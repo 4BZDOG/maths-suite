@@ -2,7 +2,9 @@
 // core/state.js — Single source of truth for all app state
 // =============================================================
 
-export const ALL_SUBTOPICS = ['Integers', 'Decimals', 'Rounding', 'Fractions', 'Percentages', 'Algebra', 'Geometry', 'Statistics', 'Financial Maths'];
+// Derived from the generator's GENERATORS dispatch table so the two
+// can never drift out of sync when new topics are added.
+export { ALL_SUBTOPICS } from '../generators/mathsQuestionGen.js';
 
 export const state = {
     // Which subtopics are enabled for generation

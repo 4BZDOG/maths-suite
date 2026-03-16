@@ -455,10 +455,10 @@ function genFinancial(rng, diff) {
         }
         return { clue: `Compound interest: $\\$${P}$ at $${r}\\%$ per year for $${t}$ years. What is the total amount?`, answer: String(A), answerDisplay: `$${A}` };
     }
-    // type 1: find the percentage profit/loss
-    const cost = ri(rng, 2, 15) * 100, sell = cost + rc(rng, [50, 100, 150, 200, 250, 300]);
-    const profit = sell - cost;
-    const pct = round((profit / cost) * 100, 1);
+    // type 1: find the percentage profit — choose pct first so result is always a whole number
+    const cost = ri(rng, 2, 15) * 100;
+    const pct  = rc(rng, [5, 10, 20, 25, 50]);
+    const sell = cost + cost * pct / 100;
     return { clue: `Cost price $\\$${cost}$, selling price $\\$${sell}$. Find the percentage profit.`, answer: String(pct), answerDisplay: `${pct}%` };
 }
 
@@ -478,7 +478,7 @@ function genGeometry(rng, diff) {
         return { clue: `Perimeter of rectangle: length $${l}$, width $${w}$`, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} units` };
     }
     if (diff === 'Medium') {
-        const type = ri(rng, 0, 1);
+        const type = ri(rng, 0, 2);
         if (type === 0) {
             // Area of triangle — even base ensures integer answer
             const b = ri(rng, 2, 12) * 2;
@@ -486,25 +486,41 @@ function genGeometry(rng, diff) {
             const ans = (b * h) / 2;
             return { clue: `Area of triangle: base $${b}$, height $${h}$`, answer: String(ans), answerDisplay: `${ans} units²` };
         }
-        // Pythagoras — find hypotenuse using scaled common triples
-        const triples = [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17], [9, 12, 15]];
-        const [a, b, c] = rc(rng, triples);
-        const scale = ri(rng, 1, 3);
-        return { clue: `Right triangle with legs $${a * scale}$ and $${b * scale}$. Find the hypotenuse.`, answer: String(c * scale), answerDisplay: `${c * scale} units` };
+        if (type === 1) {
+            // Pythagoras — find hypotenuse using scaled common triples
+            const triples = [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17], [9, 12, 15]];
+            const [a, b, c] = rc(rng, triples);
+            const scale = ri(rng, 1, 3);
+            return { clue: `Right triangle with legs $${a * scale}$ and $${b * scale}$. Find the hypotenuse.`, answer: String(c * scale), answerDisplay: `${c * scale} units` };
+        }
+        // Missing angle in triangle — angles sum to 180°
+        const angles = [30, 40, 45, 50, 60, 70, 80, 90];
+        const a1 = rc(rng, angles);
+        const remaining = angles.filter(a => a < 180 - a1 && a !== a1);
+        if (remaining.length === 0) return genGeometry(rng, diff);
+        const a2 = rc(rng, remaining);
+        const a3 = 180 - a1 - a2;
+        return { clue: `A triangle has angles $${a1}°$ and $${a2}°$. Find the third angle.`, answer: String(a3), answerDisplay: `${a3}°` };
     }
     // Hard
-    const type = ri(rng, 0, 1);
+    const type = ri(rng, 0, 2);
     if (type === 0) {
         // Area of circle (π ≈ 3.14)
         const r = ri(rng, 2, 10);
         const ans = round(3.14 * r * r, 2);
         return { clue: `Area of circle, radius $${r}$ (use $\\pi \\approx 3.14$)`, answer: String(ans), answerDisplay: `${ans} units²` };
     }
-    // Find a leg using Pythagoras — give hypotenuse and one leg
-    const triples = [[3, 4, 5], [5, 12, 13], [8, 15, 17]];
-    const [a, b, c] = rc(rng, triples);
-    const scale = ri(rng, 1, 3);
-    return { clue: `Right triangle: hypotenuse $${c * scale}$, one leg $${a * scale}$. Find the other leg.`, answer: String(b * scale), answerDisplay: `${b * scale} units` };
+    if (type === 1) {
+        // Find a leg using Pythagoras — give hypotenuse and one leg
+        const triples = [[3, 4, 5], [5, 12, 13], [8, 15, 17]];
+        const [a, b, c] = rc(rng, triples);
+        const scale = ri(rng, 1, 3);
+        return { clue: `Right triangle: hypotenuse $${c * scale}$, one leg $${a * scale}$. Find the other leg.`, answer: String(b * scale), answerDisplay: `${b * scale} units` };
+    }
+    // Circumference of circle (C = 2πr, π ≈ 3.14)
+    const r = ri(rng, 2, 15);
+    const ans = round(2 * 3.14 * r, 2);
+    return { clue: `Circumference of circle, radius $${r}$ (use $\\pi \\approx 3.14$)`, answer: String(ans), answerDisplay: `${ans} units` };
 }
 
 // ============================================================
