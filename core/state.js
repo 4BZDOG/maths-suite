@@ -4,7 +4,8 @@
 
 // Derived from the generator's GENERATORS dispatch table so the two
 // can never drift out of sync when new topics are added.
-export { ALL_SUBTOPICS } from '../generators/mathsQuestionGen.js';
+import { ALL_SUBTOPICS } from '../generators/mathsQuestionGen.js';
+export { ALL_SUBTOPICS };
 
 export const state = {
     // Which subtopics are enabled for generation
