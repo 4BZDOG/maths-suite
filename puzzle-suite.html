@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maths Suite v62</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&family=Lora:wght@500;600;700&family=Roboto:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <link rel="stylesheet" href="puzzle-suite.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+</head>
+
+<body>
+    <div id="drop-zone">
+        <div class="drop-content">
+            <i class="fas fa-file-import" style="font-size:3rem; margin-bottom:15px;"></i><br>
+            Drop text or config file to import
+        </div>
+    </div>
+
+    <div id="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
+    <div id="loading-overlay">
+        <i class="fas fa-circle-notch fa-spin loading-icon"></i>
+        <div id="loading-text" class="loading-label">Initializing...</div>
+        <div class="progress-container">
+            <div class="progress-bar" id="loading-progress"></div>
+        </div>
+    </div>
+
+    <div id="modal-overlay" role="presentation">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-heading">
+            <h3 class="modal-title" id="modal-heading">Bulk Import</h3>
+            <p class="modal-desc">Paste CSV with columns <code>topic, difficulty, clue, answer, answerDisplay, notes</code> — or one answer per line (tab-separated answer &amp; clue). Clues are <strong>added</strong> to your existing bank.</p>
+            <textarea id="import-text"
+                placeholder="topic,difficulty,clue,answer,answerDisplay,notes&#10;Number,Easy,$12 \times 12$,144,144,MA4-INT-C-01&#10;Algebra,Medium,Solve: $3x - 7 = 14$,7,x = 7,MA4-ALG-C-01"></textarea>
+            <div class="modal-actions">
+                <button class="btn-sec btn-auto" onclick="closeModal()">Cancel</button>
+                <button class="btn-main btn-auto" onclick="processImport()">Import</button>
+            </div>
+        </div>
+    </div>
+    <input type="file" id="file-input" accept=".json,.txt,.csv" onchange="loadConfigFromFile(this)">
+    <button class="toggle-sidebar" onclick="toggleSidebar()" title="Toggle Sidebar" aria-label="Toggle sidebar"><i
+            class="fas fa-bars"></i></button>
+
+    <aside>
+        <div class="brand">
+            <h1><span class="brand-icon"><i class="fas fa-square-root-alt"></i></span>Maths Suite <small
+                    class="version-tag">v62</small></h1>
+            <div class="brand-actions">
+                <button onclick="toggleDarkMode()" title="Toggle Dark Mode" id="btn-dark"
+                    aria-label="Toggle dark mode"><i class="fas fa-moon"></i></button>
+                <button onclick="downloadConfig()" title="Save config" aria-label="Save configuration"><i
+                        class="fas fa-save"></i></button>
+                <button onclick="document.getElementById('file-input').click()" title="Load config"
+                    aria-label="Load configuration"><i class="fas fa-folder-open"></i></button>
+                <button onclick="hardReset()" title="Reset all" aria-label="Reset all settings and words"><i
+                        class="fas fa-redo"></i></button>
+            </div>
+        </div>
+        <div class="nav-tabs" role="tablist" aria-label="Sidebar panels">
+            <div class="nav-tab active" onclick="switchTab('content')" data-tab="content" role="tab"
+                aria-selected="true" tabindex="0"><i class="fas fa-list"></i> Editor</div>
+            <div class="nav-tab" onclick="switchTab('design')" data-tab="design" role="tab" aria-selected="false"
+                tabindex="-1"><i class="fas fa-sliders-h"></i> Settings</div>
+            <div class="nav-tab" onclick="switchTab('export')" data-tab="export" role="tab" aria-selected="false"
+                tabindex="-1"><i class="fas fa-download"></i> Export</div>
+        </div>
+        <div class="scroll-area">
+
+            <!-- EDITOR TAB -->
+            <div id="panel-content" role="tabpanel" aria-labelledby="panel-content-tab">
+                <!-- MATHS TOPICS -->
+                <div class="section-label" style="margin-top:8px;">MATHS TOPICS</div>
+                <div class="topic-toggles" id="topic-toggles">
+                    <label class="topic-toggle-row">
+                        <input type="checkbox" id="topic-Integers" checked onchange="toggleTopic('Integers')">
+                        <span class="topic-toggle-name">Integers <span class="topic-ops">(+, −, ×, ÷)</span></span>
+                    </label>
+                    <label class="topic-toggle-row">
+                        <input type="checkbox" id="topic-Decimals" checked onchange="toggleTopic('Decimals')">
+                        <span class="topic-toggle-name">Decimals</span>
+                    </label>
+                    <label class="topic-toggle-row">
+                        <input type="checkbox" id="topic-Rounding" checked onchange="toggleTopic('Rounding')">
+                        <span class="topic-toggle-name">Rounding</span>
+                    </label>
+                    <label class="topic-toggle-row">
+                        <input type="checkbox" id="topic-Fractions" checked onchange="toggleTopic('Fractions')">
+                        <span class="topic-toggle-name">Fractions</span>
+                    </label>
+                    <label class="topic-toggle-row">
+                        <input type="checkbox" id="topic-Percentages" checked onchange="toggleTopic('Percentages')">
+                        <span class="topic-toggle-name">Percentages</span>
+                    </label>
+                    <label class="topic-toggle-row">
+                        <input type="checkbox" id="topic-Algebra" checked onchange="toggleTopic('Algebra')">
+                        <span class="topic-toggle-name">Algebra</span>
+                    </label>
+                    <label class="topic-toggle-row">
+                        <input type="checkbox" id="topic-Geometry" checked onchange="toggleTopic('Geometry')">
+                        <span class="topic-toggle-name">Geometry</span>
+                    </label>
+                    <label class="topic-toggle-row">
+                        <input type="checkbox" id="topic-Statistics" checked onchange="toggleTopic('Statistics')">
+                        <span class="topic-toggle-name">Statistics</span>
+                    </label>
+                    <label class="topic-toggle-row">
+                        <input type="checkbox" id="topic-Financial-Maths" onchange="toggleTopic('Financial Maths')">
+                        <span class="topic-toggle-name">Financial Maths</span>
+                    </label>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:4px;">
+                    <button class="btn-sec" style="flex:1; font-size:11px;" onclick="setTopicsAll(true)">All</button>
+                    <button class="btn-sec" style="flex:1; font-size:11px;" onclick="setTopicsAll(false)">None</button>
+                    <span id="topic-count" style="font-size:11px; color:var(--text-muted); align-self:center; flex:2; text-align:right;">8 of 9 selected</span>
+                </div>
+
+                <div class="section-label" style="margin-top:16px;">QUESTIONS PER DIFFICULTY</div>
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                    <select id="questionsPerSet" class="wm-select" style="flex:1;" onchange="setQuestionsPerSet(this.value)">
+                        <option value="5">5 questions</option>
+                        <option value="10" selected>10 questions</option>
+                        <option value="15">15 questions</option>
+                        <option value="20">20 questions</option>
+                        <option value="30">30 questions</option>
+                    </select>
+                </div>
+
+                <button id="btn-generate" class="btn-primary" style="width:100%; margin-top:4px;" onclick="generateAll()">
+                    <i class="fas fa-bolt"></i> Regenerate
+                </button>
+
+                <div class="status-row" style="margin-top:12px;">
+                    <div id="status-icon" class="status-icon icon-warning"><i class="fas fa-exclamation"></i></div>
+                    <span id="placed-count" style="font-size:12px; color:var(--text-muted);">0 questions</span>
+                </div>
+
+                <div class="button-row" style="margin-top:12px;">
+                    <button id="btn-undo" onclick="undo()" class="btn-sec flex-1" disabled
+                        aria-label="Undo last change" title="Undo (Ctrl+Z)"><i class="fas fa-undo"></i>
+                        Undo</button>
+                    <button id="btn-redo" onclick="redo()" class="btn-sec flex-1" disabled aria-label="Redo change"
+                        title="Redo (Ctrl+Shift+Z)"><i class="fas fa-redo-alt"></i> Redo</button>
+                </div>
+            </div>
+
+            <!-- SETTINGS TAB -->
+            <div id="panel-design" style="display:none" role="tabpanel">
+                <details class="setting-card" open>
+                    <summary>
+                        <div class="card-header-inner"><i class="fas fa-print"></i> Page Setup</div>
+                    </summary>
+                    <div class="card-content">
+                        <label class="field-label">Main Title</label>
+                        <input type="text" id="titleInput" value="Maths Quiz" onkeyup="debouncedUpdateUI()">
+                        <label class="field-label">Subtitle</label>
+                        <input type="text" id="subInput" value="Stage 4 Review" onkeyup="debouncedUpdateUI()">
+                        <label class="field-label" style="margin-top:6px;">Title &amp; Subtitle Scale</label>
+                        <div class="slider-row">
+                            <input type="range" id="titleScale" min="0.4" max="1.5" step="0.05" value="1" oninput="updateTitleScale()">
+                            <span id="titleScaleVal" class="slider-val">1.00x</span>
+                        </div>
+                        <hr class="form-divider">
+                        <label class="field-label">Paper Size</label>
+                        <select id="paperSize" onchange="updatePaperSize()">
+                            <option value="a4">A4 (210 × 297 mm)</option>
+                            <option value="letter">US Letter (8.5 × 11 in)</option>
+                        </select>
+                        <hr class="form-divider">
+                        <label class="field-label">Watermark Image</label>
+                        <div class="file-upload-wrapper">
+                            <input type="file" id="bgUpload" accept="image/*" onchange="handleImage(this)">
+                            <div class="file-upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                            <div class="file-upload-subtext">Click to upload (Max 2MB)</div>
+                        </div>
+                        <div class="slider-row" style="margin-top:8px;">
+                            <span class="slider-label">Watermark Opacity</span>
+                            <input type="range" min="0" max="1" step="0.05" value="0.15"
+                                oninput="updateOpacity(this.value)">
+                        </div>
+                        <button onclick="clearWatermark()" class="btn-remove-watermark"
+                            aria-label="Remove watermark image">Remove Watermark</button>
+                    </div>
+                </details>
+
+                <details class="setting-card">
+                    <summary>
+                        <div class="card-header-inner"><i class="fas fa-text-height"></i> Typography & Scaling</div>
+                    </summary>
+                    <div class="card-content">
+                        <label class="field-label">Font Family</label>
+                        <select id="fontSelect" onchange="saveState(); updateUI()">
+                            <option value="'Inter', sans-serif">Clean (Inter)</option>
+                            <option value="'Roboto', sans-serif">Modern (Roboto)</option>
+                            <option value="'Lora', serif">Classic (Lora)</option>
+                            <option value="'Comic Neue', cursive">Playful (Comic)</option>
+                        </select>
+                        <label class="field-label" style="margin-top:6px;">Global Font Scale</label>
+                        <div class="slider-row">
+                            <input type="range" id="globalFontScale" min="0.7" max="1.5" step="0.05" value="1"
+                                oninput="updateGlobalFontScale()">
+                            <span id="globalFontScaleVal" class="slider-val">1.00x</span>
+                        </div>
+
+                        <hr class="form-divider">
+
+                        <label class="field-label">Per-Page Font Scale</label>
+                        <div class="slider-row">
+                            <span class="slider-label">Easy</span>
+                            <input type="range" id="scaleEasyFont" min="0.5" max="2.0" step="0.05" value="1"
+                                oninput="focusPage(1); updatePageScales()">
+                            <span id="scaleEasyFontVal" class="slider-val">1.00x</span>
+                        </div>
+                        <div class="slider-row">
+                            <span class="slider-label">Medium</span>
+                            <input type="range" id="scaleMediumFont" min="0.5" max="2.0" step="0.05" value="1"
+                                oninput="focusPage(2); updatePageScales()">
+                            <span id="scaleMediumFontVal" class="slider-val">1.00x</span>
+                        </div>
+                        <div class="slider-row">
+                            <span class="slider-label">Hard</span>
+                            <input type="range" id="scaleHardFont" min="0.5" max="2.0" step="0.05" value="1"
+                                oninput="focusPage(3); updatePageScales()">
+                            <span id="scaleHardFontVal" class="slider-val">1.00x</span>
+                        </div>
+                        <div class="slider-row">
+                            <span class="slider-label">Answer Keys</span>
+                            <input type="range" id="scaleKeyFont" min="0.5" max="2.0" step="0.05" value="1"
+                                oninput="focusPage(4); updatePageScales()">
+                            <span id="scaleKeyFontVal" class="slider-val">1.00x</span>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="setting-card">
+                    <summary>
+                        <div class="card-header-inner"><i class="fas fa-list-ol"></i> Question Display</div>
+                    </summary>
+                    <div class="card-content">
+                        <label class="field-label">Columns</label>
+                        <select id="psCols" onchange="renderActivePage(); saveState();">
+                            <option value="1">1 Column</option>
+                            <option value="2" selected>2 Columns</option>
+                        </select>
+                        <hr class="form-divider">
+                        <div class="toggle-row"><label>Show Topic Badge</label><label class="switch"><input
+                                    type="checkbox" id="psShowTopic" onchange="renderActivePage(); saveState();"><span
+                                    class="slider-switch"></span></label></div>
+                    </div>
+                </details>
+            </div>
+
+            <!-- EXPORT TAB -->
+            <div id="panel-export" style="display:none" role="tabpanel">
+                <div class="export-card">
+                    <div class="input-row" style="margin-bottom: 20px;">
+                        <label class="input-inline field-label" style="margin:0;">Filename</label>
+                        <input type="text" id="exportFilename" value="MathsQuiz" class="flex-2">
+                    </div>
+                    <label class="field-label mb-8">Page Order (drag to reorder):</label>
+                    <div id="page-order-list" class="sortable-list">
+                        <div class="sortable-item" draggable="true" data-page="easy">
+                            <i class="fas fa-grip-vertical drag-handle"></i><input type="checkbox" id="sel-easy"
+                                checked onchange="saveState()"><span>Easy Questions</span>
+                        </div>
+                        <div class="sortable-item" draggable="true" data-page="medium">
+                            <i class="fas fa-grip-vertical drag-handle"></i><input type="checkbox" id="sel-medium" checked
+                                onchange="saveState()"><span>Medium Questions</span>
+                        </div>
+                        <div class="sortable-item" draggable="true" data-page="hard">
+                            <i class="fas fa-grip-vertical drag-handle"></i><input type="checkbox" id="sel-hard" checked
+                                onchange="saveState()"><span>Hard Questions</span>
+                        </div>
+                        <div class="sortable-item" draggable="true" data-page="key">
+                            <i class="fas fa-grip-vertical drag-handle"></i><input type="checkbox" id="sel-key" checked
+                                onchange="saveState()"><span>Answer Key</span>
+                        </div>
+                    </div>
+                    <hr class="form-divider">
+                    <div class="toggle-row"><label>Show Answer Key Page</label><label class="switch"><input
+                                type="checkbox" id="showAnswerKey" checked onchange="saveState()"><span
+                                class="slider-switch"></span></label></div>
+                    <div class="toggle-row"><label>Export ID in Footer</label><label class="switch"><input
+                                type="checkbox" id="showExportId" checked onchange="saveState()"><span
+                                class="slider-switch"></span></label></div>
+                    <hr class="form-divider">
+                    <div class="bulk-export-row">
+                        <input type="number" id="bulkCount" value="1" min="1" max="50" class="input-large-center">
+                        <span class="text-bold-small">Unique Copies (Bulk)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-actions">
+            <button class="btn-sec" onclick="generateAll()" style="flex:0 0 auto;" aria-label="Regenerate puzzles"><i
+                    class="fas fa-sync-alt"></i> Regenerate</button>
+            <button class="btn-main" id="export-btn-main" onclick="exportPDF()" aria-label="Export vector PDF"><i
+                    class="fas fa-file-pdf"></i> Export Vector PDF</button>
+        </div>
+        <div class="resize-handle" id="sidebar-resizer"></div>
+    </aside>
+
+    <main>
+        <div class="preview-toolbar">
+            <div class="page-tabs">
+                <button class="page-btn active" onclick="showPage(1)">Easy</button>
+                <button class="page-btn" onclick="showPage(2)">Medium</button>
+                <button class="page-btn" onclick="showPage(3)">Hard</button>
+                <button class="page-btn" onclick="showPage(4)">Key</button>
+            </div>
+            <div class="zoom-controls">
+                <button class="zoom-btn" onclick="adjustZoom(-0.1)" aria-label="Zoom Out"><i
+                        class="fas fa-minus"></i></button>
+                <button class="zoom-btn" onclick="adjustZoom(0.1)" aria-label="Zoom In"><i
+                        class="fas fa-plus"></i></button>
+            </div>
+        </div>
+        <div class="viewport">
+
+            <!-- Page 1: Easy Questions -->
+            <div class="page visible" id="page1">
+                <div class="page-inner">
+                    <img class="watermark-img" src="" style="display:none;" alt="watermark">
+                    <div class="page-header">
+                        <div>
+                            <div class="disp-title" style="font-size: calc(1.5rem * var(--title-scale));">Maths Quiz</div>
+                            <div class="disp-sub" style="font-size: calc(1rem * var(--title-scale)); color:var(--text-muted);">Stage 4 Review</div>
+                        </div>
+                        <div class="page-header-right">
+                            <div style="font-size:11px; color:var(--text-muted);">NAME: ___________________</div>
+                            <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">DATE: ___________________</div>
+                        </div>
+                    </div>
+                    <div class="page-instruction" id="p1-instruction">🟢 EASY — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.</div>
+                    <div class="p-area" id="p1-area" style="--page-scale: var(--scale-easy, 1)"></div>
+                </div>
+            </div>
+
+            <!-- Page 2: Medium Questions -->
+            <div class="page" id="page2">
+                <div class="page-inner">
+                    <img class="watermark-img" src="" style="display:none;" alt="watermark">
+                    <div class="page-header">
+                        <div>
+                            <div class="disp-title" style="font-size: calc(1.5rem * var(--title-scale));">Maths Quiz</div>
+                            <div class="disp-sub" style="font-size: calc(1rem * var(--title-scale)); color:var(--text-muted);">Stage 4 Review</div>
+                        </div>
+                        <div class="page-header-right">
+                            <div style="font-size:11px; color:var(--text-muted);">NAME: ___________________</div>
+                            <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">DATE: ___________________</div>
+                        </div>
+                    </div>
+                    <div class="page-instruction" id="p2-instruction">🟡 MEDIUM — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.</div>
+                    <div class="p-area" id="p2-area" style="--page-scale: var(--scale-medium, 1)"></div>
+                </div>
+            </div>
+
+            <!-- Page 3: Hard Questions -->
+            <div class="page" id="page3">
+                <div class="page-inner">
+                    <img class="watermark-img" src="" style="display:none;" alt="watermark">
+                    <div class="page-header">
+                        <div>
+                            <div class="disp-title" style="font-size: calc(1.5rem * var(--title-scale));">Maths Quiz</div>
+                            <div class="disp-sub" style="font-size: calc(1rem * var(--title-scale)); color:var(--text-muted);">Stage 4 Review</div>
+                        </div>
+                        <div class="page-header-right">
+                            <div style="font-size:11px; color:var(--text-muted);">NAME: ___________________</div>
+                            <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">DATE: ___________________</div>
+                        </div>
+                    </div>
+                    <div class="page-instruction" id="p3-instruction">🔴 HARD — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.</div>
+                    <div class="p-area" id="p3-area" style="--page-scale: var(--scale-hard, 1)"></div>
+                </div>
+            </div>
+
+            <!-- Page 4: Answer Key -->
+            <div class="page" id="page4">
+                <div class="page-inner">
+                    <div class="page-header">
+                        <div>
+                            <div class="disp-title" style="font-size: calc(1.5rem * var(--title-scale));">Maths Quiz</div>
+                            <div class="disp-sub" style="font-size: calc(1rem * var(--title-scale)); color:var(--text-muted);">Answer Key</div>
+                        </div>
+                    </div>
+                    <div class="p-area" id="key-container" style="--page-scale: var(--scale-key, 1)"></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="bundle.js?v=71"></script>
+</body>
+
+</html>

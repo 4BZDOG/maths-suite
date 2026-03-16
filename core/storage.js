@@ -1,0 +1,58 @@
+// =============================================================
+// core/storage.js — localStorage persistence (debounced)
+// =============================================================
+import { state, syncSettingsFromDOM } from './state.js';
+import { showToast } from '../ui/toast.js';
+
+const STORAGE_KEY     = 'puzzleSuiteV62';
+const STORAGE_KEY_OLD = 'puzzleSuiteV61';
+const DEBOUNCE_MS     = 500;
+
+let _saveTimer = null;
+
+// Immediately save all state to localStorage
+export function saveStateNow() {
+    try {
+        syncSettingsFromDOM();   // flush DOM → state.settings first
+        const payload = {
+            selectedTopics:  state.selectedTopics,
+            questionsPerSet: state.questionsPerSet,
+            generatedSets:   state.generatedSets,
+            settings:        state.settings,
+            zoom:            state.currentZoom,
+            watermarkSrc:    state.watermarkSrc,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch (e) {
+        if (e.name === 'QuotaExceededError' || (e.message && e.message.toLowerCase().includes('quota'))) {
+            showToast('Storage full. Remove watermark image or reduce questions.', 'error');
+        } else {
+            console.error('Save failed', e);
+        }
+    }
+}
+
+// Debounced save — call this on every state mutation
+export function saveState() {
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(saveStateNow, DEBOUNCE_MS);
+}
+
+// Load from localStorage and return raw parsed object (or null)
+export function loadRawState() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY_OLD);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch (e) {
+        localStorage.removeItem(STORAGE_KEY);
+        showToast('Saved data was corrupted and has been reset.', 'error');
+        return null;
+    }
+}
+
+export function hardReset() {
+    if (!confirm('Reset all questions and settings? This cannot be undone.')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+}

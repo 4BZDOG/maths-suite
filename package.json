@@ -1,0 +1,13 @@
+{
+  "name": "puzzle-suite",
+  "version": "60.3.0",
+  "description": "Browser-based vocabulary puzzle worksheet generator",
+  "private": true,
+  "scripts": {
+    "build": "bash build.sh",
+    "start": "python3 -m http.server 8082"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
