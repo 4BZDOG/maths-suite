@@ -494,13 +494,14 @@ function genGeometry(rng, diff) {
             return { clue: `Right triangle with legs $${a * scale}$ and $${b * scale}$. Find the hypotenuse.`, answer: String(c * scale), answerDisplay: `${c * scale} units` };
         }
         // Missing angle in triangle — angles sum to 180°
+        // Note: ° placed outside $...$ so KaTeX doesn't try to parse it as math
         const angles = [30, 40, 45, 50, 60, 70, 80, 90];
         const a1 = rc(rng, angles);
         const remaining = angles.filter(a => a < 180 - a1 && a !== a1);
         if (remaining.length === 0) return genGeometry(rng, diff);
         const a2 = rc(rng, remaining);
         const a3 = 180 - a1 - a2;
-        return { clue: `A triangle has angles $${a1}°$ and $${a2}°$. Find the third angle.`, answer: String(a3), answerDisplay: `${a3}°` };
+        return { clue: `A triangle has angles $${a1}$° and $${a2}$°. Find the third angle.`, answer: String(a3), answerDisplay: `${a3}°` };
     }
     // Hard
     const type = ri(rng, 0, 2);
