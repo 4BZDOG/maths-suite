@@ -4,8 +4,8 @@
 
 // Derived from the generator's GENERATORS dispatch table so the two
 // can never drift out of sync when new topics are added.
-import { ALL_SUBTOPICS } from '../generators/mathsQuestionGen.js';
-export { ALL_SUBTOPICS };
+import { ALL_SUBTOPICS, SUB_OPS } from '../generators/mathsQuestionGen.js';
+export { ALL_SUBTOPICS, SUB_OPS };
 
 export const state = {
     // Which subtopics are enabled for generation
@@ -20,6 +20,9 @@ export const state = {
         'Statistics': true,
         'Financial Maths': false,
     },
+
+    // Granular sub-operation selection per topic (null entry or missing = all enabled)
+    selectedSubOps: {},
 
     // Questions per difficulty level
     questionsPerSet: 10,
@@ -120,6 +123,24 @@ export function syncSettingsFromDOM() {
         if (el) state.selectedTopics[t] = el.checked;
     });
 
+    // Sync selectedSubOps from checkboxes
+    ALL_SUBTOPICS.forEach(t => {
+        const ops = SUB_OPS[t];
+        if (!ops) return;
+        const enabled = [];
+        ops.forEach(op => {
+            const id = 'subop-' + t.replace(/\s+/g, '-') + '-' + op.key;
+            const el = document.getElementById(id);
+            if (el && el.checked) enabled.push(op.key);
+        });
+        // Only store if user has unchecked some ops (saves space)
+        if (enabled.length < ops.length) {
+            state.selectedSubOps[t] = enabled;
+        } else {
+            delete state.selectedSubOps[t]; // all enabled = default
+        }
+    });
+
     // Sync questionsPerSet
     const qps = document.getElementById('questionsPerSet');
     if (qps) state.questionsPerSet = parseInt(qps.value, 10) || 10;
@@ -136,6 +157,21 @@ export function applyStateToDOM(s) {
             const id = 'topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
             const el = document.getElementById(id);
             if (el) el.checked = state.selectedTopics[t] !== false;
+        });
+    }
+
+    // Restore selectedSubOps
+    if (s.selectedSubOps) {
+        state.selectedSubOps = { ...s.selectedSubOps };
+        ALL_SUBTOPICS.forEach(t => {
+            const ops = SUB_OPS[t];
+            if (!ops) return;
+            const enabledOps = state.selectedSubOps[t];
+            ops.forEach(op => {
+                const id = 'subop-' + t.replace(/\s+/g, '-') + '-' + op.key;
+                const el = document.getElementById(id);
+                if (el) el.checked = enabledOps ? enabledOps.includes(op.key) : true;
+            });
         });
     }
 

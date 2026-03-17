@@ -1,7 +1,7 @@
 // =============================================================
 // main.js — Application entry point (Maths Question Sets Edition)
 // =============================================================
-import { state, ALL_SUBTOPICS, setGeneratedSets, setActivePage, updateSetting, applyStateToDOM, syncSettingsFromDOM } from './core/state.js';
+import { state, ALL_SUBTOPICS, SUB_OPS, setGeneratedSets, setActivePage, updateSetting, applyStateToDOM, syncSettingsFromDOM } from './core/state.js';
 import { pushHistory, undo, redo } from './core/history.js';
 import { saveState, saveStateNow, loadRawState, hardReset } from './core/storage.js';
 
@@ -58,10 +58,13 @@ function generateAll() {
     const n    = state.questionsPerSet || 10;
     const seed = Date.now() + (state.settings.exportCount || 0) * 1_000_000;
 
+    // Build sub-ops filter: only include topics where user has narrowed selection
+    const subOpsFilter = Object.keys(state.selectedSubOps).length > 0 ? state.selectedSubOps : null;
+
     const sets = {
-        easy:   generateMathsQuestions({ subTopics: topics, difficulty: 'Easy',   count: n, seed }),
-        medium: generateMathsQuestions({ subTopics: topics, difficulty: 'Medium', count: n, seed: seed + 1 }),
-        hard:   generateMathsQuestions({ subTopics: topics, difficulty: 'Hard',   count: n, seed: seed + 2 }),
+        easy:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Easy',   count: n, seed }),
+        medium: generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Medium', count: n, seed: seed + 1 }),
+        hard:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Hard',   count: n, seed: seed + 2 }),
     };
 
     setGeneratedSets(sets);
@@ -178,7 +181,25 @@ function focusPage(n) {
 // Topic toggles
 // =============================================================
 function toggleTopic(topicName) {
-    state.selectedTopics[topicName] = !state.selectedTopics[topicName];
+    const newVal = !state.selectedTopics[topicName];
+    state.selectedTopics[topicName] = newVal;
+    // When toggling the parent checkbox, set ALL sub-ops to match
+    const ops = SUB_OPS[topicName];
+    if (ops) {
+        const topicId = topicName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        ops.forEach(op => {
+            const el = document.getElementById('subop-' + topicId + '-' + op.key);
+            if (el) el.checked = newVal;
+        });
+        if (newVal) {
+            delete state.selectedSubOps[topicName]; // all enabled = default
+        } else {
+            state.selectedSubOps[topicName] = []; // none enabled
+        }
+        // Reset indeterminate state
+        const parentEl = document.getElementById('topic-' + topicId);
+        if (parentEl) parentEl.indeterminate = false;
+    }
     saveState();
     // Don't auto-regenerate — user clicks Regenerate explicitly
     updateTopicCount();
@@ -189,7 +210,20 @@ function setTopicsAll(enabled) {
         state.selectedTopics[t] = enabled;
         const id = 'topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
         const el = document.getElementById(id);
-        if (el) el.checked = enabled;
+        if (el) { el.checked = enabled; el.indeterminate = false; }
+        // Also set all sub-op checkboxes to match
+        const ops = SUB_OPS[t];
+        if (ops) {
+            ops.forEach(op => {
+                const subEl = document.getElementById('subop-' + id.replace('topic-', '') + '-' + op.key);
+                if (subEl) subEl.checked = enabled;
+            });
+            if (enabled) {
+                delete state.selectedSubOps[t]; // all enabled = default
+            } else {
+                state.selectedSubOps[t] = []; // none enabled
+            }
+        }
     });
     updateTopicCount();
     saveState();
@@ -199,6 +233,66 @@ function updateTopicCount() {
     const count = getActiveTopics().length;
     const el = document.getElementById('topic-count');
     if (el) el.textContent = `${count} of ${ALL_SUBTOPICS.length} selected`;
+}
+
+function toggleSubOp(topic, opKey) {
+    syncSettingsFromDOM();
+    // Update parent checkbox indeterminate state
+    _updateParentCheckbox(topic);
+    saveState();
+}
+
+function toggleTopicExpand(topicName) {
+    const panel = document.getElementById('subs-' + topicName.replace(/\s+/g, '-'));
+    if (!panel) return;
+    const isOpen = panel.style.display !== 'none';
+    // Accordion: close all others
+    document.querySelectorAll('.topic-subtypes').forEach(p => { p.style.display = 'none'; });
+    document.querySelectorAll('.topic-expand-btn').forEach(b => { b.classList.remove('open'); });
+    if (!isOpen) {
+        panel.style.display = 'block';
+        const btn = panel.previousElementSibling?.querySelector('.topic-expand-btn');
+        if (btn) btn.classList.add('open');
+    }
+}
+
+function _updateParentCheckbox(topicName) {
+    const ops = SUB_OPS[topicName];
+    if (!ops) return;
+    const id = 'topic-' + topicName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+    const parentEl = document.getElementById(id);
+    if (!parentEl) return;
+    let checked = 0;
+    ops.forEach(op => {
+        const el = document.getElementById('subop-' + topicName.replace(/\s+/g, '-') + '-' + op.key);
+        if (el && el.checked) checked++;
+    });
+    parentEl.checked = checked > 0;
+    parentEl.indeterminate = checked > 0 && checked < ops.length;
+    state.selectedTopics[topicName] = checked > 0;
+}
+
+function _updateAllParentCheckboxes() {
+    ALL_SUBTOPICS.forEach(t => _updateParentCheckbox(t));
+}
+
+function _buildSubOpsPanels() {
+    ALL_SUBTOPICS.forEach(t => {
+        const ops = SUB_OPS[t];
+        if (!ops || ops.length === 0) return;
+        const topicId = t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const container = document.getElementById('subs-' + topicId);
+        if (!container) return;
+        const enabledOps = state.selectedSubOps[t];
+        container.innerHTML = ops.map(op => {
+            const checked = enabledOps ? enabledOps.includes(op.key) : true;
+            return `<label class="sub-op-row">
+                <input type="checkbox" id="subop-${topicId}-${op.key}" ${checked ? 'checked' : ''}
+                       onchange="toggleSubOp('${t}', '${op.key}')">
+                <span class="sub-op-name">${op.label}</span>
+            </label>`;
+        }).join('');
+    });
 }
 
 function setQuestionsPerSet(n) {
@@ -250,6 +344,8 @@ function clearWatermark() {
 window._puzzleApp = {
     generateAll,
     toggleTopic,
+    toggleSubOp,
+    toggleTopicExpand,
     setTopicsAll,
     setQuestionsPerSet,
     openModal: (el) => openModal(el),
@@ -296,6 +392,8 @@ window.addEventListener('load', async () => {
             });
         }
 
+        _buildSubOpsPanels();
+        _updateAllParentCheckboxes();
         pushHistory();
         generateAll();
         updatePageScales();

@@ -2358,6 +2358,57 @@ table.mode-cw td.cell.empty {
     font-size: 11px;
 }
 
+/* Topic group — collapsible sub-operations */
+.topic-group { position: relative; }
+
+.topic-expand-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px 4px;
+    font-size: 10px;
+    opacity: 0.5;
+    transition: opacity 0.15s, transform 0.2s;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+.topic-expand-btn:hover { opacity: 1; }
+.topic-expand-btn.open { transform: rotate(180deg); opacity: 0.8; }
+
+.topic-subtypes {
+    padding: 2px 0 4px 16px;
+    margin-left: 16px;
+    border-left: 2px solid rgba(99,102,241,0.10);
+    display: none;
+}
+
+.sub-op-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-muted);
+    transition: background 0.15s;
+}
+.sub-op-row:hover {
+    background: var(--surface-hover, rgba(99,102,241,0.06));
+    color: var(--text);
+}
+.sub-op-row input[type="checkbox"] {
+    width: 13px;
+    height: 13px;
+    accent-color: var(--primary);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.sub-op-name {
+    font-weight: 400;
+}
+
 /* Answer key 3-column grid */
 .key-sets-grid {
     display: grid;
@@ -2479,6 +2530,15 @@ table.mode-cw td.cell.empty {
 
 [data-theme="dark"] .topic-toggle-row:hover {
     background: rgba(99,102,241,0.12);
+}
+
+[data-theme="dark"] .sub-op-row:hover {
+    background: rgba(99,102,241,0.12);
+}
+
+[data-theme="dark"] .topic-subtypes {
+    border-left: 2px solid rgba(99,102,241,0.15);
+    margin-left: 16px;
 }
 
 [data-theme="dark"] .key-item {

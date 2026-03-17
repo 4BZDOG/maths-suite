@@ -25,10 +25,11 @@ function createQuestionSets(cfg, seed) {
     const topics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
     if (topics.length === 0) return null;
     const n = state.questionsPerSet || 10;
+    const subOpsFilter = Object.keys(state.selectedSubOps).length > 0 ? state.selectedSubOps : null;
     return {
-        easy:   generateMathsQuestions({ subTopics: topics, difficulty: 'Easy',   count: n, seed }),
-        medium: generateMathsQuestions({ subTopics: topics, difficulty: 'Medium', count: n, seed: seed + 1 }),
-        hard:   generateMathsQuestions({ subTopics: topics, difficulty: 'Hard',   count: n, seed: seed + 2 }),
+        easy:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Easy',   count: n, seed }),
+        medium: generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Medium', count: n, seed: seed + 1 }),
+        hard:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Hard',   count: n, seed: seed + 2 }),
     };
 }
 

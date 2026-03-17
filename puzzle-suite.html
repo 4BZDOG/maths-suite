@@ -78,42 +78,87 @@
                 <!-- MATHS TOPICS -->
                 <div class="section-label" style="margin-top:8px;">MATHS TOPICS</div>
                 <div class="topic-toggles" id="topic-toggles">
-                    <label class="topic-toggle-row">
-                        <input type="checkbox" id="topic-Integers" checked onchange="toggleTopic('Integers')">
-                        <span class="topic-toggle-name">Integers <span class="topic-ops">(+, −, ×, ÷)</span></span>
-                    </label>
-                    <label class="topic-toggle-row">
-                        <input type="checkbox" id="topic-Decimals" checked onchange="toggleTopic('Decimals')">
-                        <span class="topic-toggle-name">Decimals</span>
-                    </label>
-                    <label class="topic-toggle-row">
-                        <input type="checkbox" id="topic-Rounding" checked onchange="toggleTopic('Rounding')">
-                        <span class="topic-toggle-name">Rounding</span>
-                    </label>
-                    <label class="topic-toggle-row">
-                        <input type="checkbox" id="topic-Fractions" checked onchange="toggleTopic('Fractions')">
-                        <span class="topic-toggle-name">Fractions</span>
-                    </label>
-                    <label class="topic-toggle-row">
-                        <input type="checkbox" id="topic-Percentages" checked onchange="toggleTopic('Percentages')">
-                        <span class="topic-toggle-name">Percentages</span>
-                    </label>
-                    <label class="topic-toggle-row">
-                        <input type="checkbox" id="topic-Algebra" checked onchange="toggleTopic('Algebra')">
-                        <span class="topic-toggle-name">Algebra</span>
-                    </label>
-                    <label class="topic-toggle-row">
-                        <input type="checkbox" id="topic-Geometry" checked onchange="toggleTopic('Geometry')">
-                        <span class="topic-toggle-name">Geometry</span>
-                    </label>
-                    <label class="topic-toggle-row">
-                        <input type="checkbox" id="topic-Statistics" checked onchange="toggleTopic('Statistics')">
-                        <span class="topic-toggle-name">Statistics</span>
-                    </label>
-                    <label class="topic-toggle-row">
-                        <input type="checkbox" id="topic-Financial-Maths" onchange="toggleTopic('Financial Maths')">
-                        <span class="topic-toggle-name">Financial Maths</span>
-                    </label>
+                    <!-- Integers -->
+                    <div class="topic-group">
+                        <label class="topic-toggle-row">
+                            <input type="checkbox" id="topic-Integers" checked onchange="toggleTopic('Integers')">
+                            <span class="topic-toggle-name">Integers</span>
+                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Integers')"><i class="fas fa-chevron-down"></i></button>
+                        </label>
+                        <div class="topic-subtypes" id="subs-Integers" style="display:none;"></div>
+                    </div>
+                    <!-- Decimals -->
+                    <div class="topic-group">
+                        <label class="topic-toggle-row">
+                            <input type="checkbox" id="topic-Decimals" checked onchange="toggleTopic('Decimals')">
+                            <span class="topic-toggle-name">Decimals</span>
+                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Decimals')"><i class="fas fa-chevron-down"></i></button>
+                        </label>
+                        <div class="topic-subtypes" id="subs-Decimals" style="display:none;"></div>
+                    </div>
+                    <!-- Rounding -->
+                    <div class="topic-group">
+                        <label class="topic-toggle-row">
+                            <input type="checkbox" id="topic-Rounding" checked onchange="toggleTopic('Rounding')">
+                            <span class="topic-toggle-name">Rounding</span>
+                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Rounding')"><i class="fas fa-chevron-down"></i></button>
+                        </label>
+                        <div class="topic-subtypes" id="subs-Rounding" style="display:none;"></div>
+                    </div>
+                    <!-- Fractions -->
+                    <div class="topic-group">
+                        <label class="topic-toggle-row">
+                            <input type="checkbox" id="topic-Fractions" checked onchange="toggleTopic('Fractions')">
+                            <span class="topic-toggle-name">Fractions</span>
+                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Fractions')"><i class="fas fa-chevron-down"></i></button>
+                        </label>
+                        <div class="topic-subtypes" id="subs-Fractions" style="display:none;"></div>
+                    </div>
+                    <!-- Percentages -->
+                    <div class="topic-group">
+                        <label class="topic-toggle-row">
+                            <input type="checkbox" id="topic-Percentages" checked onchange="toggleTopic('Percentages')">
+                            <span class="topic-toggle-name">Percentages</span>
+                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Percentages')"><i class="fas fa-chevron-down"></i></button>
+                        </label>
+                        <div class="topic-subtypes" id="subs-Percentages" style="display:none;"></div>
+                    </div>
+                    <!-- Algebra -->
+                    <div class="topic-group">
+                        <label class="topic-toggle-row">
+                            <input type="checkbox" id="topic-Algebra" checked onchange="toggleTopic('Algebra')">
+                            <span class="topic-toggle-name">Algebra</span>
+                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Algebra')"><i class="fas fa-chevron-down"></i></button>
+                        </label>
+                        <div class="topic-subtypes" id="subs-Algebra" style="display:none;"></div>
+                    </div>
+                    <!-- Geometry -->
+                    <div class="topic-group">
+                        <label class="topic-toggle-row">
+                            <input type="checkbox" id="topic-Geometry" checked onchange="toggleTopic('Geometry')">
+                            <span class="topic-toggle-name">Geometry</span>
+                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Geometry')"><i class="fas fa-chevron-down"></i></button>
+                        </label>
+                        <div class="topic-subtypes" id="subs-Geometry" style="display:none;"></div>
+                    </div>
+                    <!-- Statistics -->
+                    <div class="topic-group">
+                        <label class="topic-toggle-row">
+                            <input type="checkbox" id="topic-Statistics" checked onchange="toggleTopic('Statistics')">
+                            <span class="topic-toggle-name">Statistics</span>
+                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Statistics')"><i class="fas fa-chevron-down"></i></button>
+                        </label>
+                        <div class="topic-subtypes" id="subs-Statistics" style="display:none;"></div>
+                    </div>
+                    <!-- Financial Maths -->
+                    <div class="topic-group">
+                        <label class="topic-toggle-row">
+                            <input type="checkbox" id="topic-Financial-Maths" onchange="toggleTopic('Financial Maths')">
+                            <span class="topic-toggle-name">Financial Maths</span>
+                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Financial Maths')"><i class="fas fa-chevron-down"></i></button>
+                        </label>
+                        <div class="topic-subtypes" id="subs-Financial-Maths" style="display:none;"></div>
+                    </div>
                 </div>
                 <div style="display:flex; gap:8px; margin-top:4px;">
                     <button class="btn-sec" style="flex:1; font-size:11px;" onclick="setTopicsAll(true)">All</button>
@@ -396,7 +441,7 @@
         </div>
     </main>
 
-    <script src="bundle.js?v=74"></script>
+    <script src="bundle.js?v=76"></script>
 </body>
 
 </html>
