@@ -39,10 +39,14 @@ export function buildCtx(doc, pdfFont, wmImg, scale, { PAGE_WIDTH, PAGE_HEIGHT, 
 
 export function latexToText(str) {
     if (!str) return str;
+    // Protect escaped dollar signs (\$) before splitting on $ delimiters
+    let s = _protectEscapedDollars(str);
     // Replace $$...$$ and $...$ blocks with converted unicode
-    return str
-        .replace(/\$\$([^$]+)\$\$/g, (_, m) => _parseLatex(m))
-        .replace(/\$([^$]+)\$/g, (_, m) => _parseLatex(m));
+    s = s
+        .replace(/\$\$([^$]+)\$\$/g, (_, m) => _parseLatex(_restoreDollars(m)))
+        .replace(/\$([^$]+)\$/g, (_, m) => _parseLatex(_restoreDollars(m)));
+    // Restore any remaining escaped dollar signs as literal $
+    return _restoreDollars(s);
 }
 
 function _parseLatex(s) {
@@ -105,17 +109,24 @@ export function hasFraction(str) {
  *   { type: 'math',  value }   — converted math token (no fraction)
  *   { type: 'frac',  num, den} — a stacked fraction
  */
+const DOLLAR_PLACEHOLDER = '\x00DOLLAR\x00';
+
+function _protectEscapedDollars(s) { return (s || '').replace(/\\\$/g, DOLLAR_PLACEHOLDER); }
+function _restoreDollars(s)        { return (s || '').replace(/\x00DOLLAR\x00/g, '$'); }
+
 function _parseClueSegments(text) {
     const result = [];
+    // Protect \$ before splitting on $ delimiters
+    const safeText = _protectEscapedDollars(text);
     const mathRe = /\$([^$]+)\$/g;
     let lastIdx = 0, m;
 
-    while ((m = mathRe.exec(text)) !== null) {
+    while ((m = mathRe.exec(safeText)) !== null) {
         if (m.index > lastIdx) {
-            result.push({ type: 'plain', value: text.slice(lastIdx, m.index) });
+            result.push({ type: 'plain', value: _restoreDollars(safeText.slice(lastIdx, m.index)) });
         }
         // Inside $...$, split on \frac{n}{d}
-        const mathStr = m[1];
+        const mathStr = _restoreDollars(m[1]);
         const fracRe = /\\frac\{([^}]+)\}\{([^}]+)\}/g;
         let ml = 0, fm;
         while ((fm = fracRe.exec(mathStr)) !== null) {
@@ -132,8 +143,8 @@ function _parseClueSegments(text) {
         }
         lastIdx = m.index + m[0].length;
     }
-    if (lastIdx < text.length) {
-        result.push({ type: 'plain', value: text.slice(lastIdx) });
+    if (lastIdx < safeText.length) {
+        result.push({ type: 'plain', value: _restoreDollars(safeText.slice(lastIdx)) });
     }
     return result;
 }
