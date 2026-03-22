@@ -12,7 +12,10 @@ export function showToast(msg, type = 'success') {
 
     const t = document.createElement('div');
     t.className = `toast ${type}`;
-    t.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${msg}`;
+    const icon = document.createElement('i');
+    icon.className = `fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}`;
+    t.appendChild(icon);
+    t.appendChild(document.createTextNode(' ' + msg));
     tc.appendChild(t);
 
     setTimeout(() => t.classList.add('show'), 10);

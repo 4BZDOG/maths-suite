@@ -35,8 +35,6 @@ const debounceFn = (func, wait) => {
 // =============================================================
 // Generation
 // =============================================================
-let _generating = false;
-
 function getActiveTopics() {
     return ALL_SUBTOPICS.filter(t => state.selectedTopics[t]);
 }
@@ -71,6 +69,9 @@ function generateAll() {
     renderActivePage();
     updateStatus();
     saveState();
+
+    const total = (sets.easy?.length || 0) + (sets.medium?.length || 0) + (sets.hard?.length || 0);
+    if (total === 0) showToast('No questions generated. Enable at least one operation per topic.', 'warning');
 
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bolt"></i> Regenerate'; }
 }
@@ -125,9 +126,11 @@ function updateUI() {
 function updateGlobalFontScale() {
     const el = document.getElementById('globalFontScale');
     if (el) {
+        const v = parseFloat(el.value);
+        if (isNaN(v)) return;
         const valDisp = document.getElementById('globalFontScaleVal');
-        if (valDisp) valDisp.innerText = parseFloat(el.value).toFixed(2) + 'x';
-        document.documentElement.style.setProperty('--global-font-scale', el.value);
+        if (valDisp) valDisp.innerText = v.toFixed(2) + 'x';
+        document.documentElement.style.setProperty('--global-font-scale', v);
         saveState();
     }
 }
@@ -136,6 +139,7 @@ function updateTitleScale() {
     const el = document.getElementById('titleScale');
     if (!el) return;
     const v = parseFloat(el.value);
+    if (isNaN(v)) return;
     const disp = document.getElementById('titleScaleVal');
     if (disp) disp.innerText = v.toFixed(2) + 'x';
     document.documentElement.style.setProperty('--title-scale', v);
@@ -154,10 +158,11 @@ function updatePageScales() {
     [['Easy', 'easy'], ['Medium', 'medium'], ['Hard', 'hard'], ['Key', 'key']].forEach(([suffix, cssKey]) => {
         const el = document.getElementById('scale' + suffix + 'Font');
         if (el) {
-            const val = parseFloat(el.value).toFixed(2);
+            const v = parseFloat(el.value);
+            if (isNaN(v)) return;
             const dispEl = document.getElementById('scale' + suffix + 'FontVal');
-            if (dispEl) dispEl.innerText = val + 'x';
-            document.documentElement.style.setProperty('--scale-' + cssKey, val);
+            if (dispEl) dispEl.innerText = v.toFixed(2) + 'x';
+            document.documentElement.style.setProperty('--scale-' + cssKey, v.toFixed(2));
         }
     });
     saveState();
@@ -296,7 +301,7 @@ function _buildSubOpsPanels() {
 }
 
 function setQuestionsPerSet(n) {
-    state.questionsPerSet = parseInt(n, 10) || 10;
+    state.questionsPerSet = Math.min(50, Math.max(1, parseInt(n, 10) || 10));
     saveState();
 }
 
@@ -418,6 +423,7 @@ window.addEventListener('load', async () => {
                         showToast('Config loaded');
                     } catch { showToast('Invalid JSON file', 'error'); }
                 };
+                r.onerror = () => showToast('Failed to read file.', 'error');
                 r.readAsText(f);
             }
         );

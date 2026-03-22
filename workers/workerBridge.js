@@ -303,7 +303,6 @@ self.onmessage = function (e) {
 
 let _worker = null;
 let _msgId = 0;
-let _latestMsgId = 0;
 const _pendingPromises = {};
 
 function getWorker() {
@@ -349,9 +348,14 @@ export function generateAllAsync(settings) {
     const worker = getWorker();
     if (!worker) return Promise.resolve(null);
 
+    // Cancel any pending stale requests before issuing the new one
+    for (const oldId in _pendingPromises) {
+        _pendingPromises[oldId](null);
+        delete _pendingPromises[oldId];
+    }
+
     return new Promise(resolve => {
         const id = ++_msgId;
-        _latestMsgId = id;
         _pendingPromises[id] = resolve;
 
         const s = settings || state.settings;
@@ -384,7 +388,6 @@ export function terminateWorker() {
         _worker = null;
     }
     _msgId = 0;
-    _latestMsgId = 0;
     for (const id in _pendingPromises) {
         _pendingPromises[id](null);
         delete _pendingPromises[id];

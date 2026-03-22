@@ -59,7 +59,14 @@ export async function loadFontForPDF(doc, jsPDFFontName, weight) {
     const url = `https://cdn.jsdelivr.net/fontsource/fonts/${fontId}@latest/latin-${weight}-normal.ttf`;
 
     try {
-        const resp = await fetch(url);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        let resp;
+        try {
+            resp = await fetch(url, { signal: controller.signal });
+        } finally {
+            clearTimeout(timeoutId);
+        }
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
         const bytes = new Uint8Array(await resp.arrayBuffer());
