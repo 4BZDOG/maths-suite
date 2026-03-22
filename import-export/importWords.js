@@ -214,5 +214,6 @@ export function handleDroppedFile(file, onApplyJSON, onTextImport) {
             }
         }
     };
+    r.onerror = () => showToast('Failed to read file.', 'error');
     r.readAsText(file);
 }
