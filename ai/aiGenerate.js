@@ -110,9 +110,21 @@ Return ONLY a valid JSON array with no extra text, no markdown fences:
 
 // ---- Provider fetch functions --------------------------------
 
+const AI_TIMEOUT_MS = 30000;
+
+async function _fetchWithTimeout(url, options) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
 async function fetchGoogle(apiKey, modelId, prompt) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
-    const res = await fetch(url, {
+    const res = await _fetchWithTimeout(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -129,7 +141,7 @@ async function fetchGoogle(apiKey, modelId, prompt) {
 }
 
 async function fetchGroq(apiKey, modelId, prompt) {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const res = await _fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -151,7 +163,7 @@ async function fetchGroq(apiKey, modelId, prompt) {
 }
 
 async function fetchOpenAI(apiKey, modelId, prompt) {
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const res = await _fetchWithTimeout('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -173,7 +185,7 @@ async function fetchOpenAI(apiKey, modelId, prompt) {
 }
 
 async function fetchAnthropic(apiKey, modelId, prompt) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await _fetchWithTimeout('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -196,7 +208,7 @@ async function fetchAnthropic(apiKey, modelId, prompt) {
 }
 
 async function fetchOpenRouter(apiKey, modelId, prompt) {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const res = await _fetchWithTimeout('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

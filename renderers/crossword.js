@@ -107,7 +107,7 @@ function _autoScaleCluesToFit(footerEl) {
 }
 
 function esc(str) {
-    return String(str)
+    return String(str || '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')

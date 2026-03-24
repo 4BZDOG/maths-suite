@@ -15,6 +15,8 @@ export function downloadConfig() {
     const a = document.createElement('a');
     a.href     = 'data:text/json;charset=utf-8,' + encodeURIComponent(payload);
     a.download = 'maths-quiz-config.json';
+    document.body.appendChild(a);
     a.click();
+    a.remove();
     showToast('Configuration saved');
 }

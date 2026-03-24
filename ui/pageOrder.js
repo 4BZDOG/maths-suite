@@ -11,20 +11,22 @@ export function setupSortableList() {
 
     sortList.addEventListener('dragstart', e => {
         draggedItem = e.target.closest('.sortable-item');
+        if (!draggedItem) return;
         e.dataTransfer.effectAllowed = 'move';
-        setTimeout(() => draggedItem.classList.add('dragging'), 0);
+        setTimeout(() => draggedItem?.classList.add('dragging'), 0);
     });
 
     sortList.addEventListener('dragend', () => {
-        draggedItem.classList.remove('dragging');
+        if (draggedItem) draggedItem.classList.remove('dragging');
         draggedItem = null;
         saveState();
     });
 
     sortList.addEventListener('dragover', e => {
         e.preventDefault();
+        const currentItem = document.querySelector('.dragging');
+        if (!currentItem) return;
         const afterElement = _getDragAfterElement(sortList, e.clientY);
-        const currentItem  = document.querySelector('.dragging');
         if (afterElement == null) sortList.appendChild(currentItem);
         else sortList.insertBefore(currentItem, afterElement);
     });
