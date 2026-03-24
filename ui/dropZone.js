@@ -33,7 +33,7 @@ export function setupDragAndDrop(onFileDrop) {
     document.addEventListener('drop', e => {
         const dz = document.getElementById('drop-zone');
         if (dz) dz.classList.remove('active');
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
             e.preventDefault();
             if (_onFileDropped) _onFileDropped(e.dataTransfer.files[0]);
         }
