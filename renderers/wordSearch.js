@@ -36,7 +36,7 @@ export function renderWordSearch(gridArea, footerArea, wsData, clueBank, setting
 
         for (let y = 0; y < wsData.size; y++) {
             for (let x = 0; x < wsData.size; x++) {
-                htmlStr += `<div class="cell" style="--cell-size: ${z}px;">${wsData.grid[y][x]}</div>`;
+                htmlStr += `<div class="cell" style="--cell-size: ${z}px;">${esc(wsData.grid[y][x])}</div>`;
             }
         }
         htmlStr += `</div>`;

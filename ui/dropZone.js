@@ -41,7 +41,7 @@ export function setupDragAndDrop(onFileDrop) {
 }
 
 function _hasFiles(e) {
-    return e.dataTransfer.types && (
+    return e.dataTransfer?.types && (
         e.dataTransfer.types.includes('Files') ||
         e.dataTransfer.types.includes('application/x-moz-file')
     );

@@ -2,6 +2,10 @@
 // renderers/notes.js — Page 1: Notes/vocabulary page preview
 // =============================================================
 
+function esc(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 /**
  * @param {HTMLElement} container
  * @param {Object}      puzzleData  - state.puzzleData (notes may be null before gen)
@@ -36,14 +40,14 @@ export function renderNotes(container, puzzleData, words, settings, onUpdateWord
         htmlStr += isMatching
             ? `<span class="notes-num" style="width:60px">${i + 1}. ____</span>`
             : `<span class="notes-num">${i + 1}.</span>`;
-        htmlStr += `<div class="notes-word"><div class="notes-editable" ${!isMatching ? 'contenteditable="true"' : ''} ${!isMatching ? `onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onblur="window._puzzleApp.updateWord(${i}, 'word', this.innerText)"` : ''}>${w.term}</div></div>`;
+        htmlStr += `<div class="notes-word"><div class="notes-editable" ${!isMatching ? 'contenteditable="true"' : ''} ${!isMatching ? `onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onblur="window._puzzleApp.updateWord(${i}, 'word', this.innerText)"` : ''}>${esc(w.term)}</div></div>`;
         htmlStr += '<div class="notes-clue">';
 
         if (isMatching) {
-            htmlStr += `<div class="notes-editable">${w.matchLetter}. ${w.clue}</div>`;
+            htmlStr += `<div class="notes-editable">${esc(w.matchLetter)}. ${esc(w.clue)}</div>`;
             htmlStr += `<span class="notes-clue-length">(${w.clueTermLength ?? w.term.length})</span>`;
         } else {
-            htmlStr += `<div class="notes-editable" contenteditable="true" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onblur="window._puzzleApp.updateWord(${i}, 'clue', this.innerText)">${w.clue}</div>`;
+            htmlStr += `<div class="notes-editable" contenteditable="true" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}" onblur="window._puzzleApp.updateWord(${i}, 'clue', this.innerText)">${esc(w.clue)}</div>`;
             htmlStr += `<span class="notes-clue-length">(${w.term.length})</span>`;
         }
 
