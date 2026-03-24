@@ -6,6 +6,8 @@ import { showToast } from '../ui/toast.js';
 import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
 import { loadJSPDF, loadFontForPDF, FONT_SELECT_MAP } from './pdfFonts.js';
 import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue } from './pdfHelpers.js';
+// PAYMENTS: import access helpers — replace session.js backend stub when server is ready
+import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
 
 let isExporting = false;
 
@@ -251,7 +253,14 @@ export async function exportPDF() {
 
     const title    = cfg.title || 'Maths Quiz';
     const sub      = cfg.sub   || '';
-    const count    = (() => { const el = document.getElementById('bulkCount'); return el ? Math.min(50, Math.max(1, parseInt(el.value, 10) || 1)) : 1; })();
+    // PAYMENTS: clamp bulk count to tier limit (free = 1, pro = up to 50)
+    const count    = (() => {
+        const el = document.getElementById('bulkCount');
+        const requested = el ? Math.min(50, Math.max(1, parseInt(el.value, 10) || 1)) : 1;
+        const clamped = clampBulkExportCount(requested);
+        if (clamped < requested) showToast(`Bulk export limited to ${FREE_LIMITS.BULK_EXPORT_MAX} on the free plan.`, 'warning');
+        return clamped;
+    })();
     const filename = (() => { const el = document.getElementById('exportFilename'); return el ? el.value : 'MathsQuiz'; })()
         .replace(/[^a-z0-9-_]/gi, '_');
 

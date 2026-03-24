@@ -275,6 +275,13 @@ function parseResponse(text) {
 export async function generateWords(opts) {
     const { providerId, modelId, apiKey, topic, gradeLevel, subject, difficulty, count } = opts;
 
+    // PAYMENTS: AI generation is gated on Pro tier.
+    // When a real backend is ready, replace this import with a server-validated check.
+    // For now, BYOK users on free tier are allowed (they supply their own key).
+    // Uncomment the block below to enforce the Pro gate:
+    // import { requireFeature, FEATURE } from '../payments/access.js';
+    // if (!requireFeature(FEATURE.AI_GENERATION, showToastFn)) return null;
+
     if (!apiKey?.trim()) throw new Error('Please enter your API key.');
     if (!topic?.trim())  throw new Error('Please enter a topic or context.');
 
