@@ -1,5 +1,5 @@
 // core/history.js — Undo / Redo for topic selection + questionsPerSet
-import { state } from './state.js';
+import { state, ALL_SUBTOPICS } from './state.js';
 
 const MAX_HISTORY = 50;
 let history      = [];
@@ -20,12 +20,23 @@ export function pushHistory() {
     _updateButtons();
 }
 
+function _applySnapToDOM(snap) {
+    ALL_SUBTOPICS.forEach(t => {
+        const id = 'topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const el = document.getElementById(id);
+        if (el) el.checked = snap.selectedTopics[t] !== false;
+    });
+    const qps = document.getElementById('questionsPerSet');
+    if (qps) qps.value = snap.questionsPerSet;
+}
+
 export function undo(onComplete) {
     if (historyIndex <= 0) return;
     historyIndex--;
     const snap = history[historyIndex];
     Object.assign(state.selectedTopics, snap.selectedTopics);
     state.questionsPerSet = snap.questionsPerSet;
+    _applySnapToDOM(snap);
     _updateButtons();
     if (onComplete) onComplete();
 }
@@ -36,6 +47,7 @@ export function redo(onComplete) {
     const snap = history[historyIndex];
     Object.assign(state.selectedTopics, snap.selectedTopics);
     state.questionsPerSet = snap.questionsPerSet;
+    _applySnapToDOM(snap);
     _updateButtons();
     if (onComplete) onComplete();
 }

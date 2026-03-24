@@ -410,23 +410,20 @@ window.addEventListener('load', async () => {
 
         setupSidebarResize();
         setupSortableList('#page-order-list', () => saveState());
-        setupDragAndDrop(
-            document.getElementById('drop-zone'),
-            (f) => {
-                // JSON config restore only (no CSV import needed anymore)
-                const r = new FileReader();
-                r.onload = e => {
-                    try {
-                        const parsed = JSON.parse(e.target.result);
-                        applyStateToDOM(parsed);
-                        generateAll();
-                        showToast('Config loaded');
-                    } catch { showToast('Invalid JSON file', 'error'); }
-                };
-                r.onerror = () => showToast('Failed to read file.', 'error');
-                r.readAsText(f);
-            }
-        );
+        setupDragAndDrop((f) => {
+            // JSON config restore only (no CSV import needed anymore)
+            const r = new FileReader();
+            r.onload = e => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    applyStateToDOM(parsed);
+                    generateAll();
+                    showToast('Config loaded');
+                } catch { showToast('Invalid JSON file', 'error'); }
+            };
+            r.onerror = () => showToast('Failed to read file.', 'error');
+            r.readAsText(f);
+        });
 
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') closeModal();

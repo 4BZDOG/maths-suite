@@ -41,9 +41,14 @@ export function saveState() {
 // Load from localStorage and return raw parsed object (or null)
 export function loadRawState() {
     try {
-        const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY_OLD);
-        if (!raw) return null;
-        return JSON.parse(raw);
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+        const oldRaw = localStorage.getItem(STORAGE_KEY_OLD);
+        if (!oldRaw) return null;
+        // Migrate from previous key: persist under new key and remove old
+        localStorage.setItem(STORAGE_KEY, oldRaw);
+        localStorage.removeItem(STORAGE_KEY_OLD);
+        return JSON.parse(oldRaw);
     } catch (e) {
         localStorage.removeItem(STORAGE_KEY);
         showToast('Saved data was corrupted and has been reset.', 'error');

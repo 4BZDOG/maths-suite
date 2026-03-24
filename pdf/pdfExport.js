@@ -251,7 +251,7 @@ export async function exportPDF() {
 
     const title    = cfg.title || 'Maths Quiz';
     const sub      = cfg.sub   || '';
-    const count    = (() => { const el = document.getElementById('bulkCount'); return el ? parseInt(el.value, 10) : 1; })();
+    const count    = (() => { const el = document.getElementById('bulkCount'); return el ? Math.min(50, Math.max(1, parseInt(el.value, 10) || 1)) : 1; })();
     const filename = (() => { const el = document.getElementById('exportFilename'); return el ? el.value : 'MathsQuiz'; })()
         .replace(/[^a-z0-9-_]/gi, '_');
 
@@ -297,7 +297,7 @@ export async function exportPDF() {
             try {
                 const ok = await loadFontForPDF(doc, fontName, 400);
                 if (ok) { await loadFontForPDF(doc, fontName, 700); pdfFont = fontName; }
-            } catch (_) { }
+            } catch (e) { console.warn('Unexpected font load error:', e); }
         }
         ctx = buildCtx(doc, pdfFont, wmImg, scale, { PAGE_WIDTH, PAGE_HEIGHT, MARGIN }, cfg);
 
