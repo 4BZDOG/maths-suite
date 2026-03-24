@@ -11,8 +11,9 @@ export function setupSortableList() {
 
     sortList.addEventListener('dragstart', e => {
         draggedItem = e.target.closest('.sortable-item');
+        if (!draggedItem) return;
         e.dataTransfer.effectAllowed = 'move';
-        setTimeout(() => draggedItem.classList.add('dragging'), 0);
+        setTimeout(() => draggedItem?.classList.add('dragging'), 0);
     });
 
     sortList.addEventListener('dragend', () => {

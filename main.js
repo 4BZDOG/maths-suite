@@ -186,6 +186,7 @@ function focusPage(n) {
 // Topic toggles
 // =============================================================
 function toggleTopic(topicName) {
+    pushHistory();
     const newVal = !state.selectedTopics[topicName];
     state.selectedTopics[topicName] = newVal;
     // When toggling the parent checkbox, set ALL sub-ops to match
@@ -211,6 +212,7 @@ function toggleTopic(topicName) {
 }
 
 function setTopicsAll(enabled) {
+    pushHistory();
     ALL_SUBTOPICS.forEach(t => {
         state.selectedTopics[t] = enabled;
         const id = 'topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
@@ -372,8 +374,8 @@ window._puzzleApp = {
     updateOpacity,
     clearWatermark,
     hardReset: () => hardReset(),
-    undo: () => undo(() => { saveState(); generateAll(); }),
-    redo: () => redo(() => { saveState(); generateAll(); }),
+    undo: () => undo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),
+    redo: () => redo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),
     debouncedGenerate,
     renderActivePage,
     debouncedUpdateUI,
@@ -427,8 +429,8 @@ window.addEventListener('load', async () => {
 
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') closeModal();
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(() => { saveState(); generateAll(); }); }
-            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(() => { saveState(); generateAll(); }); }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }); }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }); }
         });
 
         await new Promise(r => setTimeout(r, 300));
