@@ -2216,36 +2216,38 @@ table.mode-cw td.cell.empty {
     background: var(--bg-panel);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 10px 14px 8px;
+    padding: 10px 14px 10px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 0;
     font-family: var(--user-font);
     break-inside: avoid;
 }
-.problem-header {
+/* Number + clue on the same line */
+.problem-clue-row {
     display: flex;
-    align-items: center;
-    gap: 4px;
+    align-items: baseline;
+    gap: 5px;
 }
 .problem-num {
     font-weight: 800;
     font-size: calc(0.78rem * var(--global-font-scale) * var(--page-scale));
     color: #94a3b8;
-    min-width: 22px;
+    min-width: 20px;
     flex-shrink: 0;
+    line-height: 1.5;
 }
 .problem-clue {
     font-size: calc(0.9rem * var(--global-font-scale) * var(--page-scale));
     color: var(--text-main);
     line-height: 1.5;
-    padding: 2px 0;
+    flex: 1;
 }
 .problem-working-area {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    margin: 3px 0 0;
+    gap: 0;
+    margin: 8px 0 0;
 }
 .problem-working-label {
     font-size: calc(0.63rem * var(--global-font-scale) * var(--page-scale));
@@ -2253,11 +2255,12 @@ table.mode-cw td.cell.empty {
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+    margin-bottom: 2px;
 }
 .problem-working-line {
     display: block;
     width: 100%;
-    height: 20px;
+    height: 30px;
     border-bottom: 1px dashed #cbd5e1;
 }
 [data-theme="dark"] .problem-working-line { border-bottom-color: #334155; }
@@ -2265,9 +2268,9 @@ table.mode-cw td.cell.empty {
 .problem-answer-box {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 6px;
-    padding-top: 5px;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 7px;
     border-top: 1px dashed var(--border);
 }
 .problem-answer-label {
@@ -2279,9 +2282,29 @@ table.mode-cw td.cell.empty {
 }
 .problem-answer-line {
     flex: 1;
-    height: 18px;
+    height: 22px;
     border-bottom: 2px solid #cbd5e1;
     min-width: 60px;
+}
+/* Topic badge shown below the answer line */
+.problem-tag {
+    align-self: flex-start;
+    margin-top: 6px;
+    font-size: calc(0.6rem * var(--global-font-scale) * var(--page-scale));
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 1px 6px;
+    border-radius: 20px;
+    line-height: 1.6;
+}
+/* Cap-overflow notice shown at the bottom of a capped page */
+.problem-overflow-notice {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: calc(0.72rem * var(--global-font-scale) * var(--page-scale));
+    color: #94a3b8;
+    padding: 8px 0 0;
+    font-style: italic;
 }
 
 /* Number Search clue list label */
