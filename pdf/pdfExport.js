@@ -57,7 +57,6 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
 
     let cy = startY, col = 0;
     let rowMaxH = 0;
-    let onFirstPage = true;
     let overflowCount = 0;
 
     doc.setFont(pdfFont, 'normal');
@@ -66,12 +65,16 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
     for (let i = 0; i < questions.length; i++) {
         const item = questions[i];
 
-        // Pre-calculate item height to decide whether it fits
+        // Pre-calculate item height to decide whether it fits.
+        // Fraction clues are stacked (numerator + bar + denominator) so use 3× line height.
         const clueText   = latexToText(item.clue || '');
-        const clueLines  = hasFraction(item.clue)
-            ? [clueText]  // fraction renderer handles its own height; approximate as 1 line
+        const isFraction = hasFraction(item.clue);
+        const clueLines  = isFraction
+            ? [clueText]
             : doc.splitTextToSize(clueText, colW - 14);
-        const clueBlockH = clueLines.length * 4.5 * pScale;
+        const clueBlockH = isFraction
+            ? 3 * 4.5 * pScale   // conservative estimate for stacked fraction rendering
+            : clueLines.length * 4.5 * pScale;
 
         const workingCount = item.difficulty === 'Hard' ? 2 : item.difficulty === 'Medium' ? 1 : 0;
         const tagH         = showTopic ? 4 * pScale : 0;
@@ -84,19 +87,16 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
         // Check overflow — whether a new row would push past the bottom margin
         const isNewRow = cols === 2 ? col === 0 : true;
         if (isNewRow && cy + itemH > PAGE_HEIGHT - MARGIN - 10) {
-            if (capOnePage && onFirstPage) {
-                // Count remaining questions as overflow and stop
+            if (capOnePage) {
                 overflowCount = questions.length - i;
                 break;
             }
-            // Overflow onto a new PDF page
             drawExportIdFooter(ctx, exportId, pScale);
             doc.addPage();
             drawWatermark();
             cy = MARGIN + 15 * scale;
             col = 0;
             rowMaxH = 0;
-            onFirstPage = false;
         }
 
         const itemX = col === 0 ? MARGIN : MARGIN + colW + 8;

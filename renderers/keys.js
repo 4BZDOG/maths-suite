@@ -1,5 +1,6 @@
 // renderers/keys.js — Answer Key: lists all questions with answers across 3 difficulty sets
 import { renderKaTeX } from './katexRender.js';
+import { esc } from './htmlUtils.js';
 
 export function renderKeys(container, generatedSets, settings) {
     if (!container) return;
@@ -37,6 +38,3 @@ export function renderKeys(container, generatedSets, settings) {
     renderKaTeX(container);
 }
 
-function esc(str) {
-    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}

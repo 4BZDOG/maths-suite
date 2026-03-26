@@ -2375,20 +2375,25 @@ table.mode-cw td.cell.empty {
     font-weight: 500;
 }
 
-/* Outcome code chip shown inline in each topic row */
-.outcome-chip {
+/* Shared structure for all outcome code badges */
+.outcome-chip,
+.outcome-code-pill {
     font-size: 9.5px;
-    font-weight: 700;
     letter-spacing: 0.03em;
-    padding: 1px 5px;
     border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+/* Inline chip — topic toggle list (always indigo) */
+.outcome-chip {
+    font-weight: 700;
+    padding: 1px 5px;
+    cursor: default;
     background: rgba(99,102,241,0.10);
     color: #6366f1;
     border: 1px solid rgba(99,102,241,0.22);
-    white-space: nowrap;
-    flex-shrink: 0;
-    cursor: default;
-    user-select: none;
 }
 [data-theme="dark"] .outcome-chip {
     background: rgba(99,102,241,0.18);
@@ -2420,8 +2425,8 @@ table.mode-cw td.cell.empty {
 }
 .outcomes-summary::-webkit-details-marker { display: none; }
 .outcomes-summary::before {
-    content: '\f078'; /* fa-chevron-down */
-    font-family: 'Font Awesome 6 Free';
+    content: '\f078' / '▾'; /* fa-chevron-down with Unicode fallback */
+    font-family: 'Font Awesome 6 Free', sans-serif;
     font-weight: 900;
     font-size: 9px;
     color: var(--text-muted);
@@ -2457,14 +2462,10 @@ table.mode-cw td.cell.empty {
     transition: background 0.12s;
 }
 .outcome-row:hover { background: rgba(99,102,241,0.06); }
+/* Pill variant — outcomes panel list (color set by parent .outcome-wm or default) */
 .outcome-code-pill {
-    font-size: 9.5px;
     font-weight: 800;
-    letter-spacing: 0.03em;
     padding: 2px 6px;
-    border-radius: 4px;
-    white-space: nowrap;
-    flex-shrink: 0;
     margin-top: 1px;
 }
 .outcome-wm .outcome-code-pill  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }

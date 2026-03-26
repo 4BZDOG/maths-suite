@@ -3,6 +3,7 @@
 // (Replaces Word Search for the maths edition)
 // =============================================================
 import { renderKaTeX } from './katexRender.js';
+import { esc } from './htmlUtils.js';
 
 const CELL_SIZE_MIN = 15, CELL_SIZE_MAX = 60;
 
@@ -73,10 +74,3 @@ export function renderWordSearch(gridArea, footerArea, wsData, clueBank, setting
     }
 }
 
-function esc(str) {
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}

@@ -1,5 +1,6 @@
 // renderers/problemSet.js — Renders a set of maths questions (Easy/Medium/Hard)
 import { renderKaTeX } from './katexRender.js';
+import { esc } from './htmlUtils.js';
 
 const TOPIC_COLOURS = {
     'Number': '#3b82f6', 'Algebra': '#8b5cf6', 'Geometry': '#10b981',
@@ -82,11 +83,12 @@ function _capToOnePage(container) {
     const items = Array.from(grid.querySelectorAll('.problem-item'));
     let hiddenCount = 0;
 
-    for (const item of items) {
-        const rect = item.getBoundingClientRect();
-        if (rect.bottom > pageBottom - 4) {
+    // Read all rects in one pass (single forced reflow), then write in a second pass.
+    const rects = items.map(item => item.getBoundingClientRect());
+    for (let i = 0; i < items.length; i++) {
+        if (rects[i].bottom > pageBottom - 4) {
             hiddenCount++;
-            item.style.display = 'none';
+            items[i].style.display = 'none';
         }
     }
 
@@ -98,7 +100,3 @@ function _capToOnePage(container) {
     }
 }
 
-function esc(str) {
-    if (!str) return '';
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}

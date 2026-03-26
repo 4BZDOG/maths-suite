@@ -261,7 +261,8 @@ function renderOutcomes() {
     const countable = outcomes.filter(o => !o.appliesAll).length;
     if (badge) badge.textContent = countable;
 
-    if (outcomes.length === 0) {
+    // Show empty state when no content topics are selected (MAO-WM-01 is always present but not useful alone)
+    if (activeTopics.length === 0) {
         panel.innerHTML = '<div style="padding:6px 8px; font-size:11px; color:var(--text-muted); font-style:italic;">No topics selected.</div>';
         return;
     }
