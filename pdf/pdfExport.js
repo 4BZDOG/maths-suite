@@ -37,27 +37,60 @@ function createQuestionSets(cfg, seed) {
 
 /**
  * Draw a question page (Easy / Medium / Hard) in PDF.
+ * Returns the number of questions that did NOT fit (overflow count).
  */
 function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
-    if (!questions || !questions.length) return;
+    if (!questions || !questions.length) return 0;
     const { doc, PAGE_WIDTH, PAGE_HEIGHT, MARGIN, scale, pdfFont, drawWatermark } = ctx;
     pScale = pScale || scale;
 
     const cfg = state.settings;
-    const cols = cfg.cols || 2;
-    const showTopic = cfg.showTopic || false;
-    const availW = PAGE_WIDTH - MARGIN * 2;
-    const colW   = (availW - (cols - 1) * 8) / cols;
-    const rowH   = 18 * pScale;
+    const cols       = cfg.cols || 2;
+    const showTopic  = cfg.showTopic || false;
+    const capOnePage = cfg.psCapOnePage || false;
+    const availW     = PAGE_WIDTH - MARGIN * 2;
+    const colW       = (availW - (cols - 1) * 8) / cols;
+    // Generous line spacing: working lines ~8mm, answer line ~8mm
+    const workingLineSpacing = 8 * pScale;
+    const answerLineSpacing  = 8 * pScale;
+    const itemGap            = 6 * pScale;  // vertical gap between items
 
     let cy = startY, col = 0;
-    let rowMaxH = 0; // track max height across both columns in a row
+    let rowMaxH = 0;
+    let overflowCount = 0;
 
     doc.setFont(pdfFont, 'normal');
     doc.setFontSize(9 * pScale);
 
-    questions.forEach((item, i) => {
-        if (cy + rowH > PAGE_HEIGHT - MARGIN - 10) {
+    for (let i = 0; i < questions.length; i++) {
+        const item = questions[i];
+
+        // Pre-calculate item height to decide whether it fits.
+        // Fraction clues are stacked (numerator + bar + denominator) so use 3× line height.
+        const clueText   = latexToText(item.clue || '');
+        const isFraction = hasFraction(item.clue);
+        const clueLines  = isFraction
+            ? [clueText]
+            : doc.splitTextToSize(clueText, colW - 14);
+        const clueBlockH = isFraction
+            ? 3 * 4.5 * pScale   // conservative estimate for stacked fraction rendering
+            : clueLines.length * 4.5 * pScale;
+
+        const workingCount = item.difficulty === 'Hard' ? 2 : item.difficulty === 'Medium' ? 1 : 0;
+        const tagH         = showTopic ? 4 * pScale : 0;
+        const itemH        = clueBlockH
+            + (workingCount > 0 ? 5 + workingCount * workingLineSpacing : 0)
+            + answerLineSpacing + 12 * pScale
+            + tagH
+            + itemGap;
+
+        // Check overflow — whether a new row would push past the bottom margin
+        const isNewRow = cols === 2 ? col === 0 : true;
+        if (isNewRow && cy + itemH > PAGE_HEIGHT - MARGIN - 10) {
+            if (capOnePage) {
+                overflowCount = questions.length - i;
+                break;
+            }
             drawExportIdFooter(ctx, exportId, pScale);
             doc.addPage();
             drawWatermark();
@@ -67,75 +100,77 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
         }
 
         const itemX = col === 0 ? MARGIN : MARGIN + colW + 8;
+        let drawY = cy;
 
+        // ── Question number (inline with clue) ──────────────────────
         doc.setFont(pdfFont, 'bold');
         doc.setFontSize(9 * pScale);
         doc.setTextColor(100, 116, 139);
-        doc.text(`${i + 1}.`, itemX, cy);
+        doc.text(`${i + 1}.`, itemX, drawY);
 
-        if (showTopic && item.topic) {
-            const topicRgb = TOPIC_COLOURS_RGB[item.topic] || [100, 116, 139];
-            doc.setFillColor(...topicRgb);
-            doc.circle(itemX + 6, cy - 1.5, 1.2, 'F');
-        }
-
-        // --- Clue rendering: stacked fractions or plain text ---
-        let clueBlockH, clueEndY;
+        // ── Clue text (starts same line as number) ──────────────────
+        let clueEndY;
+        const clueX = itemX + 9;
         if (hasFraction(item.clue)) {
-            const r = drawFractionClue(doc, item.clue || '', itemX + 10, cy, {
+            const r = drawFractionClue(doc, item.clue || '', clueX, drawY, {
                 fontSizePt: 9 * pScale, pdfFont, color: [15, 23, 42],
             });
-            clueBlockH = r.height + 1;
-            clueEndY   = cy + r.belowBaseline + 1;
+            clueEndY = drawY + r.belowBaseline + 1;
         } else {
-            const clueText  = latexToText(item.clue || '');
             doc.setFont(pdfFont, 'normal');
             doc.setFontSize(9 * pScale);
             doc.setTextColor(15, 23, 42);
-            const clueLines = doc.splitTextToSize(clueText, colW - 14);
             clueLines.forEach((line, li) => {
-                doc.text(line, itemX + 10, cy + li * 4.5 * pScale);
+                doc.text(line, clueX, drawY + li * 4.5 * pScale);
             });
-            clueBlockH = clueLines.length * 4.5 * pScale;
-            clueEndY   = cy + clueBlockH;
+            clueEndY = drawY + clueBlockH;
         }
 
-        // Working lines: Medium = 1, Hard = 2, Easy = 0
-        const workingCount = item.difficulty === 'Hard' ? 2 : item.difficulty === 'Medium' ? 1 : 0;
-        const lineSpacing  = 5.5 * pScale;
-        let nextY = clueEndY + 4;
+        let nextY = clueEndY + 5;
 
+        // ── Working lines ────────────────────────────────────────────
         if (workingCount > 0) {
             doc.setFont(pdfFont, 'normal');
             doc.setFontSize(6.5 * pScale);
             doc.setTextColor(160, 170, 185);
-            doc.text('Working:', itemX + 10, nextY);
-            nextY += 1;
+            doc.text('Working:', clueX, nextY);
+            nextY += 2;
             for (let wl = 0; wl < workingCount; wl++) {
-                nextY += lineSpacing;
+                nextY += workingLineSpacing;
                 doc.setDrawColor(200, 210, 225);
                 doc.setLineWidth(0.25);
                 doc.setLineDashPattern([0.6, 1.4], 0);
-                doc.line(itemX + 10, nextY, itemX + colW - 4, nextY);
+                doc.line(clueX, nextY, itemX + colW - 4, nextY);
                 doc.setLineDashPattern([], 0);
             }
-            nextY += 4;
+            nextY += 5;
         }
 
-        // Answer line
-        const lineY = nextY + lineSpacing;
+        // ── Answer line ──────────────────────────────────────────────
+        const lineY = nextY + answerLineSpacing;
         doc.setFont(pdfFont, 'normal');
         doc.setFontSize(8 * pScale);
         doc.setTextColor(100, 116, 139);
-        doc.text('Answer:', itemX + 10, lineY);
+        doc.text('Answer:', clueX, lineY);
         doc.setDrawColor(150, 160, 180);
         doc.setLineWidth(0.4);
         doc.setLineDashPattern([0.8, 1.2], 0);
-        doc.line(itemX + 28, lineY, itemX + colW - 4, lineY);
+        doc.line(clueX + 19, lineY, itemX + colW - 4, lineY);
         doc.setLineDashPattern([], 0);
+        nextY = lineY;
 
-        const itemH = clueBlockH + (workingCount + 1) * lineSpacing + (workingCount > 0 ? 9 : 5) + 8;
-        rowMaxH = Math.max(rowMaxH, itemH);
+        // ── Topic tag (below answer line) ────────────────────────────
+        if (showTopic && item.topic) {
+            const topicRgb = TOPIC_COLOURS_RGB[item.topic] || [100, 116, 139];
+            nextY += 4 * pScale;
+            doc.setFont(pdfFont, 'normal');
+            doc.setFontSize(6 * pScale);
+            doc.setTextColor(...topicRgb);
+            doc.text(item.topic.toUpperCase(), clueX, nextY);
+        }
+
+        const actualItemH = nextY - cy + itemGap;
+        rowMaxH = Math.max(rowMaxH, actualItemH);
 
         if (cols === 2) {
             if (col === 0) {
@@ -146,16 +181,15 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
                 rowMaxH = 0;
             }
         } else {
-            cy += itemH;
+            cy += actualItemH;
         }
-    });
-
-    // If last row had only left col filled, still advance cy
-    if (cols === 2 && col === 1) {
-        cy += rowMaxH;
     }
 
+    // Flush last partial row
+    if (cols === 2 && col === 1) cy += rowMaxH;
+
     drawExportIdFooter(ctx, exportId, pScale);
+    return overflowCount;
 }
 
 /**

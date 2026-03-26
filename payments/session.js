@@ -31,9 +31,9 @@ export function getSession() {
         const raw = localStorage.getItem(SESSION_KEY);
         if (raw) {
             const s = JSON.parse(raw);
-            // Treat expired sessions as free tier (backend should revoke server-side too)
+            // Expired sessions silently downgrade to free tier.
+            // Clearing storage is left to pruneExpiredSession() to avoid getter side-effects.
             if (s.expiresAt && Date.now() > s.expiresAt) {
-                clearSession();
                 return _defaultSession();
             }
             return s;
@@ -55,6 +55,17 @@ export function setSession(data) {
 /** Remove session (called on logout). */
 export function clearSession() {
     localStorage.removeItem(SESSION_KEY);
+}
+
+/**
+ * Remove a stored session that has expired.
+ * Call this explicitly at app startup rather than inside getSession() to avoid side-effects.
+ */
+export function pruneExpiredSession() {
+    const s = getSession();
+    if (s === _defaultSession() || (s.expiresAt && Date.now() > s.expiresAt)) {
+        clearSession();
+    }
 }
 
 /**

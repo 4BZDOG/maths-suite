@@ -2216,36 +2216,38 @@ table.mode-cw td.cell.empty {
     background: var(--bg-panel);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 10px 14px 8px;
+    padding: 10px 14px 10px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 0;
     font-family: var(--user-font);
     break-inside: avoid;
 }
-.problem-header {
+/* Number + clue on the same line */
+.problem-clue-row {
     display: flex;
-    align-items: center;
-    gap: 4px;
+    align-items: baseline;
+    gap: 5px;
 }
 .problem-num {
     font-weight: 800;
     font-size: calc(0.78rem * var(--global-font-scale) * var(--page-scale));
     color: #94a3b8;
-    min-width: 22px;
+    min-width: 20px;
     flex-shrink: 0;
+    line-height: 1.5;
 }
 .problem-clue {
     font-size: calc(0.9rem * var(--global-font-scale) * var(--page-scale));
     color: var(--text-main);
     line-height: 1.5;
-    padding: 2px 0;
+    flex: 1;
 }
 .problem-working-area {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    margin: 3px 0 0;
+    gap: 0;
+    margin: 8px 0 0;
 }
 .problem-working-label {
     font-size: calc(0.63rem * var(--global-font-scale) * var(--page-scale));
@@ -2253,11 +2255,12 @@ table.mode-cw td.cell.empty {
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+    margin-bottom: 2px;
 }
 .problem-working-line {
     display: block;
     width: 100%;
-    height: 20px;
+    height: 30px;
     border-bottom: 1px dashed #cbd5e1;
 }
 [data-theme="dark"] .problem-working-line { border-bottom-color: #334155; }
@@ -2265,9 +2268,9 @@ table.mode-cw td.cell.empty {
 .problem-answer-box {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 6px;
-    padding-top: 5px;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 7px;
     border-top: 1px dashed var(--border);
 }
 .problem-answer-label {
@@ -2279,9 +2282,29 @@ table.mode-cw td.cell.empty {
 }
 .problem-answer-line {
     flex: 1;
-    height: 18px;
+    height: 22px;
     border-bottom: 2px solid #cbd5e1;
     min-width: 60px;
+}
+/* Topic badge shown below the answer line */
+.problem-tag {
+    align-self: flex-start;
+    margin-top: 6px;
+    font-size: calc(0.6rem * var(--global-font-scale) * var(--page-scale));
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 1px 6px;
+    border-radius: 20px;
+    line-height: 1.6;
+}
+/* Cap-overflow notice shown at the bottom of a capped page */
+.problem-overflow-notice {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: calc(0.72rem * var(--global-font-scale) * var(--page-scale));
+    color: #94a3b8;
+    padding: 8px 0 0;
+    font-style: italic;
 }
 
 /* Number Search clue list label */
@@ -2350,6 +2373,118 @@ table.mode-cw td.cell.empty {
 .topic-toggle-name {
     flex: 1;
     font-weight: 500;
+}
+
+/* Shared structure for all outcome code badges */
+.outcome-chip,
+.outcome-code-pill {
+    font-size: 9.5px;
+    letter-spacing: 0.03em;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+/* Inline chip — topic toggle list (always indigo) */
+.outcome-chip {
+    font-weight: 700;
+    padding: 1px 5px;
+    cursor: default;
+    background: rgba(99,102,241,0.10);
+    color: #6366f1;
+    border: 1px solid rgba(99,102,241,0.22);
+}
+[data-theme="dark"] .outcome-chip {
+    background: rgba(99,102,241,0.18);
+    color: #a5b4fc;
+    border-color: rgba(99,102,241,0.35);
+}
+
+/* ---- NESA Outcomes panel --------------------------------- */
+.outcomes-details {
+    margin: 10px 0 0;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    overflow: hidden;
+}
+.outcomes-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.outcomes-summary::-webkit-details-marker { display: none; }
+.outcomes-summary::before {
+    content: '\f078' / '▾'; /* fa-chevron-down with Unicode fallback */
+    font-family: 'Font Awesome 6 Free', sans-serif;
+    font-weight: 900;
+    font-size: 9px;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+    order: 99;
+    margin-left: auto;
+}
+.outcomes-details[open] .outcomes-summary::before { transform: rotate(180deg); }
+.outcomes-summary-label { display: flex; align-items: center; gap: 6px; flex: 1; }
+.outcomes-count-badge {
+    font-size: 10px;
+    font-weight: 700;
+    background: #6366f1;
+    color: #fff;
+    border-radius: 20px;
+    padding: 0 6px;
+    min-width: 18px;
+    text-align: center;
+    line-height: 1.6;
+}
+.outcomes-panel {
+    padding: 0 10px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.outcome-row {
+    display: flex;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    align-items: flex-start;
+    transition: background 0.12s;
+}
+.outcome-row:hover { background: rgba(99,102,241,0.06); }
+/* Pill variant — outcomes panel list (color set by parent .outcome-wm or default) */
+.outcome-code-pill {
+    font-weight: 800;
+    padding: 2px 6px;
+    margin-top: 1px;
+}
+.outcome-wm .outcome-code-pill  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.outcome-row:not(.outcome-wm) .outcome-code-pill { background: rgba(99,102,241,0.10); color: #6366f1; border: 1px solid rgba(99,102,241,0.22); }
+[data-theme="dark"] .outcome-wm .outcome-code-pill { background: #14532d; color: #4ade80; border-color: #166534; }
+[data-theme="dark"] .outcome-row:not(.outcome-wm) .outcome-code-pill { background: rgba(99,102,241,0.18); color: #a5b4fc; border-color: rgba(99,102,241,0.35); }
+.outcome-text { flex: 1; }
+.outcome-content-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+}
+.outcome-statement {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    margin-top: 1px;
+    font-style: italic;
 }
 
 .topic-ops {

@@ -3,6 +3,7 @@
 // (Replaces Word Scramble for the maths edition)
 // =============================================================
 import { renderKaTeX } from './katexRender.js';
+import { esc } from './htmlUtils.js';
 
 /**
  * Render the Expression Scramble page.
@@ -42,10 +43,3 @@ export function renderScramble(container, scrData, settings) {
     renderKaTeX(container);
 }
 
-function esc(str) {
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}

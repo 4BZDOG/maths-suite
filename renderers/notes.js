@@ -1,10 +1,7 @@
 // =============================================================
 // renderers/notes.js — Page 1: Notes/vocabulary page preview
 // =============================================================
-
-function esc(str) {
-    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+import { esc } from './htmlUtils.js';
 
 /**
  * @param {HTMLElement} container

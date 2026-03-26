@@ -51,6 +51,7 @@ export const state = {
         showExportId:    true,
         showTopic:       false,
         cols:            2,
+        psCapOnePage:    false,
         wmOpacity:       0.15,
         opts:            { easy: true, medium: true, hard: true, key: true },
         pageOrder:       ['easy', 'medium', 'hard', 'key'],
@@ -104,6 +105,7 @@ export function syncSettingsFromDOM() {
     s.showExportId   = getChk('showExportId', s.showExportId);
     s.showTopic      = getChk('psShowTopic', s.showTopic);
     s.cols           = parseInt(getVal('psCols', s.cols), 10);
+    s.psCapOnePage   = getChk('psCapOnePage', s.psCapOnePage);
     s.wmOpacity      = parseFloat(
         document.documentElement.style.getPropertyValue('--wm-opacity') || s.wmOpacity
     );
@@ -233,6 +235,7 @@ export function applyStateToDOM(s) {
     setChk('showExportId',  cfg.showExportId);
     setChk('psShowTopic',   cfg.showTopic);
     setVal('psCols',        cfg.cols);
+    setChk('psCapOnePage',  cfg.psCapOnePage);
 
     if (cfg.wmOpacity !== undefined) {
         document.documentElement.style.setProperty('--wm-opacity', cfg.wmOpacity);

@@ -68,16 +68,6 @@ export function getCheckoutUrl(tier = TIER.PRO) {
     return PRICING[tier]?.checkoutUrl ?? null;
 }
 
-/** Returns true if the user is on the free tier. */
-export function isFree() {
-    return getCurrentTier() === TIER.FREE;
-}
-
-/** Returns true if the user is on the Pro tier. */
-export function isPro() {
-    return getCurrentTier() === TIER.PRO;
-}
-
 // ---- Internal -----------------------------------------------
 
 function _upgradeMessage(featureKey) {
