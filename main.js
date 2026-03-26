@@ -2,6 +2,7 @@
 // main.js — Application entry point (Maths Question Sets Edition)
 // =============================================================
 import { state, ALL_SUBTOPICS, SUB_OPS, setGeneratedSets, setActivePage, updateSetting, applyStateToDOM, syncSettingsFromDOM } from './core/state.js';
+import { getOutcomesForTopics } from './core/outcomes.js';
 import { pushHistory, undo, redo } from './core/history.js';
 import { saveState, saveStateNow, loadRawState, hardReset } from './core/storage.js';
 
@@ -209,6 +210,7 @@ function toggleTopic(topicName) {
     saveState();
     // Don't auto-regenerate — user clicks Regenerate explicitly
     updateTopicCount();
+    renderOutcomes();
 }
 
 function setTopicsAll(enabled) {
@@ -233,6 +235,7 @@ function setTopicsAll(enabled) {
         }
     });
     updateTopicCount();
+    renderOutcomes();
     saveState();
 }
 
@@ -240,6 +243,39 @@ function updateTopicCount() {
     const count = getActiveTopics().length;
     const el = document.getElementById('topic-count');
     if (el) el.textContent = `${count} of ${ALL_SUBTOPICS.length} selected`;
+}
+
+/**
+ * Re-render the NESA outcomes panel to reflect the currently active topics.
+ * Reads `state.selectedTopics` directly — no DOM read needed.
+ */
+function renderOutcomes() {
+    const panel = document.getElementById('outcomes-panel');
+    const badge = document.getElementById('outcomes-count-badge');
+    if (!panel) return;
+
+    const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
+    const outcomes = getOutcomesForTopics(activeTopics, 'Stage 4');
+
+    // Count excludes the always-on MAO-WM-01
+    const countable = outcomes.filter(o => !o.appliesAll).length;
+    if (badge) badge.textContent = countable;
+
+    if (outcomes.length === 0) {
+        panel.innerHTML = '<div style="padding:6px 8px; font-size:11px; color:var(--text-muted); font-style:italic;">No topics selected.</div>';
+        return;
+    }
+
+    panel.innerHTML = outcomes.map(o => {
+        const cls = o.appliesAll ? 'outcome-row outcome-wm' : 'outcome-row';
+        return `<div class="${cls}">
+            <span class="outcome-code-pill">${o.code}</span>
+            <div class="outcome-text">
+                <div class="outcome-content-label">${o.contentLabel}</div>
+                <div class="outcome-statement">${o.statement}</div>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 function toggleSubOp(topic, opKey) {
@@ -380,6 +416,7 @@ window._puzzleApp = {
     renderActivePage,
     debouncedUpdateUI,
     saveState,
+    renderOutcomes,
 };
 
 Object.assign(window, window._puzzleApp);
@@ -409,6 +446,7 @@ window.addEventListener('load', async () => {
         updatePaperSize();
         updateUI();
         updateTopicCount();
+        renderOutcomes();
 
         setupSidebarResize();
         setupSortableList('#page-order-list', () => saveState());
