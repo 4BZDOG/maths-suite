@@ -2,7 +2,7 @@
 // main.js — Application entry point (Maths Question Sets Edition)
 // =============================================================
 import { state, ALL_SUBTOPICS, SUB_OPS, setGeneratedSets, setActivePage, updateSetting, applyStateToDOM, syncSettingsFromDOM } from './core/state.js';
-import { getOutcomesForTopics } from './core/outcomes.js';
+import { getOutcomesForTopics, getTopicsForOutcomeCodes } from './core/outcomes.js';
 import { pushHistory, undo, redo } from './core/history.js';
 import { saveState, saveStateNow, loadRawState, hardReset } from './core/storage.js';
 
@@ -37,7 +37,12 @@ const debounceFn = (func, wait) => {
 // Generation
 // =============================================================
 function getActiveTopics() {
-    return ALL_SUBTOPICS.filter(t => state.selectedTopics[t]);
+    const allSelected = ALL_SUBTOPICS.filter(t => state.selectedTopics[t]);
+    // If any outcomes are selected as a filter, restrict to matching topics only
+    const filteredCodes = Object.keys(state.selectedOutcomes).filter(c => state.selectedOutcomes[c]);
+    if (filteredCodes.length === 0) return allSelected;
+    const outcomeTopics = new Set(getTopicsForOutcomeCodes(filteredCodes, 'Stage 4'));
+    return allSelected.filter(t => outcomeTopics.has(t));
 }
 
 function generateAll() {
@@ -249,7 +254,8 @@ function updateTopicCount() {
 
 /**
  * Re-render the NESA outcomes panel to reflect the currently active topics.
- * Reads `state.selectedTopics` directly — no DOM read needed.
+ * Each row includes a filter checkbox so the user can target specific outcomes.
+ * Reads `state.selectedTopics` / `state.selectedOutcomes` directly.
  */
 function renderOutcomes() {
     const panel = document.getElementById('outcomes-panel');
@@ -259,19 +265,38 @@ function renderOutcomes() {
     const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
     const outcomes = getOutcomesForTopics(activeTopics, 'Stage 4');
 
-    // Count excludes the always-on MAO-WM-01
     const countable = outcomes.filter(o => !o.appliesAll).length;
     if (badge) badge.textContent = countable;
 
-    // Show empty state when no content topics are selected (MAO-WM-01 is always present but not useful alone)
     if (activeTopics.length === 0) {
         panel.innerHTML = '<div style="padding:6px 8px; font-size:11px; color:var(--text-muted); font-style:italic;">No topics selected.</div>';
         return;
     }
 
-    panel.innerHTML = outcomes.map(o => {
+    const activeFilterCodes = Object.keys(state.selectedOutcomes).filter(c => state.selectedOutcomes[c]);
+    const filterActive = activeFilterCodes.length > 0;
+
+    let html = '';
+    if (filterActive) {
+        html += `<div class="outcome-filter-notice">
+            Generating questions for <strong>${activeFilterCodes.length}</strong> selected outcome${activeFilterCodes.length > 1 ? 's' : ''}.
+            <button class="outcome-filter-clear" onclick="clearOutcomeFilter()">Clear filter</button>
+        </div>`;
+    }
+
+    html += outcomes.map(o => {
+        const isSelected = !!state.selectedOutcomes[o.code];
         const cls = o.appliesAll ? 'outcome-row outcome-wm' : 'outcome-row';
+        // appliesAll (MAO-WM-01) cannot be used to filter generation — no checkbox
+        const chkHtml = o.appliesAll ? '<span class="outcome-filter-spacer"></span>' : `<input
+            type="checkbox"
+            class="outcome-filter-chk"
+            id="outfilter-${o.code}"
+            title="Filter generation to this outcome"
+            ${isSelected ? 'checked' : ''}
+            onchange="toggleOutcomeFilter('${o.code}', this.checked)">`;
         return `<div class="${cls}">
+            ${chkHtml}
             <span class="outcome-code-pill">${o.code}</span>
             <div class="outcome-text">
                 <div class="outcome-content-label">${o.contentLabel}</div>
@@ -279,6 +304,22 @@ function renderOutcomes() {
             </div>
         </div>`;
     }).join('');
+
+    panel.innerHTML = html;
+}
+
+function toggleOutcomeFilter(code, checked) {
+    state.selectedOutcomes[code] = checked;
+    renderOutcomes();    // re-render to update notice
+    debouncedGenerate();
+    saveState();
+}
+
+function clearOutcomeFilter() {
+    Object.keys(state.selectedOutcomes).forEach(k => { state.selectedOutcomes[k] = false; });
+    renderOutcomes();
+    debouncedGenerate();
+    saveState();
 }
 
 function toggleSubOp(topic, opKey) {
@@ -412,6 +453,8 @@ window._puzzleApp = {
     handleImage,
     updateOpacity,
     clearWatermark,
+    toggleOutcomeFilter,
+    clearOutcomeFilter,
     hardReset: () => hardReset(),
     undo: () => undo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),
     redo: () => redo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),

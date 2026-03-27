@@ -164,6 +164,23 @@ export function getTopicOutcomeCodes(topicKey, stage = 'Stage 4') {
 }
 
 /**
+ * Returns topic keys (from TOPIC_OUTCOME_MAP) that are covered by any of
+ * the given outcome codes. Used to derive active topics from outcome selection.
+ *
+ * @param {string[]} outcomeCodes - e.g. ['MA4-INT-C-01', 'MA4-FRC-C-01']
+ * @param {string}   stage        - e.g. 'Stage 4'
+ * @returns {string[]} topic keys, e.g. ['Integers', 'Decimals', 'Fractions', ...]
+ */
+export function getTopicsForOutcomeCodes(outcomeCodes, stage = 'Stage 4') {
+    if (!outcomeCodes || outcomeCodes.length === 0) return [];
+    const codeSet = new Set(outcomeCodes);
+    return Object.keys(TOPIC_OUTCOME_MAP).filter(topicKey => {
+        const codes = TOPIC_OUTCOME_MAP[topicKey]?.outcomes?.[stage] ?? [];
+        return codes.some(c => codeSet.has(c));
+    });
+}
+
+/**
  * Returns all unique outcome objects (from STAGE_OUTCOMES) that are covered
  * by the given active topic keys.  Always includes appliesAll outcomes.
  *

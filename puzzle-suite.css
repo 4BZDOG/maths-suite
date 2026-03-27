@@ -2456,12 +2456,55 @@ table.mode-cw td.cell.empty {
 .outcome-row {
     display: flex;
     gap: 8px;
-    padding: 6px 8px;
+    padding: 5px 8px;
     border-radius: 6px;
     align-items: flex-start;
     transition: background 0.12s;
 }
 .outcome-row:hover { background: rgba(99,102,241,0.06); }
+
+/* Outcome filter checkbox */
+.outcome-filter-chk {
+    flex-shrink: 0;
+    margin-top: 3px;
+    accent-color: #6366f1;
+    width: 13px;
+    height: 13px;
+    cursor: pointer;
+}
+.outcome-filter-spacer {
+    flex-shrink: 0;
+    width: 13px;
+    display: inline-block;
+}
+.outcome-filter-notice {
+    font-size: 11px;
+    font-weight: 500;
+    color: #6366f1;
+    background: rgba(99,102,241,0.08);
+    border: 1px solid rgba(99,102,241,0.22);
+    border-radius: 6px;
+    padding: 5px 8px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.outcome-filter-clear {
+    margin-left: auto;
+    background: none;
+    border: 1px solid rgba(99,102,241,0.35);
+    border-radius: 4px;
+    color: #6366f1;
+    font-size: 10px;
+    padding: 2px 7px;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+.outcome-filter-clear:hover { background: rgba(99,102,241,0.12); }
+[data-theme="dark"] .outcome-filter-notice { color: #a5b4fc; background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.30); }
+[data-theme="dark"] .outcome-filter-clear { color: #a5b4fc; border-color: rgba(99,102,241,0.40); }
+
 /* Pill variant — outcomes panel list (color set by parent .outcome-wm or default) */
 .outcome-code-pill {
     font-weight: 800;
