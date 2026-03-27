@@ -2684,4 +2684,93 @@ table.mode-cw td.cell.empty {
     border-bottom-color: var(--border-dark, #374151);
 }
 
+/* ---- Outcomes worksheet header (above questions) ----------- */
+.outcomes-ws-header {
+    border: 1px solid rgba(99,102,241,0.22);
+    border-radius: 7px;
+    background: rgba(99,102,241,0.04);
+    padding: 7px 10px 8px;
+    margin-bottom: 10px;
+    break-inside: avoid;
+}
+.outcomes-ws-title {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #6366f1;
+    margin-bottom: 5px;
+}
+.outcomes-ws-list { display: flex; flex-direction: column; gap: 3px; }
+.outcomes-ws-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 8.5px;
+    line-height: 1.4;
+    color: var(--text-muted, #64748b);
+}
+.outcomes-ws-row--wm .outcomes-ws-pill {
+    background: #f0fdf4;
+    color: #16a34a;
+    border-color: #bbf7d0;
+}
+.outcomes-ws-pill {
+    flex-shrink: 0;
+    font-family: 'Courier New', monospace;
+    font-size: 7.5px;
+    font-weight: 700;
+    background: rgba(99,102,241,0.10);
+    color: #6366f1;
+    border: 1px solid rgba(99,102,241,0.22);
+    border-radius: 3px;
+    padding: 1px 4px;
+    letter-spacing: 0.02em;
+}
+.outcomes-ws-desc { flex: 1; }
+.outcomes-ws-desc strong { font-weight: 600; color: var(--text, #0f172a); }
+
+[data-theme="dark"] .outcomes-ws-header {
+    border-color: rgba(99,102,241,0.30);
+    background: rgba(99,102,241,0.08);
+}
+[data-theme="dark"] .outcomes-ws-title { color: #a5b4fc; }
+[data-theme="dark"] .outcomes-ws-pill {
+    background: rgba(99,102,241,0.18);
+    color: #a5b4fc;
+    border-color: rgba(99,102,241,0.35);
+}
+[data-theme="dark"] .outcomes-ws-row--wm .outcomes-ws-pill {
+    background: #14532d;
+    color: #4ade80;
+    border-color: #166534;
+}
+[data-theme="dark"] .outcomes-ws-desc strong { color: var(--text, #f1f5f9); }
+
+/* ---- Per-question outcome chips ----------------------------- */
+.q-outcome-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 3px;
+}
+.q-outcome-chip {
+    font-family: 'Courier New', monospace;
+    font-size: 7px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    background: rgba(99,102,241,0.08);
+    color: #6366f1;
+    border: 1px solid rgba(99,102,241,0.20);
+    border-radius: 3px;
+    padding: 1px 4px;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+[data-theme="dark"] .q-outcome-chip {
+    background: rgba(99,102,241,0.15);
+    color: #a5b4fc;
+    border-color: rgba(99,102,241,0.32);
+}
+
 } /* end @layer components (maths) */

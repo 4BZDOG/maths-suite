@@ -8,6 +8,7 @@ import { loadJSPDF, loadFontForPDF, FONT_SELECT_MAP } from './pdfFonts.js';
 import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue } from './pdfHelpers.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
+import { getOutcomesForTopics, getTopicOutcomeCodes } from '../core/outcomes.js';
 
 let isExporting = false;
 
@@ -45,9 +46,12 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
     pScale = pScale || scale;
 
     const cfg = state.settings;
-    const cols       = cfg.cols || 2;
-    const showTopic  = cfg.showTopic || false;
-    const capOnePage = cfg.psCapOnePage || false;
+    const cols                = cfg.cols || 2;
+    const showTopic           = cfg.showTopic || false;
+    const showOutcomesHeader  = cfg.psShowOutcomesHeader || false;
+    const showOutcomeChips    = cfg.psShowOutcomeChips || false;
+    const capOnePage          = cfg.psCapOnePage || false;
+    const stage               = 'Stage 4';
     const availW     = PAGE_WIDTH - MARGIN * 2;
     const colW       = (availW - (cols - 1) * 8) / cols;
     // Generous line spacing: working lines ~8mm, answer line ~8mm
@@ -58,6 +62,59 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
     let cy = startY, col = 0;
     let rowMaxH = 0;
     let overflowCount = 0;
+
+    // ── Outcomes header block ──────────────────────────────────
+    if (showOutcomesHeader) {
+        const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
+        const outcomes = getOutcomesForTopics(activeTopics, stage);
+        if (outcomes.length > 0) {
+            const headerPad   = 2.5 * pScale;
+            const rowH        = 4.2 * pScale;
+            const titleH      = 5 * pScale;
+            const totalH      = titleH + outcomes.length * rowH + headerPad * 2;
+
+            // Bordered box
+            doc.setDrawColor(99, 102, 241);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(MARGIN, cy, availW, totalH, 2, 2, 'S');
+
+            // Title
+            doc.setFont(pdfFont, 'bold');
+            doc.setFontSize(6.5 * pScale);
+            doc.setTextColor(99, 102, 241);
+            doc.text(`NESA ${stage} Outcomes`, MARGIN + headerPad, cy + headerPad + 3.5 * pScale);
+
+            // Outcome rows
+            let oy = cy + headerPad + titleH;
+            outcomes.forEach(o => {
+                const isWM = o.appliesAll;
+                const pillColor = isWM ? [22, 163, 74] : [99, 102, 241];
+                // Code pill background
+                doc.setFillColor(isWM ? 240 : 239, isWM ? 253 : 238, isWM ? 244 : 255);
+                const codeText = o.code;
+                const codeW = doc.getTextWidth(codeText) * (6.5 * pScale / 10) + 4;
+                doc.roundedRect(MARGIN + headerPad, oy - 2.8 * pScale, codeW, 3.5 * pScale, 1, 1, 'F');
+                doc.setFont(pdfFont, 'bold');
+                doc.setFontSize(6 * pScale);
+                doc.setTextColor(...pillColor);
+                doc.text(codeText, MARGIN + headerPad + 1.5, oy);
+
+                // Desc: "ContentLabel — statement"
+                const descX = MARGIN + headerPad + codeW + 3;
+                const descText = `${o.contentLabel} — ${o.statement}`;
+                const descW = availW - headerPad * 2 - codeW - 3;
+                const truncated = doc.splitTextToSize(descText, descW)[0]; // one line only
+                doc.setFont(pdfFont, 'normal');
+                doc.setFontSize(6 * pScale);
+                doc.setTextColor(80, 90, 110);
+                doc.text(truncated, descX, oy);
+
+                oy += rowH;
+            });
+
+            cy += totalH + 4 * pScale;
+        }
+    }
 
     doc.setFont(pdfFont, 'normal');
     doc.setFontSize(9 * pScale);
@@ -78,10 +135,12 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
 
         const workingCount = item.difficulty === 'Hard' ? 2 : item.difficulty === 'Medium' ? 1 : 0;
         const tagH         = showTopic ? 4 * pScale : 0;
+        const chipsH       = showOutcomeChips && item.topic ? 4 * pScale : 0;
         const itemH        = clueBlockH
             + (workingCount > 0 ? 5 + workingCount * workingLineSpacing : 0)
             + answerLineSpacing + 12 * pScale
             + tagH
+            + chipsH
             + itemGap;
 
         // Check overflow — whether a new row would push past the bottom margin
@@ -167,6 +226,28 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
             doc.setFontSize(6 * pScale);
             doc.setTextColor(...topicRgb);
             doc.text(item.topic.toUpperCase(), clueX, nextY);
+        }
+
+        // ── Per-question outcome chips ──────────────────────────────
+        if (showOutcomeChips && item.topic) {
+            const codes = getTopicOutcomeCodes(item.topic, stage);
+            if (codes.length > 0) {
+                nextY += 4 * pScale;
+                doc.setFont(pdfFont, 'bold');
+                doc.setFontSize(5.5 * pScale);
+                let chipX = clueX;
+                codes.forEach(code => {
+                    const cw = doc.getTextWidth(code) * (5.5 * pScale / 10) + 5;
+                    doc.setFillColor(239, 238, 255);
+                    doc.roundedRect(chipX, nextY - 2.5 * pScale, cw, 3.5 * pScale, 1, 1, 'F');
+                    doc.setDrawColor(99, 102, 241);
+                    doc.setLineWidth(0.2);
+                    doc.roundedRect(chipX, nextY - 2.5 * pScale, cw, 3.5 * pScale, 1, 1, 'S');
+                    doc.setTextColor(99, 102, 241);
+                    doc.text(code, chipX + 2, nextY);
+                    chipX += cw + 2;
+                });
+            }
         }
 
         const actualItemH = nextY - cy + itemGap;

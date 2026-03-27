@@ -49,9 +49,11 @@ export const state = {
         paperSize:       'a4',
         showAnswerKey:   true,
         showExportId:    true,
-        showTopic:       false,
-        cols:            2,
-        psCapOnePage:    false,
+        showTopic:             false,
+        psShowOutcomesHeader:  false,
+        psShowOutcomeChips:    false,
+        cols:                  2,
+        psCapOnePage:          false,
         wmOpacity:       0.15,
         opts:            { easy: true, medium: true, hard: true, key: true },
         pageOrder:       ['easy', 'medium', 'hard', 'key'],
@@ -103,9 +105,11 @@ export function syncSettingsFromDOM() {
     s.paperSize      = getVal('paperSize', s.paperSize);
     s.showAnswerKey  = getChk('showAnswerKey', s.showAnswerKey);
     s.showExportId   = getChk('showExportId', s.showExportId);
-    s.showTopic      = getChk('psShowTopic', s.showTopic);
-    s.cols           = parseInt(getVal('psCols', s.cols), 10);
-    s.psCapOnePage   = getChk('psCapOnePage', s.psCapOnePage);
+    s.showTopic             = getChk('psShowTopic',            s.showTopic);
+    s.psShowOutcomesHeader  = getChk('psShowOutcomesHeader',   s.psShowOutcomesHeader);
+    s.psShowOutcomeChips    = getChk('psShowOutcomeChips',     s.psShowOutcomeChips);
+    s.cols                  = parseInt(getVal('psCols', s.cols), 10);
+    s.psCapOnePage          = getChk('psCapOnePage', s.psCapOnePage);
     s.wmOpacity      = parseFloat(
         document.documentElement.style.getPropertyValue('--wm-opacity') || s.wmOpacity
     );
@@ -233,9 +237,11 @@ export function applyStateToDOM(s) {
     setVal('paperSize',   cfg.paperSize);
     setChk('showAnswerKey', cfg.showAnswerKey);
     setChk('showExportId',  cfg.showExportId);
-    setChk('psShowTopic',   cfg.showTopic);
-    setVal('psCols',        cfg.cols);
-    setChk('psCapOnePage',  cfg.psCapOnePage);
+    setChk('psShowTopic',           cfg.showTopic);
+    setChk('psShowOutcomesHeader',  cfg.psShowOutcomesHeader);
+    setChk('psShowOutcomeChips',    cfg.psShowOutcomeChips);
+    setVal('psCols',                cfg.cols);
+    setChk('psCapOnePage',          cfg.psCapOnePage);
 
     if (cfg.wmOpacity !== undefined) {
         document.documentElement.style.setProperty('--wm-opacity', cfg.wmOpacity);
