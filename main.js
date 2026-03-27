@@ -116,10 +116,17 @@ function renderActivePage() {
 
     const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
     const sWithTopics = { ...s, activeTopics, stage: 'Stage 4' };
-    renderProblemSet(document.getElementById('p1-area'), sets.easy,   sWithTopics, 'Easy');
-    renderProblemSet(document.getElementById('p2-area'), sets.medium, sWithTopics, 'Medium');
-    renderProblemSet(document.getElementById('p3-area'), sets.hard,   sWithTopics, 'Hard');
-    renderKeys(document.getElementById('key-container'), sets, s);
+    const nEasy   = renderProblemSet(document.getElementById('p1-area'), sets.easy,   sWithTopics, 'Easy');
+    const nMedium = renderProblemSet(document.getElementById('p2-area'), sets.medium, sWithTopics, 'Medium');
+    const nHard   = renderProblemSet(document.getElementById('p3-area'), sets.hard,   sWithTopics, 'Hard');
+
+    // When cap-to-1-page is on, only show answers for the questions that were rendered
+    const keySets = s.psCapOnePage ? {
+        easy:   (sets.easy   || []).slice(0, nEasy),
+        medium: (sets.medium || []).slice(0, nMedium),
+        hard:   (sets.hard   || []).slice(0, nHard),
+    } : sets;
+    renderKeys(document.getElementById('key-container'), keySets, sWithTopics);
 }
 
 function updateUI() {

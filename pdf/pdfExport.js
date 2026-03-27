@@ -529,6 +529,9 @@ export async function exportPDF() {
                 ctx.drawWatermark();
             };
 
+            // Track how many questions actually rendered per difficulty (for cap-to-1-page)
+            const visibleCounts = { easy: null, medium: null, hard: null };
+
             for (const pType of selectedPages) {
                 await new Promise(r => setTimeout(r, 0));
 
@@ -536,25 +539,34 @@ export async function exportPDF() {
                     addPage();
                     const ps = getPScale('easy');
                     const sy = drawHeader(ctx, title, sub, 'EASY — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [16, 185, 129]);
-                    drawQuestionPage(ctx, sets.easy, sy, ps, exportId, 'Easy');
+                    const overflow = drawQuestionPage(ctx, sets.easy, sy, ps, exportId, 'Easy');
+                    visibleCounts.easy = (sets.easy || []).length - overflow;
 
                 } else if (pType === 'medium') {
                     addPage();
                     const ps = getPScale('medium');
                     const sy = drawHeader(ctx, title, sub, 'MEDIUM — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [245, 158, 11]);
-                    drawQuestionPage(ctx, sets.medium, sy, ps, exportId, 'Medium');
+                    const overflow = drawQuestionPage(ctx, sets.medium, sy, ps, exportId, 'Medium');
+                    visibleCounts.medium = (sets.medium || []).length - overflow;
 
                 } else if (pType === 'hard') {
                     addPage();
                     const ps = getPScale('hard');
                     const sy = drawHeader(ctx, title, sub, 'HARD — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [239, 68, 68]);
-                    drawQuestionPage(ctx, sets.hard, sy, ps, exportId, 'Hard');
+                    const overflow = drawQuestionPage(ctx, sets.hard, sy, ps, exportId, 'Hard');
+                    visibleCounts.hard = (sets.hard || []).length - overflow;
 
                 } else if (pType === 'key') {
                     addPage();
                     const ps = getPScale('key');
                     const sy = drawHeader(ctx, title, sub, 'ANSWER KEY', true, setIndicator, ps, exportId);
-                    drawKeyPage(ctx, sets, sy, ps, exportId);
+                    // Trim answer key to only questions that were rendered on question pages
+                    const keySets = cfg.psCapOnePage ? {
+                        easy:   (sets.easy   || []).slice(0, visibleCounts.easy   ?? (sets.easy   || []).length),
+                        medium: (sets.medium || []).slice(0, visibleCounts.medium ?? (sets.medium || []).length),
+                        hard:   (sets.hard   || []).slice(0, visibleCounts.hard   ?? (sets.hard   || []).length),
+                    } : sets;
+                    drawKeyPage(ctx, keySets, sy, ps, exportId);
                 }
             }
         }
