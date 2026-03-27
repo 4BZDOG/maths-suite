@@ -1,6 +1,7 @@
 // renderers/problemSet.js — Renders a set of maths questions (Easy/Medium/Hard)
 import { renderKaTeX } from './katexRender.js';
 import { esc } from './htmlUtils.js';
+import { getOutcomesForTopics, getTopicOutcomeCodes } from '../core/outcomes.js';
 
 const TOPIC_COLOURS = {
     'Number': '#3b82f6', 'Algebra': '#8b5cf6', 'Geometry': '#10b981',
@@ -12,9 +13,13 @@ const TOPIC_COLOURS = {
 export function renderProblemSet(container, questions, settings, difficultyLabel) {
     if (!container) return;
 
-    const cols = settings.cols || 2;
-    const showTopic = settings.showTopic || false;
-    const capOnePage = settings.psCapOnePage || false;
+    const cols                = settings.cols || 2;
+    const showTopic           = settings.showTopic || false;
+    const showOutcomesHeader  = settings.psShowOutcomesHeader || false;
+    const showOutcomeChips    = settings.psShowOutcomeChips || false;
+    const capOnePage          = settings.psCapOnePage || false;
+    const activeTopics        = settings.activeTopics || [];
+    const stage               = settings.stage || 'Stage 4';
 
     if (!questions || questions.length === 0) {
         container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:40px;">
@@ -23,14 +28,36 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         return;
     }
 
+    // ── Outcomes header block ────────────────────────────────────
+    let headerHtml = '';
+    if (showOutcomesHeader && activeTopics.length > 0) {
+        const outcomes = getOutcomesForTopics(activeTopics, stage);
+        headerHtml = `<div class="outcomes-ws-header">
+            <div class="outcomes-ws-title">NESA ${esc(stage)} Outcomes</div>
+            <div class="outcomes-ws-list">${outcomes.map(o => `
+                <div class="outcomes-ws-row${o.appliesAll ? ' outcomes-ws-row--wm' : ''}">
+                    <span class="outcomes-ws-pill">${esc(o.code)}</span>
+                    <span class="outcomes-ws-desc"><strong>${esc(o.contentLabel)}</strong> — ${esc(o.statement)}</span>
+                </div>`).join('')}
+            </div>
+        </div>`;
+    }
+
     const colStyle = cols === 1 ? 'grid-template-columns: 1fr' : 'grid-template-columns: 1fr 1fr';
 
-    let html = `<div class="problem-set-grid" style="display:grid; ${colStyle}; gap:14px 20px; padding:4px;">`;
+    let html = headerHtml + `<div class="problem-set-grid" style="display:grid; ${colStyle}; gap:14px 20px; padding:4px;">`;
 
     questions.forEach((item, i) => {
         const topicColor = TOPIC_COLOURS[item.topic] || '#64748b';
         const topicBadge = showTopic
             ? `<span class="problem-tag" style="background:${topicColor}18; color:${topicColor}; border:1px solid ${topicColor}35;">${esc(item.topic)}</span>`
+            : '';
+
+        const outcomeCodes = showOutcomeChips && item.topic
+            ? getTopicOutcomeCodes(item.topic, stage)
+            : [];
+        const outcomeChipsHtml = outcomeCodes.length > 0
+            ? `<div class="q-outcome-chips">${outcomeCodes.map(c => `<span class="q-outcome-chip">${esc(c)}</span>`).join('')}</div>`
             : '';
 
         // Working lines: Hard = 2, Medium = 1, Easy = 0
@@ -53,6 +80,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
                 <span class="problem-answer-line"></span>
             </div>
             ${topicBadge}
+            ${outcomeChipsHtml}
         </div>`;
     });
 

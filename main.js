@@ -109,9 +109,11 @@ function renderActivePage() {
     const sets = state.generatedSets;
     const s    = state.settings;
 
-    renderProblemSet(document.getElementById('p1-area'), sets.easy,   s, 'Easy');
-    renderProblemSet(document.getElementById('p2-area'), sets.medium, s, 'Medium');
-    renderProblemSet(document.getElementById('p3-area'), sets.hard,   s, 'Hard');
+    const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
+    const sWithTopics = { ...s, activeTopics, stage: 'Stage 4' };
+    renderProblemSet(document.getElementById('p1-area'), sets.easy,   sWithTopics, 'Easy');
+    renderProblemSet(document.getElementById('p2-area'), sets.medium, sWithTopics, 'Medium');
+    renderProblemSet(document.getElementById('p3-area'), sets.hard,   sWithTopics, 'Hard');
     renderKeys(document.getElementById('key-container'), sets, s);
 }
 
