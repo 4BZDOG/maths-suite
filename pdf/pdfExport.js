@@ -76,9 +76,11 @@ function _estimateChipsHeight(doc, codes, colW, pScale, pdfFont, fontSizePt) {
     const chipH = 3.5 * pScale;
     let rows = 1;
     let lineW = 0;
-    const maxW = colW - 10;
+    // Match the effective max width used by _drawOutcomeChips (itemX + colW - 2)
+    // The clue indent is 9mm (clueX = itemX + 9), so available chip width is colW - 9 - 2.
+    const maxW = colW - 11;
     codes.forEach(code => {
-        const cw = doc.getTextWidth(code) + 6;  // slightly wider estimate for safety
+        const cw = doc.getTextWidth(code) + 4;
         if (lineW + cw > maxW && lineW > 0) {
             rows++;
             lineW = cw + 2;
@@ -86,7 +88,7 @@ function _estimateChipsHeight(doc, codes, colW, pScale, pdfFont, fontSizePt) {
             lineW += cw + 2;
         }
     });
-    return 4 * pScale + (rows - 1) * (chipH + 1);  // 4mm gap + extra rows
+    return 4 * pScale + rows * chipH + (rows - 1) * 1;  // 4mm gap + all chip rows
 }
 
 /**
@@ -284,8 +286,9 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
     const cfg              = state.settings;
     const showOutcomeChips = cfg.psShowOutcomeChips    || false;
     const showOutcomesHdr  = cfg.psShowOutcomesHeader  || false;
-    const stage            = 'Stage 4';
+    const stage            = DEFAULT_STAGE;
     const availW           = PAGE_WIDTH - MARGIN * 2;
+    const chipFontPt       = 5 * pScale;
 
     let cy = startY;
 
@@ -294,10 +297,26 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
         const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
         const outcomes = getOutcomesForTopics(activeTopics, stage);
         if (outcomes.length > 0) {
-            const headerPad = 2.5 * pScale;
-            const rowH      = 4.2 * pScale;
-            const titleH    = 5 * pScale;
-            const totalH    = titleH + outcomes.length * rowH + headerPad * 2;
+            const headerPad  = 2.5 * pScale;
+            const lineH      = 4.2 * pScale;
+            const titleH     = 5 * pScale;
+            const descFontPt = 6 * pScale;
+
+            // Pass 1: pre-compute per-row data so we can size the border rect correctly
+            doc.setFont(pdfFont, 'bold');
+            doc.setFontSize(descFontPt);
+            const rows = outcomes.map(o => {
+                const codeW    = doc.getTextWidth(o.code) + 4;
+                const descText = `${o.contentLabel} — ${o.statement}`;
+                const descW    = availW - headerPad * 2 - codeW - 3;
+                doc.setFont(pdfFont, 'normal');
+                doc.setFontSize(descFontPt);
+                const lines = doc.splitTextToSize(descText, descW);
+                doc.setFont(pdfFont, 'bold');
+                doc.setFontSize(descFontPt);
+                return { o, codeW, descText, descW, lines };
+            });
+            const totalH = titleH + rows.reduce((s, r) => s + r.lines.length * lineH, 0) + headerPad * 2;
 
             doc.setDrawColor(99, 102, 241);
             doc.setLineWidth(0.3);
@@ -308,29 +327,26 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             doc.setTextColor(99, 102, 241);
             doc.text(`NESA ${stage} Outcomes`, MARGIN + headerPad, cy + headerPad + 3.5 * pScale);
 
+            // Pass 2: draw each row
             let oy = cy + headerPad + titleH;
-            outcomes.forEach(o => {
+            rows.forEach(({ o, codeW, lines }) => {
                 const isWM      = o.appliesAll;
                 const pillColor = isWM ? [22, 163, 74] : [99, 102, 241];
 
                 doc.setFont(pdfFont, 'bold');
-                doc.setFontSize(6 * pScale);
-                const codeW = doc.getTextWidth(o.code) + 4;
-
+                doc.setFontSize(descFontPt);
                 doc.setFillColor(isWM ? 240 : 239, isWM ? 253 : 238, isWM ? 244 : 255);
                 doc.roundedRect(MARGIN + headerPad, oy - 2.8 * pScale, codeW, 3.5 * pScale, 1, 1, 'F');
                 doc.setTextColor(...pillColor);
                 doc.text(o.code, MARGIN + headerPad + 1.5, oy);
 
-                const descX    = MARGIN + headerPad + codeW + 3;
-                const descText = `${o.contentLabel} — ${o.statement}`;
-                const descW    = availW - headerPad * 2 - codeW - 3;
+                const descX = MARGIN + headerPad + codeW + 3;
                 doc.setFont(pdfFont, 'normal');
-                doc.setFontSize(6 * pScale);
+                doc.setFontSize(descFontPt);
                 doc.setTextColor(80, 90, 110);
-                doc.text(doc.splitTextToSize(descText, descW)[0], descX, oy);
+                lines.forEach((line, li) => doc.text(line, descX, oy + li * lineH));
 
-                oy += rowH;
+                oy += lines.length * lineH;
             });
 
             cy += totalH + 5 * pScale;
@@ -362,8 +378,11 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
         let ky = cy + 8 * pScale;
 
         sec.questions.forEach((q, i) => {
-            const chipH = showOutcomeChips && q.notes ? 4.5 * pScale : 0;
-            if (ky + 7 * pScale + chipH > PAGE_HEIGHT - MARGIN) return;
+            const codes    = showOutcomeChips && q.notes ? getTopicOutcomeCodes(q.notes, stage) : [];
+            const chipsH   = codes.length > 0
+                ? _estimateChipsHeight(doc, codes, colW, pScale, pdfFont, chipFontPt)
+                : 0;
+            if (ky + 7 * pScale + chipsH > PAGE_HEIGHT - MARGIN) return;
 
             const clueText = latexToText(q.clue || '');
             const ansText  = String(q.answerDisplay || q.answer || '');
@@ -387,25 +406,11 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             ky += 6 * pScale;
 
             // ── Outcome chips per key answer ─────────────────
-            if (showOutcomeChips && q.notes) {
-                const codes = getTopicOutcomeCodes(q.notes, stage);
-                if (codes.length > 0) {
-                    doc.setFont(pdfFont, 'bold');
-                    doc.setFontSize(4.5 * pScale);
-                    let chipX = cx;
-                    codes.forEach(code => {
-                        const cw = doc.getTextWidth(code) + 3;
-                        doc.setFillColor(239, 238, 255);
-                        doc.roundedRect(chipX, ky - 2.5 * pScale, cw, 3 * pScale, 1, 1, 'F');
-                        doc.setDrawColor(99, 102, 241);
-                        doc.setLineWidth(0.15);
-                        doc.roundedRect(chipX, ky - 2.5 * pScale, cw, 3 * pScale, 1, 1, 'S');
-                        doc.setTextColor(99, 102, 241);
-                        doc.text(code, chipX + 1.5, ky);
-                        chipX += cw + 1.5;
-                    });
-                    ky += chipH;
-                }
+            if (codes.length > 0) {
+                ky += 2 * pScale;
+                ky = _drawOutcomeChips(doc, codes, cx, ky, pScale, pdfFont,
+                    cx + colW, chipFontPt);
+                ky += 2 * pScale;
             }
         });
     });
