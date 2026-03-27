@@ -8,7 +8,7 @@ import { loadJSPDF, loadFontForPDF, FONT_SELECT_MAP } from './pdfFonts.js';
 import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue } from './pdfHelpers.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
-import { getOutcomesForTopics, getTopicOutcomeCodes } from '../core/outcomes.js';
+import { getOutcomesForTopics, getTopicOutcomeCodes, DEFAULT_STAGE } from '../core/outcomes.js';
 
 let isExporting = false;
 
@@ -37,6 +37,59 @@ function createQuestionSets(cfg, seed) {
 }
 
 /**
+ * Draw outcome code chips in a horizontal row, wrapping to a new line when
+ * the chips would exceed maxX. Returns the updated nextY after all chips.
+ * Caller must advance nextY by 4*pScale before calling to create the gap.
+ */
+function _drawOutcomeChips(doc, codes, x, y, pScale, pdfFont, maxX, fontSizePt) {
+    if (!codes.length) return y;
+    doc.setFont(pdfFont, 'bold');
+    doc.setFontSize(fontSizePt);
+    const chipH = 3.5 * pScale;
+    let chipX = x;
+    codes.forEach(code => {
+        const cw = doc.getTextWidth(code) + 4;
+        if (chipX + cw > maxX && chipX > x) {
+            chipX = x;
+            y += chipH + 1;         // wrap to next row
+        }
+        doc.setFillColor(239, 238, 255);
+        doc.roundedRect(chipX, y - 2.5 * pScale, cw, chipH, 1, 1, 'F');
+        doc.setDrawColor(99, 102, 241);
+        doc.setLineWidth(0.2);
+        doc.roundedRect(chipX, y - 2.5 * pScale, cw, chipH, 1, 1, 'S');
+        doc.setTextColor(99, 102, 241);
+        doc.text(code, chipX + 2, y);
+        chipX += cw + 2;
+    });
+    return y;
+}
+
+/**
+ * Estimate the height (mm) that outcome chips will occupy for a set of codes
+ * at a given pScale and column width. Used for pre-layout before drawing.
+ */
+function _estimateChipsHeight(doc, codes, colW, pScale, pdfFont, fontSizePt) {
+    if (!codes.length) return 0;
+    doc.setFont(pdfFont, 'bold');
+    doc.setFontSize(fontSizePt);
+    const chipH = 3.5 * pScale;
+    let rows = 1;
+    let lineW = 0;
+    const maxW = colW - 10;
+    codes.forEach(code => {
+        const cw = doc.getTextWidth(code) + 6;  // slightly wider estimate for safety
+        if (lineW + cw > maxW && lineW > 0) {
+            rows++;
+            lineW = cw + 2;
+        } else {
+            lineW += cw + 2;
+        }
+    });
+    return 4 * pScale + (rows - 1) * (chipH + 1);  // 4mm gap + extra rows
+}
+
+/**
  * Draw a question page (Easy / Medium / Hard) in PDF.
  * Returns the number of questions that did NOT fit (overflow count).
  */
@@ -46,21 +99,22 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
     pScale = pScale || scale;
 
     const cfg = state.settings;
-    const cols                = cfg.cols || 2;
-    const showTopic           = cfg.showTopic || false;
-    const showOutcomeChips    = cfg.psShowOutcomeChips || false;
-    const capOnePage          = cfg.psCapOnePage || false;
-    const stage               = 'Stage 4';
-    const availW     = PAGE_WIDTH - MARGIN * 2;
-    const colW       = (availW - (cols - 1) * 8) / cols;
-    // Generous line spacing: working lines ~8mm, answer line ~8mm
+    const cols             = cfg.cols || 2;
+    const showTopic        = cfg.showTopic || false;
+    const showOutcomeChips = cfg.psShowOutcomeChips || false;
+    const capOnePage       = cfg.psCapOnePage || false;
+    const stage            = DEFAULT_STAGE;
+    const availW           = PAGE_WIDTH - MARGIN * 2;
+    const colW             = (availW - (cols - 1) * 8) / cols;
+    const chipFontPt       = 5.5 * pScale;
     const workingLineSpacing = 8 * pScale;
     const answerLineSpacing  = 8 * pScale;
-    const itemGap            = 6 * pScale;  // vertical gap between items
+    const itemGap            = 6 * pScale;
 
-    let cy = startY, col = 0;
-    let rowMaxH = 0;
+    let cy          = startY, col = 0;
+    let rowMaxH     = 0;
     let overflowCount = 0;
+    let pageStartY  = startY;   // Y where content begins on the current PDF page
 
     doc.setFont(pdfFont, 'normal');
     doc.setFontSize(9 * pScale);
@@ -69,51 +123,56 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
         const item = questions[i];
 
         // Pre-calculate item height to decide whether it fits.
-        // Fraction clues are stacked (numerator + bar + denominator) so use 3× line height.
+        // Fraction clues need 3 line-heights (numerator + bar + denominator).
         const clueText   = latexToText(item.clue || '');
         const isFraction = hasFraction(item.clue);
         const clueLines  = isFraction
             ? [clueText]
             : doc.splitTextToSize(clueText, colW - 14);
         const clueBlockH = isFraction
-            ? 3 * 4.5 * pScale   // conservative estimate for stacked fraction rendering
+            ? 3 * 4.5 * pScale
             : clueLines.length * 4.5 * pScale;
 
         const workingCount = item.difficulty === 'Hard' ? 2 : item.difficulty === 'Medium' ? 1 : 0;
-        const tagH         = showTopic ? 4 * pScale : 0;
-        const chipsH       = showOutcomeChips && item.topic ? 4 * pScale : 0;
-        const itemH        = clueBlockH
+        const tagH    = showTopic ? 4 * pScale : 0;
+        // Use item.notes (specific sub-topic key) for outcome lookup — item.topic is broad category
+        const itemCodes = showOutcomeChips && item.notes ? getTopicOutcomeCodes(item.notes, stage) : [];
+        const chipsH    = itemCodes.length > 0
+            ? _estimateChipsHeight(doc, itemCodes, colW, pScale, pdfFont, chipFontPt)
+            : 0;
+        const itemH = clueBlockH
             + (workingCount > 0 ? 5 + workingCount * workingLineSpacing : 0)
             + answerLineSpacing + 12 * pScale
-            + tagH
-            + chipsH
-            + itemGap;
+            + tagH + chipsH + itemGap;
 
-        // Check overflow — whether a new row would push past the bottom margin
+        // Overflow check — only fires at row start for 2-column layout
         const isNewRow = cols === 2 ? col === 0 : true;
         if (isNewRow && cy + itemH > PAGE_HEIGHT - MARGIN - 10) {
             if (capOnePage) {
                 overflowCount = questions.length - i;
                 break;
             }
+            // Draw divider for this page before flipping to next
+            if (cols === 2) _drawColumnDivider(doc, MARGIN, colW, pageStartY, cy);
             drawExportIdFooter(ctx, exportId, pScale);
             doc.addPage();
             drawWatermark();
-            cy = MARGIN + 15 * scale;
-            col = 0;
-            rowMaxH = 0;
+            pageStartY = MARGIN + 15 * scale;
+            cy         = pageStartY;
+            col        = 0;
+            rowMaxH    = 0;
         }
 
         const itemX = col === 0 ? MARGIN : MARGIN + colW + 8;
         let drawY = cy;
 
-        // ── Question number (inline with clue) ──────────────────────
+        // ── Question number (inline with clue) ───────────────────────
         doc.setFont(pdfFont, 'bold');
         doc.setFontSize(9 * pScale);
         doc.setTextColor(100, 116, 139);
         doc.text(`${i + 1}.`, itemX, drawY);
 
-        // ── Clue text (starts same line as number) ──────────────────
+        // ── Clue text ────────────────────────────────────────────────
         let clueEndY;
         const clueX = itemX + 9;
         if (hasFraction(item.clue)) {
@@ -164,7 +223,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
         doc.setLineDashPattern([], 0);
         nextY = lineY;
 
-        // ── Topic tag (below answer line) ────────────────────────────
+        // ── Topic tag ────────────────────────────────────────────────
         if (showTopic && item.topic) {
             const topicRgb = TOPIC_COLOURS_RGB[item.topic] || [100, 116, 139];
             nextY += 4 * pScale;
@@ -174,29 +233,11 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
             doc.text(item.topic.toUpperCase(), clueX, nextY);
         }
 
-        // ── Per-question outcome chips ──────────────────────────────
-        // item.notes holds the specific sub-topic key (e.g. 'Integers') which maps to outcomes;
-        // item.topic is the display category ('Number') which does not.
-        if (showOutcomeChips && item.notes) {
-            const codes = getTopicOutcomeCodes(item.notes, stage);
-            if (codes.length > 0) {
-                nextY += 4 * pScale;
-                doc.setFont(pdfFont, 'bold');
-                doc.setFontSize(5.5 * pScale);
-                let chipX = clueX;
-                codes.forEach(code => {
-                    // measure at the actual draw font size, then add left+right padding (2mm each)
-                    const cw = doc.getTextWidth(code) + 4;
-                    doc.setFillColor(239, 238, 255);
-                    doc.roundedRect(chipX, nextY - 2.5 * pScale, cw, 3.5 * pScale, 1, 1, 'F');
-                    doc.setDrawColor(99, 102, 241);
-                    doc.setLineWidth(0.2);
-                    doc.roundedRect(chipX, nextY - 2.5 * pScale, cw, 3.5 * pScale, 1, 1, 'S');
-                    doc.setTextColor(99, 102, 241);
-                    doc.text(code, chipX + 2, nextY);
-                    chipX += cw + 2;
-                });
-            }
+        // ── Outcome chips (line-wrapped to column width) ─────────────
+        if (itemCodes.length > 0) {
+            nextY += 4 * pScale;
+            nextY = _drawOutcomeChips(doc, itemCodes, clueX, nextY, pScale, pdfFont,
+                itemX + colW - 2, chipFontPt);
         }
 
         const actualItemH = nextY - cy + itemGap;
@@ -218,18 +259,20 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
     // Flush last partial row
     if (cols === 2 && col === 1) cy += rowMaxH;
 
-    // ── Bold vertical column divider ─────────────────────────
-    if (cols === 2) {
-        const divX = MARGIN + colW + 4;
-        doc.setDrawColor(200, 205, 220);
-        doc.setLineWidth(0.6);
-        doc.setLineDashPattern([], 0);
-        doc.line(divX, startY, divX, cy);
-    }
+    // Draw column divider for this (final) page
+    if (cols === 2) _drawColumnDivider(doc, MARGIN, colW, pageStartY, cy);
 
     drawExportIdFooter(ctx, exportId, pScale);
     return overflowCount;
 }
+
+function _drawColumnDivider(doc, MARGIN, colW, fromY, toY) {
+    doc.setDrawColor(200, 205, 220);
+    doc.setLineWidth(0.6);
+    doc.setLineDashPattern([], 0);
+    doc.line(MARGIN + colW + 4, fromY, MARGIN + colW + 4, toY);
+}
+
 
 /**
  * Draw the answer key page showing all 3 difficulty sets.

@@ -2617,11 +2617,17 @@ table.mode-cw td.cell.empty {
 
 .key-item {
     display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.key-item-row {
+    display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 6px;
-    padding: 4px 0;
-    border-bottom: 1px solid var(--border, #e5e7eb);
 }
 
 .key-clue {

@@ -54,9 +54,10 @@ export function renderKeys(container, generatedSets, settings) {
                     .map(c => `<span class="q-outcome-chip">${esc(c)}</span>`).join('')
                 : '';
             html += `<li class="key-item">
-                <span class="key-clue katex-target">${clue}</span>
-                <span class="key-answer">${ans}</span>
-                ${chips ? `<div class="q-outcome-chips" style="margin-top:2px;">${chips}</div>` : ''}
+                <div class="key-item-row">
+                    <span class="key-clue katex-target">${clue}</span>
+                    <span class="key-answer">${ans}</span>
+                </div>${chips ? `<div class="q-outcome-chips">${chips}</div>` : ''}
             </li>`;
         });
         html += '</ol></div>';

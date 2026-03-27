@@ -5,6 +5,8 @@
 // etc. can be added without touching existing Stage 4 data.
 // =============================================================
 
+export const DEFAULT_STAGE = 'Stage 4';
+
 // ---- Full outcome definitions per stage ---------------------
 export const STAGE_OUTCOMES = {
     'Stage 4': {
