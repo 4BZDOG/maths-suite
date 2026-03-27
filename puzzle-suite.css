@@ -420,6 +420,27 @@ label.field-label {
     letter-spacing: 0.05em;
 }
 
+.section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    font-family: inherit;
+}
+
+.cap-page-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    margin-top: 6px;
+    line-height: 1.45;
+}
+
 input[type="text"],
 input[type="number"],
 select,
@@ -2685,6 +2706,11 @@ table.mode-cw td.cell.empty {
     font-size: calc(1rem * var(--global-font-scale, 1) * var(--page-scale, 1));
 }
 
+/* Key page can grow beyond A4 when outcomes header is expanded */
+#key-container {
+    overflow: visible;
+}
+
 /* Generate button in sidebar */
 #btn-generate {
     background: var(--primary);
@@ -2737,9 +2763,41 @@ table.mode-cw td.cell.empty {
     border: 1px solid rgba(99,102,241,0.22);
     border-radius: 7px;
     background: rgba(99,102,241,0.04);
-    padding: 7px 10px 8px;
+    padding: 0;
     margin-bottom: 10px;
-    break-inside: avoid;
+}
+/* Collapsible variant used in HTML key preview */
+.outcomes-ws-collapsible { cursor: default; }
+.outcomes-ws-collapsible .outcomes-ws-list { padding: 0 10px 8px; }
+.outcomes-ws-summary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+.outcomes-ws-summary::-webkit-details-marker { display: none; }
+.outcomes-ws-summary::after {
+    content: '▾';
+    margin-left: auto;
+    font-size: 12px;
+    color: #6366f1;
+    transition: transform 0.18s;
+    line-height: 1;
+}
+details.outcomes-ws-header:not([open]) .outcomes-ws-summary::after { transform: rotate(-90deg); }
+.outcomes-ws-count {
+    font-size: 10px;
+    font-weight: 700;
+    background: #6366f1;
+    color: #fff;
+    border-radius: 20px;
+    padding: 0 6px;
+    min-width: 18px;
+    text-align: center;
+    line-height: 1.6;
 }
 .outcomes-ws-title {
     font-size: 9px;
@@ -2747,7 +2805,6 @@ table.mode-cw td.cell.empty {
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: #6366f1;
-    margin-bottom: 5px;
 }
 .outcomes-ws-list { display: flex; flex-direction: column; gap: 3px; }
 .outcomes-ws-row {

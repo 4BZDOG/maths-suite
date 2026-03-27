@@ -88,6 +88,10 @@ function _capToOnePage(container, total) {
     const page = container.closest('.page');
     if (!page) return total;
 
+    // If the page isn't currently visible, DOM measurements are unreliable
+    // (all rects return 0), which would incorrectly mark every item as overflow.
+    if (!page.classList.contains('visible')) return total;
+
     const pageBottom = page.getBoundingClientRect().bottom;
     const grid = container.querySelector('.problem-set-grid');
     if (!grid) return total;

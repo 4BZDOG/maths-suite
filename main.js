@@ -129,6 +129,12 @@ function renderActivePage() {
     renderKeys(document.getElementById('key-container'), keySets, sWithTopics);
 }
 
+function updateCapHint() {
+    const hint = document.getElementById('capPageHint');
+    const chk  = document.getElementById('psCapOnePage');
+    if (hint && chk) hint.style.display = chk.checked ? '' : 'none';
+}
+
 function updateUI() {
     const fsEl = document.getElementById('fontSelect');
     if (fsEl) document.documentElement.style.setProperty('--user-font', fsEl.value);
@@ -453,6 +459,7 @@ window._puzzleApp = {
     showPage,
     focusPage,
     updateUI,
+    updateCapHint,
     updateGlobalFontScale,
     updateTitleScale,
     updatePaperSize,
@@ -500,6 +507,7 @@ window.addEventListener('load', async () => {
         updateUI();
         updateTopicCount();
         renderOutcomes();
+        updateCapHint();
 
         setupSidebarResize();
         setupSortableList('#page-order-list', () => saveState());

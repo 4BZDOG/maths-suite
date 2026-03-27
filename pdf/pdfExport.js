@@ -284,11 +284,9 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
     pScale = pScale || scale;
 
     const cfg              = state.settings;
-    const showOutcomeChips = cfg.psShowOutcomeChips    || false;
     const showOutcomesHdr  = cfg.psShowOutcomesHeader  || false;
     const stage            = DEFAULT_STAGE;
     const availW           = PAGE_WIDTH - MARGIN * 2;
-    const chipFontPt       = 5 * pScale;
 
     let cy = startY;
 
@@ -378,11 +376,7 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
         let ky = cy + 8 * pScale;
 
         sec.questions.forEach((q, i) => {
-            const codes    = showOutcomeChips && q.notes ? getTopicOutcomeCodes(q.notes, stage) : [];
-            const chipsH   = codes.length > 0
-                ? _estimateChipsHeight(doc, codes, colW, pScale, pdfFont, chipFontPt)
-                : 0;
-            if (ky + 7 * pScale + chipsH > PAGE_HEIGHT - MARGIN) return;
+            if (ky + 7 * pScale > PAGE_HEIGHT - MARGIN) return;
 
             const clueText = latexToText(q.clue || '');
             const ansText  = String(q.answerDisplay || q.answer || '');
@@ -404,14 +398,6 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             doc.line(cx, ky + 1.5 * scale, cx + colW, ky + 1.5 * scale);
 
             ky += 6 * pScale;
-
-            // ── Outcome chips per key answer ─────────────────
-            if (codes.length > 0) {
-                ky += 2 * pScale;
-                ky = _drawOutcomeChips(doc, codes, cx, ky, pScale, pdfFont,
-                    cx + colW, chipFontPt);
-                ky += 2 * pScale;
-            }
         });
     });
 
