@@ -75,23 +75,22 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
 
     // Cap-to-one-page: hide items that overflow the page container
     if (capOnePage) {
-        _capToOnePage(container);
+        return _capToOnePage(container, questions.length);
     }
+    return questions.length;
 }
 
 /**
  * After render, measure which grid items overflow the page container and
  * remove them, replacing with an overflow notice.
  */
-function _capToOnePage(container) {
-    // Walk up to find the .page ancestor to get its usable height
+function _capToOnePage(container, total) {
     const page = container.closest('.page');
-    if (!page) return;
+    if (!page) return total;
 
-    // clientHeight of .page minus its own padding (15mm ≈ used via CSS)
     const pageBottom = page.getBoundingClientRect().bottom;
     const grid = container.querySelector('.problem-set-grid');
-    if (!grid) return;
+    if (!grid) return total;
 
     const items = Array.from(grid.querySelectorAll('.problem-item'));
     let hiddenCount = 0;
@@ -111,5 +110,7 @@ function _capToOnePage(container) {
         notice.textContent = `+ ${hiddenCount} more question${hiddenCount > 1 ? 's' : ''} (not shown — cap to 1 page is on)`;
         grid.appendChild(notice);
     }
+
+    return total - hiddenCount;
 }
 
