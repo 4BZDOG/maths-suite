@@ -6,6 +6,7 @@
 // can never drift out of sync when new topics are added.
 import { ALL_SUBTOPICS, SUB_OPS } from '../generators/mathsQuestionGen.js';
 export { ALL_SUBTOPICS, SUB_OPS };
+import { STAGE_OUTCOMES } from './outcomes.js';
 
 export const state = {
     // Which subtopics are enabled for generation
@@ -23,6 +24,10 @@ export const state = {
 
     // Granular sub-operation selection per topic (null entry or missing = all enabled)
     selectedSubOps: {},
+
+    // Outcome filter: keyed by NESA outcome code, true = selected for generation filter.
+    // Empty (all false) means no filter — all selected topics are used.
+    selectedOutcomes: {},
 
     // Questions per difficulty level
     questionsPerSet: 10,
@@ -147,6 +152,13 @@ export function syncSettingsFromDOM() {
         }
     });
 
+    // Sync selectedOutcomes from outcome filter checkboxes
+    const stage4Outcomes = STAGE_OUTCOMES['Stage 4']?.outcomes ?? [];
+    stage4Outcomes.forEach(o => {
+        const el = document.getElementById('outfilter-' + o.code);
+        if (el) state.selectedOutcomes[o.code] = el.checked;
+    });
+
     // Sync questionsPerSet
     const qps = document.getElementById('questionsPerSet');
     if (qps) state.questionsPerSet = parseInt(qps.value, 10) || 10;
@@ -187,6 +199,9 @@ export function applyStateToDOM(s) {
     }
 
     if (s.generatedSets) state.generatedSets = s.generatedSets;
+
+    // Restore selectedOutcomes (checkbox elements may not exist yet; renderOutcomes() re-applies)
+    if (s.selectedOutcomes) Object.assign(state.selectedOutcomes, s.selectedOutcomes);
 
     // Restore watermark
     const wSrc = s.watermarkSrc || s.settings?.watermarkSrc;

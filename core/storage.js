@@ -15,12 +15,13 @@ export function saveStateNow() {
     try {
         syncSettingsFromDOM();   // flush DOM → state.settings first
         const payload = {
-            selectedTopics:  state.selectedTopics,
-            questionsPerSet: state.questionsPerSet,
-            generatedSets:   state.generatedSets,
-            settings:        state.settings,
-            zoom:            state.currentZoom,
-            watermarkSrc:    state.watermarkSrc,
+            selectedTopics:   state.selectedTopics,
+            selectedOutcomes: state.selectedOutcomes,
+            questionsPerSet:  state.questionsPerSet,
+            generatedSets:    state.generatedSets,
+            settings:         state.settings,
+            zoom:             state.currentZoom,
+            watermarkSrc:     state.watermarkSrc,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (e) {

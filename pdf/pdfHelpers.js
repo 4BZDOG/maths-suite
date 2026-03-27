@@ -348,22 +348,29 @@ export function drawHeader(ctx, fullTitle, subText, instructions, isKey, setIndi
     doc.line(MARGIN, dividerY, PAGE_WIDTH - MARGIN, dividerY);
 
     // Instruction bar with coloured left accent — always starts BELOW the divider
-    const iColor   = instrColor || [100, 116, 139];
-    const instrH   = 5.5 * pScale;           // height of the coloured accent bar
-    const instrBarY = dividerY + 3;          // top of bar: 3 mm gap after divider
-    const instrTextY = instrBarY + instrH;   // text baseline at bottom of bar
+    // Derive bar height from text cap-height so block and text align vertically.
+    const iColor      = instrColor || [100, 116, 139];
+    const fontSizePt  = 8 * pScale;
+    // cap-height ≈ 72% of em; 1 pt = 0.3528 mm
+    const capHeightMm = fontSizePt * 0.3528 * 0.72;
+    // Descent ≈ 20% of em below baseline
+    const descentMm   = fontSizePt * 0.3528 * 0.20;
+    // Bar top aligns with text cap top; bar bottom aligns with text baseline
+    const instrTextY  = dividerY + 5 * pScale;          // baseline: 5mm gap after divider
+    const instrBarTop = instrTextY - capHeightMm;
+    const instrH      = capHeightMm + descentMm;         // matches full text body height
 
     doc.setFillColor(...iColor);
-    doc.rect(MARGIN, instrBarY, 2, instrH, 'F');
+    doc.rect(MARGIN, instrBarTop, 2.5, instrH, 'F');
 
-    drawText(doc, instructions.toUpperCase(), MARGIN + 5, instrTextY, {
-        fontSizePt: 8 * pScale,
+    drawText(doc, instructions.toUpperCase(), MARGIN + 5.5, instrTextY, {
+        fontSizePt,
         bold: true,
         color: iColor,
         pdfFont,
     });
 
-    return instrTextY + 5 * scale;
+    return instrTextY + 8 * scale;  // generous spacing before first question
 }
 
 /**
