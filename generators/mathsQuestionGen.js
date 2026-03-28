@@ -747,7 +747,7 @@ function genFinancial(rng, diff, allowedOps, _depth = 0) {
     }
     const cost = ri(rng, 2, 15) * 100;
     const pct  = rc(rng, [5, 10, 20, 25, 50]);
-    const sell = cost + cost * pct / 100;
+    const sell = round(cost + cost * pct / 100, 2);
     const ph = rc(rng, [
         `An item costs $\\$${cost}$ and sells for $\\$${sell}$. Calculate the percentage profit.`,
         `Find the percentage profit: cost $\\$${cost}$, selling price $\\$${sell}$.`,
