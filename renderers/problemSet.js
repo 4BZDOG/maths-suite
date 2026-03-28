@@ -1,7 +1,7 @@
 // renderers/problemSet.js — Renders a set of maths questions (Easy/Medium/Hard)
 import { renderKaTeX } from './katexRender.js';
 import { esc } from './htmlUtils.js';
-import { getTopicOutcomeCodes } from '../core/outcomes.js';
+import { getTopicOutcomeCodes, DEFAULT_STAGE } from '../core/outcomes.js';
 
 const TOPIC_COLOURS = {
     'Number': '#3b82f6', 'Algebra': '#8b5cf6', 'Geometry': '#10b981',
@@ -17,7 +17,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
     const showTopic        = settings.showTopic || false;
     const showOutcomeChips = settings.psShowOutcomeChips || false;
     const capOnePage       = settings.psCapOnePage || false;
-    const stage            = settings.stage || 'Stage 4';
+    const stage            = settings.stage || DEFAULT_STAGE;
 
     if (!questions || questions.length === 0) {
         container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:40px;">
