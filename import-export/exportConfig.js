@@ -8,6 +8,7 @@ export function downloadConfig() {
     syncSettingsFromDOM();
     const payload = JSON.stringify({
         selectedTopics:  state.selectedTopics,
+        selectedSubOps:  state.selectedSubOps,
         questionsPerSet: state.questionsPerSet,
         settings:        state.settings,
         watermarkSrc:    state.watermarkSrc,

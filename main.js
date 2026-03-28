@@ -54,7 +54,14 @@ function generateAll() {
     if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Generating…'; }
 
     if (topics.length === 0) {
-        showToast('Select at least one topic to generate questions.', 'warning');
+        // Distinguish: all topics unchecked vs outcome filter excluded everything
+        const allSelected = ALL_SUBTOPICS.filter(t => state.selectedTopics[t]);
+        const hasOutcomeFilter = Object.values(state.selectedOutcomes).some(Boolean);
+        if (allSelected.length > 0 && hasOutcomeFilter) {
+            showToast('Outcome filter excluded all selected topics. Clear filters or select matching topics.', 'warning');
+        } else {
+            showToast('Select at least one topic to generate questions.', 'warning');
+        }
         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bolt"></i> Regenerate'; }
         return;
     }

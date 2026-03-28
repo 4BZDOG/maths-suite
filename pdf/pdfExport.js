@@ -475,8 +475,9 @@ export async function exportPDF() {
         if (state.watermarkSrc) {
             wmImg = await new Promise(res => {
                 const img = new Image();
-                img.onload  = () => res(img);
-                img.onerror = () => res(null);
+                const timeout = setTimeout(() => res(null), 8000);
+                img.onload  = () => { clearTimeout(timeout); res(img); };
+                img.onerror = () => { clearTimeout(timeout); res(null); };
                 img.src = state.watermarkSrc;
             });
         }

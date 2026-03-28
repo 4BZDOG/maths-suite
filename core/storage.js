@@ -16,6 +16,7 @@ export function saveStateNow() {
         syncSettingsFromDOM();   // flush DOM → state.settings first
         const payload = {
             selectedTopics:   state.selectedTopics,
+            selectedSubOps:   state.selectedSubOps,
             selectedOutcomes: state.selectedOutcomes,
             questionsPerSet:  state.questionsPerSet,
             generatedSets:    state.generatedSets,
@@ -26,7 +27,24 @@ export function saveStateNow() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (e) {
         if (e.name === 'QuotaExceededError' || (e.message && e.message.toLowerCase().includes('quota'))) {
-            showToast('Storage full. Remove watermark image or reduce questions.', 'error');
+            // First fallback: try saving without the watermark image
+            try {
+                syncSettingsFromDOM();
+                const fallback = {
+                    selectedTopics:   state.selectedTopics,
+                    selectedSubOps:   state.selectedSubOps,
+                    selectedOutcomes: state.selectedOutcomes,
+                    questionsPerSet:  state.questionsPerSet,
+                    generatedSets:    state.generatedSets,
+                    settings:         state.settings,
+                    zoom:             state.currentZoom,
+                    watermarkSrc:     '',
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(fallback));
+                showToast('Storage full — watermark not saved. Remove it to free space.', 'warning');
+            } catch {
+                showToast('Storage full. Hard reset may be required.', 'error');
+            }
         } else {
             console.error('Save failed', e);
         }
