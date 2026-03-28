@@ -1,6 +1,6 @@
 // renderers/keys.js — Answer Key: lists all questions with answers across 3 difficulty sets
 import { renderKaTeX } from './katexRender.js';
-import { esc } from './htmlUtils.js';
+import { esc, formatClue } from './htmlUtils.js';
 import { getOutcomesForTopics } from '../core/outcomes.js';
 
 export function renderKeys(container, generatedSets, settings) {
@@ -50,11 +50,11 @@ export function renderKeys(container, generatedSets, settings) {
             <div class="key-section-title" style="color:${set.color}; border-bottom: 2px solid ${set.color}40;">${set.label}</div>
             <ol class="key-list">`;
         set.questions.forEach((q, i) => {
-            const clue = esc(q.clue || '');
-            const ans  = esc(q.answerDisplay || q.answer || '');
+            const ans = esc(q.answerDisplay || q.answer || '');
             html += `<li class="key-item">
                 <div class="key-item-row">
-                    <span class="key-clue katex-target">${clue}</span>
+                    <span class="key-num">${i + 1}.</span>
+                    <span class="key-clue katex-target">${formatClue(q.clue)}</span>
                     <span class="key-answer">${ans}</span>
                 </div>
             </li>`;

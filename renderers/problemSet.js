@@ -1,6 +1,6 @@
 // renderers/problemSet.js — Renders a set of maths questions (Easy/Medium/Hard)
 import { renderKaTeX } from './katexRender.js';
-import { esc } from './htmlUtils.js';
+import { esc, formatClue } from './htmlUtils.js';
 import { getTopicOutcomeCodes, DEFAULT_STAGE } from '../core/outcomes.js';
 
 const TOPIC_COLOURS = {
@@ -28,7 +28,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
 
     const colStyle = cols === 1 ? 'grid-template-columns: 1fr' : 'grid-template-columns: 1fr 1fr';
 
-    let html = `<div class="problem-set-grid" style="display:grid; ${colStyle}; gap:14px 20px; padding:4px;">`;
+    let html = `<div class="problem-set-grid" style="display:grid; ${colStyle}; gap:18px 20px; padding:4px;">`;
 
     questions.forEach((item, i) => {
         const topicColor = TOPIC_COLOURS[item.topic] || '#64748b';
@@ -41,8 +41,11 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         const outcomeCodes = showOutcomeChips && item.notes
             ? getTopicOutcomeCodes(item.notes, stage)
             : [];
-        const outcomeChipsHtml = outcomeCodes.length > 0
-            ? `<div class="q-outcome-chips">${outcomeCodes.map(c => `<span class="q-outcome-chip">${esc(c)}</span>`).join('')}</div>`
+        const outcomeChipsHtml = outcomeCodes.map(c => `<span class="q-outcome-chip">${esc(c)}</span>`).join('');
+
+        // Topic badge and outcome chips share one centered row beneath the answer line
+        const metaRowHtml = (topicBadge || outcomeChipsHtml)
+            ? `<div class="problem-meta-row">${topicBadge}${outcomeChipsHtml}</div>`
             : '';
 
         // Working lines: Hard = 2, Medium = 1, Easy = 0
@@ -57,15 +60,14 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         html += `<div class="problem-item">
             <div class="problem-clue-row">
                 <span class="problem-num">${i + 1}.</span>
-                <div class="problem-clue katex-target">${esc(item.clue)}</div>
+                <div class="problem-clue katex-target">${formatClue(item.clue)}</div>
             </div>
             ${workingHtml}
             <div class="problem-answer-box">
                 <span class="problem-answer-label">Answer:</span>
                 <span class="problem-answer-line"></span>
             </div>
-            ${topicBadge}
-            ${outcomeChipsHtml}
+            ${metaRowHtml}
         </div>`;
     });
 
