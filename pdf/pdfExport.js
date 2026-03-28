@@ -37,61 +37,6 @@ function createQuestionSets(cfg, seed) {
 }
 
 /**
- * Draw outcome code chips in a horizontal row, wrapping to a new line when
- * the chips would exceed maxX. Returns the updated nextY after all chips.
- * Caller must advance nextY by 4*pScale before calling to create the gap.
- */
-function _drawOutcomeChips(doc, codes, x, y, pScale, pdfFont, maxX, fontSizePt) {
-    if (!codes.length) return y;
-    doc.setFont(pdfFont, 'bold');
-    doc.setFontSize(fontSizePt);
-    const chipH = 3.5 * pScale;
-    let chipX = x;
-    codes.forEach(code => {
-        const cw = doc.getTextWidth(code) + 4;
-        if (chipX + cw > maxX && chipX > x) {
-            chipX = x;
-            y += chipH + 1;         // wrap to next row
-        }
-        doc.setFillColor(239, 238, 255);
-        doc.roundedRect(chipX, y - 2.5 * pScale, cw, chipH, 1, 1, 'F');
-        doc.setDrawColor(99, 102, 241);
-        doc.setLineWidth(0.2);
-        doc.roundedRect(chipX, y - 2.5 * pScale, cw, chipH, 1, 1, 'S');
-        doc.setTextColor(99, 102, 241);
-        doc.text(code, chipX + 2, y);
-        chipX += cw + 2;
-    });
-    return y;
-}
-
-/**
- * Estimate the height (mm) that outcome chips will occupy for a set of codes
- * at a given pScale and column width. Used for pre-layout before drawing.
- */
-function _estimateChipsHeight(doc, codes, colW, pScale, pdfFont, fontSizePt) {
-    if (!codes.length) return 0;
-    doc.setFont(pdfFont, 'bold');
-    doc.setFontSize(fontSizePt);
-    const chipH = 3.5 * pScale;
-    let rows = 1;
-    let lineW = 0;
-    // Match the effective max width used by _drawOutcomeChips (itemX + colW - 2)
-    // The clue indent is 9mm (clueX = itemX + 9), so available chip width is colW - 9 - 2.
-    const maxW = colW - 11;
-    codes.forEach(code => {
-        const cw = doc.getTextWidth(code) + 4;
-        if (lineW + cw > maxW && lineW > 0) {
-            rows++;
-            lineW = cw + 2;
-        } else {
-            lineW += cw + 2;
-        }
-    });
-    return 4 * pScale + rows * chipH + (rows - 1) * 1;  // 4mm gap + all chip rows
-}
-
-/**
  * Draw a question page (Easy / Medium / Hard) in PDF.
  * Returns the number of questions that did NOT fit (overflow count).
  */
@@ -126,6 +71,10 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
 
         // Pre-calculate item height to decide whether it fits.
         // Fraction clues need 3 line-heights (numerator + bar + denominator).
+        // Reset clue font before splitTextToSize — prior iterations change doc font state,
+        // which would cause the width calculation to use wrong glyph metrics.
+        doc.setFont(pdfFont, 'normal');
+        doc.setFontSize(9 * pScale);
         const clueText   = latexToText(item.clue || '');
         const isFraction = hasFraction(item.clue);
         const clueLines  = isFraction
@@ -136,16 +85,35 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
             : clueLines.length * 4.5 * pScale;
 
         const workingCount = item.difficulty === 'Hard' ? 2 : item.difficulty === 'Medium' ? 1 : 0;
-        const tagH    = showTopic ? 4 * pScale : 0;
         // Use item.notes (specific sub-topic key) for outcome lookup — item.topic is broad category
         const itemCodes = showOutcomeChips && item.notes ? getTopicOutcomeCodes(item.notes, stage) : [];
-        const chipsH    = itemCodes.length > 0
-            ? _estimateChipsHeight(doc, itemCodes, colW, pScale, pdfFont, chipFontPt)
-            : 0;
+        // Estimate height for the combined meta row (topic pill + outcome chips on one centered line)
+        const hasMeta = (showTopic && item.topic) || itemCodes.length > 0;
+        let metaH = 0;
+        if (hasMeta) {
+            const chipH  = 3.5 * pScale;
+            const maxMetaW = colW - 4;
+            let lineW = 0, metaRows = 1;
+            if (showTopic && item.topic) {
+                doc.setFont(pdfFont, 'normal');
+                doc.setFontSize(6 * pScale);
+                lineW += doc.getTextWidth(item.topic.toUpperCase()) + 6;
+            }
+            if (itemCodes.length > 0) {
+                doc.setFont(pdfFont, 'bold');
+                doc.setFontSize(chipFontPt);
+                itemCodes.forEach(code => {
+                    const cw = doc.getTextWidth(code) + 6;
+                    if (lineW + cw > maxMetaW && lineW > 0) { metaRows++; lineW = cw; }
+                    else lineW += cw;
+                });
+            }
+            metaH = 4 * pScale + metaRows * (chipH + 1);
+        }
         const itemH = clueBlockH
             + (workingCount > 0 ? 5 + workingCount * workingLineSpacing : 0)
             + answerLineSpacing + 12 * pScale
-            + tagH + chipsH + itemGap;
+            + metaH + itemGap;
 
         // Overflow check — only fires at row start for 2-column layout
         const isNewRow = cols === 2 ? col === 0 : true;
@@ -225,21 +193,80 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
         doc.setLineDashPattern([], 0);
         nextY = lineY;
 
-        // ── Topic tag ────────────────────────────────────────────────
-        if (showTopic && item.topic) {
-            const topicRgb = TOPIC_COLOURS_RGB[item.topic] || [100, 116, 139];
+        // ── Meta row: topic pill + outcome chips, centered in column ──
+        if (hasMeta) {
             nextY += 4 * pScale;
-            doc.setFont(pdfFont, 'normal');
-            doc.setFontSize(6 * pScale);
-            doc.setTextColor(...topicRgb);
-            doc.text(item.topic.toUpperCase(), clueX, nextY);
-        }
-
-        // ── Outcome chips (line-wrapped to column width) ─────────────
-        if (itemCodes.length > 0) {
-            nextY += 4 * pScale;
-            nextY = _drawOutcomeChips(doc, itemCodes, clueX, nextY, pScale, pdfFont,
-                itemX + colW - 2, chipFontPt);
+            const chipH = 3.5 * pScale;
+            const gap   = 2;
+            // Build ordered pill list: topic first, then outcome chips
+            const pills = [];
+            if (showTopic && item.topic) {
+                const topicRgb = TOPIC_COLOURS_RGB[item.topic] || [100, 116, 139];
+                doc.setFont(pdfFont, 'normal');
+                doc.setFontSize(6 * pScale);
+                const tw = doc.getTextWidth(item.topic.toUpperCase()) + 4;
+                pills.push({ text: item.topic.toUpperCase(), w: tw, rgb: topicRgb, style: 'topic' });
+            }
+            if (itemCodes.length > 0) {
+                doc.setFont(pdfFont, 'bold');
+                doc.setFontSize(chipFontPt);
+                itemCodes.forEach(code => {
+                    pills.push({ text: code, w: doc.getTextWidth(code) + 4, style: 'chip' });
+                });
+            }
+            // Wrap pills into rows, then center each row in the column
+            const colCenterX = itemX + colW / 2;
+            const maxRowW    = colW - 4;
+            const pillRows = [];
+            let curRow = [], curRowW = 0;
+            for (const p of pills) {
+                const needed = curRowW > 0 ? gap + p.w : p.w;
+                if (curRowW > 0 && curRowW + gap + p.w > maxRowW) {
+                    pillRows.push(curRow);
+                    curRow  = [p];
+                    curRowW = p.w;
+                } else {
+                    curRow.push(p);
+                    curRowW += needed;
+                }
+            }
+            if (curRow.length > 0) pillRows.push(curRow);
+            // Draw each row centered
+            for (const r of pillRows) {
+                const totalW = r.reduce((s, p) => s + p.w, 0) + gap * (r.length - 1);
+                let px = colCenterX - totalW / 2;
+                for (const p of r) {
+                    const pillTop = nextY - 2.5 * pScale;
+                    if (p.style === 'topic') {
+                        doc.setFont(pdfFont, 'normal');
+                        doc.setFontSize(6 * pScale);
+                        doc.setFillColor(
+                            Math.round(255 * 0.88 + p.rgb[0] * 0.12),
+                            Math.round(255 * 0.88 + p.rgb[1] * 0.12),
+                            Math.round(255 * 0.88 + p.rgb[2] * 0.12)
+                        );
+                        doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'F');
+                        doc.setDrawColor(...p.rgb);
+                        doc.setLineWidth(0.2);
+                        doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'S');
+                        doc.setTextColor(...p.rgb);
+                        doc.text(p.text, px + 2, nextY);
+                    } else {
+                        doc.setFont(pdfFont, 'bold');
+                        doc.setFontSize(chipFontPt);
+                        doc.setFillColor(239, 238, 255);
+                        doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'F');
+                        doc.setDrawColor(99, 102, 241);
+                        doc.setLineWidth(0.2);
+                        doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'S');
+                        doc.setTextColor(99, 102, 241);
+                        doc.text(p.text, px + 2, nextY);
+                    }
+                    px += p.w + gap;
+                }
+                nextY += chipH + 1;
+            }
+            nextY -= 1;  // remove trailing inter-row gap
         }
 
         const actualItemH = nextY - cy + itemGap;
