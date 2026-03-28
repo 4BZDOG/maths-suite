@@ -246,7 +246,12 @@ function parseResponse(text) {
     if (start === -1 || end === -1) throw new Error('No JSON array found in response.');
     clean = clean.slice(start, end + 1);
 
-    const arr = JSON.parse(clean);
+    let arr;
+    try {
+        arr = JSON.parse(clean);
+    } catch {
+        throw new Error('AI response was not valid JSON. Try again or switch models.');
+    }
     if (!Array.isArray(arr)) throw new Error('Response is not an array.');
 
     return arr
