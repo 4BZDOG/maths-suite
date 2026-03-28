@@ -1,13 +1,12 @@
 // renderers/keys.js — Answer Key: lists all questions with answers across 3 difficulty sets
 import { renderKaTeX } from './katexRender.js';
 import { esc } from './htmlUtils.js';
-import { getOutcomesForTopics, getTopicOutcomeCodes } from '../core/outcomes.js';
+import { getOutcomesForTopics } from '../core/outcomes.js';
 
 export function renderKeys(container, generatedSets, settings) {
     if (!container) return;
 
     const showOutcomesHeader = settings?.psShowOutcomesHeader || false;
-    const showOutcomeChips   = settings?.psShowOutcomeChips   || false;
     const activeTopics       = settings?.activeTopics         || [];
     const stage              = settings?.stage                || 'Stage 4';
 
@@ -27,15 +26,21 @@ export function renderKeys(container, generatedSets, settings) {
     // ── Outcomes summary header (key page only) ──────────────
     if (showOutcomesHeader && activeTopics.length > 0) {
         const outcomes = getOutcomesForTopics(activeTopics, stage);
-        html += `<div class="outcomes-ws-header">
-            <div class="outcomes-ws-title">NESA ${esc(stage)} Outcomes</div>
-            <div class="outcomes-ws-list">${outcomes.map(o => `
-                <div class="outcomes-ws-row${o.appliesAll ? ' outcomes-ws-row--wm' : ''}">
-                    <span class="outcomes-ws-pill">${esc(o.code)}</span>
-                    <span class="outcomes-ws-desc"><strong>${esc(o.contentLabel)}</strong> — ${esc(o.statement)}</span>
-                </div>`).join('')}
-            </div>
-        </div>`;
+        if (outcomes.length > 0) {
+            const isLong = outcomes.length > 4;
+            html += `<details class="outcomes-ws-header outcomes-ws-collapsible"${isLong ? '' : ' open'}>
+                <summary class="outcomes-ws-summary">
+                    <span class="outcomes-ws-title">NESA ${esc(stage)} Outcomes</span>
+                    <span class="outcomes-ws-count">${outcomes.length}</span>
+                </summary>
+                <div class="outcomes-ws-list">${outcomes.map(o => `
+                    <div class="outcomes-ws-row${o.appliesAll ? ' outcomes-ws-row--wm' : ''}">
+                        <span class="outcomes-ws-pill">${esc(o.code)}</span>
+                        <span class="outcomes-ws-desc"><strong>${esc(o.contentLabel)}</strong> — ${esc(o.statement)}</span>
+                    </div>`).join('')}
+                </div>
+            </details>`;
+        }
     }
 
     html += '<div class="key-sets-grid">';
@@ -45,19 +50,13 @@ export function renderKeys(container, generatedSets, settings) {
             <div class="key-section-title" style="color:${set.color}; border-bottom: 2px solid ${set.color}40;">${set.label}</div>
             <ol class="key-list">`;
         set.questions.forEach((q, i) => {
-            const clue  = esc(q.clue || '');
-            const ans   = esc(q.answerDisplay || q.answer || '');
-            // Use q.notes (sub-topic key e.g. 'Integers') for outcome lookup;
-            // q.topic is the mapped display category ('Number') which has no TOPIC_OUTCOME_MAP entry.
-            const chips = showOutcomeChips && q.notes
-                ? getTopicOutcomeCodes(q.notes, stage)
-                    .map(c => `<span class="q-outcome-chip">${esc(c)}</span>`).join('')
-                : '';
+            const clue = esc(q.clue || '');
+            const ans  = esc(q.answerDisplay || q.answer || '');
             html += `<li class="key-item">
                 <div class="key-item-row">
                     <span class="key-clue katex-target">${clue}</span>
                     <span class="key-answer">${ans}</span>
-                </div>${chips ? `<div class="q-outcome-chips">${chips}</div>` : ''}
+                </div>
             </li>`;
         });
         html += '</ol></div>';
@@ -67,4 +66,3 @@ export function renderKeys(container, generatedSets, settings) {
     container.innerHTML = html;
     renderKaTeX(container);
 }
-

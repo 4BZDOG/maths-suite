@@ -20,6 +20,8 @@ function ri(rng, min, max) { return Math.floor(rng() * (max - min + 1)) + min; }
 function rc(rng, arr)       { return arr[Math.floor(rng() * arr.length)]; }
 function round(n, dp)       { const f = Math.pow(10, dp); return Math.round(n * f) / f; }
 
+const CALC_VERBS = ['Calculate:', 'Evaluate:', 'Find the value of:', 'Work out:'];
+
 function gcd(a, b)  { return b === 0 ? a : gcd(b, a % b); }
 function lcm(a, b)  { return (a * b) / gcd(a, b); }
 
@@ -122,13 +124,13 @@ function genIntegers(rng, diff, allowedOps) {
     if (op === '+') {
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, max);
-        const verb = rc(rng, ['Calculate:', 'Evaluate:', 'Find the value of:', 'Work out:']);
+        const verb = rc(rng, CALC_VERBS);
         return { clue: `${verb} $${a} + ${b}$`, answer: String(a + b) };
     }
     if (op === '-') {
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, a);
-        const verb = rc(rng, ['Calculate:', 'Evaluate:', 'Find the value of:', 'Work out:']);
+        const verb = rc(rng, CALC_VERBS);
         return { clue: `${verb} $${a} - ${b}$`, answer: String(a - b) };
     }
     if (op === '×') {
@@ -169,7 +171,7 @@ function genDecimals(rng, diff, allowedOps) {
     const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : 2);
     if (type === -1) return null;
 
-    const verb = rc(rng, ['Calculate:', 'Evaluate:', 'Find the value of:', 'Work out:']);
+    const verb = rc(rng, CALC_VERBS);
     if (diff === 'Easy') {
         if (type === 0) {
             const a = ri(rng, 1, 9) / 10, b = ri(rng, 1, 9) / 10;
@@ -312,7 +314,7 @@ function genFractions(rng, diff, allowedOps) {
     const type = _pickType(rng, filtered, diff === 'Hard' ? 1 : 2);
     if (type === -1) return null;
 
-    const calcVerb = rc(rng, ['Calculate:', 'Evaluate:', 'Find the value of:', 'Work out:']);
+    const calcVerb = rc(rng, CALC_VERBS);
     if (diff === 'Easy') {
         if (type === 0) {
             const den = rc(rng, [2, 4, 5, 10]);

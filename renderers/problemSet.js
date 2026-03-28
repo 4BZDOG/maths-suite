@@ -1,7 +1,7 @@
 // renderers/problemSet.js — Renders a set of maths questions (Easy/Medium/Hard)
 import { renderKaTeX } from './katexRender.js';
 import { esc } from './htmlUtils.js';
-import { getTopicOutcomeCodes } from '../core/outcomes.js';
+import { getTopicOutcomeCodes, DEFAULT_STAGE } from '../core/outcomes.js';
 
 const TOPIC_COLOURS = {
     'Number': '#3b82f6', 'Algebra': '#8b5cf6', 'Geometry': '#10b981',
@@ -17,7 +17,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
     const showTopic        = settings.showTopic || false;
     const showOutcomeChips = settings.psShowOutcomeChips || false;
     const capOnePage       = settings.psCapOnePage || false;
-    const stage            = settings.stage || 'Stage 4';
+    const stage            = settings.stage || DEFAULT_STAGE;
 
     if (!questions || questions.length === 0) {
         container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:40px;">
@@ -87,6 +87,10 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
 function _capToOnePage(container, total) {
     const page = container.closest('.page');
     if (!page) return total;
+
+    // If the page isn't currently visible, DOM measurements are unreliable
+    // (all rects return 0), which would incorrectly mark every item as overflow.
+    if (!page.classList.contains('visible')) return total;
 
     const pageBottom = page.getBoundingClientRect().bottom;
     const grid = container.querySelector('.problem-set-grid');
