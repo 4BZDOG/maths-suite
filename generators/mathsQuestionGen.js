@@ -230,7 +230,11 @@ function genRounding(rng, diff, allowedOps) {
             ]);
             return { clue: ph, answer: String(ans) };
         }
-        const n = ri(rng, 10, 999) / 10;
+        // Guarantee a non-zero decimal part so the question isn't nonsensical
+        // (e.g. "Write 91 as a whole number" makes no sense).
+        const whole = ri(rng, 1, 99);
+        const frac  = ri(rng, 1, 9);
+        const n     = whole + frac / 10;   // e.g. 7.3, 42.8 — always has .1–.9
         const ph = rc(rng, [
             `Round $${n}$ to the nearest whole number`,
             `Write $${n}$ as a whole number (rounded)`,
