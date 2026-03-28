@@ -469,7 +469,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
     if (type === 0) {
         const orig = ri(rng, 5, 20) * 20;
         const pct = rc(rng, [10, 20, 25, 50]);
-        const final = orig * (1 + pct / 100);
+        const final = round(orig * (1 + pct / 100), 2);
         const ph = rc(rng, [
             `After a $${pct}\\%$ increase the value is $${final}$. Find the original.`,
             `A quantity increases by $${pct}\\%$ to become $${final}$. Determine the original value.`,
@@ -480,7 +480,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
     if (type === 1) {
         const orig = ri(rng, 4, 20) * 25;
         const pct = rc(rng, [10, 20, 25, 50]);
-        const newVal = orig * (1 + pct / 100);
+        const newVal = round(orig * (1 + pct / 100), 2);
         const ph = rc(rng, [
             `A price rises from $\\$${orig}$ to $\\$${newVal}$. What is the percentage increase?`,
             `Calculate the percentage increase from $\\$${orig}$ to $\\$${newVal}$.`,
@@ -700,13 +700,14 @@ function genFinancial(rng, diff, allowedOps, _depth = 0) {
             `Calculate the GST-inclusive price for an item costing $\\$${price}$`,
             `A product costs $\\$${price}$ before GST. Find the total price including $10\\%$ GST.`,
         ]);
-        return { clue: ph, answer: String(price * 1.1), answerDisplay: `$${price * 1.1}` };
+        const gstTotal = round(price * 1.1, 2);
+        return { clue: ph, answer: String(gstTotal), answerDisplay: `$${gstTotal}` };
     }
     if (diff === 'Medium') {
         if (type === 0) {
             const cost = ri(rng, 5, 20) * 10;
             const pctProfit = rc(rng, [10, 20, 25, 50]);
-            const sell = cost * (1 + pctProfit / 100);
+            const sell = round(cost * (1 + pctProfit / 100), 2);
             if (!Number.isInteger(sell)) return genFinancial(rng, diff, allowedOps, _depth + 1);
             const ph = rc(rng, [
                 `Find the selling price: cost $\\$${cost}$, mark-up $${pctProfit}\\%$`,
