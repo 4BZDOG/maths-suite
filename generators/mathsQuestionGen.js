@@ -304,7 +304,8 @@ function genRounding(rng, diff, allowedOps) {
 // ============================================================
 // FRACTIONS — answers are always integers or simple decimals
 // ============================================================
-function genFractions(rng, diff, allowedOps) {
+function genFractions(rng, diff, allowedOps, _depth = 0) {
+    if (_depth > 20) return null;
     const maps = {
         Easy:   { 'fraction-of': [0], 'add-subtract': [1], 'simplify-convert': [2] },
         Medium: { 'add-subtract': [0], 'multiply-divide': [1], 'simplify-convert': [2] },
@@ -337,7 +338,7 @@ function genFractions(rng, diff, allowedOps) {
         }
         const den = rc(rng, [4, 6, 8, 10, 12]);
         const factor = rc(rng, [2, 3]);
-        if (factor >= den) return genFractions(rng, diff, allowedOps);
+        if (factor >= den) return genFractions(rng, diff, allowedOps, _depth + 1);
         const num = factor * ri(rng, 1, Math.floor(den / factor));
         const ans = fracStr(num, den);
         const ph = rc(rng, [
@@ -382,11 +383,11 @@ function genFractions(rng, diff, allowedOps) {
         return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} \\div \\frac{${n2}}{${d2}}$`, answer: ans };
     }
     const d1 = rc(rng, [3, 4, 5, 6]), d2 = rc(rng, [3, 4, 5, 6]);
-    if (d1 === d2) return genFractions(rng, diff, allowedOps);
+    if (d1 === d2) return genFractions(rng, diff, allowedOps, _depth + 1);
     const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
     const l = lcm(d1, d2);
     const numResult = n1 * (l / d1) - n2 * (l / d2);
-    if (numResult <= 0) return genFractions(rng, diff, allowedOps);
+    if (numResult <= 0) return genFractions(rng, diff, allowedOps, _depth + 1);
     const ans = fracStr(numResult, l);
     return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} - \\frac{${n2}}{${d2}}$`, answer: ans };
 }
@@ -394,7 +395,8 @@ function genFractions(rng, diff, allowedOps) {
 // ============================================================
 // PERCENTAGES
 // ============================================================
-function genPercentages(rng, diff, allowedOps) {
+function genPercentages(rng, diff, allowedOps, _depth = 0) {
+    if (_depth > 20) return null;
     const maps = {
         Easy:   { 'find-pct': [0] },
         Medium: { 'find-pct': [0, 2], 'increase-decrease': [1] },
@@ -440,7 +442,7 @@ function genPercentages(rng, diff, allowedOps) {
             const orig = ri(rng, 2, 20) * 10;
             const pct = rc(rng, [10, 20, 25, 50]);
             const ans = Math.round(orig * (1 + pct / 100));
-            if (!Number.isInteger(ans)) return genPercentages(rng, diff, allowedOps);
+            if (!Number.isInteger(ans)) return genPercentages(rng, diff, allowedOps, _depth + 1);
             const ctx = rc(rng, ['a price', 'a value', 'an amount', 'a score']);
             const ph = rc(rng, [
                 `Increase $${orig}$ by $${pct}\\%$`,
@@ -452,7 +454,7 @@ function genPercentages(rng, diff, allowedOps) {
         const b = rc(rng, [10, 20, 25, 50, 100]);
         const a = ri(rng, 1, b - 1);
         const ans = (a / b) * 100;
-        if (!Number.isInteger(ans)) return genPercentages(rng, diff, allowedOps);
+        if (!Number.isInteger(ans)) return genPercentages(rng, diff, allowedOps, _depth + 1);
         const ph = rc(rng, [
             `Express $${a}$ out of $${b}$ as a percentage`,
             `Write $${a}$ out of $${b}$ as a percentage`,
@@ -491,7 +493,7 @@ function genPercentages(rng, diff, allowedOps) {
     const partial = (pct1 / 100) * whole;
     const pct2 = rc(rng, [10, 20, 25, 50]);
     const ans2 = (pct2 / 100) * partial;
-    if (!Number.isInteger(ans2)) return genPercentages(rng, diff, allowedOps);
+    if (!Number.isInteger(ans2)) return genPercentages(rng, diff, allowedOps, _depth + 1);
     const ph = rc(rng, [
         `Find $${pct2}\\%$ of $${pct1}\\%$ of $${whole}$`,
         `Calculate $${pct2}\\%$ of $${pct1}\\%$ of $${whole}$`,
@@ -566,7 +568,8 @@ function genAlgebra(rng, diff, allowedOps) {
 // ============================================================
 // STATISTICS
 // ============================================================
-function genStatistics(rng, diff, allowedOps) {
+function genStatistics(rng, diff, allowedOps, _depth = 0) {
+    if (_depth > 30) return null;
     const maps = {
         Easy:   { 'mean-median': [0, 1] },
         Medium: { 'mode-range': [0, 1], 'mean-median': [2] },
@@ -581,7 +584,7 @@ function genStatistics(rng, diff, allowedOps) {
             const n = ri(rng, 3, 5);
             const data = Array.from({ length: n }, () => ri(rng, 1, 20));
             const sum = data.reduce((a, b) => a + b, 0);
-            if (sum % n !== 0) return genStatistics(rng, diff, allowedOps);
+            if (sum % n !== 0) return genStatistics(rng, diff, allowedOps, _depth + 1);
             const ph = rc(rng, [
                 `Find the mean of $${data.join(', ')}$`,
                 `Calculate the mean of $${data.join(', ')}$`,
@@ -629,7 +632,7 @@ function genStatistics(rng, diff, allowedOps) {
         const n = ri(rng, 4, 6);
         const data = Array.from({ length: n }, () => ri(rng, 5, 30));
         const sum = data.reduce((a, b) => a + b, 0);
-        if (sum % n !== 0) return genStatistics(rng, diff, allowedOps);
+        if (sum % n !== 0) return genStatistics(rng, diff, allowedOps, _depth + 1);
         const ph = rc(rng, [
             `Calculate the mean of $${data.join(', ')}$`,
             `Find the mean of $${data.join(', ')}$`,
@@ -643,7 +646,7 @@ function genStatistics(rng, diff, allowedOps) {
         const q1 = (data[1] + data[2]) / 2;
         const q3 = (data[5] + data[6]) / 2;
         const iqr = q3 - q1;
-        if (!Number.isInteger(iqr)) return genStatistics(rng, diff, allowedOps);
+        if (!Number.isInteger(iqr)) return genStatistics(rng, diff, allowedOps, _depth + 1);
         const ph = rc(rng, [
             `Find the interquartile range of $${data.join(', ')}$`,
             `Calculate the IQR of $${data.join(', ')}$`,
@@ -654,7 +657,7 @@ function genStatistics(rng, diff, allowedOps) {
     const n = rc(rng, [4, 6]);
     const data = Array.from({ length: n }, () => ri(rng, 1, 30)).sort((a, b) => a - b);
     const med = (data[n / 2 - 1] + data[n / 2]) / 2;
-    if (!Number.isInteger(med)) return genStatistics(rng, diff, allowedOps);
+    if (!Number.isInteger(med)) return genStatistics(rng, diff, allowedOps, _depth + 1);
     const ph = rc(rng, [
         `Find the median of $${data.join(', ')}$`,
         `Calculate the median of $${data.join(', ')}$`,
@@ -666,7 +669,8 @@ function genStatistics(rng, diff, allowedOps) {
 // ============================================================
 // FINANCIAL MATHS
 // ============================================================
-function genFinancial(rng, diff, allowedOps) {
+function genFinancial(rng, diff, allowedOps, _depth = 0) {
+    if (_depth > 20) return null;
     const maps = {
         Easy:   { 'simple-interest': [0], 'gst': [1] },
         Medium: { 'markup-profit': [0], 'simple-interest': [1] },
@@ -703,7 +707,7 @@ function genFinancial(rng, diff, allowedOps) {
             const cost = ri(rng, 5, 20) * 10;
             const pctProfit = rc(rng, [10, 20, 25, 50]);
             const sell = cost * (1 + pctProfit / 100);
-            if (!Number.isInteger(sell)) return genFinancial(rng, diff, allowedOps);
+            if (!Number.isInteger(sell)) return genFinancial(rng, diff, allowedOps, _depth + 1);
             const ph = rc(rng, [
                 `Find the selling price: cost $\\$${cost}$, mark-up $${pctProfit}\\%$`,
                 `An item costs $\\$${cost}$. Calculate the selling price after a $${pctProfit}\\%$ mark-up.`,
@@ -754,7 +758,8 @@ function genFinancial(rng, diff, allowedOps) {
 // ============================================================
 // GEOMETRY
 // ============================================================
-function genGeometry(rng, diff, allowedOps) {
+function genGeometry(rng, diff, allowedOps, _depth = 0) {
+    if (_depth > 20) return null;
     const maps = {
         Easy:   { 'area-perimeter': [0, 1] },
         Medium: { 'area-perimeter': [0], 'pythagoras': [1], 'angles': [2] },
@@ -810,7 +815,7 @@ function genGeometry(rng, diff, allowedOps) {
         const angles = [30, 40, 45, 50, 60, 70, 80, 90];
         const a1 = rc(rng, angles);
         const remaining = angles.filter(a => a < 180 - a1 && a !== a1);
-        if (remaining.length === 0) return genGeometry(rng, diff, allowedOps);
+        if (remaining.length === 0) return genGeometry(rng, diff, allowedOps, _depth + 1);
         const a2 = rc(rng, remaining);
         const a3 = 180 - a1 - a2;
         const ph = rc(rng, [
