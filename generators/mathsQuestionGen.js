@@ -783,7 +783,7 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
                 `A rectangle has length $${l}$ and width $${w}$. Determine its area.`,
                 `What is the area of a rectangle measuring $${l}$ by $${w}$?`,
             ]);
-            return { clue: ph, answer: String(l * w), answerDisplay: `${l * w} units²` };
+            return { clue: ph, answer: String(l * w), answerDisplay: `${l * w} units²`, diagram: { type: 'rectangle', l, w, missing: 'area' } };
         }
         const l = ri(rng, 3, 15), w = ri(rng, 2, l);
         const ph = rc(rng, [
@@ -792,7 +792,7 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
             `A rectangle has length $${l}$ and width $${w}$. Determine its perimeter.`,
             `What is the perimeter of a rectangle measuring $${l}$ by $${w}$?`,
         ]);
-        return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} units` };
+        return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} units`, diagram: { type: 'rectangle', l, w, missing: 'perimeter' } };
     }
     if (diff === 'Medium') {
         if (type === 0) {
@@ -804,7 +804,7 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
                 `Calculate the area of a triangle: base $${b}$, perpendicular height $${h}$`,
                 `A triangle has base $${b}$ and height $${h}$. Determine its area.`,
             ]);
-            return { clue: ph, answer: String(ans), answerDisplay: `${ans} units²` };
+            return { clue: ph, answer: String(ans), answerDisplay: `${ans} units²`, diagram: { type: 'triangle-area', base: b, height: h } };
         }
         if (type === 1) {
             const triples = [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17], [9, 12, 15]];
@@ -815,7 +815,7 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
                 `Calculate the hypotenuse of a right triangle with legs $${a * scale}$ and $${b * scale}$.`,
                 `Determine the length of the hypotenuse given legs of $${a * scale}$ and $${b * scale}$.`,
             ]);
-            return { clue: ph, answer: String(c * scale), answerDisplay: `${c * scale} units` };
+            return { clue: ph, answer: String(c * scale), answerDisplay: `${c * scale} units`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'c' } };
         }
         const angles = [30, 40, 45, 50, 60, 70, 80, 90];
         const a1 = rc(rng, angles);
@@ -829,7 +829,7 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
             `Calculate the third angle of a triangle given angles of $${a1}$° and $${a2}$°.`,
             `Two angles of a triangle are $${a1}$° and $${a2}$°. What is the third angle?`,
         ]);
-        return { clue: ph, answer: String(a3), answerDisplay: `${a3}°` };
+        return { clue: ph, answer: String(a3), answerDisplay: `${a3}°`, diagram: { type: 'triangle-angles', a1, a2, a3, missing: 'a3' } };
     }
     // Hard
     if (type === 0) {
@@ -840,7 +840,7 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
             `Calculate the area of a circle of radius $${r}$. Use $\\pi \\approx 3.14$.`,
             `Determine the area of a circle with radius $${r}$ cm. Use $\\pi \\approx 3.14$.`,
         ]);
-        return { clue: ph, answer: String(ans), answerDisplay: `${ans} units²` };
+        return { clue: ph, answer: String(ans), answerDisplay: `${ans} units²`, diagram: { type: 'circle', r, missing: 'area' } };
     }
     if (type === 1) {
         const triples = [[3, 4, 5], [5, 12, 13], [8, 15, 17]];
@@ -851,7 +851,7 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
             `Calculate the missing leg of a right triangle: hypotenuse $${c * scale}$, known leg $${a * scale}$.`,
             `Determine the unknown side of a right triangle with hypotenuse $${c * scale}$ and leg $${a * scale}$.`,
         ]);
-        return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} units` };
+        return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} units`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'b' } };
     }
     const r = ri(rng, 2, 15);
     const ans = round(2 * 3.14 * r, 2);
@@ -860,7 +860,7 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
         `Calculate the circumference of a circle of radius $${r}$. Use $\\pi \\approx 3.14$.`,
         `Determine the circumference of a circle with radius $${r}$ cm. Use $\\pi \\approx 3.14$.`,
     ]);
-    return { clue: ph, answer: String(ans), answerDisplay: `${ans} units` };
+    return { clue: ph, answer: String(ans), answerDisplay: `${ans} units`, diagram: { type: 'circle', r, missing: 'circumference' } };
 }
 
 // ============================================================

@@ -2307,6 +2307,21 @@ table.mode-cw td.cell.empty {
     border-bottom: 2px solid #cbd5e1;
     min-width: 60px;
 }
+/* Geometry diagram — shown between question clue and working lines */
+.problem-diagram {
+    margin: 5px 0 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-main);   /* SVG uses currentColor for fills/labels */
+}
+.geo-diagram-svg {
+    max-width: min(100%, 168px);
+    height: auto;
+    display: block;
+}
+[data-theme="dark"] .problem-diagram { color: var(--text-main, #f1f5f9); }
+
 /* Topic + outcome chips on one centered line below the answer box */
 .problem-meta-row {
     display: flex;

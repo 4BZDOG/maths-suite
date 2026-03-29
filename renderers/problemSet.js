@@ -2,6 +2,7 @@
 import { renderKaTeX } from './katexRender.js';
 import { esc, formatClue } from './htmlUtils.js';
 import { getTopicOutcomeCodes, DEFAULT_STAGE } from '../core/outcomes.js';
+import { renderDiagramSVG } from './diagramSVG.js';
 
 const TOPIC_COLOURS = {
     'Number': '#3b82f6', 'Algebra': '#8b5cf6', 'Geometry': '#10b981',
@@ -17,6 +18,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
     const showTopic        = settings.showTopic || false;
     const showOutcomeChips = settings.psShowOutcomeChips || false;
     const capOnePage       = settings.psCapOnePage || false;
+    const showDiagrams     = settings.showDiagrams !== false;   // default true
     const stage            = settings.stage || DEFAULT_STAGE;
 
     if (!questions || questions.length === 0) {
@@ -48,6 +50,11 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
             ? `<div class="problem-meta-row">${topicBadge}${outcomeChipsHtml}</div>`
             : '';
 
+        // Diagram (geometry questions only, when enabled)
+        const diagramHtml = showDiagrams && item.diagram
+            ? `<div class="problem-diagram">${renderDiagramSVG(item.diagram)}</div>`
+            : '';
+
         // Working lines: Hard = 2, Medium = 1, Easy = 0
         const workingCount = item.difficulty === 'Hard' ? 2 : item.difficulty === 'Medium' ? 1 : 0;
         const workingHtml = workingCount > 0
@@ -62,6 +69,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
                 <span class="problem-num">${i + 1}.</span>
                 <div class="problem-clue katex-target">${formatClue(item.clue)}</div>
             </div>
+            ${diagramHtml}
             ${workingHtml}
             <div class="problem-answer-box">
                 <span class="problem-answer-label">Answer:</span>

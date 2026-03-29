@@ -314,6 +314,10 @@
                             <option value="2" selected>2 Columns</option>
                         </select>
                         <hr class="form-divider">
+                        <div class="toggle-row"><label title="Show shape diagrams for geometry questions (triangles, rectangles, circles) with labelled measurements">Show Diagrams</label><label class="switch"><input
+                                    type="checkbox" id="psShowDiagrams" checked onchange="renderActivePage(); saveState();"><span
+                                    class="slider-switch"></span></label></div>
+                        <hr class="form-divider">
                         <div class="toggle-row"><label>Show Topic Badge</label><label class="switch"><input
                                     type="checkbox" id="psShowTopic" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
@@ -475,7 +479,7 @@
         </div>
     </main>
 
-    <script src="bundle.js?v=89"></script>
+    <script src="bundle.js?v=90"></script>
 </body>
 
 </html>

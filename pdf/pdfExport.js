@@ -12,6 +12,241 @@ import { getOutcomesForTopics, getTopicOutcomeCodes, DEFAULT_STAGE } from '../co
 
 let isExporting = false;
 
+// ─── PDF Diagram Drawing ──────────────────────────────────────────────────────
+// Draws geometry diagrams using jsPDF primitives.
+// Returns the height (mm) consumed so callers can advance their Y position.
+
+const _GC  = [16, 185, 129];   // emerald green
+const _GCF = [209, 250, 229];  // light green fill
+const _LC  = [80, 96, 116];    // slate label
+const _MC  = [239, 68, 68];    // red missing value
+
+function _triLines(doc, pts, style) {
+    // Draw a closed triangle given 3 {x,y} vertices using jsPDF lines()
+    const [A, B, C] = pts;
+    doc.lines([[B.x - A.x, B.y - A.y], [C.x - B.x, C.y - B.y]], A.x, A.y, [1, 1], style, true);
+}
+
+function _rightAnglePDF(doc, vx, vy, sq) {
+    // Small square right-angle marker at vertex (vx,vy); sq = side length mm
+    doc.setDrawColor(..._GC);
+    doc.lines([[sq, 0], [0, -sq], [-sq, 0]], vx, vy, [1, 1], 'S', true);
+}
+
+function _drawRectDiagramPDF(doc, { l, w: wv }, x0, y0, w, h, ps, font) {
+    const aspect = l / wv;
+    const maxW = w * 0.68, maxH = h * 0.68;
+    let dw = aspect >= maxW / maxH ? maxW : maxH * aspect;
+    let dh = aspect >= maxW / maxH ? maxW / aspect : maxH;
+    dw = Math.max(10, Math.min(maxW, dw));
+    dh = Math.max(7,  Math.min(maxH, dh));
+
+    const rx = x0 + (w - dw) / 2;
+    const ry = y0 + (h - dh) / 2 - 1;
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(0.45 * ps);
+    doc.rect(rx, ry, dw, dh, 'FD');
+
+    // Length label (below, centred)
+    doc.setFont(font, 'normal');
+    doc.setFontSize(7.5 * ps);
+    doc.setTextColor(..._LC);
+    doc.text(String(l), rx + dw / 2, ry + dh + 3.2 * ps, { align: 'center' });
+
+    // Width label (left side, rotated 90°)
+    doc.text(String(wv), rx - 3.5 * ps, ry + dh / 2, { angle: 90, align: 'center' });
+
+    // Missing "?" in centre
+    doc.setFont(font, 'bold');
+    doc.setFontSize(9 * ps);
+    doc.setTextColor(..._MC);
+    doc.text('?', rx + dw / 2, ry + dh / 2 + 1.5 * ps, { align: 'center' });
+}
+
+function _drawRightTriDiagramPDF(doc, { a, b, c, missing }, x0, y0, w, h, ps, font) {
+    const maxW = w * 0.62, maxH = h * 0.74;
+    const sc  = Math.min(maxW / a, maxH / b);
+    const aPx = Math.max(9, Math.min(maxW, a * sc));
+    const bPx = Math.max(7, Math.min(maxH, b * sc));
+
+    const Ax = x0 + (w - aPx) / 2 - 3;
+    const Ay = y0 + h - 4.5 * ps;
+    const A = { x: Ax, y: Ay };
+    const B = { x: Ax + aPx, y: Ay };
+    const C = { x: Ax, y: Ay - bPx };
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(0.45 * ps);
+    _triLines(doc, [A, B, C], 'FD');
+
+    const sq = 2.2 * ps;
+    doc.setLineWidth(0.35 * ps);
+    _rightAnglePDF(doc, Ax, Ay, sq);
+
+    const aLabel = missing === 'a' ? '?' : String(a);
+    const bLabel = missing === 'b' ? '?' : String(b);
+    const cLabel = missing === 'c' ? 'c = ?' : `c = ${c}`;
+
+    // Leg a
+    doc.setFont(font, missing === 'a' ? 'bold' : 'normal');
+    doc.setFontSize(7.5 * ps);
+    doc.setTextColor(...(missing === 'a' ? _MC : _LC));
+    doc.text(aLabel, (Ax + Ax + aPx) / 2, Ay + 3.2 * ps, { align: 'center' });
+
+    // Leg b (rotated)
+    doc.setFont(font, missing === 'b' ? 'bold' : 'normal');
+    doc.setTextColor(...(missing === 'b' ? _MC : _LC));
+    doc.text(bLabel, Ax - 3.5 * ps, (Ay + Ay - bPx) / 2, { angle: 90, align: 'center' });
+
+    // Hypotenuse (midpoint + small offset outward)
+    const hmx = (B.x + C.x) / 2 + 3.5 * ps;
+    const hmy = (B.y + C.y) / 2;
+    doc.setFont(font, missing === 'c' ? 'bold' : 'normal');
+    doc.setFontSize(7 * ps);
+    doc.setTextColor(...(missing === 'c' ? _MC : _LC));
+    doc.text(cLabel, hmx, hmy, { align: 'left' });
+}
+
+function _drawTriAnglesDiagramPDF(doc, { a1, a2, a3, missing }, x0, y0, w, h, ps, font) {
+    const triW = w * 0.7;
+    const triH = h * 0.62;
+    const cx = x0 + w / 2;
+    const by = y0 + h - 4 * ps;
+
+    const A = { x: cx - triW / 2, y: by };
+    const B = { x: cx + triW / 2, y: by };
+    const C = { x: cx, y: by - triH };
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(0.45 * ps);
+    _triLines(doc, [A, B, C], 'FD');
+
+    const a3Label = missing === 'a3' ? '?' : `${a3}\u00B0`;
+
+    doc.setFontSize(7.5 * ps);
+
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    doc.text(`${a1}\u00B0`, A.x + 2, A.y + 3 * ps, { align: 'left' });
+    doc.text(`${a2}\u00B0`, B.x - 2, B.y + 3 * ps, { align: 'right' });
+
+    doc.setFont(font, missing === 'a3' ? 'bold' : 'normal');
+    doc.setTextColor(...(missing === 'a3' ? _MC : _LC));
+    doc.text(a3Label, C.x, C.y - 2.5 * ps, { align: 'center' });
+}
+
+function _drawTriAreaDiagramPDF(doc, { base, height }, x0, y0, w, h, ps, font) {
+    const triW = w * 0.7;
+    const ratio = height / base;
+    const triH = Math.max(7, Math.min(h * 0.64, triW * ratio * 0.58));
+    const cx = x0 + w / 2;
+    const by = y0 + h - 4.5 * ps;
+
+    const bl = { x: cx - triW / 2, y: by };
+    const br = { x: cx + triW / 2, y: by };
+    const ap = { x: cx, y: by - triH };
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(0.45 * ps);
+    _triLines(doc, [bl, br, ap], 'FD');
+
+    // Dashed height line
+    doc.setLineDashPattern([1.2, 1.2], 0);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(0.3 * ps);
+    doc.line(ap.x, ap.y, ap.x, by);
+    doc.setLineDashPattern([], 0);
+
+    // Right-angle mark at height foot
+    const sq = 1.8 * ps;
+    doc.setLineWidth(0.3 * ps);
+    _rightAnglePDF(doc, ap.x, by, sq);
+
+    doc.setFontSize(7.5 * ps);
+
+    // Base label
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    doc.text(String(base), cx, by + 3.2 * ps, { align: 'center' });
+
+    // Height label
+    doc.text(`h=${height}`, ap.x + 2.5 * ps, (ap.y + by) / 2, { align: 'left' });
+
+    // Missing "?" for area
+    doc.setFont(font, 'bold');
+    doc.setTextColor(..._MC);
+    doc.setFontSize(8.5 * ps);
+    doc.text('?', cx - 7 * ps, (ap.y + by) / 2 + 1, { align: 'center' });
+}
+
+function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
+    const maxR = Math.min(w * 0.22, h * 0.42);
+    const rPx  = Math.max(4, Math.min(maxR, r * 1.3 * ps));
+    const cx   = x0 + w * 0.36;
+    const cy   = y0 + h / 2;
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(0.45 * ps);
+    doc.circle(cx, cy, rPx, 'FD');
+
+    // Dashed radius
+    doc.setLineDashPattern([1.2, 1.2], 0);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(0.3 * ps);
+    doc.line(cx, cy, cx + rPx, cy);
+    doc.setLineDashPattern([], 0);
+
+    // Centre dot
+    doc.setFillColor(..._GC);
+    doc.circle(cx, cy, 0.7, 'F');
+
+    doc.setFontSize(7 * ps);
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    doc.text(`r = ${r}`, cx + rPx / 2, cy - 2 * ps, { align: 'center' });
+
+    const missText = missing === 'area' ? 'A = ?' : 'C = ?';
+    doc.setFont(font, 'bold');
+    doc.setFontSize(8.5 * ps);
+    doc.setTextColor(..._MC);
+    doc.text(missText, cx + rPx + 4.5 * ps, cy + 1.5 * ps, { align: 'left' });
+}
+
+/**
+ * Draw a geometry diagram into a bounding box.
+ * @param {jsPDF} doc
+ * @param {Object} diagram  - item.diagram
+ * @param {number} x0       - left edge (mm)
+ * @param {number} y0       - top edge (mm)
+ * @param {number} w        - available width (mm)
+ * @param {number} h        - allocated height (mm)
+ * @param {number} ps       - pScale
+ * @param {string} font     - pdf font name
+ */
+function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
+    if (!diagram) return;
+    // Reset dash + line state before drawing
+    doc.setLineDashPattern([], 0);
+    switch (diagram.type) {
+        case 'rectangle':       _drawRectDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'right-triangle':  _drawRightTriDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'triangle-angles': _drawTriAnglesDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'triangle-area':   _drawTriAreaDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'circle':          _drawCircleDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+    }
+    // Restore defaults
+    doc.setLineDashPattern([], 0);
+    doc.setTextColor(15, 23, 42);
+    doc.setDrawColor(100, 116, 139);
+    doc.setFillColor(255, 255, 255);
+}
+
 const TOPIC_COLOURS_RGB = {
     'Number': [59, 130, 246], 'Algebra': [139, 92, 246], 'Geometry': [16, 185, 129],
     'Statistics': [245, 158, 11], 'Financial Maths': [239, 68, 68],
@@ -50,7 +285,9 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
     const showTopic        = cfg.showTopic || false;
     const showOutcomeChips = cfg.psShowOutcomeChips || false;
     const capOnePage       = cfg.psCapOnePage || false;
+    const showDiagrams     = cfg.showDiagrams !== false;   // default true
     const stage            = DEFAULT_STAGE;
+    const DIAG_H           = 22 * pScale;  // allocated height (mm) per diagram
     const availW           = PAGE_WIDTH - MARGIN * 2;
     const colW             = (availW - (cols - 1) * 8) / cols;
     const chipFontPt       = 5.5 * pScale;
@@ -110,7 +347,9 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
             }
             metaH = 4 * pScale + metaRows * (chipH + 1);
         }
+        const hasDiagram = showDiagrams && !!item.diagram;
         const itemH = clueBlockH
+            + (hasDiagram ? DIAG_H + 2 * pScale : 0)
             + (workingCount > 0 ? 5 + workingCount * workingLineSpacing : 0)
             + answerLineSpacing + 12 * pScale
             + metaH + itemGap;
@@ -161,6 +400,12 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
         }
 
         let nextY = clueEndY + 5;
+
+        // ── Geometry diagram ─────────────────────────────────────────
+        if (hasDiagram) {
+            _drawDiagramInPDF(doc, item.diagram, itemX + 9, nextY, colW - 13, DIAG_H, pScale, pdfFont);
+            nextY += DIAG_H + 2 * pScale;
+        }
 
         // ── Working lines ────────────────────────────────────────────
         if (workingCount > 0) {
