@@ -22,27 +22,29 @@ const _LC  = [80, 96, 116];    // slate label
 const _MC  = [239, 68, 68];    // red missing value
 
 function _triLines(doc, pts, style) {
-    // Draw a closed triangle given 3 {x,y} vertices using jsPDF lines()
+    // Draw a closed triangle given 3 {x,y} vertices using jsPDF triangle()
     const [A, B, C] = pts;
-    doc.lines([[B.x - A.x, B.y - A.y], [C.x - B.x, C.y - B.y]], A.x, A.y, [1, 1], style, true);
+    doc.triangle(A.x, A.y, B.x, B.y, C.x, C.y, style);
 }
 
 function _rightAnglePDF(doc, vx, vy, sq) {
-    // Small square right-angle marker at vertex (vx,vy); sq = side length mm
+    // Small L-shaped right-angle marker at vertex (vx,vy); sq = side length mm
+    // Two doc.line() calls are reliable in all jsPDF versions
     doc.setDrawColor(..._GC);
-    doc.lines([[sq, 0], [0, -sq], [-sq, 0]], vx, vy, [1, 1], 'S', true);
+    doc.line(vx + sq, vy, vx + sq, vy - sq);   // vertical right side
+    doc.line(vx, vy - sq, vx + sq, vy - sq);   // horizontal top
 }
 
 function _drawRectDiagramPDF(doc, { l, w: wv }, x0, y0, w, h, ps, font) {
     const aspect = l / wv;
-    const maxW = w * 0.68, maxH = h * 0.68;
+    const maxW = w * 0.72, maxH = h * 0.60;
     let dw = aspect >= maxW / maxH ? maxW : maxH * aspect;
     let dh = aspect >= maxW / maxH ? maxW / aspect : maxH;
-    dw = Math.max(10, Math.min(maxW, dw));
-    dh = Math.max(7,  Math.min(maxH, dh));
+    dw = Math.max(12, Math.min(maxW, dw));
+    dh = Math.max(8,  Math.min(maxH, dh));
 
     const rx = x0 + (w - dw) / 2;
-    const ry = y0 + (h - dh) / 2 - 1;
+    const ry = y0 + (h - dh) / 2 - 2 * ps;
 
     doc.setFillColor(..._GCF);
     doc.setDrawColor(..._GC);
@@ -51,28 +53,28 @@ function _drawRectDiagramPDF(doc, { l, w: wv }, x0, y0, w, h, ps, font) {
 
     // Length label (below, centred)
     doc.setFont(font, 'normal');
-    doc.setFontSize(7.5 * ps);
+    doc.setFontSize(8 * ps);
     doc.setTextColor(..._LC);
-    doc.text(String(l), rx + dw / 2, ry + dh + 3.2 * ps, { align: 'center' });
+    doc.text(String(l), rx + dw / 2, ry + dh + 4 * ps, { align: 'center' });
 
     // Width label (left side, rotated 90°)
-    doc.text(String(wv), rx - 3.5 * ps, ry + dh / 2, { angle: 90, align: 'center' });
+    doc.text(String(wv), rx - 4 * ps, ry + dh / 2, { angle: 90, align: 'center' });
 
     // Missing "?" in centre
     doc.setFont(font, 'bold');
-    doc.setFontSize(9 * ps);
+    doc.setFontSize(10 * ps);
     doc.setTextColor(..._MC);
-    doc.text('?', rx + dw / 2, ry + dh / 2 + 1.5 * ps, { align: 'center' });
+    doc.text('?', rx + dw / 2, ry + dh / 2 + 1.8 * ps, { align: 'center' });
 }
 
 function _drawRightTriDiagramPDF(doc, { a, b, c, missing }, x0, y0, w, h, ps, font) {
-    const maxW = w * 0.62, maxH = h * 0.74;
+    const maxW = w * 0.65, maxH = h * 0.68;
     const sc  = Math.min(maxW / a, maxH / b);
-    const aPx = Math.max(9, Math.min(maxW, a * sc));
-    const bPx = Math.max(7, Math.min(maxH, b * sc));
+    const aPx = Math.max(10, Math.min(maxW, a * sc));
+    const bPx = Math.max(8,  Math.min(maxH, b * sc));
 
-    const Ax = x0 + (w - aPx) / 2 - 3;
-    const Ay = y0 + h - 4.5 * ps;
+    const Ax = x0 + (w - aPx) / 2 - 2 * ps;
+    const Ay = y0 + h - 5 * ps;
     const A = { x: Ax, y: Ay };
     const B = { x: Ax + aPx, y: Ay };
     const C = { x: Ax, y: Ay - bPx };
@@ -82,7 +84,7 @@ function _drawRightTriDiagramPDF(doc, { a, b, c, missing }, x0, y0, w, h, ps, fo
     doc.setLineWidth(0.45 * ps);
     _triLines(doc, [A, B, C], 'FD');
 
-    const sq = 2.2 * ps;
+    const sq = 2.5 * ps;
     doc.setLineWidth(0.35 * ps);
     _rightAnglePDF(doc, Ax, Ay, sq);
 
@@ -90,31 +92,31 @@ function _drawRightTriDiagramPDF(doc, { a, b, c, missing }, x0, y0, w, h, ps, fo
     const bLabel = missing === 'b' ? '?' : String(b);
     const cLabel = missing === 'c' ? 'c = ?' : `c = ${c}`;
 
-    // Leg a
+    // Leg a (below)
     doc.setFont(font, missing === 'a' ? 'bold' : 'normal');
-    doc.setFontSize(7.5 * ps);
+    doc.setFontSize(8 * ps);
     doc.setTextColor(...(missing === 'a' ? _MC : _LC));
-    doc.text(aLabel, (Ax + Ax + aPx) / 2, Ay + 3.2 * ps, { align: 'center' });
+    doc.text(aLabel, (Ax + Ax + aPx) / 2, Ay + 4 * ps, { align: 'center' });
 
-    // Leg b (rotated)
+    // Leg b (rotated, left side)
     doc.setFont(font, missing === 'b' ? 'bold' : 'normal');
     doc.setTextColor(...(missing === 'b' ? _MC : _LC));
-    doc.text(bLabel, Ax - 3.5 * ps, (Ay + Ay - bPx) / 2, { angle: 90, align: 'center' });
+    doc.text(bLabel, Ax - 4 * ps, (Ay + Ay - bPx) / 2, { angle: 90, align: 'center' });
 
-    // Hypotenuse (midpoint + small offset outward)
-    const hmx = (B.x + C.x) / 2 + 3.5 * ps;
+    // Hypotenuse label at midpoint, offset outward
+    const hmx = (B.x + C.x) / 2 + 4 * ps;
     const hmy = (B.y + C.y) / 2;
     doc.setFont(font, missing === 'c' ? 'bold' : 'normal');
-    doc.setFontSize(7 * ps);
+    doc.setFontSize(7.5 * ps);
     doc.setTextColor(...(missing === 'c' ? _MC : _LC));
     doc.text(cLabel, hmx, hmy, { align: 'left' });
 }
 
 function _drawTriAnglesDiagramPDF(doc, { a1, a2, a3, missing }, x0, y0, w, h, ps, font) {
-    const triW = w * 0.7;
-    const triH = h * 0.62;
+    const triW = w * 0.72;
+    const triH = h * 0.64;
     const cx = x0 + w / 2;
-    const by = y0 + h - 4 * ps;
+    const by = y0 + h - 5 * ps;
 
     const A = { x: cx - triW / 2, y: by };
     const B = { x: cx + triW / 2, y: by };
@@ -127,24 +129,24 @@ function _drawTriAnglesDiagramPDF(doc, { a1, a2, a3, missing }, x0, y0, w, h, ps
 
     const a3Label = missing === 'a3' ? '?' : `${a3}\u00B0`;
 
-    doc.setFontSize(7.5 * ps);
+    doc.setFontSize(8 * ps);
 
     doc.setFont(font, 'normal');
     doc.setTextColor(..._LC);
-    doc.text(`${a1}\u00B0`, A.x + 2, A.y + 3 * ps, { align: 'left' });
-    doc.text(`${a2}\u00B0`, B.x - 2, B.y + 3 * ps, { align: 'right' });
+    doc.text(`${a1}\u00B0`, A.x + 2.5 * ps, A.y + 4 * ps, { align: 'left' });
+    doc.text(`${a2}\u00B0`, B.x - 2.5 * ps, B.y + 4 * ps, { align: 'right' });
 
     doc.setFont(font, missing === 'a3' ? 'bold' : 'normal');
     doc.setTextColor(...(missing === 'a3' ? _MC : _LC));
-    doc.text(a3Label, C.x, C.y - 2.5 * ps, { align: 'center' });
+    doc.text(a3Label, C.x, C.y - 3 * ps, { align: 'center' });
 }
 
 function _drawTriAreaDiagramPDF(doc, { base, height }, x0, y0, w, h, ps, font) {
-    const triW = w * 0.7;
+    const triW = w * 0.70;
     const ratio = height / base;
-    const triH = Math.max(7, Math.min(h * 0.64, triW * ratio * 0.58));
+    const triH = Math.max(8, Math.min(h * 0.62, triW * ratio * 0.58));
     const cx = x0 + w / 2;
-    const by = y0 + h - 4.5 * ps;
+    const by = y0 + h - 5 * ps;
 
     const bl = { x: cx - triW / 2, y: by };
     const br = { x: cx + triW / 2, y: by };
@@ -163,39 +165,40 @@ function _drawTriAreaDiagramPDF(doc, { base, height }, x0, y0, w, h, ps, font) {
     doc.setLineDashPattern([], 0);
 
     // Right-angle mark at height foot
-    const sq = 1.8 * ps;
+    const sq = 2.2 * ps;
     doc.setLineWidth(0.3 * ps);
     _rightAnglePDF(doc, ap.x, by, sq);
 
-    doc.setFontSize(7.5 * ps);
+    doc.setFontSize(8 * ps);
 
     // Base label
     doc.setFont(font, 'normal');
     doc.setTextColor(..._LC);
-    doc.text(String(base), cx, by + 3.2 * ps, { align: 'center' });
+    doc.text(String(base), cx, by + 4 * ps, { align: 'center' });
 
-    // Height label
-    doc.text(`h=${height}`, ap.x + 2.5 * ps, (ap.y + by) / 2, { align: 'left' });
+    // Height label (right of dashed line)
+    doc.text(`h = ${height}`, ap.x + 3 * ps, (ap.y + by) / 2, { align: 'left' });
 
-    // Missing "?" for area
+    // Missing "?" for area (left side)
     doc.setFont(font, 'bold');
     doc.setTextColor(..._MC);
-    doc.setFontSize(8.5 * ps);
-    doc.text('?', cx - 7 * ps, (ap.y + by) / 2 + 1, { align: 'center' });
+    doc.setFontSize(10 * ps);
+    doc.text('?', cx - 8 * ps, (ap.y + by) / 2 + 1.5 * ps, { align: 'center' });
 }
 
 function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
-    const maxR = Math.min(w * 0.22, h * 0.42);
-    const rPx  = Math.max(4, Math.min(maxR, r * 1.3 * ps));
-    const cx   = x0 + w * 0.36;
-    const cy   = y0 + h / 2;
+    // Allocate left ~45% of width for the circle, right ~55% for the missing label
+    const maxR = Math.min(w * 0.26, h * 0.38);
+    const rPx  = Math.max(5, Math.min(maxR, r * 1.6 * ps));
+    const cx   = x0 + w * 0.35;
+    const cy   = y0 + h / 2 + 1 * ps;   // slightly below vertical centre to leave room above
 
     doc.setFillColor(..._GCF);
     doc.setDrawColor(..._GC);
     doc.setLineWidth(0.45 * ps);
     doc.circle(cx, cy, rPx, 'FD');
 
-    // Dashed radius
+    // Dashed radius line (centre → right edge)
     doc.setLineDashPattern([1.2, 1.2], 0);
     doc.setDrawColor(..._GC);
     doc.setLineWidth(0.3 * ps);
@@ -204,18 +207,20 @@ function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
 
     // Centre dot
     doc.setFillColor(..._GC);
-    doc.circle(cx, cy, 0.7, 'F');
+    doc.circle(cx, cy, 0.8, 'F');
 
-    doc.setFontSize(7 * ps);
+    // "r = X" label — centred above the radius line, clear of the circle edge
+    doc.setFontSize(8 * ps);
     doc.setFont(font, 'normal');
     doc.setTextColor(..._LC);
-    doc.text(`r = ${r}`, cx + rPx / 2, cy - 2 * ps, { align: 'center' });
+    doc.text(`r = ${r}`, cx + rPx / 2, cy - rPx - 2.5 * ps, { align: 'center' });
 
+    // Missing label — to the right of the circle with generous gap
     const missText = missing === 'area' ? 'A = ?' : 'C = ?';
     doc.setFont(font, 'bold');
-    doc.setFontSize(8.5 * ps);
+    doc.setFontSize(9.5 * ps);
     doc.setTextColor(..._MC);
-    doc.text(missText, cx + rPx + 4.5 * ps, cy + 1.5 * ps, { align: 'left' });
+    doc.text(missText, cx + rPx + 5 * ps, cy + 1.5 * ps, { align: 'left' });
 }
 
 /**
@@ -287,7 +292,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
     const capOnePage       = cfg.psCapOnePage || false;
     const showDiagrams     = cfg.showDiagrams !== false;   // default true
     const stage            = DEFAULT_STAGE;
-    const DIAG_H           = 22 * pScale;  // allocated height (mm) per diagram
+    const DIAG_H           = 30 * pScale;  // allocated height (mm) per diagram
     const availW           = PAGE_WIDTH - MARGIN * 2;
     const colW             = (availW - (cols - 1) * 8) / cols;
     const chipFontPt       = 5.5 * pScale;

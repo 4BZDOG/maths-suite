@@ -178,9 +178,9 @@ function _triangleArea({ base, height }) {
 // ─── Circle (area or circumference) ──────────────────────────────────────────
 // diagram: { type:'circle', r, missing:'area'|'circumference' }
 function _circle({ r, missing }) {
-    const VW = 172, VH = 106;
-    const cx = 60, cy = 52;
-    const rPx = Math.min(42, Math.max(15, r * 3.6));
+    const VW = 200, VH = 120;
+    const cx = 70, cy = 64;
+    const rPx = Math.min(46, Math.max(20, r * 4));
 
     const missText = missing === 'area' ? 'A\u202F=\u202F?' : 'C\u202F=\u202F?';
 
@@ -193,10 +193,10 @@ function _circle({ r, missing }) {
         `stroke="${GC}" stroke-width="1.4" stroke-dasharray="4,3"/>` +
         // Centre dot
         `<circle cx="${cx}" cy="${cy}" r="2.5" fill="${GC}"/>` +
-        // r label above radius
-        _t(cx + rPx / 2, cy - 7, `r\u202F=\u202F${r}`, { size: 10 }) +
-        // Missing label to the right
-        _t(cx + rPx + 16, cy + 5, missText, { anchor: 'start', missing: true, size: 12 });
+        // r label — centred above the radius line, above the circle
+        _t(cx + rPx / 2, cy - rPx - 7, `r\u202F=\u202F${r}`, { size: 11 }) +
+        // Missing label to the right with generous clearance
+        _t(cx + rPx + 14, cy + 6, missText, { anchor: 'start', missing: true, size: 13 });
 
     return _svg(VW, VH, inner);
 }
