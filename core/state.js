@@ -57,6 +57,7 @@ export const state = {
         showTopic:             false,
         psShowOutcomesHeader:  false,
         psShowOutcomeChips:    false,
+        showDiagrams:          true,
         cols:                  2,
         psCapOnePage:          false,
         wmOpacity:       0.15,
@@ -113,6 +114,7 @@ export function syncSettingsFromDOM() {
     s.showTopic             = getChk('psShowTopic',            s.showTopic);
     s.psShowOutcomesHeader  = getChk('psShowOutcomesHeader',   s.psShowOutcomesHeader);
     s.psShowOutcomeChips    = getChk('psShowOutcomeChips',     s.psShowOutcomeChips);
+    s.showDiagrams          = getChk('psShowDiagrams',         s.showDiagrams);
     s.cols                  = parseInt(getVal('psCols', s.cols), 10);
     s.psCapOnePage          = getChk('psCapOnePage', s.psCapOnePage);
     s.wmOpacity      = parseFloat(
@@ -255,6 +257,7 @@ export function applyStateToDOM(s) {
     setChk('psShowTopic',           cfg.showTopic);
     setChk('psShowOutcomesHeader',  cfg.psShowOutcomesHeader);
     setChk('psShowOutcomeChips',    cfg.psShowOutcomeChips);
+    setChk('psShowDiagrams',        cfg.showDiagrams);
     setVal('psCols',                cfg.cols);
     setChk('psCapOnePage',          cfg.psCapOnePage);
 
