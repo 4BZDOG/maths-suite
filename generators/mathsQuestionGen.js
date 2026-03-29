@@ -763,6 +763,16 @@ function genFinancial(rng, diff, allowedOps, _depth = 0) {
 // ============================================================
 // GEOMETRY
 // ============================================================
+
+// Pick measurement unit appropriate to the magnitude.
+// val ≤ 10 → mm (tiny), ≤ 100 → cm (classroom), ≤ 1000 → m (room/field), else km
+function _geoUnit(maxVal) {
+    if (maxVal <= 10)  return 'mm';
+    if (maxVal <= 100) return 'cm';
+    if (maxVal <= 999) return 'm';
+    return 'km';
+}
+
 function genGeometry(rng, diff, allowedOps, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
@@ -777,45 +787,49 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
     if (diff === 'Easy') {
         if (type === 0) {
             const l = ri(rng, 2, 15), w = ri(rng, 2, 12);
+            const u = _geoUnit(Math.max(l, w));
             const ph = rc(rng, [
-                `Find the area of a rectangle with length $${l}$ and width $${w}$`,
-                `Calculate the area of a rectangle: length $${l}$, width $${w}$`,
-                `A rectangle has length $${l}$ and width $${w}$. Determine its area.`,
-                `What is the area of a rectangle measuring $${l}$ by $${w}$?`,
+                `Find the area of a rectangle with length $${l}$ ${u} and width $${w}$ ${u}.`,
+                `Calculate the area of a rectangle: length $${l}$ ${u}, width $${w}$ ${u}.`,
+                `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its area.`,
+                `What is the area of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?`,
             ]);
-            return { clue: ph, answer: String(l * w), answerDisplay: `${l * w} units²`, diagram: { type: 'rectangle', l, w, missing: 'area' } };
+            return { clue: ph, answer: String(l * w), answerDisplay: `${l * w} ${u}²`, diagram: { type: 'rectangle', l, w, missing: 'area' } };
         }
         const l = ri(rng, 3, 15), w = ri(rng, 2, l);
+        const u = _geoUnit(Math.max(l, w));
         const ph = rc(rng, [
-            `Find the perimeter of a rectangle with length $${l}$ and width $${w}$`,
-            `Calculate the perimeter of a rectangle: length $${l}$, width $${w}$`,
-            `A rectangle has length $${l}$ and width $${w}$. Determine its perimeter.`,
-            `What is the perimeter of a rectangle measuring $${l}$ by $${w}$?`,
+            `Find the perimeter of a rectangle with length $${l}$ ${u} and width $${w}$ ${u}.`,
+            `Calculate the perimeter of a rectangle: length $${l}$ ${u}, width $${w}$ ${u}.`,
+            `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its perimeter.`,
+            `What is the perimeter of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?`,
         ]);
-        return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} units`, diagram: { type: 'rectangle', l, w, missing: 'perimeter' } };
+        return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} ${u}`, diagram: { type: 'rectangle', l, w, missing: 'perimeter' } };
     }
     if (diff === 'Medium') {
         if (type === 0) {
             const b = ri(rng, 2, 12) * 2;
             const h = ri(rng, 3, 15);
+            const u = _geoUnit(Math.max(b, h));
             const ans = (b * h) / 2;
             const ph = rc(rng, [
-                `Find the area of a triangle with base $${b}$ and height $${h}$`,
-                `Calculate the area of a triangle: base $${b}$, perpendicular height $${h}$`,
-                `A triangle has base $${b}$ and height $${h}$. Determine its area.`,
+                `Find the area of a triangle with base $${b}$ ${u} and perpendicular height $${h}$ ${u}.`,
+                `Calculate the area of a triangle: base $${b}$ ${u}, height $${h}$ ${u}.`,
+                `A triangle has base $${b}$ ${u} and height $${h}$ ${u}. Determine its area.`,
             ]);
-            return { clue: ph, answer: String(ans), answerDisplay: `${ans} units²`, diagram: { type: 'triangle-area', base: b, height: h } };
+            return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'triangle-area', base: b, height: h } };
         }
         if (type === 1) {
             const triples = [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17], [9, 12, 15]];
             const [a, b, c] = rc(rng, triples);
             const scale = ri(rng, 1, 3);
+            const u = _geoUnit(c * scale);
             const ph = rc(rng, [
-                `A right-angled triangle has legs $${a * scale}$ and $${b * scale}$. Find the hypotenuse.`,
-                `Calculate the hypotenuse of a right triangle with legs $${a * scale}$ and $${b * scale}$.`,
-                `Determine the length of the hypotenuse given legs of $${a * scale}$ and $${b * scale}$.`,
+                `A right-angled triangle has legs $${a * scale}$ ${u} and $${b * scale}$ ${u}. Find the hypotenuse.`,
+                `Calculate the hypotenuse of a right triangle with legs $${a * scale}$ ${u} and $${b * scale}$ ${u}.`,
+                `Determine the hypotenuse given legs of $${a * scale}$ ${u} and $${b * scale}$ ${u}.`,
             ]);
-            return { clue: ph, answer: String(c * scale), answerDisplay: `${c * scale} units`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'c' } };
+            return { clue: ph, answer: String(c * scale), answerDisplay: `${c * scale} ${u}`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'c' } };
         }
         const angles = [30, 40, 45, 50, 60, 70, 80, 90];
         const a1 = rc(rng, angles);
@@ -834,33 +848,36 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
     // Hard
     if (type === 0) {
         const r = ri(rng, 2, 10);
+        const u = _geoUnit(r);
         const ans = round(3.14 * r * r, 2);
         const ph = rc(rng, [
-            `Find the area of a circle with radius $${r}$ (use $\\pi \\approx 3.14$)`,
-            `Calculate the area of a circle of radius $${r}$. Use $\\pi \\approx 3.14$.`,
-            `Determine the area of a circle with radius $${r}$ cm. Use $\\pi \\approx 3.14$.`,
+            `Find the area of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.`,
+            `Calculate the area of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.`,
+            `Determine the area of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.`,
         ]);
-        return { clue: ph, answer: String(ans), answerDisplay: `${ans} units²`, diagram: { type: 'circle', r, missing: 'area' } };
+        return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'circle', r, missing: 'area' } };
     }
     if (type === 1) {
         const triples = [[3, 4, 5], [5, 12, 13], [8, 15, 17]];
         const [a, b, c] = rc(rng, triples);
         const scale = ri(rng, 1, 3);
+        const u = _geoUnit(c * scale);
         const ph = rc(rng, [
-            `A right triangle has hypotenuse $${c * scale}$ and one leg $${a * scale}$. Find the other leg.`,
-            `Calculate the missing leg of a right triangle: hypotenuse $${c * scale}$, known leg $${a * scale}$.`,
-            `Determine the unknown side of a right triangle with hypotenuse $${c * scale}$ and leg $${a * scale}$.`,
+            `A right triangle has hypotenuse $${c * scale}$ ${u} and one leg $${a * scale}$ ${u}. Find the other leg.`,
+            `Calculate the missing leg: hypotenuse $${c * scale}$ ${u}, known leg $${a * scale}$ ${u}.`,
+            `Determine the unknown side of a right triangle with hypotenuse $${c * scale}$ ${u} and leg $${a * scale}$ ${u}.`,
         ]);
-        return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} units`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'b' } };
+        return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'b' } };
     }
     const r = ri(rng, 2, 15);
+    const u = _geoUnit(r);
     const ans = round(2 * 3.14 * r, 2);
     const ph = rc(rng, [
-        `Find the circumference of a circle with radius $${r}$ (use $\\pi \\approx 3.14$)`,
-        `Calculate the circumference of a circle of radius $${r}$. Use $\\pi \\approx 3.14$.`,
-        `Determine the circumference of a circle with radius $${r}$ cm. Use $\\pi \\approx 3.14$.`,
+        `Find the circumference of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.`,
+        `Calculate the circumference of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.`,
+        `Determine the circumference of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.`,
     ]);
-    return { clue: ph, answer: String(ans), answerDisplay: `${ans} units`, diagram: { type: 'circle', r, missing: 'circumference' } };
+    return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, diagram: { type: 'circle', r, missing: 'circumference' } };
 }
 
 // ============================================================
