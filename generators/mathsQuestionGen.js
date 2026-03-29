@@ -960,6 +960,7 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
             answer:        ans,
             answerDisplay: q.answerDisplay || ans,
             notes:         st,    // store sub-topic in notes for reference
+            diagram:       q.diagram || null,
         });
     }
 
