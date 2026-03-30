@@ -206,7 +206,7 @@ function genDecimals(rng, diff, allowedOps) {
         const ans = round(a / b, 2);
         return { clue: `${verb} $${a} \\div ${b}$`, answer: String(ans) };
     }
-    const a = ri(rng, 100, 999) / 100, b = ri(rng, 100, Math.floor(a * 100) - 1) / 100;
+    const a = ri(rng, 101, 999) / 100, b = ri(rng, 100, Math.floor(a * 100) - 1) / 100;
     return { clue: `${verb} $${a} - ${b}$`, answer: String(round(a - b, 2)) };
 }
 
