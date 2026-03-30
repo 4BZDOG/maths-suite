@@ -335,7 +335,7 @@ function genFractions(rng, diff, allowedOps) {
         }
         if (type === 1) {
             const den = rc(rng, [4, 5, 6, 8, 10]);
-            const n1 = ri(rng, 1, den - 2), n2 = ri(rng, 1, den - n1);
+            const n1 = ri(rng, 1, den - 2), n2 = ri(rng, 1, den - n1 - 1);
             const ans = fracStr(n1 + n2, den);
             return { clue: `${calcVerb} $\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}}$`, answer: ans };
         }

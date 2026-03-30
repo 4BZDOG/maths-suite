@@ -438,11 +438,43 @@ function clearWatermark() {
     showToast('Watermark removed');
 }
 
+function loadConfigFromFile(input) {
+    const file = input?.files?.[0];
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = e => {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            if (parsed.settings)        Object.assign(state.settings, parsed.settings);
+            if (parsed.selectedTopics)  Object.assign(state.selectedTopics, parsed.selectedTopics);
+            if (parsed.questionsPerSet) state.questionsPerSet = parsed.questionsPerSet;
+            if (parsed.watermarkSrc)    state.watermarkSrc = parsed.watermarkSrc;
+            applyStateToDOM(state);
+            saveState();
+            generateAll();
+            showToast('Configuration loaded!');
+        } catch (_) {
+            showToast('Invalid configuration file.', 'error');
+        }
+    };
+    r.onerror = () => showToast('Failed to read file.', 'error');
+    r.readAsText(file);
+    // Reset so the same file can be re-loaded if needed
+    input.value = '';
+}
+
+function processImport() {
+    // Custom question import via CSV — coming soon
+    showToast('Custom question import coming soon.', 'info');
+}
+
 // =============================================================
 // Expose public API on window
 // =============================================================
 window._puzzleApp = {
     generateAll,
+    processImport,
+    loadConfigFromFile,
     toggleTopic,
     toggleSubOp,
     toggleTopicExpand,
