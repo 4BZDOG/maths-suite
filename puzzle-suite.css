@@ -516,6 +516,16 @@ input[type=range]::-webkit-slider-thumb:hover {
     transform: scale(1.15);
 }
 
+input[type=range]:focus-visible {
+    outline: none;
+}
+input[type=range]:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px var(--bg-panel), 0 0 0 5px var(--primary);
+}
+input[type=range]:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 3px var(--bg-panel), 0 0 0 5px var(--primary);
+}
+
 .toggle-row {
     display: flex;
     justify-content: space-between;

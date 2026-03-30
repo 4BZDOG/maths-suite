@@ -471,7 +471,7 @@ function genPercentages(rng, diff, allowedOps) {
     if (type === 0) {
         const orig = ri(rng, 5, 20) * 20;
         const pct = rc(rng, [10, 20, 25, 50]);
-        const final = orig * (1 + pct / 100);
+        const final = round(orig * (1 + pct / 100), 2);
         const ph = rc(rng, [
             `After a $${pct}\\%$ increase the value is $${final}$. Find the original.`,
             `A quantity increases by $${pct}\\%$ to become $${final}$. Determine the original value.`,
@@ -482,7 +482,7 @@ function genPercentages(rng, diff, allowedOps) {
     if (type === 1) {
         const orig = ri(rng, 4, 20) * 25;
         const pct = rc(rng, [10, 20, 25, 50]);
-        const newVal = orig * (1 + pct / 100);
+        const newVal = round(orig * (1 + pct / 100), 2);
         const ph = rc(rng, [
             `A price rises from $\\$${orig}$ to $\\$${newVal}$. What is the percentage increase?`,
             `Calculate the percentage increase from $\\$${orig}$ to $\\$${newVal}$.`,
@@ -943,8 +943,8 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
         if (!q) continue;
 
         const ans = String(q.answer);
-        // Skip if answer is too long (won't fit in grid) or contains invalid chars
-        if (!ans || ans.length > 10) continue;
+        // Skip empty, over-length, or numerically invalid answers
+        if (!ans || ans.length > 10 || ans === 'NaN' || ans === 'Infinity' || ans === '-Infinity') continue;
 
         results.push({
             id:            'gen_' + results.length + '_' + (seed || Date.now()),

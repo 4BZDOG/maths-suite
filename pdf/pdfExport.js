@@ -417,7 +417,11 @@ export async function exportPDF() {
 
     isExporting = true;
     const exportBtn = document.getElementById('export-btn-main');
-    if (exportBtn) exportBtn.disabled = true;
+    const exportBtnOrigHTML = exportBtn ? exportBtn.innerHTML : '';
+    if (exportBtn) {
+        exportBtn.disabled = true;
+        exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…';
+    }
 
     const cfg = state.settings;
     const pageOrder   = cfg.pageOrder || ['easy', 'medium', 'hard', 'key'];
@@ -427,7 +431,7 @@ export async function exportPDF() {
     if (selectedPages.length === 0) {
         showToast('Select at least one page.', 'error');
         isExporting = false;
-        if (exportBtn) exportBtn.disabled = false;
+        if (exportBtn) { exportBtn.disabled = false; exportBtn.innerHTML = exportBtnOrigHTML; }
         return;
     }
 
@@ -570,7 +574,10 @@ export async function exportPDF() {
         showToast('PDF export failed. Check internet connection for required libraries.', 'error');
     } finally {
         isExporting = false;
-        if (exportBtn) exportBtn.disabled = false;
+        if (exportBtn) {
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = exportBtnOrigHTML;
+        }
         if (L) { L.style.opacity = '0'; setTimeout(() => L.style.display = 'none', 300); }
     }
 }
