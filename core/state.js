@@ -29,8 +29,8 @@ export const state = {
     // Empty (all false) means no filter — all selected topics are used.
     selectedOutcomes: {},
 
-    // Questions per difficulty level
-    questionsPerSet: 10,
+    // Pages per difficulty level (1 or 2); questions are generated to fill these pages
+    questionsPerSet: 1,
 
     // Generated question sets (arrays of {id,topic,difficulty,clue,answer,answerDisplay,notes})
     generatedSets: { easy: [], medium: [], hard: [] },
@@ -57,10 +57,15 @@ export const state = {
         showTopic:             false,
         psShowOutcomesHeader:  false,
         psShowOutcomeChips:    false,
-        showDiagrams:          true,
         cols:                  2,
-        psCapOnePage:          false,
         wmOpacity:       0.15,
+        showFormulas: {
+            'area-perimeter': { easy: true, medium: false, hard: false },
+            'pythagoras': { easy: false, medium: false, hard: false },
+            'circles': { easy: false, medium: false, hard: false },
+            'simple-interest': { easy: false, medium: false, hard: false },
+            'compound-interest': { easy: false, medium: false, hard: false }
+        },
         opts:            { easy: true, medium: true, hard: true, key: true },
         pageOrder:       ['easy', 'medium', 'hard', 'key'],
         sidebarWidth:    '420px',
@@ -112,11 +117,9 @@ export function syncSettingsFromDOM() {
     s.showAnswerKey  = getChk('showAnswerKey', s.showAnswerKey);
     s.showExportId   = getChk('showExportId', s.showExportId);
     s.showTopic             = getChk('psShowTopic',            s.showTopic);
-    s.psShowOutcomesHeader  = getChk('psShowOutcomesHeader',   s.psShowOutcomesHeader);
     s.psShowOutcomeChips    = getChk('psShowOutcomeChips',     s.psShowOutcomeChips);
     s.showDiagrams          = getChk('psShowDiagrams',         s.showDiagrams);
     s.cols                  = parseInt(getVal('psCols', s.cols), 10);
-    s.psCapOnePage          = getChk('psCapOnePage', s.psCapOnePage);
     s.wmOpacity      = parseFloat(
         document.documentElement.style.getPropertyValue('--wm-opacity') || s.wmOpacity
     );
@@ -126,6 +129,16 @@ export function syncSettingsFromDOM() {
         hard:   getChk('sel-hard',   s.opts.hard),
         key:    getChk('sel-key',    s.opts.key),
     };
+
+    // Sync formulas
+    const formulaGroups = ['area-perimeter', 'pythagoras', 'circles', 'simple-interest', 'compound-interest'];
+    formulaGroups.forEach(g => {
+        if (!s.showFormulas[g]) s.showFormulas[g] = {};
+        s.showFormulas[g].easy   = getChk(`form-${g}-easy`,   s.showFormulas[g].easy);
+        s.showFormulas[g].medium = getChk(`form-${g}-medium`, s.showFormulas[g].medium);
+        s.showFormulas[g].hard   = getChk(`form-${g}-hard`,   s.showFormulas[g].hard);
+    });
+
     const pol = document.querySelectorAll('#page-order-list .sortable-item');
     if (pol.length) s.pageOrder = Array.from(pol).map(el => el.dataset.page);
     s.sidebarWidth = document.documentElement.style.getPropertyValue('--sidebar-width') || s.sidebarWidth;
@@ -154,16 +167,12 @@ export function syncSettingsFromDOM() {
         }
     });
 
-    // Sync selectedOutcomes from outcome filter checkboxes
-    const stage4Outcomes = STAGE_OUTCOMES['Stage 4']?.outcomes ?? [];
-    stage4Outcomes.forEach(o => {
-        const el = document.getElementById('outfilter-' + o.code);
-        if (el) state.selectedOutcomes[o.code] = el.checked;
-    });
+    // Selected outcomes are synced purely through toggleOutcomeFilter in main.js
+    // to avoid issues with duplicated checkboxes across topic accordions.
 
-    // Sync questionsPerSet
+    // Sync pagesPerDifficulty (stored as questionsPerSet, value is 1 or 2)
     const qps = document.getElementById('questionsPerSet');
-    if (qps) state.questionsPerSet = parseInt(qps.value, 10) || 10;
+    if (qps) state.questionsPerSet = Math.min(2, Math.max(1, parseInt(qps.value, 10) || 1));
 }
 
 export function applyStateToDOM(s) {
@@ -196,8 +205,10 @@ export function applyStateToDOM(s) {
     }
 
     if (s.questionsPerSet !== undefined) {
-        state.questionsPerSet = s.questionsPerSet;
-        setVal('questionsPerSet', s.questionsPerSet);
+        // Legacy: old saves stored a question count (5-30); treat only exact 1/2 as valid page counts
+        const rawVal = parseInt(s.questionsPerSet, 10);
+        state.questionsPerSet = (rawVal === 1 || rawVal === 2) ? rawVal : 1;
+        setVal('questionsPerSet', state.questionsPerSet);
     }
 
     if (s.generatedSets) state.generatedSets = s.generatedSets;
@@ -254,12 +265,22 @@ export function applyStateToDOM(s) {
     setVal('paperSize',   cfg.paperSize);
     setChk('showAnswerKey', cfg.showAnswerKey);
     setChk('showExportId',  cfg.showExportId);
+
+    if (cfg.showFormulas) {
+        const formulaGroups = ['area-perimeter', 'pythagoras', 'circles', 'simple-interest', 'compound-interest'];
+        formulaGroups.forEach(g => {
+            if (cfg.showFormulas[g]) {
+                setChk(`form-${g}-easy`,   cfg.showFormulas[g].easy);
+                setChk(`form-${g}-medium`, cfg.showFormulas[g].medium);
+                setChk(`form-${g}-hard`,   cfg.showFormulas[g].hard);
+            }
+        });
+    }
     setChk('psShowTopic',           cfg.showTopic);
     setChk('psShowOutcomesHeader',  cfg.psShowOutcomesHeader);
     setChk('psShowOutcomeChips',    cfg.psShowOutcomeChips);
     setChk('psShowDiagrams',        cfg.showDiagrams);
     setVal('psCols',                cfg.cols);
-    setChk('psCapOnePage',          cfg.psCapOnePage);
 
     if (cfg.wmOpacity !== undefined) {
         document.documentElement.style.setProperty('--wm-opacity', cfg.wmOpacity);

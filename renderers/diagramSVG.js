@@ -58,11 +58,9 @@ function _rectangle({ l, w: wv }) {
         `<rect x="${x0}" y="${y0}" width="${dw}" height="${dh}" ` +
         `fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2" rx="1"/>` +
         // Length label below (centred)
-        _t(x0 + dw / 2, y0 + dh + 14, String(l)) +
-        // Width label left (rotated −90°)
-        _t(x0 - 13, y0 + dh / 2 + 4, String(wv), {
-            transform: `rotate(-90 ${x0 - 13} ${y0 + dh / 2 + 4})`,
-        }) +
+        _t(x0 + dw / 2, y0 + dh + 16, String(l)) +
+        // Width label left (oriented normally)
+        _t(x0 - 8, y0 + dh / 2 + 4, String(wv), { anchor: 'end' }) +
         // Missing "?" centred in shape
         _t(x0 + dw / 2, y0 + dh / 2 + 5, '?', { missing: true, size: 14 });
 
@@ -91,12 +89,12 @@ function _rightTriangle({ a, b, c, missing }) {
     // Hypotenuse midpoint with perpendicular offset for label
     const hmx = (Bx + Cx) / 2;
     const hmy = (By + Cy) / 2;
-    // Normal to hypotenuse pointing away from right-angle vertex
+    // Normal to hypotenuse pointing up-right, away from right-angle vertex
     const dx = Bx - Cx, dy = By - Cy;
     const len = Math.sqrt(dx * dx + dy * dy);
-    const nx = -dy / len, ny = dx / len;
-    const lx = hmx + nx * 13;
-    const ly = hmy + ny * 13;
+    const nx = dy / len, ny = -dx / len;
+    const lx = hmx + nx * 29;
+    const ly = hmy + ny * 29 + 5;
 
     const inner =
         // Triangle fill + outline
@@ -105,14 +103,11 @@ function _rightTriangle({ a, b, c, missing }) {
         // Right-angle mark
         _rightAngleMark(Ax, Ay, 9) +
         // Leg a (below baseline)
-        _t((Ax + Bx) / 2, Ay + 14, aLabel, { missing: missing === 'a' }) +
-        // Leg b (left side, rotated)
-        _t(Ax - 14, (Ay + Cy) / 2 + 4, bLabel, {
-            missing: missing === 'b',
-            transform: `rotate(-90 ${Ax - 14} ${(Ay + Cy) / 2 + 4})`,
-        }) +
-        // Hypotenuse label at midpoint
-        _t(lx, ly, `c\u202F=\u202F${cLabel}`, { anchor: 'middle', missing: missing === 'c', size: 10 });
+        _t((Ax + Bx) / 2, Ay + 16, aLabel, { missing: missing === 'a' }) +
+        // Leg b (left side, oriented normally)
+        _t(Ax - 8, (Ay + Cy) / 2 + 4, bLabel, { anchor: 'end', missing: missing === 'b' }) +
+        // Hypotenuse label at midpoint (points up-right)
+        _t(lx, ly, `c\u202F=\u202F${cLabel}`, { anchor: 'middle', missing: missing === 'c', size: 11 });
 
     return _svg(VW, VH, inner);
 }
@@ -134,9 +129,9 @@ function _triangleAngles({ a1, a2, a3, missing }) {
         `<polygon points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}" ` +
         `fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
         // Angle labels — inside each vertex
-        _t(A.x + 14, A.y - 3, `${a1}\u00B0`, { anchor: 'start' }) +
-        _t(B.x - 14, B.y - 3, `${a2}\u00B0`, { anchor: 'end' }) +
-        _t(C.x, C.y + 14, a3Label, { anchor: 'middle', missing: missing === 'a3' });
+        _t(A.x + 18, A.y - 5, `${a1}\u00B0`, { anchor: 'start' }) +
+        _t(B.x - 18, B.y - 5, `${a2}\u00B0`, { anchor: 'end' }) +
+        _t(C.x, C.y + 20, a3Label, { anchor: 'middle', missing: missing === 'a3' });
 
     return _svg(VW, VH, inner);
 }
@@ -166,9 +161,9 @@ function _triangleArea({ base, height }) {
         `<polyline points="${ap.x + 6},${y0} ${ap.x + 6},${y0 - 6} ${ap.x},${y0 - 6}" ` +
         `fill="none" stroke="${GC}" stroke-width="1.2"/>` +
         // Base label
-        _t(cx, y0 + 13, String(base)) +
+        _t(cx, y0 + 16, String(base)) +
         // Height label (right of dashed line)
-        _t(ap.x + 22, (ap.y + y0) / 2 + 4, `h\u202F=\u202F${height}`, { anchor: 'start', size: 10 }) +
+        _t(ap.x + 22, (ap.y + y0) / 2 + 4, `h\u202F=\u202F${height}`, { anchor: 'start', size: 11 }) +
         // Missing "?" for area (left of height line)
         _t(cx - 22, (ap.y + y0) / 2 + 5, '?', { missing: true, size: 14 });
 
@@ -180,7 +175,7 @@ function _triangleArea({ base, height }) {
 function _circle({ r, missing }) {
     const VW = 200, VH = 120;
     const cx = 70, cy = 64;
-    const rPx = Math.min(46, Math.max(20, r * 4));
+    const rPx = Math.min(54, Math.max(38, r * 4.5));
 
     const missText = missing === 'area' ? 'A\u202F=\u202F?' : 'C\u202F=\u202F?';
 
@@ -193,8 +188,8 @@ function _circle({ r, missing }) {
         `stroke="${GC}" stroke-width="1.4" stroke-dasharray="4,3"/>` +
         // Centre dot
         `<circle cx="${cx}" cy="${cy}" r="2.5" fill="${GC}"/>` +
-        // r label — centred above the radius line, above the circle
-        _t(cx + rPx / 2, cy - rPx - 7, `r\u202F=\u202F${r}`, { size: 11 }) +
+        // r label — normally oriented, centred just above the radius line
+        _t(cx + rPx / 2, cy - 6, `r\u202F=\u202F${r}`, { size: 11 }) +
         // Missing label to the right with generous clearance
         _t(cx + rPx + 14, cy + 6, missText, { anchor: 'start', missing: true, size: 13 });
 

@@ -31,6 +31,9 @@ export const FEATURE = Object.freeze({
     // Config
     EXPORT_CONFIG:      'export_config',     // save/load JSON configuration
     IMPORT_CSV:         'import_csv',        // import word/clue lists via CSV
+
+    // Layout
+    TWO_PAGE_MODE:      'two_page_mode',     // 2 pages per difficulty (Pro; free=1 page)
 });
 
 // ---- Tier → feature map -------------------------------------
@@ -54,13 +57,14 @@ export const TIER_FEATURES = Object.freeze({
         FEATURE.ALL_TOPICS,
         FEATURE.AI_GENERATION,
         FEATURE.CUSTOM_FONT,
+        FEATURE.TWO_PAGE_MODE,
     ]),
 });
 
 // ---- Free-tier usage limits ---------------------------------
 // Hard limits enforced client-side; backend should also enforce.
 export const FREE_LIMITS = Object.freeze({
-    BULK_EXPORT_MAX: 1,      // max copies per bulk export on free tier
+    BULK_EXPORT_MAX: 500,    // max copies per bulk export on free tier (unlocked)
     MONTHLY_EXPORTS: 10,     // max PDF exports per month (future: tracked server-side)
 });
 

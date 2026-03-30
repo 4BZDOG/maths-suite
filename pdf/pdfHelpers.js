@@ -279,7 +279,13 @@ export function drawText(doc, text, x, y, { fontSizePt, bold = false, italic = f
         const imgX = align === 'right' ? x - img.widthMm : x;
         doc.addImage(img.url, 'PNG', imgX, y - img.heightMm, img.widthMm, img.heightMm);
     } else {
-        doc.setFont(pdfFont, italic ? (bold ? 'bolditalic' : 'italic') : (bold ? 'bold' : 'normal'));
+        // jsPDF only natively supports italic for helvetica; 
+        // custom fonts are only loaded as normal/bold TTFs
+        const style = (pdfFont === 'helvetica' && italic)
+            ? (bold ? 'bolditalic' : 'italic')
+            : (bold ? 'bold' : 'normal');
+
+        doc.setFont(pdfFont, style);
         doc.setFontSize(fontSizePt);
         doc.setTextColor(...color);
         doc.text(renderText, x, y, { align });

@@ -175,27 +175,17 @@
                     <span id="topic-count" style="font-size:11px; color:var(--text-muted); align-self:center; flex:2; text-align:right;">8 of 9 selected</span>
                 </div>
 
-                <!-- NESA Outcomes panel — populated dynamically by renderOutcomes() -->
-                <details class="outcomes-details" id="outcomes-details" open>
-                    <summary class="outcomes-summary">
-                        <span class="outcomes-summary-label"><i class="fas fa-graduation-cap"></i> NESA Stage 4 Outcomes</span>
-                        <span id="outcomes-count-badge" class="outcomes-count-badge">0</span>
-                    </summary>
-                    <div id="outcomes-panel" class="outcomes-panel">
-                        <!-- rows injected by renderOutcomes() -->
-                    </div>
-                </details>
+                <!-- NESA Outcomes injected dynamically into topic accordions via JS -->
 
-                <div class="section-label" style="margin-top:16px;">QUESTIONS PER DIFFICULTY</div>
+                <div class="section-label" style="margin-top:16px;">PAGES PER DIFFICULTY</div>
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                    <select id="questionsPerSet" class="wm-select" style="flex:1;" onchange="setQuestionsPerSet(this.value)">
-                        <option value="5">5 questions</option>
-                        <option value="10" selected>10 questions</option>
-                        <option value="15">15 questions</option>
-                        <option value="20">20 questions</option>
-                        <option value="30">30 questions</option>
+                    <select id="questionsPerSet" class="wm-select" style="flex:1;" onchange="setPagesPerDifficulty(this.value)">
+                        <option value="1" selected>1 page per difficulty</option>
+                        <option value="2">2 pages per difficulty</option>
                     </select>
+                    <span class="pro-badge" id="two-page-pro-badge" style="display:none;" title="Upgrade to Pro to unlock 2-page mode">PRO</span>
                 </div>
+                <div id="questions-per-page-summary" style="font-size:11px; color:var(--text-muted); margin-bottom:8px; line-height:1.7;"></div>
 
                 <button id="btn-generate" class="btn-primary" style="width:100%; margin-top:4px;" onclick="generateAll()">
                     <i class="fas fa-bolt"></i> Regenerate
@@ -305,6 +295,65 @@
 
                 <details class="setting-card">
                     <summary>
+                        <div class="card-header-inner"><i class="fas fa-square-root-alt"></i> Formulas &amp; Hints</div>
+                    </summary>
+                    <div class="card-content" style="font-size:12px;">
+                        <p style="margin:0 0 10px 0; color:var(--text-muted); line-height:1.3;">Show formula hints for specific question types and difficulty levels.</p>
+                        
+                        <!-- Area & Perimeter -->
+                        <div style="margin-bottom:8px;">
+                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);">Area &amp; Perimeter</div>
+                            <div style="display:flex; justify-content:space-between; max-width: 180px;">
+                                <label><input type="checkbox" id="form-area-perimeter-easy" onchange="renderActivePage(); saveState();" checked> Easy</label>
+                                <label><input type="checkbox" id="form-area-perimeter-medium" onchange="renderActivePage(); saveState();"> Med</label>
+                                <label><input type="checkbox" id="form-area-perimeter-hard" onchange="renderActivePage(); saveState();"> Hard</label>
+                            </div>
+                        </div>
+
+                        <!-- Pythagoras -->
+                        <div style="margin-bottom:8px;">
+                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);">Pythagoras</div>
+                            <div style="display:flex; justify-content:space-between; max-width: 180px;">
+                                <label><input type="checkbox" id="form-pythagoras-easy" onchange="renderActivePage(); saveState();"> Easy</label>
+                                <label><input type="checkbox" id="form-pythagoras-medium" onchange="renderActivePage(); saveState();"> Med</label>
+                                <label><input type="checkbox" id="form-pythagoras-hard" onchange="renderActivePage(); saveState();"> Hard</label>
+                            </div>
+                        </div>
+
+                        <!-- Circles -->
+                        <div style="margin-bottom:8px;">
+                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);">Circles</div>
+                            <div style="display:flex; justify-content:space-between; max-width: 180px;">
+                                <label><input type="checkbox" id="form-circles-easy" onchange="renderActivePage(); saveState();"> Easy</label>
+                                <label><input type="checkbox" id="form-circles-medium" onchange="renderActivePage(); saveState();"> Med</label>
+                                <label><input type="checkbox" id="form-circles-hard" onchange="renderActivePage(); saveState();"> Hard</label>
+                            </div>
+                        </div>
+
+                        <!-- Simple Interest -->
+                        <div style="margin-bottom:8px;">
+                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);">Simple Interest</div>
+                            <div style="display:flex; justify-content:space-between; max-width: 180px;">
+                                <label><input type="checkbox" id="form-simple-interest-easy" onchange="renderActivePage(); saveState();"> Easy</label>
+                                <label><input type="checkbox" id="form-simple-interest-medium" onchange="renderActivePage(); saveState();"> Med</label>
+                                <label><input type="checkbox" id="form-simple-interest-hard" onchange="renderActivePage(); saveState();"> Hard</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Compound Interest -->
+                        <div style="margin-bottom:4px;">
+                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);">Compound Interest</div>
+                            <div style="display:flex; justify-content:space-between; max-width: 180px;">
+                                <label><input type="checkbox" id="form-compound-interest-easy" onchange="renderActivePage(); saveState();"> Easy</label>
+                                <label><input type="checkbox" id="form-compound-interest-medium" onchange="renderActivePage(); saveState();"> Med</label>
+                                <label><input type="checkbox" id="form-compound-interest-hard" onchange="renderActivePage(); saveState();"> Hard</label>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="setting-card">
+                    <summary>
                         <div class="card-header-inner"><i class="fas fa-list-ol"></i> Question Display</div>
                     </summary>
                     <div class="card-content">
@@ -330,11 +379,6 @@
                         <div class="toggle-row"><label title="Show outcome code chips on each individual question">Outcome Chips per Question</label><label class="switch"><input
                                     type="checkbox" id="psShowOutcomeChips" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
-                        <hr class="form-divider">
-                        <div class="toggle-row"><label title="Limit preview and PDF to questions that fit on one page per difficulty level">Cap to 1 Page</label><label class="switch"><input
-                                    type="checkbox" id="psCapOnePage" onchange="updateCapHint(); renderActivePage(); saveState();"><span
-                                    class="slider-switch"></span></label></div>
-                        <p class="cap-page-hint" id="capPageHint" style="display:none;">Questions that don't fit on one page are hidden from the preview and excluded from the exported PDF and answer key.</p>
                     </div>
                 </details>
             </div>
@@ -350,19 +394,19 @@
                     <div id="page-order-list" class="sortable-list">
                         <div class="sortable-item" draggable="true" data-page="easy">
                             <i class="fas fa-grip-vertical drag-handle"></i><input type="checkbox" id="sel-easy"
-                                checked onchange="saveState()"><span>Easy Questions</span>
+                                checked onchange="saveState(); renderExportPreview()"><span>Easy Questions</span>
                         </div>
                         <div class="sortable-item" draggable="true" data-page="medium">
                             <i class="fas fa-grip-vertical drag-handle"></i><input type="checkbox" id="sel-medium" checked
-                                onchange="saveState()"><span>Medium Questions</span>
+                                onchange="saveState(); renderExportPreview()"><span>Medium Questions</span>
                         </div>
                         <div class="sortable-item" draggable="true" data-page="hard">
                             <i class="fas fa-grip-vertical drag-handle"></i><input type="checkbox" id="sel-hard" checked
-                                onchange="saveState()"><span>Hard Questions</span>
+                                onchange="saveState(); renderExportPreview()"><span>Hard Questions</span>
                         </div>
                         <div class="sortable-item" draggable="true" data-page="key">
                             <i class="fas fa-grip-vertical drag-handle"></i><input type="checkbox" id="sel-key" checked
-                                onchange="saveState()"><span>Answer Key</span>
+                                onchange="saveState(); renderExportPreview()"><span>Answer Key</span>
                         </div>
                     </div>
                     <hr class="form-divider">
@@ -374,9 +418,25 @@
                                 class="slider-switch"></span></label></div>
                     <hr class="form-divider">
                     <div class="bulk-export-row">
-                        <input type="number" id="bulkCount" value="1" min="1" max="50" class="input-large-center">
+                        <input type="number" id="bulkCount" value="1" min="1" max="50"
+                            class="input-large-center" oninput="saveState(); renderExportPreview()">
                         <span class="text-bold-small">Unique Copies (Bulk)</span>
                     </div>
+                    <p class="cap-page-hint" id="bulk-tier-note" style="display:none;">Free plan: export up to 500 unique copies.</p>
+                </div>
+
+                <!-- Export preview: shows exactly what the PDF will contain -->
+                <div id="export-preview-panel" class="export-preview-panel">
+                    <div class="ep-title"><i class="fas fa-file-pdf" style="margin-right:4px; opacity:.6;"></i>Export Preview</div>
+                    <hr class="ep-divider">
+                    <div id="export-preview-body">Generate questions to see export details.</div>
+                </div>
+
+                <!-- Upsell strip: visible for free-tier users -->
+                <div id="upsell-strip" class="upsell-strip" style="display:none;">
+                    <div class="upsell-title"><i class="fas fa-star" style="color:#8b5cf6; margin-right:5px;"></i>Upgrade to Pro</div>
+                    <div class="upsell-body">Unlock 2-page difficulty sets, watermark removal, and custom PDF fonts.</div>
+                    <a href="#" class="upsell-btn" id="upsell-cta-btn" onclick="return false;">Upgrade to Pro →</a>
                 </div>
             </div>
         </div>
@@ -479,7 +539,7 @@
         </div>
     </main>
 
-    <script src="bundle.js?v=95"></script>
+    <script src="bundle.js?v=98"></script>
 </body>
 
 </html>

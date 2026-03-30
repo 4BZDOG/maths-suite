@@ -2914,3 +2914,118 @@ details.outcomes-ws-header:not([open]) .outcomes-ws-summary::after { transform: 
 }
 
 } /* end @layer components (maths) */
+
+/* =============================================================
+   Monetisation / Tier UI
+   ============================================================= */
+
+/* PRO pill badge — inline label next to gated controls */
+.pro-badge {
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    line-height: 1;
+    vertical-align: middle;
+    margin-left: 6px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Dimmed row for a feature the current tier cannot use */
+.feature-gated {
+    opacity: .5;
+    pointer-events: none;
+    position: relative;
+}
+.feature-gated::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    cursor: not-allowed;
+}
+
+/* =============================================================
+   Export Preview Panel
+   ============================================================= */
+.export-preview-panel {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.8;
+    margin-top: 12px;
+}
+.export-preview-panel .ep-title {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+.export-preview-panel .ep-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 6px 0;
+    opacity: .5;
+}
+.export-preview-panel .ep-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.export-preview-panel .ep-note {
+    font-size: 10px;
+    color: var(--text-muted);
+    opacity: .8;
+    margin-top: 4px;
+}
+
+/* =============================================================
+   Upsell Upgrade Strip
+   ============================================================= */
+.upsell-strip {
+    background: linear-gradient(135deg, rgba(79,70,229,.06), rgba(139,92,246,.06));
+    border: 1px solid rgba(99,102,241,.2);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.upsell-strip .upsell-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+.upsell-strip .upsell-body {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+.upsell-strip .upsell-btn {
+    align-self: flex-start;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin-top: 2px;
+    transition: opacity .15s;
+}
+.upsell-strip .upsell-btn:hover { opacity: .88; }

@@ -17,7 +17,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
     const cols             = settings.cols || 2;
     const showTopic        = settings.showTopic || false;
     const showOutcomeChips = settings.psShowOutcomeChips || false;
-    const capOnePage       = settings.psCapOnePage || false;
+    const capPages         = settings.psCapPages || 0;
     const showDiagrams     = settings.showDiagrams !== false;   // default true
     const stage            = settings.stage || DEFAULT_STAGE;
 
@@ -83,9 +83,9 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
     container.innerHTML = html;
     renderKaTeX(container);
 
-    // Cap-to-one-page: hide items that overflow the page container
-    if (capOnePage) {
-        return _capToOnePage(container, questions.length);
+    // Cap-to-N-pages: hide items that overflow the specific page container amount
+    if (capPages > 0) {
+        return _capToPages(container, questions.length, capPages);
     }
     return questions.length;
 }
@@ -94,17 +94,35 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
  * After render, measure which grid items overflow the page container and
  * remove them, replacing with an overflow notice.
  */
-function _capToOnePage(container, total) {
+function _capToPages(container, total, capPages) {
     const page = container.closest('.page');
     if (!page) return total;
 
-    // If the page isn't currently visible, DOM measurements are unreliable
-    // (all rects return 0), which would incorrectly mark every item as overflow.
-    if (!page.classList.contains('visible')) return total;
+    const wasHidden = !page.classList.contains('visible');
+    
+    // Temporarily show the page to measure rects accurately if it is hidden
+    if (wasHidden) {
+        page.style.display = 'block';
+        page.style.visibility = 'hidden';
+        page.style.position = 'absolute';
+        page.style.zIndex = '-9999';
+    }
 
+    const pageTop = page.getBoundingClientRect().top;
     const pageBottom = page.getBoundingClientRect().bottom;
+    const pageHeight = pageBottom - pageTop;
+    const limitBottom = pageTop + (pageHeight * capPages);
+
     const grid = container.querySelector('.problem-set-grid');
-    if (!grid) return total;
+    if (!grid) {
+        if (wasHidden) {
+            page.style.display = '';
+            page.style.visibility = '';
+            page.style.position = '';
+            page.style.zIndex = '';
+        }
+        return total;
+    }
 
     const items = Array.from(grid.querySelectorAll('.problem-item'));
     let hiddenCount = 0;
@@ -112,7 +130,7 @@ function _capToOnePage(container, total) {
     // Read all rects in one pass (single forced reflow), then write in a second pass.
     const rects = items.map(item => item.getBoundingClientRect());
     for (let i = 0; i < items.length; i++) {
-        if (rects[i].bottom > pageBottom - 4) {
+        if (rects[i].bottom > limitBottom - 4) {
             hiddenCount++;
             items[i].style.display = 'none';
         }
@@ -121,8 +139,15 @@ function _capToOnePage(container, total) {
     if (hiddenCount > 0) {
         const notice = document.createElement('div');
         notice.className = 'problem-overflow-notice';
-        notice.textContent = `+ ${hiddenCount} more question${hiddenCount > 1 ? 's' : ''} (not shown — cap to 1 page is on)`;
+        notice.textContent = `+ ${hiddenCount} more question${hiddenCount > 1 ? 's' : ''} (not shown)`;
         grid.appendChild(notice);
+    }
+
+    if (wasHidden) {
+        page.style.display = '';
+        page.style.visibility = '';
+        page.style.position = '';
+        page.style.zIndex = '';
     }
 
     return total - hiddenCount;
