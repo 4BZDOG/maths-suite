@@ -22,6 +22,7 @@ import { setupSortableList } from './ui/pageOrder.js';
 import { setupDragAndDrop } from './ui/dropZone.js';
 
 import { downloadConfig } from './import-export/exportConfig.js';
+import { hasFeature, FEATURE, PRICING, TIER } from './payments/access.js';
 
 // =============================================================
 // Constants
@@ -66,16 +67,17 @@ function generateAll() {
         return;
     }
 
-    const n    = state.questionsPerSet || 10;
+    // Always generate enough questions to fill the selected number of pages
+    const GENERATE_COUNT = 30;
     const seed = Date.now() + (state.settings.exportCount || 0) * 1_000_000;
 
     // Build sub-ops filter: only include topics where user has narrowed selection
     const subOpsFilter = Object.keys(state.selectedSubOps).length > 0 ? state.selectedSubOps : null;
 
     const sets = {
-        easy:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Easy',   count: n, seed }),
-        medium: generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Medium', count: n, seed: seed + 1 }),
-        hard:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Hard',   count: n, seed: seed + 2 }),
+        easy:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Easy',   count: GENERATE_COUNT, seed, showFormulas: state.settings.showFormulas }),
+        medium: generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Medium', count: GENERATE_COUNT, seed: seed + 1, showFormulas: state.settings.showFormulas }),
+        hard:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Hard',   count: GENERATE_COUNT, seed: seed + 2, showFormulas: state.settings.showFormulas }),
     };
 
     setGeneratedSets(sets);
@@ -91,6 +93,9 @@ function generateAll() {
 
 const debouncedGenerate = debounceFn(generateAll, 300);
 const debouncedUpdateUI = debounceFn(() => { saveState(); updateUI(); }, 500);
+
+// Stores the last rendered visible question counts; read by renderExportPreview()
+let _lastRenderedCounts = { easy: 0, medium: 0, hard: 0 };
 
 // =============================================================
 // Status badge
@@ -121,25 +126,161 @@ function renderActivePage() {
     const sets = state.generatedSets;
     const s    = state.settings;
 
-    const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
-    const sWithTopics = { ...s, activeTopics, stage: 'Stage 4' };
+    // Always cap to the selected number of pages (1 or 2)
+    const pages = state.questionsPerSet || 1;
+    const sWithTopics = { ...s, activeTopics: Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]), stage: 'Stage 4', psCapPages: pages };
+
     const nEasy   = renderProblemSet(document.getElementById('p1-area'), sets.easy,   sWithTopics, 'Easy');
     const nMedium = renderProblemSet(document.getElementById('p2-area'), sets.medium, sWithTopics, 'Medium');
     const nHard   = renderProblemSet(document.getElementById('p3-area'), sets.hard,   sWithTopics, 'Hard');
 
-    // When cap-to-1-page is on, only show answers for the questions that were rendered
-    const keySets = s.psCapOnePage ? {
+    // Answer key always shows only the questions visible in the preview
+    const keySets = {
         easy:   (sets.easy   || []).slice(0, nEasy),
         medium: (sets.medium || []).slice(0, nMedium),
         hard:   (sets.hard   || []).slice(0, nHard),
-    } : sets;
+    };
     renderKeys(document.getElementById('key-container'), keySets, sWithTopics);
+
+    _lastRenderedCounts = { easy: nEasy, medium: nMedium, hard: nHard };
+    _updateQuestionsPerPageSummary(nEasy, nMedium, nHard, pages);
+    _updatePageButtonLabels(nEasy, nMedium, nHard);
+    renderExportPreview();
 }
 
-function updateCapHint() {
-    const hint = document.getElementById('capPageHint');
-    const chk  = document.getElementById('psCapOnePage');
-    if (hint && chk) hint.style.display = chk.checked ? '' : 'none';
+function _updateQuestionsPerPageSummary(nEasy, nMedium, nHard, pages) {
+    const el = document.getElementById('questions-per-page-summary');
+    if (!el) return;
+    const pageLabel = pages === 1 ? '1 page' : '2 pages';
+    const perPage = (n) => pages > 1 ? `~${Math.ceil(n / pages)}/page` : '';
+    const rows = [
+        { label: 'Easy',   n: nEasy,   color: '#10b981' },
+        { label: 'Medium', n: nMedium, color: '#f59e0b' },
+        { label: 'Hard',   n: nHard,   color: '#ef4444' },
+    ].filter(r => r.n > 0);
+    if (rows.length === 0) { el.innerHTML = '<span style="opacity:.6;">Click Regenerate to see question counts.</span>'; return; }
+    el.innerHTML = rows.map(r => {
+        const sub = pages > 1 ? ` <span style="opacity:0.65;">(${perPage(r.n)})</span>` : '';
+        return `<span style="color:${r.color}; font-weight:600;">${r.label}:</span> ${r.n} question${r.n !== 1 ? 's' : ''} across ${pageLabel}${sub}`;
+    }).join('<br>');
+}
+
+function _updatePageButtonLabels(nEasy, nMedium, nHard) {
+    const btns = document.querySelectorAll('.page-btn');
+    if (btns.length < 4) return;
+    btns[0].textContent = nEasy   > 0 ? `Easy (${nEasy})`     : 'Easy';
+    btns[1].textContent = nMedium > 0 ? `Medium (${nMedium})` : 'Medium';
+    btns[2].textContent = nHard   > 0 ? `Hard (${nHard})`     : 'Hard';
+    // btns[3] is the Key button — no count needed
+}
+
+function renderTierUI() {
+    const isPro = hasFeature(FEATURE.TWO_PAGE_MODE);
+
+    // PRO badge next to the pages-per-difficulty selector
+    const badge = document.getElementById('two-page-pro-badge');
+    if (badge) badge.style.display = isPro ? 'none' : '';
+
+    // Disable the "2 pages" option for free users; reset if it was somehow selected
+    const qpsEl = document.getElementById('questionsPerSet');
+    if (qpsEl) {
+        const opt2 = qpsEl.querySelector('option[value="2"]');
+        if (opt2) opt2.disabled = !isPro;
+        if (!isPro && qpsEl.value === '2') {
+            qpsEl.value = '1';
+            setPagesPerDifficulty(1);
+        }
+    }
+
+    // Upsell strip — shown only on free tier
+    const strip = document.getElementById('upsell-strip');
+    if (strip) strip.style.display = isPro ? 'none' : '';
+
+    // Bulk export tier note
+    const bulkNote = document.getElementById('bulk-tier-note');
+    if (bulkNote) bulkNote.style.display = isPro ? 'none' : '';
+
+    // Wire CTA button href when a Stripe checkout URL is configured
+    const ctaBtn = document.getElementById('upsell-cta-btn');
+    if (ctaBtn) {
+        const url = PRICING?.[TIER.PRO]?.checkoutUrl;
+        if (url) { ctaBtn.href = url; ctaBtn.onclick = null; }
+    }
+
+    renderExportPreview();
+}
+
+function renderExportPreview() {
+    const panel = document.getElementById('export-preview-panel');
+    const body  = document.getElementById('export-preview-body');
+    if (!panel || !body) return;
+
+    // Always show the panel — hide only the content, not the panel itself
+    panel.style.display = '';
+
+    const { easy, medium, hard } = _lastRenderedCounts;
+    const total = easy + medium + hard;
+
+    if (total === 0) {
+        body.innerHTML = '<span style="opacity:.6;">Click Regenerate to see export details.</span>';
+        return;
+    }
+
+    const selEasy   = document.getElementById('sel-easy')?.checked   ?? true;
+    const selMedium = document.getElementById('sel-medium')?.checked ?? true;
+    const selHard   = document.getElementById('sel-hard')?.checked   ?? true;
+    const selKey    = document.getElementById('sel-key')?.checked    ?? true;
+    const copies    = Math.max(1, parseInt(document.getElementById('bulkCount')?.value, 10) || 1);
+    const pages     = state.questionsPerSet || 1;
+    const pageLabel = pages === 1 ? '1 page' : '2 pages';
+    const isPro     = hasFeature(FEATURE.TWO_PAGE_MODE);
+
+    const diffRows = [
+        { label: 'Easy',   n: easy,   color: '#10b981', sel: selEasy   },
+        { label: 'Medium', n: medium, color: '#f59e0b', sel: selMedium },
+        { label: 'Hard',   n: hard,   color: '#ef4444', sel: selHard   },
+    ].filter(r => r.sel && r.n > 0);
+
+    let pageCount = 0;
+    let html = '';
+
+    for (const r of diffRows) {
+        pageCount += pages;
+        html += `<div class="ep-row">
+            <span><span style="color:${r.color}; font-weight:700;">${r.label}</span>&nbsp;${r.n} question${r.n !== 1 ? 's' : ''}</span>
+            <span style="opacity:.7;">${pageLabel}</span>
+        </div>`;
+    }
+
+    if (selKey) {
+        pageCount += 1;
+        const keyTotal = (selEasy ? easy : 0) + (selMedium ? medium : 0) + (selHard ? hard : 0);
+        html += `<div class="ep-row">
+            <span style="font-weight:600;">Answer Key</span>
+            <span style="opacity:.7;">${keyTotal} answer${keyTotal !== 1 ? 's' : ''}</span>
+        </div>`;
+    }
+
+    html += `<hr class="ep-divider">`;
+    if (copies > 1) {
+        html += `<div class="ep-row" style="font-weight:600;">
+            <span>Total</span>
+            <span>${pageCount}&thinsp;pages &times;&thinsp;${copies}&thinsp;copies&nbsp;=&nbsp;${pageCount * copies}&thinsp;pages</span>
+        </div>`;
+    } else {
+        html += `<div class="ep-row" style="font-weight:600;">
+            <span>Total</span>
+            <span>${pageCount} page${pageCount !== 1 ? 's' : ''}</span>
+        </div>`;
+    }
+
+    if (!isPro) {
+        html += `<hr class="ep-divider">
+        <div class="ep-note"><i class="fas fa-tint" style="color:#6366f1; margin-right:3px;"></i> Free plan: watermark on every page</div>
+        <div class="ep-note"><i class="fas fa-font" style="color:#6366f1; margin-right:3px;"></i> Free plan: system font (Inter)</div>`;
+    }
+
+    body.innerHTML = html;
 }
 
 function updateUI() {
@@ -278,54 +419,68 @@ function updateTopicCount() {
  * Reads `state.selectedTopics` / `state.selectedOutcomes` directly.
  */
 function renderOutcomes() {
-    const panel = document.getElementById('outcomes-panel');
-    const badge = document.getElementById('outcomes-count-badge');
-    if (!panel) return;
+    // Clear all existing outcome containers
+    ALL_SUBTOPICS.forEach(t => {
+        const topicId = t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const container = document.getElementById('outcomes-for-' + topicId);
+        if (container) container.innerHTML = '';
+    });
 
     const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
-    const outcomes = getOutcomesForTopics(activeTopics, 'Stage 4');
 
-    const countable = outcomes.filter(o => !o.appliesAll).length;
-    if (badge) badge.textContent = countable;
-
-    if (activeTopics.length === 0) {
-        panel.innerHTML = '<div style="padding:6px 8px; font-size:11px; color:var(--text-muted); font-style:italic;">No topics selected.</div>';
-        return;
+    // Global filter notice under the topic toggles
+    let noticeContainer = document.getElementById('global-outcome-notice');
+    if (!noticeContainer) {
+        noticeContainer = document.createElement('div');
+        noticeContainer.id = 'global-outcome-notice';
+        const toggles = document.getElementById('topic-toggles');
+        if (toggles) toggles.parentNode.insertBefore(noticeContainer, toggles.nextSibling);
     }
-
+    
     const activeFilterCodes = Object.keys(state.selectedOutcomes).filter(c => state.selectedOutcomes[c]);
-    const filterActive = activeFilterCodes.length > 0;
-
-    let html = '';
-    if (filterActive) {
-        html += `<div class="outcome-filter-notice">
+    if (activeFilterCodes.length > 0) {
+        noticeContainer.innerHTML = `<div class="outcome-filter-notice" style="margin-top:8px;">
             Generating questions for <strong>${activeFilterCodes.length}</strong> selected outcome${activeFilterCodes.length > 1 ? 's' : ''}.
             <button class="outcome-filter-clear" onclick="clearOutcomeFilter()">Clear filter</button>
         </div>`;
+    } else {
+        noticeContainer.innerHTML = '';
     }
 
-    html += outcomes.map(o => {
-        const isSelected = !!state.selectedOutcomes[o.code];
-        const cls = o.appliesAll ? 'outcome-row outcome-wm' : 'outcome-row';
-        // appliesAll (MAO-WM-01) cannot be used to filter generation — no checkbox
-        const chkHtml = o.appliesAll ? '<span class="outcome-filter-spacer"></span>' : `<input
-            type="checkbox"
-            class="outcome-filter-chk"
-            id="outfilter-${o.code}"
-            title="Filter generation to this outcome"
-            ${isSelected ? 'checked' : ''}
-            onchange="toggleOutcomeFilter('${o.code}', this.checked)">`;
-        return `<div class="${cls}">
-            ${chkHtml}
-            <span class="outcome-code-pill">${o.code}</span>
-            <div class="outcome-text">
-                <div class="outcome-content-label">${o.contentLabel}</div>
-                <div class="outcome-statement">${o.statement}</div>
-            </div>
-        </div>`;
-    }).join('');
+    if (activeTopics.length === 0) return;
 
-    panel.innerHTML = html;
+    // Render per-topic outcomes
+    activeTopics.forEach(t => {
+        const topicId = t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const container = document.getElementById('outcomes-for-' + topicId);
+        if (!container) return;
+        
+        const outcomes = getOutcomesForTopics([t], 'Stage 4');
+        if (outcomes.length === 0) return;
+
+        let html = '<div style="margin-top:12px; margin-bottom: 6px; font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;"><i class="fas fa-graduation-cap"></i> STAGE 4 OUTCOMES</div>';
+        
+        html += outcomes.map(o => {
+            const isSelected = !!state.selectedOutcomes[o.code];
+            const cls = o.appliesAll ? 'outcome-row outcome-wm' : 'outcome-row';
+            const chkHtml = o.appliesAll ? '<span class="outcome-filter-spacer"></span>' : `<input
+                type="checkbox"
+                class="outcome-filter-chk"
+                title="Filter generation to this outcome"
+                ${isSelected ? 'checked' : ''}
+                onchange="toggleOutcomeFilter('${o.code}', this.checked)">`;
+            return `<div class="${cls}">
+                ${chkHtml}
+                <span class="outcome-code-pill">${o.code}</span>
+                <div class="outcome-text">
+                    <div class="outcome-content-label">${o.contentLabel}</div>
+                    <div class="outcome-statement">${o.statement}</div>
+                </div>
+            </div>`;
+        }).join('');
+        
+        container.innerHTML = html;
+    });
 }
 
 function toggleOutcomeFilter(code, checked) {
@@ -386,25 +541,32 @@ function _updateAllParentCheckboxes() {
 function _buildSubOpsPanels() {
     ALL_SUBTOPICS.forEach(t => {
         const ops = SUB_OPS[t];
-        if (!ops || ops.length === 0) return;
         const topicId = t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
         const container = document.getElementById('subs-' + topicId);
         if (!container) return;
-        const enabledOps = state.selectedSubOps[t];
-        container.innerHTML = ops.map(op => {
-            const checked = enabledOps ? enabledOps.includes(op.key) : true;
-            return `<label class="sub-op-row">
-                <input type="checkbox" id="subop-${topicId}-${op.key}" ${checked ? 'checked' : ''}
-                       onchange="toggleSubOp('${t}', '${op.key}')">
-                <span class="sub-op-name">${op.label}</span>
-            </label>`;
-        }).join('');
+        
+        let html = '';
+        if (ops && ops.length > 0) {
+            const enabledOps = state.selectedSubOps[t];
+            html += ops.map(op => {
+                const checked = enabledOps ? enabledOps.includes(op.key) : true;
+                return `<label class="sub-op-row">
+                    <input type="checkbox" id="subop-${topicId}-${op.key}" ${checked ? 'checked' : ''}
+                           onchange="toggleSubOp('${t}', '${op.key}')">
+                    <span class="sub-op-name">${op.label}</span>
+                </label>`;
+            }).join('');
+        }
+        
+        html += `<div id="outcomes-for-${topicId}" class="topic-outcomes-wrapper" style="padding: 0 4px 6px;"></div>`;
+        container.innerHTML = html;
     });
 }
 
-function setQuestionsPerSet(n) {
-    state.questionsPerSet = Math.min(50, Math.max(1, parseInt(n, 10) || 10));
+function setPagesPerDifficulty(n) {
+    state.questionsPerSet = (parseInt(n, 10) === 2) ? 2 : 1;
     saveState();
+    generateAll();
 }
 
 // =============================================================
@@ -454,7 +616,7 @@ window._puzzleApp = {
     toggleSubOp,
     toggleTopicExpand,
     setTopicsAll,
-    setQuestionsPerSet,
+    setPagesPerDifficulty,
     openModal: (el) => openModal(el),
     closeModal,
     downloadConfig,
@@ -466,7 +628,8 @@ window._puzzleApp = {
     showPage,
     focusPage,
     updateUI,
-    updateCapHint,
+    renderTierUI,
+    renderExportPreview,
     updateGlobalFontScale,
     updateTitleScale,
     updatePaperSize,
@@ -514,7 +677,7 @@ window.addEventListener('load', async () => {
         updateUI();
         updateTopicCount();
         renderOutcomes();
-        updateCapHint();
+        renderTierUI();
 
         setupSidebarResize();
         setupSortableList('#page-order-list', () => saveState());

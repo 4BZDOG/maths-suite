@@ -55,10 +55,10 @@ function _drawRectDiagramPDF(doc, { l, w: wv }, x0, y0, w, h, ps, font) {
     doc.setFont(font, 'normal');
     doc.setFontSize(8 * ps);
     doc.setTextColor(..._LC);
-    doc.text(String(l), rx + dw / 2, ry + dh + 4 * ps, { align: 'center' });
+    doc.text(String(l), rx + dw / 2, ry + dh + 3.5 * ps, { align: 'center' });
 
-    // Width label (left side, rotated 90°)
-    doc.text(String(wv), rx - 4 * ps, ry + dh / 2, { angle: 90, align: 'center' });
+    // Width label (left side, normally oriented)
+    doc.text(String(wv), rx - 2 * ps, ry + dh / 2 + 1.2 * ps, { align: 'right' });
 
     // Missing "?" in centre
     doc.setFont(font, 'bold');
@@ -96,20 +96,23 @@ function _drawRightTriDiagramPDF(doc, { a, b, c, missing }, x0, y0, w, h, ps, fo
     doc.setFont(font, missing === 'a' ? 'bold' : 'normal');
     doc.setFontSize(8 * ps);
     doc.setTextColor(...(missing === 'a' ? _MC : _LC));
-    doc.text(aLabel, (Ax + Ax + aPx) / 2, Ay + 4 * ps, { align: 'center' });
+    doc.text(aLabel, (Ax + Ax + aPx) / 2, Ay + 3.5 * ps, { align: 'center' });
 
-    // Leg b (rotated, left side)
+    // Leg b (left side, normally oriented)
     doc.setFont(font, missing === 'b' ? 'bold' : 'normal');
     doc.setTextColor(...(missing === 'b' ? _MC : _LC));
-    doc.text(bLabel, Ax - 4 * ps, (Ay + Ay - bPx) / 2, { angle: 90, align: 'center' });
+    doc.text(bLabel, Ax - 2 * ps, (Ay + Ay - bPx) / 2 + 1.2 * ps, { align: 'right' });
 
     // Hypotenuse label at midpoint, offset outward
-    const hmx = (B.x + C.x) / 2 + 4 * ps;
-    const hmy = (B.y + C.y) / 2;
+    const dx = B.x - C.x, dy = B.y - C.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const nx = dy / len, ny = -dx / len;
+    const hmx = (B.x + C.x) / 2 + nx * 4.8 * ps;
+    const hmy = (B.y + C.y) / 2 + ny * 4.8 * ps + 1.2 * ps;
     doc.setFont(font, missing === 'c' ? 'bold' : 'normal');
     doc.setFontSize(7.5 * ps);
     doc.setTextColor(...(missing === 'c' ? _MC : _LC));
-    doc.text(cLabel, hmx, hmy, { align: 'left' });
+    doc.text(cLabel, hmx, hmy, { align: 'center' });
 }
 
 function _drawTriAnglesDiagramPDF(doc, { a1, a2, a3, missing }, x0, y0, w, h, ps, font) {
@@ -133,12 +136,12 @@ function _drawTriAnglesDiagramPDF(doc, { a1, a2, a3, missing }, x0, y0, w, h, ps
 
     doc.setFont(font, 'normal');
     doc.setTextColor(..._LC);
-    doc.text(`${a1}\u00B0`, A.x + 2.5 * ps, A.y + 4 * ps, { align: 'left' });
-    doc.text(`${a2}\u00B0`, B.x - 2.5 * ps, B.y + 4 * ps, { align: 'right' });
+    doc.text(`${a1}\u00B0`, A.x + 4 * ps, A.y - 2.5 * ps, { align: 'left' });
+    doc.text(`${a2}\u00B0`, B.x - 4 * ps, B.y - 2.5 * ps, { align: 'right' });
 
     doc.setFont(font, missing === 'a3' ? 'bold' : 'normal');
     doc.setTextColor(...(missing === 'a3' ? _MC : _LC));
-    doc.text(a3Label, C.x, C.y - 3 * ps, { align: 'center' });
+    doc.text(a3Label, C.x, C.y + 5.5 * ps, { align: 'center' });
 }
 
 function _drawTriAreaDiagramPDF(doc, { base, height }, x0, y0, w, h, ps, font) {
@@ -188,9 +191,9 @@ function _drawTriAreaDiagramPDF(doc, { base, height }, x0, y0, w, h, ps, font) {
 
 function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
     // Allocate left ~45% of width for the circle, right ~55% for the missing label
-    const maxR = Math.min(w * 0.26, h * 0.38);
-    const rPx  = Math.max(5, Math.min(maxR, r * 1.6 * ps));
-    const cx   = x0 + w * 0.35;
+    const maxR = Math.min(w * 0.35, h * 0.45);
+    const rPx  = Math.max(11, Math.min(maxR, r * 2.2 * ps));
+    const cx   = x0 + w * 0.40;
     const cy   = y0 + h / 2 + 1 * ps;   // slightly below vertical centre to leave room above
 
     doc.setFillColor(..._GCF);
@@ -267,7 +270,7 @@ const DIFF_RGB = { Easy: [16, 185, 129], Medium: [245, 158, 11], Hard: [239, 68,
 function createQuestionSets(cfg, seed) {
     const topics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
     if (topics.length === 0) return null;
-    const n = state.questionsPerSet || 10;
+    const n = 30; // always generate enough to fill the selected page count
     const subOpsFilter = Object.keys(state.selectedSubOps).length > 0 ? state.selectedSubOps : null;
     return {
         easy:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Easy',   count: n, seed }),
@@ -289,7 +292,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
     const cols             = cfg.cols || 2;
     const showTopic        = cfg.showTopic || false;
     const showOutcomeChips = cfg.psShowOutcomeChips || false;
-    const capOnePage       = cfg.psCapOnePage || false;
+    const capPages         = cfg.psCapPages || 0;
     const showDiagrams     = cfg.showDiagrams !== false;   // default true
     const stage            = DEFAULT_STAGE;
     const DIAG_H           = 30 * pScale;  // allocated height (mm) per diagram
@@ -303,6 +306,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
     let cy          = startY, col = 0;
     let rowMaxH     = 0;
     let overflowCount = 0;
+    let pagesUsed   = 1;
     let pageStartY  = startY;   // Y where content begins on the current PDF page
 
     doc.setFont(pdfFont, 'normal');
@@ -362,10 +366,11 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
         // Overflow check — only fires at row start for 2-column layout
         const isNewRow = cols === 2 ? col === 0 : true;
         if (isNewRow && cy + itemH > PAGE_HEIGHT - MARGIN - 10) {
-            if (capOnePage) {
+            if (capPages > 0 && pagesUsed >= capPages) {
                 overflowCount = questions.length - i;
                 break;
             }
+            pagesUsed++;
             // Draw divider for this page before flipping to next
             if (cols === 2) _drawColumnDivider(doc, MARGIN, colW, pageStartY, cy);
             drawExportIdFooter(ctx, exportId, pScale);
@@ -772,6 +777,9 @@ export async function exportPDF() {
         }
         ctx = buildCtx(doc, pdfFont, wmImg, scale, { PAGE_WIDTH, PAGE_HEIGHT, MARGIN }, cfg);
 
+        // Derive cap from pages-per-difficulty selector (state.questionsPerSet is 1 or 2)
+        cfg.psCapPages = state.questionsPerSet || 1;
+
         let isFirstPage = true;
 
         for (let i = 0; i < count; i++) {
@@ -793,8 +801,13 @@ export async function exportPDF() {
                 ctx.drawWatermark();
             };
 
-            // Track how many questions actually rendered per difficulty (for cap-to-1-page)
-            const visibleCounts = { easy: null, medium: null, hard: null };
+            // Track visible question counts per difficulty.
+            // Pages not in selectedPages default to 0 so their answers are excluded from the key.
+            const visibleCounts = {
+                easy:   selectedPages.includes('easy')   ? null : 0,
+                medium: selectedPages.includes('medium') ? null : 0,
+                hard:   selectedPages.includes('hard')   ? null : 0,
+            };
 
             for (const pType of selectedPages) {
                 await new Promise(r => setTimeout(r, 0));
@@ -824,12 +837,12 @@ export async function exportPDF() {
                     addPage();
                     const ps = getPScale('key');
                     const sy = drawHeader(ctx, title, sub, 'ANSWER KEY', true, setIndicator, ps, exportId);
-                    // Trim answer key to only questions that were rendered on question pages
-                    const keySets = cfg.psCapOnePage ? {
+                    // Always trim answer key to only questions that were rendered on question pages
+                    const keySets = {
                         easy:   (sets.easy   || []).slice(0, visibleCounts.easy   ?? (sets.easy   || []).length),
                         medium: (sets.medium || []).slice(0, visibleCounts.medium ?? (sets.medium || []).length),
                         hard:   (sets.hard   || []).slice(0, visibleCounts.hard   ?? (sets.hard   || []).length),
-                    } : sets;
+                    };
                     drawKeyPage(ctx, keySets, sy, ps, exportId);
                 }
             }

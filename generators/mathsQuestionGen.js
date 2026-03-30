@@ -1,4 +1,5 @@
 // =============================================================
+
 // generators/mathsQuestionGen.js
 // Local maths question generator — no API required.
 // Produces clue bank entries for: integers, decimals, rounding,
@@ -17,13 +18,13 @@ function mulberry32(seed) {
 }
 
 function ri(rng, min, max) { return Math.floor(rng() * (max - min + 1)) + min; }
-function rc(rng, arr)       { return arr[Math.floor(rng() * arr.length)]; }
-function round(n, dp)       { const f = Math.pow(10, dp); return Math.round(n * f) / f; }
+function rc(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
+function round(n, dp) { const f = Math.pow(10, dp); return Math.round(n * f) / f; }
 
 const CALC_VERBS = ['Calculate:', 'Evaluate:', 'Find the value of:', 'Work out:'];
 
-function gcd(a, b)  { return b === 0 ? a : gcd(b, a % b); }
-function lcm(a, b)  { return (a * b) / gcd(a, b); }
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+function lcm(a, b) { return (a * b) / gcd(a, b); }
 
 // Simplify fraction; return {n, d}
 function simplify(n, d) {
@@ -41,52 +42,52 @@ function fracStr(n, d) {
 // ============================================================
 export const SUB_OPS = {
     'Integers': [
-        { key: 'add',      label: 'Add (+)' },
+        { key: 'add', label: 'Add (+)' },
         { key: 'subtract', label: 'Subtract (−)' },
         { key: 'multiply', label: 'Multiply (×)' },
-        { key: 'divide',   label: 'Divide (÷)' },
-        { key: 'bodmas',   label: 'BODMAS' },
+        { key: 'divide', label: 'Divide (÷)' },
+        { key: 'bodmas', label: 'BODMAS' },
     ],
     'Decimals': [
-        { key: 'add-subtract',    label: 'Add / Subtract' },
+        { key: 'add-subtract', label: 'Add / Subtract' },
         { key: 'multiply-divide', label: 'Multiply / Divide' },
     ],
     'Rounding': [
-        { key: 'nearest',        label: 'Nearest 10 / 100 / 1000' },
+        { key: 'nearest', label: 'Nearest 10 / 100 / 1000' },
         { key: 'decimal-places', label: 'Decimal places' },
-        { key: 'sig-figs',       label: 'Significant figures' },
+        { key: 'sig-figs', label: 'Significant figures' },
     ],
     'Fractions': [
-        { key: 'fraction-of',      label: 'Fraction of amount' },
-        { key: 'add-subtract',     label: 'Add / Subtract' },
-        { key: 'multiply-divide',  label: 'Multiply / Divide' },
+        { key: 'fraction-of', label: 'Fraction of amount' },
+        { key: 'add-subtract', label: 'Add / Subtract' },
+        { key: 'multiply-divide', label: 'Multiply / Divide' },
         { key: 'simplify-convert', label: 'Simplify / Convert' },
     ],
     'Percentages': [
-        { key: 'find-pct',          label: 'Find percentage' },
+        { key: 'find-pct', label: 'Find percentage' },
         { key: 'increase-decrease', label: 'Increase / Decrease' },
-        { key: 'reverse-change',    label: 'Reverse / % change' },
+        { key: 'reverse-change', label: 'Reverse / % change' },
     ],
     'Algebra': [
-        { key: 'solve',        label: 'Solve equations' },
+        { key: 'solve', label: 'Solve equations' },
         { key: 'substitution', label: 'Substitution' },
     ],
     'Geometry': [
         { key: 'area-perimeter', label: 'Area / Perimeter' },
-        { key: 'pythagoras',     label: 'Pythagoras' },
-        { key: 'angles',        label: 'Angles' },
-        { key: 'circles',       label: 'Circles' },
+        { key: 'pythagoras', label: 'Pythagoras' },
+        { key: 'angles', label: 'Angles' },
+        { key: 'circles', label: 'Circles' },
     ],
     'Statistics': [
         { key: 'mean-median', label: 'Mean / Median' },
-        { key: 'mode-range',  label: 'Mode / Range' },
-        { key: 'iqr',         label: 'Interquartile range' },
+        { key: 'mode-range', label: 'Mode / Range' },
+        { key: 'iqr', label: 'Interquartile range' },
     ],
     'Financial Maths': [
-        { key: 'simple-interest',   label: 'Simple interest' },
+        { key: 'simple-interest', label: 'Simple interest' },
         { key: 'compound-interest', label: 'Compound interest' },
-        { key: 'markup-profit',     label: 'Markup / Profit' },
-        { key: 'gst',              label: 'GST' },
+        { key: 'markup-profit', label: 'Markup / Profit' },
+        { key: 'gst', label: 'GST' },
     ],
 };
 
@@ -163,9 +164,9 @@ function genIntegers(rng, diff, allowedOps) {
 function genDecimals(rng, diff, allowedOps) {
     // type → sub-op mapping per difficulty
     const maps = {
-        Easy:   { 'add-subtract': [0], 'multiply-divide': [1] },
+        Easy: { 'add-subtract': [0], 'multiply-divide': [1] },
         Medium: { 'add-subtract': [0, 1], 'multiply-divide': [2] },
-        Hard:   { 'multiply-divide': [0, 1], 'add-subtract': [2] },
+        Hard: { 'multiply-divide': [0, 1], 'add-subtract': [2] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
     const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : 2);
@@ -187,7 +188,7 @@ function genDecimals(rng, diff, allowedOps) {
         }
         if (type === 1) {
             const a = ri(rng, 20, 99) / 10, b = ri(rng, 1, Math.floor(a * 10) - 1) / 10;
-            return { clue: `${verb} $${a} - ${round(b,1)}$`, answer: String(round(a - b, 2)) };
+            return { clue: `${verb} $${a} - ${round(b, 1)}$`, answer: String(round(a - b, 2)) };
         }
         const a = ri(rng, 10, 99) / 10, b = ri(rng, 10, 99) / 10;
         return { clue: `${verb} $${a} \\times ${b}$`, answer: String(round(a * b, 2)) };
@@ -211,9 +212,9 @@ function genDecimals(rng, diff, allowedOps) {
 // ============================================================
 function genRounding(rng, diff, allowedOps) {
     const maps = {
-        Easy:   { 'nearest': [0, 1] },
+        Easy: { 'nearest': [0, 1] },
         Medium: { 'nearest': [0], 'decimal-places': [1, 2] },
-        Hard:   { 'nearest': [0], 'decimal-places': [1], 'sig-figs': [2] },
+        Hard: { 'nearest': [0], 'decimal-places': [1], 'sig-figs': [2] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
     const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : 2);
@@ -233,8 +234,8 @@ function genRounding(rng, diff, allowedOps) {
         // Guarantee a non-zero decimal part so the question isn't nonsensical
         // (e.g. "Write 91 as a whole number" makes no sense).
         const whole = ri(rng, 1, 99);
-        const frac  = ri(rng, 1, 9);
-        const n     = whole + frac / 10;   // e.g. 7.3, 42.8 — always has .1–.9
+        const frac = ri(rng, 1, 9);
+        const n = whole + frac / 10;   // e.g. 7.3, 42.8 — always has .1–.9
         const ph = rc(rng, [
             `Round $${n}$ to the nearest whole number`,
             `Write $${n}$ as a whole number (rounded)`,
@@ -311,9 +312,9 @@ function genRounding(rng, diff, allowedOps) {
 function genFractions(rng, diff, allowedOps, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
-        Easy:   { 'fraction-of': [0], 'add-subtract': [1], 'simplify-convert': [2] },
+        Easy: { 'fraction-of': [0], 'add-subtract': [1], 'simplify-convert': [2] },
         Medium: { 'add-subtract': [0], 'multiply-divide': [1], 'simplify-convert': [2] },
-        Hard:   { 'multiply-divide': [0], 'add-subtract': [1] },
+        Hard: { 'multiply-divide': [0], 'add-subtract': [1] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
     const type = _pickType(rng, filtered, diff === 'Hard' ? 1 : 2);
@@ -363,8 +364,8 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} + \\frac{${n2}}{${d2}}$`, answer: ans };
         }
         if (type === 1) {
-            const d1 = ri(rng, 3, 7),  n1 = ri(rng, 1, d1 - 1);
-            const d2 = ri(rng, 3, 7),  n2 = ri(rng, 1, d2 - 1);
+            const d1 = ri(rng, 3, 7), n1 = ri(rng, 1, d1 - 1);
+            const d2 = ri(rng, 3, 7), n2 = ri(rng, 1, d2 - 1);
             const ans = fracStr(n1 * n2, d1 * d2);
             return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}}$`, answer: ans };
         }
@@ -381,8 +382,8 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
 
     // Hard
     if (type === 0) {
-        const d1 = ri(rng, 3, 8),  n1 = ri(rng, 1, d1 - 1);
-        const d2 = ri(rng, 3, 8),  n2 = ri(rng, 1, d2 - 1);
+        const d1 = ri(rng, 3, 8), n1 = ri(rng, 1, d1 - 1);
+        const d2 = ri(rng, 3, 8), n2 = ri(rng, 1, d2 - 1);
         const ans = fracStr(n1 * d2, d1 * n2);
         return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} \\div \\frac{${n2}}{${d2}}$`, answer: ans };
     }
@@ -402,9 +403,9 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
 function genPercentages(rng, diff, allowedOps, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
-        Easy:   { 'find-pct': [0] },
+        Easy: { 'find-pct': [0] },
         Medium: { 'find-pct': [0, 2], 'increase-decrease': [1] },
-        Hard:   { 'reverse-change': [0, 1, 2] },
+        Hard: { 'reverse-change': [0, 1, 2] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
 
@@ -511,9 +512,9 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
 // ============================================================
 function genAlgebra(rng, diff, allowedOps) {
     const maps = {
-        Easy:   { 'solve': [0, 1] },
+        Easy: { 'solve': [0, 1] },
         Medium: { 'solve': [0, 1], 'substitution': [2] },
-        Hard:   { 'solve': [0, 2], 'substitution': [1] },
+        Hard: { 'solve': [0, 2], 'substitution': [1] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
     const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : 2);
@@ -575,9 +576,9 @@ function genAlgebra(rng, diff, allowedOps) {
 function genStatistics(rng, diff, allowedOps, _depth = 0) {
     if (_depth > 30) return null;
     const maps = {
-        Easy:   { 'mean-median': [0, 1] },
+        Easy: { 'mean-median': [0, 1] },
         Medium: { 'mode-range': [0, 1], 'mean-median': [2] },
-        Hard:   { 'iqr': [0], 'mean-median': [1] },
+        Hard: { 'iqr': [0], 'mean-median': [1] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
     const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : diff === 'Medium' ? 2 : 1);
@@ -673,12 +674,12 @@ function genStatistics(rng, diff, allowedOps, _depth = 0) {
 // ============================================================
 // FINANCIAL MATHS
 // ============================================================
-function genFinancial(rng, diff, allowedOps, _depth = 0) {
+function genFinancial(rng, diff, allowedOps, opts = {}, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
-        Easy:   { 'simple-interest': [0], 'gst': [1] },
+        Easy: { 'simple-interest': [0], 'gst': [1] },
         Medium: { 'markup-profit': [0], 'simple-interest': [1] },
-        Hard:   { 'compound-interest': [0], 'markup-profit': [1] },
+        Hard: { 'compound-interest': [0], 'markup-profit': [1] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
     const type = _pickType(rng, filtered, 1);
@@ -691,10 +692,12 @@ function genFinancial(rng, diff, allowedOps, _depth = 0) {
             const t = ri(rng, 1, 3);
             const I = P * r / 100 * t;
             const yrs = `$${t}$ year${t > 1 ? 's' : ''}`;
+            const fOn = opts.showFormulas?.['simple-interest']?.[diff.toLowerCase()];
+            const pf = fOn ? ' Use $I = Prn$.' : '';
             const ph = rc(rng, [
-                `Calculate the simple interest on $\\$${P}$ at $${r}\\%$ p.a. for ${yrs}`,
-                `Find the simple interest earned on $\\$${P}$ invested at $${r}\\%$ per year for ${yrs}`,
-                `Determine the interest on $\\$${P}$ at $${r}\\%$ p.a. for ${yrs}`,
+                `Calculate the simple interest on $\\$${P}$ at $${r}\\%$ p.a. for ${yrs}.${pf}`,
+                `Find the simple interest earned on $\\$${P}$ invested at $${r}\\%$ per year for ${yrs}.${pf}`,
+                `Determine the interest on $\\$${P}$ at $${r}\\%$ p.a. for ${yrs}.${pf}`,
             ]);
             return { clue: ph, answer: String(I), answerDisplay: `$${I}` };
         }
@@ -722,10 +725,12 @@ function genFinancial(rng, diff, allowedOps, _depth = 0) {
         }
         const P = ri(rng, 2, 10) * 1000, r = rc(rng, [5, 10]), t = ri(rng, 1, 3);
         const I = P * r / 100 * t;
+        const fOn = opts.showFormulas?.['simple-interest']?.[diff.toLowerCase()];
+        const pf = fOn ? ' Use $I = Prn$.' : '';
         const ph = rc(rng, [
-            `Calculate the simple interest on $\\$${P}$ at $${r}\\%$ p.a. for $${t}$ years`,
-            `Find the simple interest earned on a $\\$${P}$ investment at $${r}\\%$ p.a. over $${t}$ years`,
-            `Determine the interest on $\\$${P}$ at $${r}\\%$ per annum for $${t}$ years`,
+            `Calculate the simple interest on $\\$${P}$ at $${r}\\%$ p.a. for $${t}$ years.${pf}`,
+            `Find the simple interest earned on a $\\$${P}$ investment at $${r}\\%$ p.a. over $${t}$ years.${pf}`,
+            `Determine the interest on $\\$${P}$ at $${r}\\%$ per annum for $${t}$ years.${pf}`,
         ]);
         return { clue: ph, answer: String(I), answerDisplay: `$${I}` };
     }
@@ -736,21 +741,25 @@ function genFinancial(rng, diff, allowedOps, _depth = 0) {
         if (!Number.isInteger(A)) {
             const P2 = ri(rng, 1, 5) * 2000, r2 = 10, t2 = ri(rng, 2, 3);
             const A2 = round(P2 * Math.pow(1 + r2 / 100, t2), 2);
+            const fOn = opts.showFormulas?.['compound-interest']?.[diff.toLowerCase()];
+            const pf = fOn ? ' Use $A = P(1+r)^n$.' : '';
             const ph = rc(rng, [
-                `Calculate the total amount after compound interest: $\\$${P2}$ at $${r2}\\%$ p.a. for $${t2}$ years`,
-                `$\\$${P2}$ is invested at $${r2}\\%$ p.a. compound interest for $${t2}$ years. Find the total amount.`,
+                `Calculate the total amount after compound interest: $\\$${P2}$ at $${r2}\\%$ p.a. for $${t2}$ years.${pf}`,
+                `$\\$${P2}$ is invested at $${r2}\\%$ p.a. compound interest for $${t2}$ years. Find the total amount.${pf}`,
             ]);
             return { clue: ph, answer: String(A2), answerDisplay: `$${A2}` };
         }
+        const fOn = opts.showFormulas?.['compound-interest']?.[diff.toLowerCase()];
+        const pf = fOn ? ' Use $A = P(1+r)^n$.' : '';
         const ph = rc(rng, [
-            `Calculate the total amount after compound interest: $\\$${P}$ at $${r}\\%$ p.a. for $${t}$ years`,
-            `$\\$${P}$ is invested at $${r}\\%$ p.a. compound interest for $${t}$ years. Determine the total amount.`,
-            `Find the final value of $\\$${P}$ compounded at $${r}\\%$ p.a. for $${t}$ years`,
+            `Calculate the total amount after compound interest: $\\$${P}$ at $${r}\\%$ p.a. for $${t}$ years.${pf}`,
+            `$\\$${P}$ is invested at $${r}\\%$ p.a. compound interest for $${t}$ years. Determine the total amount.${pf}`,
+            `Find the final value of $\\$${P}$ compounded at $${r}\\%$ p.a. for $${t}$ years.${pf}`,
         ]);
         return { clue: ph, answer: String(A), answerDisplay: `$${A}` };
     }
     const cost = ri(rng, 2, 15) * 100;
-    const pct  = rc(rng, [5, 10, 20, 25, 50]);
+    const pct = rc(rng, [5, 10, 20, 25, 50]);
     const sell = round(cost + cost * pct / 100, 2);
     const ph = rc(rng, [
         `An item costs $\\$${cost}$ and sells for $\\$${sell}$. Calculate the percentage profit.`,
@@ -767,18 +776,18 @@ function genFinancial(rng, diff, allowedOps, _depth = 0) {
 // Pick measurement unit appropriate to the magnitude.
 // val ≤ 10 → mm (tiny), ≤ 100 → cm (classroom), ≤ 1000 → m (room/field), else km
 function _geoUnit(maxVal) {
-    if (maxVal <= 10)  return 'mm';
+    if (maxVal <= 10) return 'mm';
     if (maxVal <= 100) return 'cm';
     if (maxVal <= 999) return 'm';
     return 'km';
 }
 
-function genGeometry(rng, diff, allowedOps, _depth = 0) {
+function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
-        Easy:   { 'area-perimeter': [0, 1] },
+        Easy: { 'area-perimeter': [0, 1] },
         Medium: { 'area-perimeter': [0], 'pythagoras': [1], 'angles': [2] },
-        Hard:   { 'circles': [0, 2], 'pythagoras': [1] },
+        Hard: { 'circles': [0, 2], 'pythagoras': [1] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
     const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : 2);
@@ -788,21 +797,25 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
         if (type === 0) {
             const l = ri(rng, 2, 15), w = ri(rng, 2, 12);
             const u = _geoUnit(Math.max(l, w));
+            const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
+            const pf = fOn ? ' Use $A = l \\times w$.' : '';
             const ph = rc(rng, [
-                `Find the area of a rectangle with length $${l}$ ${u} and width $${w}$ ${u}.`,
-                `Calculate the area of a rectangle: length $${l}$ ${u}, width $${w}$ ${u}.`,
-                `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its area.`,
-                `What is the area of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?`,
+                `Find the area of a rectangle with length $${l}$ ${u} and width $${w}$ ${u}.${pf}`,
+                `Calculate the area of a rectangle: length $${l}$ ${u}, width $${w}$ ${u}.${pf}`,
+                `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its area.${pf}`,
+                `What is the area of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?${pf}`,
             ]);
             return { clue: ph, answer: String(l * w), answerDisplay: `${l * w} ${u}²`, diagram: { type: 'rectangle', l, w, missing: 'area' } };
         }
         const l = ri(rng, 3, 15), w = ri(rng, 2, l);
         const u = _geoUnit(Math.max(l, w));
+        const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
+        const pf = fOn ? ' Use $P = 2l + 2w$.' : '';
         const ph = rc(rng, [
-            `Find the perimeter of a rectangle with length $${l}$ ${u} and width $${w}$ ${u}.`,
-            `Calculate the perimeter of a rectangle: length $${l}$ ${u}, width $${w}$ ${u}.`,
-            `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its perimeter.`,
-            `What is the perimeter of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?`,
+            `Find the perimeter of a rectangle with length $${l}$ ${u} and width $${w}$ ${u}.${pf}`,
+            `Calculate the perimeter of a rectangle: length $${l}$ ${u}, width $${w}$ ${u}.${pf}`,
+            `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its perimeter.${pf}`,
+            `What is the perimeter of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?${pf}`,
         ]);
         return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} ${u}`, diagram: { type: 'rectangle', l, w, missing: 'perimeter' } };
     }
@@ -812,10 +825,12 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
             const h = ri(rng, 3, 15);
             const u = _geoUnit(Math.max(b, h));
             const ans = (b * h) / 2;
+            const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
+            const pf = fOn ? ' Use $A = \\frac{1}{2}bh$.' : '';
             const ph = rc(rng, [
-                `Find the area of a triangle with base $${b}$ ${u} and perpendicular height $${h}$ ${u}.`,
-                `Calculate the area of a triangle: base $${b}$ ${u}, height $${h}$ ${u}.`,
-                `A triangle has base $${b}$ ${u} and height $${h}$ ${u}. Determine its area.`,
+                `Find the area of a triangle with base $${b}$ ${u} and perpendicular height $${h}$ ${u}.${pf}`,
+                `Calculate the area of a triangle: base $${b}$ ${u}, height $${h}$ ${u}.${pf}`,
+                `A triangle has base $${b}$ ${u} and height $${h}$ ${u}. Determine its area.${pf}`,
             ]);
             return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'triangle-area', base: b, height: h } };
         }
@@ -824,10 +839,12 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
             const [a, b, c] = rc(rng, triples);
             const scale = ri(rng, 1, 3);
             const u = _geoUnit(c * scale);
+            const fOn = opts.showFormulas?.['pythagoras']?.[diff.toLowerCase()];
+            const pf = fOn ? ' Use $a^2 + b^2 = c^2$.' : '';
             const ph = rc(rng, [
-                `A right-angled triangle has legs $${a * scale}$ ${u} and $${b * scale}$ ${u}. Find the hypotenuse.`,
-                `Calculate the hypotenuse of a right triangle with legs $${a * scale}$ ${u} and $${b * scale}$ ${u}.`,
-                `Determine the hypotenuse given legs of $${a * scale}$ ${u} and $${b * scale}$ ${u}.`,
+                `A right-angled triangle has legs $${a * scale}$ ${u} and $${b * scale}$ ${u}. Find the hypotenuse.${pf}`,
+                `Calculate the hypotenuse of a right triangle with legs $${a * scale}$ ${u} and $${b * scale}$ ${u}.${pf}`,
+                `Determine the hypotenuse given legs of $${a * scale}$ ${u} and $${b * scale}$ ${u}.${pf}`,
             ]);
             return { clue: ph, answer: String(c * scale), answerDisplay: `${c * scale} ${u}`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'c' } };
         }
@@ -850,10 +867,12 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
         const r = ri(rng, 2, 10);
         const u = _geoUnit(r);
         const ans = round(3.14 * r * r, 2);
+        const fOn = opts.showFormulas?.['circles']?.[diff.toLowerCase()];
+        const pf = fOn ? ' Use $A = \\pi r^2$.' : '';
         const ph = rc(rng, [
-            `Find the area of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.`,
-            `Calculate the area of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.`,
-            `Determine the area of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.`,
+            `Find the area of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+            `Calculate the area of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+            `Determine the area of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
         ]);
         return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'circle', r, missing: 'area' } };
     }
@@ -862,20 +881,24 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
         const [a, b, c] = rc(rng, triples);
         const scale = ri(rng, 1, 3);
         const u = _geoUnit(c * scale);
+        const fOn = opts.showFormulas?.['pythagoras']?.[diff.toLowerCase()];
+        const pf = fOn ? ' Use $a^2 + b^2 = c^2$.' : '';
         const ph = rc(rng, [
-            `A right triangle has hypotenuse $${c * scale}$ ${u} and one leg $${a * scale}$ ${u}. Find the other leg.`,
-            `Calculate the missing leg: hypotenuse $${c * scale}$ ${u}, known leg $${a * scale}$ ${u}.`,
-            `Determine the unknown side of a right triangle with hypotenuse $${c * scale}$ ${u} and leg $${a * scale}$ ${u}.`,
+            `A right triangle has hypotenuse $${c * scale}$ ${u} and one leg $${a * scale}$ ${u}. Find the other leg.${pf}`,
+            `Calculate the missing leg: hypotenuse $${c * scale}$ ${u}, known leg $${a * scale}$ ${u}.${pf}`,
+            `Determine the unknown side of a right triangle with hypotenuse $${c * scale}$ ${u} and leg $${a * scale}$ ${u}.${pf}`,
         ]);
         return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'b' } };
     }
     const r = ri(rng, 2, 15);
     const u = _geoUnit(r);
     const ans = round(2 * 3.14 * r, 2);
+    const fOn = opts.showFormulas?.['circles']?.[diff.toLowerCase()];
+    const pf = fOn ? ' Use $C = 2\\pi r$.' : '';
     const ph = rc(rng, [
-        `Find the circumference of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.`,
-        `Calculate the circumference of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.`,
-        `Determine the circumference of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.`,
+        `Find the circumference of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+        `Calculate the circumference of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+        `Determine the circumference of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
     ]);
     return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, diagram: { type: 'circle', r, missing: 'circumference' } };
 }
@@ -884,27 +907,27 @@ function genGeometry(rng, diff, allowedOps, _depth = 0) {
 // DISPATCH table
 // ============================================================
 const GENERATORS = {
-    'Integers':       genIntegers,
-    'Decimals':       genDecimals,
-    'Rounding':       genRounding,
-    'Fractions':      genFractions,
-    'Percentages':    genPercentages,
-    'Algebra':        genAlgebra,
-    'Geometry':       genGeometry,
-    'Statistics':     genStatistics,
+    'Integers': genIntegers,
+    'Decimals': genDecimals,
+    'Rounding': genRounding,
+    'Fractions': genFractions,
+    'Percentages': genPercentages,
+    'Algebra': genAlgebra,
+    'Geometry': genGeometry,
+    'Statistics': genStatistics,
     'Financial Maths': genFinancial,
 };
 
 // Map generator sub-topic → clue bank topic field
 const TOPIC_MAP = {
-    'Integers':       'Number',
-    'Decimals':       'Number',
-    'Rounding':       'Number',
-    'Fractions':      'Number',
-    'Percentages':    'Number',
-    'Algebra':        'Algebra',
-    'Geometry':       'Geometry',
-    'Statistics':     'Statistics',
+    'Integers': 'Number',
+    'Decimals': 'Number',
+    'Rounding': 'Number',
+    'Fractions': 'Number',
+    'Percentages': 'Number',
+    'Algebra': 'Algebra',
+    'Geometry': 'Geometry',
+    'Statistics': 'Statistics',
     'Financial Maths': 'Financial Maths',
 };
 
@@ -920,7 +943,7 @@ const ALL_SUBTOPICS = Object.keys(GENERATORS);
  * @param {object}  [opts.subOpsFilter] - { topic: [allowedOpKeys] } or null for all
  * @returns {Array} clue bank items
  */
-export function generateMathsQuestions({ subTopic = 'All', subTopics = null, subOpsFilter = null, difficulty = 'All', count = 10, seed } = {}) {
+export function generateMathsQuestions({ subTopic = 'All', subTopics = null, subOpsFilter = null, difficulty = 'All', count = 10, seed, showFormulas } = {}) {
     const rng = mulberry32(seed != null ? seed : Date.now());
 
     // subTopics array takes priority over subTopic string
@@ -931,7 +954,7 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
     } else {
         subtopics = subTopic === 'All' ? ALL_SUBTOPICS : [subTopic];
     }
-    const diffs      = difficulty === 'All' ? ['Easy', 'Medium', 'Hard'] : [difficulty];
+    const diffs = difficulty === 'All' ? ['Easy', 'Medium', 'Hard'] : [difficulty];
 
     // Build a balanced topic plan: cycle through shuffled topics so every
     // topic appears roughly equally — avoids 4× rounding with 0× algebra.
@@ -947,37 +970,40 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
     while (topicPlan.length < count) topicPlan.push(...shuffled(subtopics));
 
     const results = [];
-    let attempts  = 0;
+    let attempts = 0;
     const maxAttempts = count * 20;
 
     while (results.length < count && attempts < maxAttempts) {
         attempts++;
         // Use the pre-planned topic for this slot; fall back to random if exhausted
-        const st   = topicPlan[results.length] ?? rc(rng, subtopics);
+        const st = topicPlan[results.length] ?? rc(rng, subtopics);
         const diff = rc(rng, diffs);
-        const gen  = GENERATORS[st];
+        const gen = GENERATORS[st];
         if (!gen) continue;
 
         // Pass the allowed sub-ops for this topic (null = all allowed)
         const allowedOps = subOpsFilter?.[st] || null;
 
         let q;
-        try { q = gen(rng, diff, allowedOps); } catch (_) { continue; }
+        try { q = gen(rng, diff, allowedOps, { showFormulas }); } catch (e) { console.error(e); continue; }
         if (!q) continue;
 
         const ans = String(q.answer);
         // Skip if answer is too long (won't fit in grid) or contains invalid chars
         if (!ans || ans.length > 10) continue;
 
+        // Prevent duplicate questions
+        if (results.some(r => r.clue === q.clue)) continue;
+
         results.push({
-            id:            'gen_' + results.length + '_' + (seed || Date.now()),
-            topic:         TOPIC_MAP[st] || 'Number',
-            difficulty:    diff,
-            clue:          q.clue || '',
-            answer:        ans,
+            id: 'gen_' + results.length + '_' + (seed || Date.now()),
+            topic: TOPIC_MAP[st] || 'Number',
+            difficulty: diff,
+            clue: q.clue || '',
+            answer: ans,
             answerDisplay: q.answerDisplay || ans,
-            notes:         st,    // store sub-topic in notes for reference
-            diagram:       q.diagram || null,
+            notes: st,    // store sub-topic in notes for reference
+            diagram: q.diagram || null,
         });
     }
 
