@@ -2,7 +2,7 @@
 // main.js — Application entry point (Maths Question Sets Edition)
 // =============================================================
 import { state, ALL_SUBTOPICS, SUB_OPS, setGeneratedSets, setActivePage, updateSetting, applyStateToDOM, syncSettingsFromDOM } from './core/state.js';
-import { getOutcomesForTopics, getTopicsForOutcomeCodes } from './core/outcomes.js';
+import { getOutcomesForTopics, getTopicsForOutcomeCodes, DEFAULT_STAGE } from './core/outcomes.js';
 import { pushHistory, undo, redo } from './core/history.js';
 import { saveState, saveStateNow, loadRawState, hardReset } from './core/storage.js';
 
@@ -41,7 +41,7 @@ function getActiveTopics() {
     // If any outcomes are selected as a filter, restrict to matching topics only
     const filteredCodes = Object.keys(state.selectedOutcomes).filter(c => state.selectedOutcomes[c]);
     if (filteredCodes.length === 0) return allSelected;
-    const outcomeTopics = new Set(getTopicsForOutcomeCodes(filteredCodes, 'Stage 4'));
+    const outcomeTopics = new Set(getTopicsForOutcomeCodes(filteredCodes, DEFAULT_STAGE));
     return allSelected.filter(t => outcomeTopics.has(t));
 }
 
@@ -115,7 +115,7 @@ function renderActivePage() {
     const s    = state.settings;
 
     const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
-    const sWithTopics = { ...s, activeTopics, stage: 'Stage 4' };
+    const sWithTopics = { ...s, activeTopics, stage: DEFAULT_STAGE };
     const nEasy   = renderProblemSet(document.getElementById('p1-area'), sets.easy,   sWithTopics, 'Easy');
     const nMedium = renderProblemSet(document.getElementById('p2-area'), sets.medium, sWithTopics, 'Medium');
     const nHard   = renderProblemSet(document.getElementById('p3-area'), sets.hard,   sWithTopics, 'Hard');
@@ -276,7 +276,7 @@ function renderOutcomes() {
     if (!panel) return;
 
     const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
-    const outcomes = getOutcomesForTopics(activeTopics, 'Stage 4');
+    const outcomes = getOutcomesForTopics(activeTopics, DEFAULT_STAGE);
 
     const countable = outcomes.filter(o => !o.appliesAll).length;
     if (badge) badge.textContent = countable;

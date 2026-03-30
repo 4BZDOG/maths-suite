@@ -515,8 +515,9 @@ export async function exportPDF() {
                 ctx.drawWatermark();
             };
 
-            // Track how many questions actually rendered per difficulty (for cap-to-1-page)
-            const visibleCounts = { easy: null, medium: null, hard: null };
+            // Track how many questions actually rendered per difficulty (for cap-to-1-page).
+            // Initialised to 0 so unselected difficulty pages contribute nothing to the key.
+            const visibleCounts = { easy: 0, medium: 0, hard: 0 };
 
             for (const pType of selectedPages) {
                 await new Promise(r => setTimeout(r, 0));
@@ -546,11 +547,11 @@ export async function exportPDF() {
                     addPage();
                     const ps = getPScale('key');
                     const sy = drawHeader(ctx, title, sub, 'ANSWER KEY', true, setIndicator, ps, exportId);
-                    // Trim answer key to only questions that were rendered on question pages
+                    // Only key answers for questions that appeared on selected question pages.
                     const keySets = cfg.psCapOnePage ? {
-                        easy:   (sets.easy   || []).slice(0, visibleCounts.easy   ?? (sets.easy   || []).length),
-                        medium: (sets.medium || []).slice(0, visibleCounts.medium ?? (sets.medium || []).length),
-                        hard:   (sets.hard   || []).slice(0, visibleCounts.hard   ?? (sets.hard   || []).length),
+                        easy:   (sets.easy   || []).slice(0, visibleCounts.easy),
+                        medium: (sets.medium || []).slice(0, visibleCounts.medium),
+                        hard:   (sets.hard   || []).slice(0, visibleCounts.hard),
                     } : sets;
                     drawKeyPage(ctx, keySets, sy, ps, exportId);
                 }
