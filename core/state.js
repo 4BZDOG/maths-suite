@@ -57,6 +57,7 @@ export const state = {
         showTopic:             false,
         psShowOutcomesHeader:  false,
         psShowOutcomeChips:    false,
+        showDiagrams:          true,
         cols:                  2,
         wmOpacity:       0.15,
         showFormulas: {
@@ -117,6 +118,7 @@ export function syncSettingsFromDOM() {
     s.showAnswerKey  = getChk('showAnswerKey', s.showAnswerKey);
     s.showExportId   = getChk('showExportId', s.showExportId);
     s.showTopic             = getChk('psShowTopic',            s.showTopic);
+    s.psShowOutcomesHeader  = getChk('psShowOutcomesHeader',   s.psShowOutcomesHeader);
     s.psShowOutcomeChips    = getChk('psShowOutcomeChips',     s.psShowOutcomeChips);
     s.showDiagrams          = getChk('psShowDiagrams',         s.showDiagrams);
     s.cols                  = parseInt(getVal('psCols', s.cols), 10);

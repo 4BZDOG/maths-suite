@@ -3,8 +3,9 @@
 // =============================================================
 import { saveState } from '../core/storage.js';
 
-export function setupSortableList() {
-    const sortList = document.getElementById('page-order-list');
+export function setupSortableList(selectorOrId) {
+    const id = (selectorOrId || '#page-order-list').replace(/^#/, '');
+    const sortList = document.getElementById(id);
     if (!sortList) return;
 
     let draggedItem = null;

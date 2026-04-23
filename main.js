@@ -608,6 +608,33 @@ function clearWatermark() {
 }
 
 // =============================================================
+// Config file loader (triggered by the Load Config file-input)
+// =============================================================
+function loadConfigFromFile(input) {
+    const file = input?.files?.[0];
+    if (!file) return;
+    if (!file.name.endsWith('.json')) {
+        showToast('Only .json config files are supported.', 'error');
+        input.value = '';
+        return;
+    }
+    const r = new FileReader();
+    r.onload = e => {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            applyStateToDOM(parsed);
+            generateAll();
+            showToast('Config loaded');
+        } catch {
+            showToast('Invalid JSON config file.', 'error');
+        }
+        input.value = '';
+    };
+    r.onerror = () => { showToast('Failed to read file.', 'error'); input.value = ''; };
+    r.readAsText(file);
+}
+
+// =============================================================
 // Expose public API on window
 // =============================================================
 window._puzzleApp = {
@@ -647,6 +674,7 @@ window._puzzleApp = {
     debouncedUpdateUI,
     saveState,
     renderOutcomes,
+    loadConfigFromFile,
 };
 
 Object.assign(window, window._puzzleApp);

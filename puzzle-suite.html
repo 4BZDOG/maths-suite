@@ -32,19 +32,7 @@
         </div>
     </div>
 
-    <div id="modal-overlay" role="presentation">
-        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-heading">
-            <h3 class="modal-title" id="modal-heading">Bulk Import</h3>
-            <p class="modal-desc">Paste CSV with columns <code>topic, difficulty, clue, answer, answerDisplay, notes</code> — or one answer per line (tab-separated answer &amp; clue). Clues are <strong>added</strong> to your existing bank.</p>
-            <textarea id="import-text"
-                placeholder="topic,difficulty,clue,answer,answerDisplay,notes&#10;Number,Easy,$12 \times 12$,144,144,MA4-INT-C-01&#10;Algebra,Medium,Solve: $3x - 7 = 14$,7,x = 7,MA4-ALG-C-01"></textarea>
-            <div class="modal-actions">
-                <button class="btn-sec btn-auto" onclick="closeModal()">Cancel</button>
-                <button class="btn-main btn-auto" onclick="processImport()">Import</button>
-            </div>
-        </div>
-    </div>
-    <input type="file" id="file-input" accept=".json,.txt,.csv" onchange="loadConfigFromFile(this)">
+    <input type="file" id="file-input" accept=".json" onchange="loadConfigFromFile(this)">
     <button class="toggle-sidebar" onclick="toggleSidebar()" title="Toggle Sidebar" aria-label="Toggle sidebar"><i
             class="fas fa-bars"></i></button>
 
@@ -371,7 +359,6 @@
                                     type="checkbox" id="psShowTopic" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
                         <hr class="form-divider">
-                        <hr class="form-divider">
                         <div class="toggle-row"><label title="Show all relevant NESA outcomes with full code and description at the top of each worksheet">Outcomes Header</label><label class="switch"><input
                                     type="checkbox" id="psShowOutcomesHeader" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
@@ -539,7 +526,7 @@
         </div>
     </main>
 
-    <script src="bundle.js?v=99"></script>
+    <script src="bundle.js?v=100"></script>
 </body>
 
 </html>
