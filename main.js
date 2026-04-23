@@ -9,6 +9,7 @@ import { saveState, saveStateNow, loadRawState, hardReset } from './core/storage
 import { renderProblemSet } from './renderers/problemSet.js';
 import { renderKeys } from './renderers/keys.js';
 import { renderKaTeX } from './renderers/katexRender.js';
+import { esc } from './renderers/htmlUtils.js';
 
 import { exportPDF } from './pdf/pdfExport.js';
 
@@ -468,13 +469,13 @@ function renderOutcomes() {
                 class="outcome-filter-chk"
                 title="Filter generation to this outcome"
                 ${isSelected ? 'checked' : ''}
-                onchange="toggleOutcomeFilter('${o.code}', this.checked)">`;
+                onchange="toggleOutcomeFilter('${esc(o.code)}', this.checked)">`;
             return `<div class="${cls}">
                 ${chkHtml}
-                <span class="outcome-code-pill">${o.code}</span>
+                <span class="outcome-code-pill">${esc(o.code)}</span>
                 <div class="outcome-text">
-                    <div class="outcome-content-label">${o.contentLabel}</div>
-                    <div class="outcome-statement">${o.statement}</div>
+                    <div class="outcome-content-label">${esc(o.contentLabel)}</div>
+                    <div class="outcome-statement">${esc(o.statement)}</div>
                 </div>
             </div>`;
         }).join('');
