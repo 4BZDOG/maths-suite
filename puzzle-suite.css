@@ -1499,48 +1499,6 @@ table.mode-cw td.cell.empty {
     box-shadow: 0 0 10px var(--primary);
 }
 
-#modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 150;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    -webkit-backdrop-filter: blur(4px);
-    backdrop-filter: blur(4px);
-}
-
-.modal {
-    background: var(--bg-panel);
-    width: 500px;
-    max-width: 90vw;
-    border-radius: 16px;
-    padding: 30px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
-}
-
-.modal textarea {
-    height: 200px;
-    resize: vertical;
-    margin-bottom: 20px;
-    width: 100%;
-    padding: 16px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-family: monospace;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    background: var(--input-bg);
-    color: var(--text-main);
-    transition: border-color 0.2s;
-}
-
-.modal textarea:focus {
-    border-color: var(--primary);
-    outline: none;
-    background: var(--bg-panel);
-}
 
 #toast-container {
     position: fixed;
@@ -1953,6 +1911,7 @@ table.mode-cw td.cell.empty {
     aside, .preview-toolbar, .page-tabs, #loading-overlay { display: none !important; }
     .viewport { padding: 0; }
     .page { box-shadow: none; margin: 0; }
+    .problem-item, .key-item, .key-section { break-inside: avoid; page-break-inside: avoid; }
 }
 
 } /* end @layer utils */

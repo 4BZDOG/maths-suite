@@ -372,7 +372,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
             }
             pagesUsed++;
             // Draw divider for this page before flipping to next
-            if (cols === 2) _drawColumnDivider(doc, MARGIN, colW, pageStartY, cy);
+            if (cols === 2 && cy > pageStartY) _drawColumnDivider(doc, MARGIN, colW, pageStartY, cy);
             drawExportIdFooter(ctx, exportId, pScale);
             doc.addPage();
             drawWatermark();
@@ -544,7 +544,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
     if (cols === 2 && col === 1) cy += rowMaxH;
 
     // Draw column divider for this (final) page
-    if (cols === 2) _drawColumnDivider(doc, MARGIN, colW, pageStartY, cy);
+    if (cols === 2 && cy > pageStartY) _drawColumnDivider(doc, MARGIN, colW, pageStartY, cy);
 
     drawExportIdFooter(ctx, exportId, pScale);
     return overflowCount;

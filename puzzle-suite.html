@@ -52,17 +52,17 @@
             </div>
         </div>
         <div class="nav-tabs" role="tablist" aria-label="Sidebar panels">
-            <div class="nav-tab active" onclick="switchTab('content')" data-tab="content" role="tab"
+            <div id="tab-content" class="nav-tab active" onclick="switchTab('content')" data-tab="content" role="tab"
                 aria-selected="true" tabindex="0"><i class="fas fa-list"></i> Editor</div>
-            <div class="nav-tab" onclick="switchTab('design')" data-tab="design" role="tab" aria-selected="false"
+            <div id="tab-design" class="nav-tab" onclick="switchTab('design')" data-tab="design" role="tab" aria-selected="false"
                 tabindex="-1"><i class="fas fa-sliders-h"></i> Settings</div>
-            <div class="nav-tab" onclick="switchTab('export')" data-tab="export" role="tab" aria-selected="false"
+            <div id="tab-export" class="nav-tab" onclick="switchTab('export')" data-tab="export" role="tab" aria-selected="false"
                 tabindex="-1"><i class="fas fa-download"></i> Export</div>
         </div>
         <div class="scroll-area">
 
             <!-- EDITOR TAB -->
-            <div id="panel-content" role="tabpanel" aria-labelledby="panel-content-tab">
+            <div id="panel-content" role="tabpanel" aria-labelledby="tab-content">
                 <!-- MATHS TOPICS -->
                 <div class="section-label" style="margin-top:8px;">MATHS TOPICS</div>
                 <div class="topic-toggles" id="topic-toggles">
@@ -121,17 +121,17 @@
                         <label class="topic-toggle-row">
                             <input type="checkbox" id="topic-Algebra" checked onchange="toggleTopic('Algebra')">
                             <span class="topic-toggle-name">Algebraic Techniques</span>
-                            <span class="outcome-chip" title="Algebraic techniques, Equations, Linear relationships">MA4-ALG/EQU/LIN</span>
+                            <span class="outcome-chip" title="Algebraic techniques: MA4-ALG-C-01, MA4-EQU-C-01, MA4-LIN-C-01">MA4-ALG-C-01 +2</span>
                             <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Algebra')"><i class="fas fa-chevron-down"></i></button>
                         </label>
                         <div class="topic-subtypes" id="subs-Algebra" style="display:none;"></div>
                     </div>
-                    <!-- Geometry → MA4-ARE/GEO/ANG/PYT/LEN -->
+                    <!-- Geometry → MA4-ARE-C-01, MA4-GEO-C-01, MA4-ANG-C-01, MA4-PYT-C-01, MA4-LEN-C-01 -->
                     <div class="topic-group">
                         <label class="topic-toggle-row">
                             <input type="checkbox" id="topic-Geometry" checked onchange="toggleTopic('Geometry')">
                             <span class="topic-toggle-name">Measurement & Geometry</span>
-                            <span class="outcome-chip" title="Area, Properties of geometrical figures, Angle relationships, Pythagoras' theorem, Length">MA4-ARE/GEO/ANG…</span>
+                            <span class="outcome-chip" title="Area, Geometry, Angles, Pythagoras, Length: MA4-ARE-C-01, MA4-GEO-C-01, MA4-ANG-C-01, MA4-PYT-C-01, MA4-LEN-C-01">MA4-ARE-C-01 +4</span>
                             <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Geometry')"><i class="fas fa-chevron-down"></i></button>
                         </label>
                         <div class="topic-subtypes" id="subs-Geometry" style="display:none;"></div>
@@ -141,7 +141,8 @@
                         <label class="topic-toggle-row">
                             <input type="checkbox" id="topic-Statistics" checked onchange="toggleTopic('Statistics')">
                             <span class="topic-toggle-name">Data Analysis</span>
-                            <span class="outcome-chip" title="Data classification and visualisation, Data analysis">MA4-DAT-C-01/02</span>
+                            <span class="outcome-chip" title="Data classification and visualisation">MA4-DAT-C-01</span>
+                            <span class="outcome-chip" title="Data analysis">MA4-DAT-C-02</span>
                             <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Statistics')"><i class="fas fa-chevron-down"></i></button>
                         </label>
                         <div class="topic-subtypes" id="subs-Statistics" style="display:none;"></div>
@@ -194,7 +195,7 @@
             </div>
 
             <!-- SETTINGS TAB -->
-            <div id="panel-design" style="display:none" role="tabpanel">
+            <div id="panel-design" style="display:none" role="tabpanel" aria-labelledby="tab-design">
                 <details class="setting-card" open>
                     <summary>
                         <div class="card-header-inner"><i class="fas fa-print"></i> Page Setup</div>
@@ -371,7 +372,7 @@
             </div>
 
             <!-- EXPORT TAB -->
-            <div id="panel-export" style="display:none" role="tabpanel">
+            <div id="panel-export" style="display:none" role="tabpanel" aria-labelledby="tab-export">
                 <div class="export-card">
                     <div class="input-row" style="margin-bottom: 20px;">
                         <label class="input-inline field-label" style="margin:0;">Filename</label>
@@ -526,7 +527,7 @@
         </div>
     </main>
 
-    <script src="bundle.js?v=101"></script>
+    <script src="bundle.js?v=102"></script>
 </body>
 
 </html>
