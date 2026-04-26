@@ -22,7 +22,7 @@ import { setupSortableList } from './ui/pageOrder.js';
 import { setupDragAndDrop } from './ui/dropZone.js';
 
 import { downloadConfig } from './import-export/exportConfig.js';
-import { hasFeature, FEATURE, PRICING, TIER, isAdmin, enableAdminMode, disableAdminMode } from './payments/access.js';
+import { hasFeature, FEATURE, PRICING, TIER, GROUPS, isAdmin, enableAdminMode, disableAdminMode, getActiveGroupId } from './payments/access.js';
 import { pruneExpiredSession } from './payments/session.js';
 import {
     openAccessPanel, closeAccessPanel,
@@ -186,7 +186,20 @@ function renderTierUI() {
 
     // Admin indicator banner
     const adminBanner = document.getElementById('admin-mode-banner');
-    if (adminBanner) adminBanner.style.display = adminOn ? '' : 'none';
+    if (adminBanner) {
+        adminBanner.style.display = adminOn ? '' : 'none';
+        const bannerBody = adminBanner.querySelector('.admin-banner-body');
+        if (bannerBody) {
+            const groupId = getActiveGroupId();
+            if (!groupId) {
+                bannerBody.textContent = 'All Pro features unlocked. Use Access Control to test different user groups.';
+            } else if (groupId === 'custom') {
+                bannerBody.textContent = 'Custom feature overrides active.';
+            } else {
+                bannerBody.textContent = `Simulating: ${GROUPS[groupId]?.label ?? groupId}.`;
+            }
+        }
+    }
 
     // PRO badge next to the pages-per-difficulty selector
     const badge = document.getElementById('two-page-pro-badge');

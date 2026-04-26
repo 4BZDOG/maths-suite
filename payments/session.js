@@ -73,10 +73,11 @@ export function pruneExpiredSession() {
 
 /**
  * Set an admin session for local testing — unlocks all features with no expiry.
+ * Explicitly clears any featureOverrides so the full admin tier takes effect.
  * Call clearSession() to revert to the free tier.
  */
 export function setAdminSession() {
-    setSession({ tier: 'admin', userId: 'admin', token: null, expiresAt: null });
+    setSession({ tier: 'admin', userId: 'admin', token: null, expiresAt: null, featureOverrides: null });
 }
 
 /**
@@ -92,5 +93,5 @@ export async function refreshFromServer() {
 }
 
 function _defaultSession() {
-    return { tier: 'free', userId: null, token: null, expiresAt: null };
+    return { tier: 'free', userId: null, token: null, expiresAt: null, featureOverrides: null };
 }

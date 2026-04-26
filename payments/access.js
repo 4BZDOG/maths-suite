@@ -13,10 +13,10 @@
 //       return;
 //   }
 // =============================================================
-import { TIER, FEATURE, TIER_FEATURES, FREE_LIMITS, PRICING } from './config.js';
+import { TIER, FEATURE, TIER_FEATURES, FREE_LIMITS, PRICING, GROUPS } from './config.js';
 import { getSession, setSession, clearSession, setAdminSession } from './session.js';
 
-export { TIER, FEATURE, FREE_LIMITS, PRICING };
+export { TIER, FEATURE, FREE_LIMITS, PRICING, GROUPS };
 
 // ---- Core access functions ----------------------------------
 
@@ -55,6 +55,22 @@ export function setFeatureOverrides(overrides) {
 /** Remove all feature overrides — reverts every feature to its tier default. */
 export function clearFeatureOverrides() {
     setSession({ featureOverrides: null });
+}
+
+/**
+ * Returns the id of the named GROUPS entry whose feature set exactly matches
+ * the current featureOverrides, 'custom' if overrides are set but don't match
+ * any group, or null if no overrides are active.
+ * @returns {string|null}
+ */
+export function getActiveGroupId() {
+    const overrides = getSession().featureOverrides;
+    if (!overrides) return null;
+    const allKeys = Object.values(FEATURE);
+    for (const [id, group] of Object.entries(GROUPS)) {
+        if (allKeys.every(key => group.features.has(key) === !!overrides[key])) return id;
+    }
+    return 'custom';
 }
 
 /**

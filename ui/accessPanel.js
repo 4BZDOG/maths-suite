@@ -141,12 +141,6 @@ function _renderBody() {
     }
     html += `</div>`;
 
-    // ---- Actions ----
-    html += `<div class="acp-actions">`;
-    html += `<button class="btn-sec btn-auto" onclick="resetAccessOverrides()">Reset to Tier</button>`;
-    html += `<button class="btn-main btn-auto" onclick="applyAccessOverrides()">Apply Changes</button>`;
-    html += `</div>`;
-
     body.innerHTML = html;
 }
 

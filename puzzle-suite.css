@@ -72,6 +72,7 @@
     /* Distinct track background for sliders/toggles */
     --ws-bg-color: transparent;
     --cw-bg-color: transparent;
+    --hover-bg: rgba(255, 255, 255, .06);
 }
 
 [data-theme="dark"] .setting-card,
@@ -3128,7 +3129,6 @@ details.outcomes-ws-header:not([open]) .outcomes-ws-summary::after { transform: 
     padding: 20px 24px;
     display: flex;
     flex-direction: column;
-    gap: 0;
 }
 .acp-section {
     display: flex;
@@ -3251,13 +3251,23 @@ details.outcomes-ws-header:not([open]) .outcomes-ws-summary::after { transform: 
     margin-left: 5px;
     vertical-align: middle;
 }
-/* Actions row */
-.acp-actions {
+/* Dark mode: increase translucent teal fills so they're visible on dark panels */
+[data-theme="dark"] .acp-group-btn.active {
+    background: rgba(16, 185, 129, .28);
+}
+[data-theme="dark"] .acp-override-badge {
+    background: rgba(16, 185, 129, .25);
+}
+[data-theme="dark"] .admin-mode-banner {
+    background: linear-gradient(135deg, rgba(16,185,129,.14), rgba(5,150,105,.14));
+}
+
+/* Footer — pinned outside the scroll area, always visible */
+.acp-footer {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
-    padding-top: 16px;
-    margin-top: 4px;
+    padding: 14px 24px;
     border-top: 1px solid var(--border);
     flex-shrink: 0;
 }
