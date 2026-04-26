@@ -719,12 +719,18 @@ export async function exportPDF() {
 
     const title    = cfg.title || 'Maths Quiz';
     const sub      = cfg.sub   || '';
-    // PAYMENTS: clamp bulk count to tier limit (free = 1, pro = up to 50)
+    // Clamp the requested bulk count to the universal hard ceiling and tier limit.
     const count    = (() => {
         const el = document.getElementById('bulkCount');
-        const requested = el ? Math.min(50, Math.max(1, parseInt(el.value, 10) || 1)) : 1;
-        const clamped = clampBulkExportCount(requested);
-        if (clamped < requested) showToast(`Bulk export limited to ${FREE_LIMITS.BULK_EXPORT_MAX} on the free plan.`, 'warning');
+        const raw = el ? Math.max(1, parseInt(el.value, 10) || 1) : 1;
+        const ceiling = Math.min(raw, FREE_LIMITS.BULK_EXPORT_MAX);
+        const clamped = clampBulkExportCount(ceiling);
+        if (clamped < raw) {
+            const msg = clamped < ceiling
+                ? `Bulk export limited to ${clamped} on the free plan.`
+                : `Bulk export capped at ${FREE_LIMITS.BULK_EXPORT_MAX} copies.`;
+            showToast(msg, 'warning');
+        }
         return clamped;
     })();
     const filename = (() => { const el = document.getElementById('exportFilename'); return el ? el.value : 'MathsQuiz'; })()
@@ -853,11 +859,19 @@ export async function exportPDF() {
         await new Promise(r => setTimeout(r, 100));
 
         doc.save(filename + '.pdf');
-        showToast('PDF exported successfully!');
+
+        const pagesPerDiff = state.questionsPerSet || 1;
+        const diffPagesPerCopy = ['easy', 'medium', 'hard'].filter(t => selectedPages.includes(t)).length * pagesPerDiff;
+        const keyPagesPerCopy = selectedPages.includes('key') ? 1 : 0;
+        const totalPages = count * (diffPagesPerCopy + keyPagesPerCopy);
+        const copyMsg = count === 1 ? '1 copy' : `${count} copies`;
+        const pageMsg = totalPages === 1 ? '1 page' : `${totalPages} pages`;
+        showToast(`Exported ${copyMsg} · ${pageMsg}`, 'success');
 
     } catch (e) {
         console.error(e);
-        showToast('PDF export failed. Check internet connection for required libraries.', 'error');
+        const detail = (e && e.message) ? `: ${e.message}` : '';
+        showToast(`PDF export failed${detail}`, 'error');
     } finally {
         isExporting = false;
         if (exportBtn) exportBtn.disabled = false;

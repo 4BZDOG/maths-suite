@@ -22,7 +22,7 @@ import { setupSortableList } from './ui/pageOrder.js';
 import { setupDragAndDrop } from './ui/dropZone.js';
 
 import { downloadConfig } from './import-export/exportConfig.js';
-import { hasFeature, FEATURE, PRICING, TIER, GROUPS, isAdmin, enableAdminMode, disableAdminMode, getActiveGroupId } from './payments/access.js';
+import { hasFeature, FEATURE, PRICING, TIER, GROUPS, FREE_LIMITS, isAdmin, enableAdminMode, disableAdminMode, getActiveGroupId, getBulkExportLimit } from './payments/access.js';
 import { pruneExpiredSession } from './payments/session.js';
 import {
     openAccessPanel, closeAccessPanel,
@@ -107,14 +107,25 @@ let _lastRenderedCounts = { easy: 0, medium: 0, hard: 0 };
 // Status badge
 // =============================================================
 function updateStatus() {
+    const { easy = 0, medium = 0, hard = 0 } = _lastRenderedCounts;
+    const visible = easy + medium + hard;
     const sets = state.generatedSets;
-    const total = (sets.easy?.length || 0) + (sets.medium?.length || 0) + (sets.hard?.length || 0);
+    const generated = (sets.easy?.length || 0) + (sets.medium?.length || 0) + (sets.hard?.length || 0);
+
     const pc = document.getElementById('placed-count');
-    if (pc) pc.innerText = `${total} questions`;
+    if (pc) {
+        if (visible > 0) {
+            pc.innerText = `${visible} question${visible !== 1 ? 's' : ''} on page`;
+        } else if (generated > 0) {
+            pc.innerText = `0 fit — adjust font/paper`;
+        } else {
+            pc.innerText = `0 questions`;
+        }
+    }
 
     const icon = document.getElementById('status-icon');
     if (icon) {
-        if (total > 0) {
+        if (visible > 0) {
             icon.className = 'status-icon icon-success';
             icon.innerHTML = '<i class="fas fa-check"></i>';
         } else {
@@ -249,6 +260,15 @@ function openAccessPanelUI() {
     openAccessPanel(() => renderTierUI());
 }
 
+function _setExportEnabled(enabled, reason) {
+    const btn = document.getElementById('export-btn-main');
+    if (!btn) return;
+    btn.disabled = !enabled;
+    btn.title = enabled ? 'Export Vector PDF' : (reason || '');
+    btn.style.cursor = enabled ? '' : 'not-allowed';
+    btn.style.opacity = enabled ? '' : '0.55';
+}
+
 function renderExportPreview() {
     const panel = document.getElementById('export-preview-panel');
     const body  = document.getElementById('export-preview-body');
@@ -262,6 +282,7 @@ function renderExportPreview() {
 
     if (total === 0) {
         body.innerHTML = '<span style="opacity:.6;">Click Regenerate to see export details.</span>';
+        _setExportEnabled(false, 'Generate questions before exporting');
         return;
     }
 
@@ -269,7 +290,10 @@ function renderExportPreview() {
     const selMedium = document.getElementById('sel-medium')?.checked ?? true;
     const selHard   = document.getElementById('sel-hard')?.checked   ?? true;
     const selKey    = document.getElementById('sel-key')?.checked    ?? true;
-    const copies    = Math.max(1, parseInt(document.getElementById('bulkCount')?.value, 10) || 1);
+    const tierLimit = getBulkExportLimit();
+    const requestedCopies = Math.max(1, parseInt(document.getElementById('bulkCount')?.value, 10) || 1);
+    const copies = Math.min(requestedCopies, tierLimit, FREE_LIMITS.BULK_EXPORT_MAX);
+    const wasClamped = copies < requestedCopies;
     const pages     = state.questionsPerSet || 1;
     const isPro     = hasFeature(FEATURE.TWO_PAGE_MODE);
 
@@ -278,6 +302,12 @@ function renderExportPreview() {
         { label: 'Medium', n: medium, color: '#f59e0b', sel: selMedium },
         { label: 'Hard',   n: hard,   color: '#ef4444', sel: selHard   },
     ].filter(r => r.sel && r.n > 0);
+
+    if (diffRows.length === 0 && !selKey) {
+        body.innerHTML = '<span style="opacity:.7;">No pages selected. Tick at least one row in <em>Page Selection &amp; Order</em> to enable export.</span>';
+        _setExportEnabled(false, 'Select at least one page to export');
+        return;
+    }
 
     let pageCount = 0;
     let questionCount = 0;
@@ -321,6 +351,10 @@ function renderExportPreview() {
         </div>`;
     }
 
+    if (wasClamped) {
+        html += `<div class="ep-note" style="color:#d97706;"><i class="fas fa-exclamation-triangle" style="margin-right:3px;"></i> Capped from ${requestedCopies} to ${copies} copies (max for current plan).</div>`;
+    }
+
     html += `<div class="ep-note" style="margin-top:6px;"><i class="fas fa-info-circle" style="color:#64748b; margin-right:3px;"></i> Counts auto-fit your current paper size, font scale, and zoom. Adjust those to fit more/fewer per page.</div>`;
 
     if (!isPro) {
@@ -330,6 +364,12 @@ function renderExportPreview() {
     }
 
     body.innerHTML = html;
+
+    if (pageCount === 0) {
+        _setExportEnabled(false, 'Select at least one page to export');
+    } else {
+        _setExportEnabled(true);
+    }
 }
 
 function updateUI() {
