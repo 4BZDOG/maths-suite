@@ -10,7 +10,7 @@
 //   }
 // =============================================================
 import { TIER, FEATURE, TIER_FEATURES, FREE_LIMITS, PRICING } from './config.js';
-import { getSession } from './session.js';
+import { getSession, setSession, clearSession, setAdminSession } from './session.js';
 
 export { TIER, FEATURE, FREE_LIMITS, PRICING };
 
@@ -59,6 +59,27 @@ export function getBulkExportLimit() {
 export function clampBulkExportCount(requested) {
     const limit = getBulkExportLimit();
     return Math.min(requested, limit);
+}
+
+// ---- Admin helpers -----------------------------------------
+
+/** Returns true when the current session is the admin tier. */
+export function isAdmin() {
+    return getCurrentTier() === TIER.ADMIN;
+}
+
+/**
+ * Activate admin mode — sets the local session to the admin tier so all
+ * features are unlocked with no limits.  Persists across page reloads
+ * until disableAdminMode() or clearSession() is called.
+ */
+export function enableAdminMode() {
+    setAdminSession();
+}
+
+/** Revert to the free tier by removing the stored session. */
+export function disableAdminMode() {
+    clearSession();
 }
 
 // ---- Upgrade prompt helpers ---------------------------------

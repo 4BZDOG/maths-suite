@@ -22,7 +22,7 @@ import { setupSortableList } from './ui/pageOrder.js';
 import { setupDragAndDrop } from './ui/dropZone.js';
 
 import { downloadConfig } from './import-export/exportConfig.js';
-import { hasFeature, FEATURE, PRICING, TIER } from './payments/access.js';
+import { hasFeature, FEATURE, PRICING, TIER, isAdmin, enableAdminMode, disableAdminMode } from './payments/access.js';
 
 // =============================================================
 // Constants
@@ -175,7 +175,12 @@ function _updatePageButtonLabels(nEasy, nMedium, nHard) {
 }
 
 function renderTierUI() {
-    const isPro = hasFeature(FEATURE.TWO_PAGE_MODE);
+    const isPro   = hasFeature(FEATURE.TWO_PAGE_MODE);
+    const adminOn = isAdmin();
+
+    // Admin indicator banner
+    const adminBanner = document.getElementById('admin-mode-banner');
+    if (adminBanner) adminBanner.style.display = adminOn ? '' : 'none';
 
     // PRO badge next to the pages-per-difficulty selector
     const badge = document.getElementById('two-page-pro-badge');
@@ -208,6 +213,16 @@ function renderTierUI() {
     }
 
     renderExportPreview();
+}
+
+/**
+ * Toggle admin mode on/off. Persists across reloads.
+ * Call from the browser console: setAdminMode(true) / setAdminMode(false)
+ */
+function setAdminMode(on) {
+    if (on) enableAdminMode(); else disableAdminMode();
+    renderTierUI();
+    showToast(on ? 'Admin mode enabled — all features unlocked.' : 'Admin mode disabled — reverted to free tier.', on ? 'success' : 'info');
 }
 
 function renderExportPreview() {
@@ -647,6 +662,7 @@ window._puzzleApp = {
     debouncedUpdateUI,
     saveState,
     renderOutcomes,
+    setAdminMode,
 };
 
 Object.assign(window, window._puzzleApp);

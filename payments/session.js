@@ -62,10 +62,20 @@ export function clearSession() {
  * Call this explicitly at app startup rather than inside getSession() to avoid side-effects.
  */
 export function pruneExpiredSession() {
-    const s = getSession();
-    if (s === _defaultSession() || (s.expiresAt && Date.now() > s.expiresAt)) {
-        clearSession();
-    }
+    try {
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (!raw) return;
+        const s = JSON.parse(raw);
+        if (s.expiresAt && Date.now() > s.expiresAt) clearSession();
+    } catch (_) { clearSession(); }
+}
+
+/**
+ * Set an admin session for local testing — unlocks all features with no expiry.
+ * Call clearSession() to revert to the free tier.
+ */
+export function setAdminSession() {
+    setSession({ tier: 'admin', userId: 'admin', token: null, expiresAt: null });
 }
 
 /**

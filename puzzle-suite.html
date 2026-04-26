@@ -438,6 +438,13 @@
                     <div class="upsell-body">Unlock 2-page difficulty sets, watermark removal, and custom PDF fonts.</div>
                     <a href="#" class="upsell-btn" id="upsell-cta-btn" onclick="return false;">Upgrade to Pro →</a>
                 </div>
+
+                <!-- Admin mode banner: visible only when admin tier is active -->
+                <div id="admin-mode-banner" class="admin-mode-banner" style="display:none;">
+                    <div class="admin-banner-title"><i class="fas fa-shield-alt" style="margin-right:5px;"></i>Admin Mode</div>
+                    <div class="admin-banner-body">All Pro features unlocked. No limits enforced.</div>
+                    <button class="admin-banner-btn" onclick="setAdminMode(false)">Exit Admin Mode</button>
+                </div>
             </div>
         </div>
         <div class="footer-actions">
@@ -539,7 +546,7 @@
         </div>
     </main>
 
-    <script src="bundle.js?v=99"></script>
+    <script src="bundle.js?v=100"></script>
 </body>
 
 </html>

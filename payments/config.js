@@ -11,8 +11,9 @@
 
 // ---- Tier identifiers ----------------------------------------
 export const TIER = Object.freeze({
-    FREE: 'free',
-    PRO:  'pro',
+    FREE:  'free',
+    PRO:   'pro',
+    ADMIN: 'admin', // internal/testing — all features, no limits
 });
 
 // ---- Feature keys --------------------------------------------
@@ -43,7 +44,7 @@ export const TIER_FEATURES = Object.freeze({
     [TIER.FREE]: new Set([
         FEATURE.EXPORT_CONFIG,
         FEATURE.IMPORT_CSV,
-        // Bulk export limited to 1 copy (enforced in pdfExport.js)
+        // Bulk export capped at FREE_LIMITS.BULK_EXPORT_MAX (enforced in pdfExport.js)
         // AI generation disabled on free tier
         // All topics available on free (generous free tier)
         FEATURE.ALL_TOPICS,
@@ -59,6 +60,8 @@ export const TIER_FEATURES = Object.freeze({
         FEATURE.CUSTOM_FONT,
         FEATURE.TWO_PAGE_MODE,
     ]),
+    // Admin has every feature — used for internal testing only.
+    [TIER.ADMIN]: new Set(Object.values(FEATURE)),
 });
 
 // ---- Free-tier usage limits ---------------------------------
