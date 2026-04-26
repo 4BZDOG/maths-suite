@@ -20,18 +20,21 @@ import { esc } from '../renderers/htmlUtils.js';
 
 const OVERLAY_ID = 'access-panel-overlay';
 
-let _onApply = null;
+let _onApply    = null;
+let _triggerEl  = null; // element that had focus when the panel was opened
 
 // ---- Public API ---------------------------------------------
 
 export function openAccessPanel(onApply) {
-    _onApply = onApply || null;
+    _onApply   = onApply || null;
+    _triggerEl = document.activeElement || null;
     _renderBody();
     const overlay = document.getElementById(OVERLAY_ID);
     if (overlay) {
         overlay.style.display = 'flex';
+        // Defensive: remove before adding to prevent duplicate listeners on re-open
+        overlay.removeEventListener('keydown', _trapFocus);
         overlay.addEventListener('keydown', _trapFocus);
-        // Close on backdrop click
         overlay.onclick = e => { if (e.target === overlay) closeAccessPanel(); };
         const firstBtn = overlay.querySelector('button');
         if (firstBtn) firstBtn.focus();
@@ -45,7 +48,10 @@ export function closeAccessPanel() {
         overlay.removeEventListener('keydown', _trapFocus);
         overlay.onclick = null;
     }
-    _onApply = null;
+    // Return focus to the element that opened the panel
+    if (_triggerEl && typeof _triggerEl.focus === 'function') _triggerEl.focus();
+    _triggerEl = null;
+    _onApply   = null;
 }
 
 /**

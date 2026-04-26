@@ -162,8 +162,11 @@ function _upgradeMessage(featureKey) {
         [FEATURE.BULK_EXPORT]:       'Bulk export requires a Pro subscription.',
         [FEATURE.UNLIMITED_EXPORTS]: 'Unlimited exports require a Pro subscription.',
         [FEATURE.REMOVE_WATERMARK]:  'Removing the watermark requires a Pro subscription.',
+        [FEATURE.ALL_TOPICS]:        'Access to all topics requires a Pro subscription.',
         [FEATURE.AI_GENERATION]:     'AI question generation requires a Pro subscription.',
         [FEATURE.CUSTOM_FONT]:       'Custom fonts require a Pro subscription.',
+        [FEATURE.EXPORT_CONFIG]:     'Saving configurations requires a Pro subscription.',
+        [FEATURE.IMPORT_CSV]:        'CSV import requires a Pro subscription.',
         [FEATURE.TWO_PAGE_MODE]:     'Two-page difficulty sets require a Pro subscription.',
     };
     return map[featureKey] || 'This feature requires a Pro subscription.';

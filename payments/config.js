@@ -101,15 +101,14 @@ export const FEATURE_META = Object.freeze({
 // Groups let admins quickly apply and test different access configurations.
 // Each entry defines a named bundle; the access panel uses these as presets.
 // Add new groups here — they appear automatically in the panel UI.
+//
+// free / pro / admin reference the TIER_FEATURES Sets directly so they
+// stay in sync automatically when tier definitions change.
 export const GROUPS = Object.freeze({
     free: {
         label: 'Free',
         description: 'Standard free-tier experience',
-        features: new Set([
-            FEATURE.EXPORT_CONFIG,
-            FEATURE.IMPORT_CSV,
-            FEATURE.ALL_TOPICS,
-        ]),
+        features: TIER_FEATURES[TIER.FREE],
     },
     teacher_trial: {
         label: 'Teacher Trial',
@@ -139,21 +138,11 @@ export const GROUPS = Object.freeze({
     pro: {
         label: 'Pro',
         description: 'Standard Pro subscription',
-        features: new Set([
-            FEATURE.EXPORT_CONFIG,
-            FEATURE.IMPORT_CSV,
-            FEATURE.BULK_EXPORT,
-            FEATURE.UNLIMITED_EXPORTS,
-            FEATURE.REMOVE_WATERMARK,
-            FEATURE.ALL_TOPICS,
-            FEATURE.AI_GENERATION,
-            FEATURE.CUSTOM_FONT,
-            FEATURE.TWO_PAGE_MODE,
-        ]),
+        features: TIER_FEATURES[TIER.PRO],
     },
     admin: {
         label: 'Admin (All)',
         description: 'Every feature enabled — internal testing only',
-        features: new Set(Object.values(FEATURE)),
+        features: TIER_FEATURES[TIER.ADMIN],
     },
 });
