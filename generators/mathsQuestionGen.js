@@ -715,7 +715,7 @@ function genFinancial(rng, diff, allowedOps, opts = {}, _depth = 0) {
             const cost = ri(rng, 5, 20) * 10;
             const pctProfit = rc(rng, [10, 20, 25, 50]);
             const sell = round(cost * (1 + pctProfit / 100), 2);
-            if (!Number.isInteger(sell)) return genFinancial(rng, diff, allowedOps, _depth + 1);
+            if (!Number.isInteger(sell)) return genFinancial(rng, diff, allowedOps, opts, _depth + 1);
             const ph = rc(rng, [
                 `Find the selling price: cost $\\$${cost}$, mark-up $${pctProfit}\\%$`,
                 `An item costs $\\$${cost}$. Calculate the selling price after a $${pctProfit}\\%$ mark-up.`,
@@ -851,7 +851,7 @@ function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
         const angles = [30, 40, 45, 50, 60, 70, 80, 90];
         const a1 = rc(rng, angles);
         const remaining = angles.filter(a => a < 180 - a1 && a !== a1);
-        if (remaining.length === 0) return genGeometry(rng, diff, allowedOps, _depth + 1);
+        if (remaining.length === 0) return genGeometry(rng, diff, allowedOps, opts, _depth + 1);
         const a2 = rc(rng, remaining);
         const a3 = 180 - a1 - a2;
         const ph = rc(rng, [

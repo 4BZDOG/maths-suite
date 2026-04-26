@@ -2760,7 +2760,7 @@ table.mode-cw td.cell.empty {
     justify-content: center;
     gap: 6px;
 }
-#btn-generate:hover { background: var(--primary-dark, #4338ca); }
+#btn-generate:hover { background: var(--primary-hover); }
 #btn-generate:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* Status row */
@@ -2785,11 +2785,11 @@ table.mode-cw td.cell.empty {
 }
 
 [data-theme="dark"] .key-item {
-    border-bottom-color: var(--border-dark, #374151);
+    border-bottom-color: var(--border);
 }
 
 [data-theme="dark"] .page-header {
-    border-bottom-color: var(--border-dark, #374151);
+    border-bottom-color: var(--border);
 }
 
 /* ---- Outcomes worksheet header (above questions) ----------- */

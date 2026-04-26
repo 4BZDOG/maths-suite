@@ -603,7 +603,9 @@ function _buildSubOpsPanels() {
 }
 
 function setPagesPerDifficulty(n) {
-    state.questionsPerSet = (parseInt(n, 10) === 2) ? 2 : 1;
+    let pages = (parseInt(n, 10) === 2) ? 2 : 1;
+    if (pages === 2 && !hasFeature(FEATURE.TWO_PAGE_MODE)) pages = 1;
+    state.questionsPerSet = pages;
     saveState();
     generateAll();
 }
@@ -716,6 +718,7 @@ window.addEventListener('load', async () => {
         _buildSubOpsPanels();
         _updateAllParentCheckboxes();
         pushHistory();
+        renderTierUI();
         generateAll();
         updatePageScales();
         updateGlobalFontScale();
@@ -724,7 +727,6 @@ window.addEventListener('load', async () => {
         updateUI();
         updateTopicCount();
         renderOutcomes();
-        renderTierUI();
 
         setupSidebarResize();
         setupSortableList('#page-order-list', () => saveState());

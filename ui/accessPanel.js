@@ -99,7 +99,8 @@ function _renderBody() {
 
     const effectiveMap = getEffectiveFeatureMap();
     const tier = getCurrentTier();
-    const activeGroup = _detectActiveGroup(effectiveMap);
+    const enabledMap = Object.fromEntries(Object.entries(effectiveMap).map(([k, v]) => [k, v.enabled]));
+    const activeGroup = _detectActiveGroup(enabledMap);
 
     let html = '';
 
@@ -161,19 +162,16 @@ function _readCheckboxState() {
 
 function _syncGroupButtons() {
     const current = _readCheckboxState();
-    const fakeMap = {};
-    Object.entries(current).forEach(([k, v]) => { fakeMap[k] = { enabled: v }; });
-    const activeGroup = _detectActiveGroup(fakeMap);
+    const activeGroup = _detectActiveGroup(current);
     document.querySelectorAll('.acp-group-btn[data-group-id]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.groupId === activeGroup);
     });
 }
 
-function _detectActiveGroup(effectiveMap) {
+function _detectActiveGroup(featureMap) {
     const allKeys = Object.values(FEATURE);
     for (const [id, group] of Object.entries(GROUPS)) {
-        const matches = allKeys.every(key => group.features.has(key) === !!(effectiveMap[key]?.enabled));
-        if (matches) return id;
+        if (allKeys.every(key => group.features.has(key) === !!featureMap[key])) return id;
     }
     return null;
 }
