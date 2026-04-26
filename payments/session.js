@@ -19,10 +19,11 @@ const SESSION_KEY = 'puzzleSuiteSession_v1';
 
 /**
  * @typedef {Object} Session
- * @property {string}      tier        - One of TIER.FREE | TIER.PRO
- * @property {string|null} userId      - Opaque user id from backend (null = anonymous)
- * @property {string|null} token       - Auth token (null until backend wired)
- * @property {number|null} expiresAt   - Unix timestamp ms (null = no expiry)
+ * @property {string}           tier             - One of TIER.FREE | TIER.PRO | TIER.ADMIN
+ * @property {string|null}      userId           - Opaque user id from backend (null = anonymous)
+ * @property {string|null}      token            - Auth token (null until backend wired)
+ * @property {number|null}      expiresAt        - Unix timestamp ms (null = no expiry)
+ * @property {Object|null}      featureOverrides - Per-feature boolean map set by access panel (null = use tier defaults)
  */
 
 /** @returns {Session} */
@@ -62,10 +63,21 @@ export function clearSession() {
  * Call this explicitly at app startup rather than inside getSession() to avoid side-effects.
  */
 export function pruneExpiredSession() {
-    const s = getSession();
-    if (s === _defaultSession() || (s.expiresAt && Date.now() > s.expiresAt)) {
-        clearSession();
-    }
+    try {
+        const raw = localStorage.getItem(SESSION_KEY);
+        if (!raw) return;
+        const s = JSON.parse(raw);
+        if (s.expiresAt && Date.now() > s.expiresAt) clearSession();
+    } catch (_) { clearSession(); }
+}
+
+/**
+ * Set an admin session for local testing — unlocks all features with no expiry.
+ * Explicitly clears any featureOverrides so the full admin tier takes effect.
+ * Call clearSession() to revert to the free tier.
+ */
+export function setAdminSession() {
+    setSession({ tier: 'admin', userId: 'admin', token: null, expiresAt: null, featureOverrides: null });
 }
 
 /**
@@ -81,5 +93,5 @@ export async function refreshFromServer() {
 }
 
 function _defaultSession() {
-    return { tier: 'free', userId: null, token: null, expiresAt: null };
+    return { tier: 'free', userId: null, token: null, expiresAt: null, featureOverrides: null };
 }

@@ -1,6 +1,10 @@
 // =============================================================
 // payments/access.js — Feature-gate API
 //
+// Resolution order for hasFeature():
+//   1. session.featureOverrides[key]  — set by the admin access panel
+//   2. TIER_FEATURES[session.tier]    — tier default
+//
 // Usage:
 //   import { hasFeature, getCurrentTier, requireFeature } from '../payments/access.js';
 //
@@ -9,22 +13,84 @@
 //       return;
 //   }
 // =============================================================
-import { TIER, FEATURE, TIER_FEATURES, FREE_LIMITS, PRICING } from './config.js';
-import { getSession } from './session.js';
+import { TIER, FEATURE, TIER_FEATURES, FREE_LIMITS, PRICING, GROUPS } from './config.js';
+import { getSession, setSession, clearSession, setAdminSession } from './session.js';
 
-export { TIER, FEATURE, FREE_LIMITS, PRICING };
+export { TIER, FEATURE, FREE_LIMITS, PRICING, GROUPS };
 
 // ---- Core access functions ----------------------------------
 
-/** Returns the current subscription tier string (e.g. 'free' | 'pro'). */
+/** Returns the current subscription tier string (e.g. 'free' | 'pro' | 'admin'). */
 export function getCurrentTier() {
     return getSession().tier || TIER.FREE;
 }
 
-/** Returns true if the current tier includes the given feature key. */
+/**
+ * Returns true if the current session includes the given feature key.
+ * Checks featureOverrides first (set via the access panel), then falls
+ * back to the tier's default feature set.
+ */
 export function hasFeature(featureKey) {
-    const tier = getCurrentTier();
+    const session = getSession();
+    const overrides = session.featureOverrides;
+    if (overrides != null && Object.prototype.hasOwnProperty.call(overrides, featureKey)) {
+        return !!overrides[featureKey];
+    }
+    const tier = session.tier || TIER.FREE;
     return TIER_FEATURES[tier]?.has(featureKey) ?? false;
+}
+
+// ---- Feature override management ----------------------------
+
+/**
+ * Persist a full feature-override map for the current session.
+ * Each key is a FEATURE.* value; each value is a boolean.
+ * Pass null to clear all overrides (reverts to tier defaults).
+ * @param {Object|null} overrides
+ */
+export function setFeatureOverrides(overrides) {
+    setSession({ featureOverrides: overrides ?? null });
+}
+
+/** Remove all feature overrides — reverts every feature to its tier default. */
+export function clearFeatureOverrides() {
+    setSession({ featureOverrides: null });
+}
+
+/**
+ * Returns the id of the named GROUPS entry whose feature set exactly matches
+ * the current featureOverrides, 'custom' if overrides are set but don't match
+ * any group, or null if no overrides are active.
+ * @returns {string|null}
+ */
+export function getActiveGroupId() {
+    const overrides = getSession().featureOverrides;
+    if (!overrides) return null;
+    const allKeys = Object.values(FEATURE);
+    for (const [id, group] of Object.entries(GROUPS)) {
+        if (allKeys.every(key => group.features.has(key) === !!overrides[key])) return id;
+    }
+    return 'custom';
+}
+
+/**
+ * Returns a map of every feature key → { enabled: boolean, source: 'override'|'tier' }
+ * so the access panel can display both the effective value and where it came from.
+ * @returns {Object}
+ */
+export function getEffectiveFeatureMap() {
+    const session = getSession();
+    const overrides = session.featureOverrides || {};
+    const tier = session.tier || TIER.FREE;
+    const result = {};
+    Object.values(FEATURE).forEach(key => {
+        if (Object.prototype.hasOwnProperty.call(overrides, key)) {
+            result[key] = { enabled: !!overrides[key], source: 'override' };
+        } else {
+            result[key] = { enabled: !!(TIER_FEATURES[tier]?.has(key)), source: 'tier' };
+        }
+    });
+    return result;
 }
 
 /**
@@ -61,6 +127,27 @@ export function clampBulkExportCount(requested) {
     return Math.min(requested, limit);
 }
 
+// ---- Admin helpers -----------------------------------------
+
+/** Returns true when the current session is the admin tier. */
+export function isAdmin() {
+    return getCurrentTier() === TIER.ADMIN;
+}
+
+/**
+ * Activate admin mode — sets the local session to the admin tier so all
+ * features are unlocked with no limits.  Persists across page reloads
+ * until disableAdminMode() or clearSession() is called.
+ */
+export function enableAdminMode() {
+    setAdminSession();
+}
+
+/** Revert to the free tier by removing the stored session. */
+export function disableAdminMode() {
+    clearSession();
+}
+
 // ---- Upgrade prompt helpers ---------------------------------
 
 /** Returns the Stripe checkout URL for a tier (null if not configured). */
@@ -75,8 +162,11 @@ function _upgradeMessage(featureKey) {
         [FEATURE.BULK_EXPORT]:       'Bulk export requires a Pro subscription.',
         [FEATURE.UNLIMITED_EXPORTS]: 'Unlimited exports require a Pro subscription.',
         [FEATURE.REMOVE_WATERMARK]:  'Removing the watermark requires a Pro subscription.',
+        [FEATURE.ALL_TOPICS]:        'Access to all topics requires a Pro subscription.',
         [FEATURE.AI_GENERATION]:     'AI question generation requires a Pro subscription.',
         [FEATURE.CUSTOM_FONT]:       'Custom fonts require a Pro subscription.',
+        [FEATURE.EXPORT_CONFIG]:     'Saving configurations requires a Pro subscription.',
+        [FEATURE.IMPORT_CSV]:        'CSV import requires a Pro subscription.',
         [FEATURE.TWO_PAGE_MODE]:     'Two-page difficulty sets require a Pro subscription.',
     };
     return map[featureKey] || 'This feature requires a Pro subscription.';
