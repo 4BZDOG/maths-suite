@@ -29,7 +29,6 @@ export function saveStateNow() {
         if (e.name === 'QuotaExceededError' || (e.message && e.message.toLowerCase().includes('quota'))) {
             // First fallback: try saving without the watermark image
             try {
-                syncSettingsFromDOM();
                 const fallback = {
                     selectedTopics:   state.selectedTopics,
                     selectedSubOps:   state.selectedSubOps,

@@ -24,7 +24,7 @@ export function openModal(triggerEl) {
     _modalTrigger = triggerEl || document.activeElement;
     const mo  = document.getElementById('modal-overlay');
     const imp = document.getElementById('import-text');
-    if (mo)  { mo.style.display = 'flex'; mo.addEventListener('keydown', _trapModalFocus); }
+    if (mo)  { mo.style.display = 'flex'; mo.removeEventListener('keydown', _trapModalFocus); mo.addEventListener('keydown', _trapModalFocus); }
     if (imp) imp.focus();
 }
 
