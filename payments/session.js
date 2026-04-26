@@ -19,10 +19,11 @@ const SESSION_KEY = 'puzzleSuiteSession_v1';
 
 /**
  * @typedef {Object} Session
- * @property {string}      tier        - One of TIER.FREE | TIER.PRO
- * @property {string|null} userId      - Opaque user id from backend (null = anonymous)
- * @property {string|null} token       - Auth token (null until backend wired)
- * @property {number|null} expiresAt   - Unix timestamp ms (null = no expiry)
+ * @property {string}           tier             - One of TIER.FREE | TIER.PRO | TIER.ADMIN
+ * @property {string|null}      userId           - Opaque user id from backend (null = anonymous)
+ * @property {string|null}      token            - Auth token (null until backend wired)
+ * @property {number|null}      expiresAt        - Unix timestamp ms (null = no expiry)
+ * @property {Object|null}      featureOverrides - Per-feature boolean map set by access panel (null = use tier defaults)
  */
 
 /** @returns {Session} */

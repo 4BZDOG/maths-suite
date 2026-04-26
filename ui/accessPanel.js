@@ -16,6 +16,7 @@ import {
     clearFeatureOverrides,
     getCurrentTier,
 } from '../payments/access.js';
+import { esc } from '../renderers/htmlUtils.js';
 
 const OVERLAY_ID = 'access-panel-overlay';
 
@@ -77,11 +78,11 @@ export function applyAccessOverrides() {
     closeAccessPanel();
 }
 
-/** Wipe all overrides, re-render the panel body to show tier defaults. */
+/** Wipe all overrides and close the panel — reverts every feature to its tier default. */
 export function resetAccessOverrides() {
     clearFeatureOverrides();
-    _renderBody();
     if (_onApply) _onApply();
+    closeAccessPanel();
 }
 
 // ---- Internal -----------------------------------------------
@@ -103,7 +104,7 @@ function _renderBody() {
     html += `<div class="acp-group-btns">`;
     for (const [id, group] of Object.entries(GROUPS)) {
         const active = activeGroup === id ? ' active' : '';
-        html += `<button class="acp-group-btn${active}" onclick="applyGroupPreset('${id}')" title="${_esc(group.description)}">${_esc(group.label)}</button>`;
+        html += `<button class="acp-group-btn${active}" data-group-id="${esc(id)}" onclick="applyGroupPreset('${esc(id)}')" title="${esc(group.description)}">${esc(group.label)}</button>`;
     }
     html += `</div>`;
     html += `</div>`;
@@ -120,7 +121,7 @@ function _renderBody() {
         const keys = Object.values(FEATURE).filter(k => FEATURE_META[k]?.category === category);
         if (keys.length === 0) continue;
         html += `<div class="acp-category">`;
-        html += `<div class="acp-category-label">${_esc(category)}</div>`;
+        html += `<div class="acp-category-label">${esc(category)}</div>`;
         for (const key of keys) {
             const meta  = FEATURE_META[key];
             const entry = effectiveMap[key];
@@ -129,10 +130,10 @@ function _renderBody() {
             html += `<label class="acp-feature-row${fromOverride ? ' is-override' : ''}">`;
             html += `<input type="checkbox" id="acpf-${key}"${checked} onchange="acpFeatureChange()">`;
             html += `<div class="acp-feature-info">`;
-            html += `<span class="acp-feature-name">${_esc(meta.label)}`;
+            html += `<span class="acp-feature-name">${esc(meta.label)}`;
             if (fromOverride) html += ` <span class="acp-override-badge">overridden</span>`;
             html += `</span>`;
-            html += `<span class="acp-feature-desc">${_esc(meta.desc)}</span>`;
+            html += `<span class="acp-feature-desc">${esc(meta.desc)}</span>`;
             html += `</div>`;
             html += `</label>`;
         }
@@ -160,14 +161,11 @@ function _readCheckboxState() {
 
 function _syncGroupButtons() {
     const current = _readCheckboxState();
-    // Build an effectiveMap-like structure from checkboxes for _detectActiveGroup
     const fakeMap = {};
     Object.entries(current).forEach(([k, v]) => { fakeMap[k] = { enabled: v }; });
     const activeGroup = _detectActiveGroup(fakeMap);
-    document.querySelectorAll('.acp-group-btn').forEach(btn => {
-        // Extract group id from the onclick attribute
-        const m = btn.getAttribute('onclick')?.match(/applyGroupPreset\('([^']+)'\)/);
-        if (m) btn.classList.toggle('active', m[1] === activeGroup);
+    document.querySelectorAll('.acp-group-btn[data-group-id]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.groupId === activeGroup);
     });
 }
 
@@ -197,10 +195,3 @@ function _trapFocus(e) {
     }
 }
 
-function _esc(str) {
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}

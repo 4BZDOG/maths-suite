@@ -23,6 +23,7 @@ import { setupDragAndDrop } from './ui/dropZone.js';
 
 import { downloadConfig } from './import-export/exportConfig.js';
 import { hasFeature, FEATURE, PRICING, TIER, isAdmin, enableAdminMode, disableAdminMode } from './payments/access.js';
+import { pruneExpiredSession } from './payments/session.js';
 import {
     openAccessPanel, closeAccessPanel,
     applyGroupPreset, acpFeatureChange,
@@ -202,13 +203,13 @@ function renderTierUI() {
         }
     }
 
-    // Upsell strip — shown only on free tier
+    // Upsell strip — shown only on free tier, never when admin mode is active
     const strip = document.getElementById('upsell-strip');
-    if (strip) strip.style.display = isPro ? 'none' : '';
+    if (strip) strip.style.display = (isPro || adminOn) ? 'none' : '';
 
     // Bulk export tier note
     const bulkNote = document.getElementById('bulk-tier-note');
-    if (bulkNote) bulkNote.style.display = isPro ? 'none' : '';
+    if (bulkNote) bulkNote.style.display = (isPro || adminOn) ? 'none' : '';
 
     // Wire CTA button href when a Stripe checkout URL is configured
     const ctaBtn = document.getElementById('upsell-cta-btn');
@@ -689,6 +690,7 @@ Object.assign(window, window._puzzleApp);
 window.addEventListener('load', async () => {
     const overlay = document.getElementById('loading-overlay');
     try {
+        pruneExpiredSession();
         const saved = loadRawState();
         if (saved) applyStateToDOM(saved);
 

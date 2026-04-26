@@ -3076,6 +3076,16 @@ details.outcomes-ws-header:not([open]) .outcomes-ws-summary::after { transform: 
 /* ================================================================
    Access Control Panel
    ================================================================ */
+.access-panel-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .5);
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .access-panel {
     background: var(--bg-panel);
     width: 580px;
