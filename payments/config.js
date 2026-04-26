@@ -81,3 +81,79 @@ export const PRICING = Object.freeze({
         checkoutUrl: null, // e.g. 'https://buy.stripe.com/your-link'
     },
 });
+
+// ---- Feature metadata (labels + categories for UI rendering) -----
+export const FEATURE_CATEGORIES = Object.freeze(['PDF / Export', 'Content', 'Config', 'Layout']);
+
+export const FEATURE_META = Object.freeze({
+    [FEATURE.BULK_EXPORT]:       { label: 'Bulk Export',       desc: 'Export multiple unique copies in one go',   category: 'PDF / Export' },
+    [FEATURE.UNLIMITED_EXPORTS]: { label: 'Unlimited Exports', desc: 'No monthly PDF export cap',                 category: 'PDF / Export' },
+    [FEATURE.REMOVE_WATERMARK]:  { label: 'Remove Watermark',  desc: 'Hide branding watermark on exported PDFs',  category: 'PDF / Export' },
+    [FEATURE.ALL_TOPICS]:        { label: 'All Topics',        desc: 'Access all 9 maths topic categories',       category: 'Content'      },
+    [FEATURE.AI_GENERATION]:     { label: 'AI Generation',     desc: 'AI-assisted question and word generation',  category: 'Content'      },
+    [FEATURE.CUSTOM_FONT]:       { label: 'Custom Font',       desc: 'Choose custom fonts for PDF exports',       category: 'Content'      },
+    [FEATURE.EXPORT_CONFIG]:     { label: 'Export Config',     desc: 'Save and load JSON configuration files',    category: 'Config'       },
+    [FEATURE.IMPORT_CSV]:        { label: 'Import CSV',        desc: 'Import word / clue lists via CSV',          category: 'Config'       },
+    [FEATURE.TWO_PAGE_MODE]:     { label: 'Two-Page Mode',     desc: '2 pages per difficulty band per set',       category: 'Layout'       },
+});
+
+// ---- Named groups (predefined feature bundles) ---------------
+// Groups let admins quickly apply and test different access configurations.
+// Each entry defines a named bundle; the access panel uses these as presets.
+// Add new groups here — they appear automatically in the panel UI.
+export const GROUPS = Object.freeze({
+    free: {
+        label: 'Free',
+        description: 'Standard free-tier experience',
+        features: new Set([
+            FEATURE.EXPORT_CONFIG,
+            FEATURE.IMPORT_CSV,
+            FEATURE.ALL_TOPICS,
+        ]),
+    },
+    teacher_trial: {
+        label: 'Teacher Trial',
+        description: 'Free features plus AI generation and custom fonts',
+        features: new Set([
+            FEATURE.EXPORT_CONFIG,
+            FEATURE.IMPORT_CSV,
+            FEATURE.ALL_TOPICS,
+            FEATURE.AI_GENERATION,
+            FEATURE.CUSTOM_FONT,
+        ]),
+    },
+    school: {
+        label: 'School License',
+        description: 'Full Pro access for educational institutions (no watermark removal)',
+        features: new Set([
+            FEATURE.EXPORT_CONFIG,
+            FEATURE.IMPORT_CSV,
+            FEATURE.BULK_EXPORT,
+            FEATURE.UNLIMITED_EXPORTS,
+            FEATURE.ALL_TOPICS,
+            FEATURE.AI_GENERATION,
+            FEATURE.CUSTOM_FONT,
+            FEATURE.TWO_PAGE_MODE,
+        ]),
+    },
+    pro: {
+        label: 'Pro',
+        description: 'Standard Pro subscription',
+        features: new Set([
+            FEATURE.EXPORT_CONFIG,
+            FEATURE.IMPORT_CSV,
+            FEATURE.BULK_EXPORT,
+            FEATURE.UNLIMITED_EXPORTS,
+            FEATURE.REMOVE_WATERMARK,
+            FEATURE.ALL_TOPICS,
+            FEATURE.AI_GENERATION,
+            FEATURE.CUSTOM_FONT,
+            FEATURE.TWO_PAGE_MODE,
+        ]),
+    },
+    admin: {
+        label: 'Admin (All)',
+        description: 'Every feature enabled — internal testing only',
+        features: new Set(Object.values(FEATURE)),
+    },
+});

@@ -1,6 +1,10 @@
 // =============================================================
 // payments/access.js — Feature-gate API
 //
+// Resolution order for hasFeature():
+//   1. session.featureOverrides[key]  — set by the admin access panel
+//   2. TIER_FEATURES[session.tier]    — tier default
+//
 // Usage:
 //   import { hasFeature, getCurrentTier, requireFeature } from '../payments/access.js';
 //
@@ -16,15 +20,61 @@ export { TIER, FEATURE, FREE_LIMITS, PRICING };
 
 // ---- Core access functions ----------------------------------
 
-/** Returns the current subscription tier string (e.g. 'free' | 'pro'). */
+/** Returns the current subscription tier string (e.g. 'free' | 'pro' | 'admin'). */
 export function getCurrentTier() {
     return getSession().tier || TIER.FREE;
 }
 
-/** Returns true if the current tier includes the given feature key. */
+/**
+ * Returns true if the current session includes the given feature key.
+ * Checks featureOverrides first (set via the access panel), then falls
+ * back to the tier's default feature set.
+ */
 export function hasFeature(featureKey) {
-    const tier = getCurrentTier();
+    const session = getSession();
+    const overrides = session.featureOverrides;
+    if (overrides != null && Object.prototype.hasOwnProperty.call(overrides, featureKey)) {
+        return !!overrides[featureKey];
+    }
+    const tier = session.tier || TIER.FREE;
     return TIER_FEATURES[tier]?.has(featureKey) ?? false;
+}
+
+// ---- Feature override management ----------------------------
+
+/**
+ * Persist a full feature-override map for the current session.
+ * Each key is a FEATURE.* value; each value is a boolean.
+ * Pass null to clear all overrides (reverts to tier defaults).
+ * @param {Object|null} overrides
+ */
+export function setFeatureOverrides(overrides) {
+    setSession({ featureOverrides: overrides ?? null });
+}
+
+/** Remove all feature overrides — reverts every feature to its tier default. */
+export function clearFeatureOverrides() {
+    setSession({ featureOverrides: null });
+}
+
+/**
+ * Returns a map of every feature key → { enabled: boolean, source: 'override'|'tier' }
+ * so the access panel can display both the effective value and where it came from.
+ * @returns {Object}
+ */
+export function getEffectiveFeatureMap() {
+    const session = getSession();
+    const overrides = session.featureOverrides || {};
+    const tier = session.tier || TIER.FREE;
+    const result = {};
+    Object.values(FEATURE).forEach(key => {
+        if (Object.prototype.hasOwnProperty.call(overrides, key)) {
+            result[key] = { enabled: !!overrides[key], source: 'override' };
+        } else {
+            result[key] = { enabled: !!(TIER_FEATURES[tier]?.has(key)), source: 'tier' };
+        }
+    });
+    return result;
 }
 
 /**

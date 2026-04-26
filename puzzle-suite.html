@@ -442,8 +442,11 @@
                 <!-- Admin mode banner: visible only when admin tier is active -->
                 <div id="admin-mode-banner" class="admin-mode-banner" style="display:none;">
                     <div class="admin-banner-title"><i class="fas fa-shield-alt" style="margin-right:5px;"></i>Admin Mode</div>
-                    <div class="admin-banner-body">All Pro features unlocked. No limits enforced.</div>
-                    <button class="admin-banner-btn" onclick="setAdminMode(false)">Exit Admin Mode</button>
+                    <div class="admin-banner-body">All Pro features unlocked. Use Access Control to test different user groups.</div>
+                    <div class="admin-banner-btns">
+                        <button class="admin-banner-btn admin-banner-btn--primary" onclick="openAccessPanel()"><i class="fas fa-sliders-h" style="margin-right:4px;"></i>Access Control</button>
+                        <button class="admin-banner-btn" onclick="setAdminMode(false)">Exit Admin Mode</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -546,7 +549,22 @@
         </div>
     </main>
 
-    <script src="bundle.js?v=100"></script>
+    <!-- Access Control Panel overlay (admin only) -->
+    <div id="access-panel-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:300; align-items:center; justify-content:center;" role="presentation">
+        <div id="access-panel" class="access-panel" role="dialog" aria-modal="true" aria-labelledby="access-panel-heading">
+            <div class="acp-header">
+                <h3 class="acp-heading" id="access-panel-heading">
+                    <i class="fas fa-shield-alt" style="color:#059669; margin-right:6px;"></i>Access Control
+                </h3>
+                <button class="acp-close-btn" onclick="closeAccessPanel()" aria-label="Close access panel">×</button>
+            </div>
+            <div id="access-panel-body" class="acp-body">
+                <!-- Populated by ui/accessPanel.js openAccessPanel() -->
+            </div>
+        </div>
+    </div>
+
+    <script src="bundle.js?v=101"></script>
 </body>
 
 </html>

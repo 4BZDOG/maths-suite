@@ -23,6 +23,11 @@ import { setupDragAndDrop } from './ui/dropZone.js';
 
 import { downloadConfig } from './import-export/exportConfig.js';
 import { hasFeature, FEATURE, PRICING, TIER, isAdmin, enableAdminMode, disableAdminMode } from './payments/access.js';
+import {
+    openAccessPanel, closeAccessPanel,
+    applyGroupPreset, acpFeatureChange,
+    applyAccessOverrides, resetAccessOverrides,
+} from './ui/accessPanel.js';
 
 // =============================================================
 // Constants
@@ -223,6 +228,11 @@ function setAdminMode(on) {
     if (on) enableAdminMode(); else disableAdminMode();
     renderTierUI();
     showToast(on ? 'Admin mode enabled — all features unlocked.' : 'Admin mode disabled — reverted to free tier.', on ? 'success' : 'info');
+}
+
+/** Open the access-control panel (admin only). */
+function openAccessPanelUI() {
+    openAccessPanel(() => renderTierUI());
 }
 
 function renderExportPreview() {
@@ -663,6 +673,12 @@ window._puzzleApp = {
     saveState,
     renderOutcomes,
     setAdminMode,
+    openAccessPanel: openAccessPanelUI,
+    closeAccessPanel,
+    applyGroupPreset,
+    acpFeatureChange,
+    applyAccessOverrides,
+    resetAccessOverrides,
 };
 
 Object.assign(window, window._puzzleApp);
