@@ -271,7 +271,6 @@ function renderExportPreview() {
     const selKey    = document.getElementById('sel-key')?.checked    ?? true;
     const copies    = Math.max(1, parseInt(document.getElementById('bulkCount')?.value, 10) || 1);
     const pages     = state.questionsPerSet || 1;
-    const pageLabel = pages === 1 ? '1 page' : '2 pages';
     const isPro     = hasFeature(FEATURE.TWO_PAGE_MODE);
 
     const diffRows = [
@@ -281,13 +280,17 @@ function renderExportPreview() {
     ].filter(r => r.sel && r.n > 0);
 
     let pageCount = 0;
+    let questionCount = 0;
     let html = '';
 
     for (const r of diffRows) {
         pageCount += pages;
+        questionCount += r.n;
+        const perPage = Math.max(1, Math.round(r.n / pages));
+        const pageStr = pages === 1 ? '1 page' : `2 pages · ~${perPage}/page`;
         html += `<div class="ep-row">
-            <span><span style="color:${r.color}; font-weight:700;">${r.label}</span>&nbsp;${r.n} question${r.n !== 1 ? 's' : ''}</span>
-            <span style="opacity:.7;">${pageLabel}</span>
+            <span><span style="color:${r.color}; font-weight:700;">${r.label}</span> · ${r.n} question${r.n !== 1 ? 's' : ''}</span>
+            <span style="opacity:.7;">${pageStr}</span>
         </div>`;
     }
 
@@ -296,22 +299,29 @@ function renderExportPreview() {
         const keyTotal = (selEasy ? easy : 0) + (selMedium ? medium : 0) + (selHard ? hard : 0);
         html += `<div class="ep-row">
             <span style="font-weight:600;">Answer Key</span>
-            <span style="opacity:.7;">${keyTotal} answer${keyTotal !== 1 ? 's' : ''}</span>
+            <span style="opacity:.7;">${keyTotal} answer${keyTotal !== 1 ? 's' : ''} · 1 page</span>
         </div>`;
     }
 
     html += `<hr class="ep-divider">`;
     if (copies > 1) {
+        const qPerCopy = questionCount;
         html += `<div class="ep-row" style="font-weight:600;">
+            <span>Per copy</span>
+            <span>${pageCount} page${pageCount !== 1 ? 's' : ''} · ${qPerCopy} question${qPerCopy !== 1 ? 's' : ''}</span>
+        </div>`;
+        html += `<div class="ep-row" style="font-weight:700;">
             <span>Total</span>
-            <span>${pageCount}&thinsp;pages &times;&thinsp;${copies}&thinsp;copies&nbsp;=&nbsp;${pageCount * copies}&thinsp;pages</span>
+            <span>${pageCount * copies}&thinsp;pages (${copies}&thinsp;copies)</span>
         </div>`;
     } else {
-        html += `<div class="ep-row" style="font-weight:600;">
+        html += `<div class="ep-row" style="font-weight:700;">
             <span>Total</span>
-            <span>${pageCount} page${pageCount !== 1 ? 's' : ''}</span>
+            <span>${pageCount} page${pageCount !== 1 ? 's' : ''} · ${questionCount} question${questionCount !== 1 ? 's' : ''}</span>
         </div>`;
     }
+
+    html += `<div class="ep-note" style="margin-top:6px;"><i class="fas fa-info-circle" style="color:#64748b; margin-right:3px;"></i> Counts auto-fit your current paper size, font scale, and zoom. Adjust those to fit more/fewer per page.</div>`;
 
     if (!isPro) {
         html += `<hr class="ep-divider">
