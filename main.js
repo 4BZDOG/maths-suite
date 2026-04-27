@@ -844,12 +844,20 @@ Object.assign(window, window._puzzleApp);
 // Initialisation
 // =============================================================
 window.addEventListener('load', async () => {
-    const overlay = document.getElementById('loading-overlay');
+    const overlay  = document.getElementById('loading-overlay');
+    const loadText = document.getElementById('loading-text');
+    const loadBar  = document.getElementById('loading-progress');
+    const _step = (msg, pct) => {
+        if (loadText) loadText.textContent = msg;
+        if (loadBar)  loadBar.style.width  = pct + '%';
+    };
     try {
+        _step('Restoring saved state…', 15);
         pruneExpiredSession();
         const saved = loadRawState();
         if (saved) applyStateToDOM(saved);
 
+        _step('Loading watermark…', 30);
         if (state.watermarkSrc) {
             document.querySelectorAll('.watermark-img').forEach(img => {
                 if (!img.closest('#page4')) { img.src = state.watermarkSrc; img.style.display = 'block'; }
@@ -857,10 +865,13 @@ window.addEventListener('load', async () => {
         }
         _updateWatermarkUI();
 
+        _step('Building topic panels…', 45);
         _buildSubOpsPanels();
         _updateAllParentCheckboxes();
         pushHistory();
         renderTierUI();
+
+        _step('Generating questions…', 65);
         generateAll();
         updatePageScales();
         updateGlobalFontScale();
@@ -871,6 +882,7 @@ window.addEventListener('load', async () => {
         renderOutcomes();
         adjustZoom(0); // sync zoom display with restored state
 
+        _step('Setting up…', 90);
         setupSidebarResize();
         setupSortableList('#page-order-list', () => saveState());
         setupDragAndDrop((f) => {
@@ -899,7 +911,8 @@ window.addEventListener('load', async () => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); generateAll(); }
         });
 
-        await new Promise(r => setTimeout(r, 300));
+        _step('Ready!', 100);
+        await new Promise(r => setTimeout(r, 250));
         if (overlay) overlay.style.opacity = '0';
         setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 600);
 
