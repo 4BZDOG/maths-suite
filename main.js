@@ -777,6 +777,9 @@ function loadConfigFromFile(input) {
         try {
             const parsed = JSON.parse(e.target.result);
             applyStateToDOM(parsed);
+            updateUI();
+            updateTopicCount();
+            renderOutcomes();
             generateAll();
             showToast(`Config loaded from ${f.name}`);
         } catch {
@@ -895,6 +898,9 @@ window.addEventListener('load', async () => {
                 try {
                     const parsed = JSON.parse(e.target.result);
                     applyStateToDOM(parsed);
+                    updateUI();
+                    updateTopicCount();
+                    renderOutcomes();
                     generateAll();
                     showToast(`Config loaded from ${f.name}`);
                 } catch { showToast('Invalid JSON — not a valid config file.', 'error'); }
