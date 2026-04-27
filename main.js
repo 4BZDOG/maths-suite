@@ -451,6 +451,7 @@ function showPage(n) {
     if (pEl) pEl.classList.add('visible');
     document.querySelectorAll('.page-btn').forEach((b, i) => b.classList.toggle('active', i + 1 === n));
     renderActivePage();
+    document.querySelector('.viewport')?.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function focusPage(n) {

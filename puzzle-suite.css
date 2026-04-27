@@ -2783,8 +2783,11 @@ table.mode-cw td.cell.empty {
     align-items: center;
     justify-content: center;
     gap: 6px;
+    transition: background 0.25s, transform 0.15s, box-shadow 0.15s;
+    font-family: inherit;
 }
-#btn-generate:hover { background: var(--primary-hover); }
+#btn-generate:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 4px 8px -2px rgba(79,70,229,0.35); }
+#btn-generate:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
 #btn-generate:disabled { opacity: 0.6; cursor: not-allowed; }
 #btn-generate.no-topics { background: #94a3b8; }
 #btn-generate.no-topics:hover { background: #7c8fa3; }
