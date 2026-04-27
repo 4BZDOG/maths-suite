@@ -66,8 +66,11 @@ export const TIER_FEATURES = Object.freeze({
 
 // ---- Free-tier usage limits ---------------------------------
 // Hard limits enforced client-side; backend should also enforce.
+// BULK_EXPORT_MAX is the hard ceiling enforced for ALL tiers (free + pro). 50
+// copies × 4 pages × 30 questions ≈ 6000 PDF questions, which is already a
+// long generation; raising this requires testing PDF memory pressure first.
 export const FREE_LIMITS = Object.freeze({
-    BULK_EXPORT_MAX: 500,    // max copies per bulk export on free tier (unlocked)
+    BULK_EXPORT_MAX: 50,
     MONTHLY_EXPORTS: 10,     // max PDF exports per month (future: tracked server-side)
 });
 

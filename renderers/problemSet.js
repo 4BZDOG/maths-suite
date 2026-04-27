@@ -109,8 +109,14 @@ function _capToPages(container, total, capPages) {
     }
 
     const pageTop = page.getBoundingClientRect().top;
-    const pageBottom = page.getBoundingClientRect().bottom;
-    const pageHeight = pageBottom - pageTop;
+    // Use the resolved paper-size min-height, not the rect height: when items
+    // overflow, .page expands and bottom-top would no longer be the paper size,
+    // so nothing would ever be considered "off-page".
+    const cs = getComputedStyle(page);
+    const cssMinH = parseFloat(cs.minHeight);
+    const pageHeight = (cssMinH > 0 && Number.isFinite(cssMinH))
+        ? cssMinH
+        : (page.getBoundingClientRect().bottom - pageTop);
     const limitBottom = pageTop + (pageHeight * capPages);
 
     const grid = container.querySelector('.problem-set-grid');

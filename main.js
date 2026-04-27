@@ -22,7 +22,7 @@ import { setupSortableList } from './ui/pageOrder.js';
 import { setupDragAndDrop } from './ui/dropZone.js';
 
 import { downloadConfig } from './import-export/exportConfig.js';
-import { hasFeature, FEATURE, PRICING, TIER, GROUPS, isAdmin, enableAdminMode, disableAdminMode, getActiveGroupId } from './payments/access.js';
+import { hasFeature, FEATURE, PRICING, TIER, GROUPS, FREE_LIMITS, isAdmin, enableAdminMode, disableAdminMode, getActiveGroupId, getBulkExportLimit } from './payments/access.js';
 import { pruneExpiredSession } from './payments/session.js';
 import {
     openAccessPanel, closeAccessPanel,
@@ -56,12 +56,7 @@ function generateAll() {
     syncSettingsFromDOM();
     const topics = getActiveTopics();
 
-    // Show loading state on generate button
-    const btn = document.getElementById('btn-generate');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Generating…'; }
-
     if (topics.length === 0) {
-        // Distinguish: all topics unchecked vs outcome filter excluded everything
         const allSelected = ALL_SUBTOPICS.filter(t => state.selectedTopics[t]);
         const hasOutcomeFilter = Object.values(state.selectedOutcomes).some(Boolean);
         if (allSelected.length > 0 && hasOutcomeFilter) {
@@ -69,9 +64,12 @@ function generateAll() {
         } else {
             showToast('Select at least one topic to generate questions.', 'warning');
         }
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bolt"></i> Regenerate'; }
         return;
     }
+
+    // Show loading state only when we will actually generate
+    const btn = document.getElementById('btn-generate');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Generating…'; }
 
     // Always generate enough questions to fill the selected number of pages
     const GENERATE_COUNT = 30;
@@ -88,7 +86,6 @@ function generateAll() {
 
     setGeneratedSets(sets);
     renderActivePage();
-    updateStatus();
     saveState();
 
     const total = (sets.easy?.length || 0) + (sets.medium?.length || 0) + (sets.hard?.length || 0);
@@ -107,14 +104,25 @@ let _lastRenderedCounts = { easy: 0, medium: 0, hard: 0 };
 // Status badge
 // =============================================================
 function updateStatus() {
+    const { easy = 0, medium = 0, hard = 0 } = _lastRenderedCounts;
+    const visible = easy + medium + hard;
     const sets = state.generatedSets;
-    const total = (sets.easy?.length || 0) + (sets.medium?.length || 0) + (sets.hard?.length || 0);
+    const generated = (sets.easy?.length || 0) + (sets.medium?.length || 0) + (sets.hard?.length || 0);
+
     const pc = document.getElementById('placed-count');
-    if (pc) pc.innerText = `${total} questions`;
+    if (pc) {
+        if (visible > 0) {
+            pc.innerText = `${visible} question${visible !== 1 ? 's' : ''} on page`;
+        } else if (generated > 0) {
+            pc.innerText = `0 fit — adjust font/paper`;
+        } else {
+            pc.innerText = `0 questions`;
+        }
+    }
 
     const icon = document.getElementById('status-icon');
     if (icon) {
-        if (total > 0) {
+        if (visible > 0) {
             icon.className = 'status-icon icon-success';
             icon.innerHTML = '<i class="fas fa-check"></i>';
         } else {
@@ -151,6 +159,7 @@ function renderActivePage() {
     _lastRenderedCounts = { easy: nEasy, medium: nMedium, hard: nHard };
     _updateQuestionsPerPageSummary(nEasy, nMedium, nHard, pages);
     _updatePageButtonLabels(nEasy, nMedium, nHard);
+    updateStatus();
     renderExportPreview();
 }
 
@@ -164,7 +173,15 @@ function _updateQuestionsPerPageSummary(nEasy, nMedium, nHard, pages) {
         { label: 'Medium', n: nMedium, color: '#f59e0b' },
         { label: 'Hard',   n: nHard,   color: '#ef4444' },
     ].filter(r => r.n > 0);
-    if (rows.length === 0) { el.innerHTML = '<span style="opacity:.6;">Click Regenerate to see question counts.</span>'; return; }
+    if (rows.length === 0) {
+        const generated = (state.generatedSets.easy?.length || 0) + (state.generatedSets.medium?.length || 0) + (state.generatedSets.hard?.length || 0);
+        if (generated > 0) {
+            el.innerHTML = '<span style="color:#d97706;"><i class="fas fa-exclamation-triangle" style="margin-right:3px;"></i>None fit — reduce font scale or switch to larger paper.</span>';
+        } else {
+            el.innerHTML = '<span style="opacity:.6;">Click Regenerate to see question counts.</span>';
+        }
+        return;
+    }
     el.innerHTML = rows.map(r => {
         const sub = pages > 1 ? ` <span style="opacity:0.65;">(${perPage(r.n)})</span>` : '';
         return `<span style="color:${r.color}; font-weight:600;">${r.label}:</span> ${r.n} question${r.n !== 1 ? 's' : ''} across ${pageLabel}${sub}`;
@@ -249,6 +266,15 @@ function openAccessPanelUI() {
     openAccessPanel(() => renderTierUI());
 }
 
+function _setExportEnabled(enabled, reason) {
+    const btn = document.getElementById('export-btn-main');
+    if (!btn) return;
+    btn.disabled = !enabled;
+    btn.title = enabled ? 'Export Vector PDF' : (reason || '');
+    btn.style.cursor = enabled ? '' : 'not-allowed';
+    btn.style.opacity = enabled ? '' : '0.55';
+}
+
 function renderExportPreview() {
     const panel = document.getElementById('export-preview-panel');
     const body  = document.getElementById('export-preview-body');
@@ -262,6 +288,7 @@ function renderExportPreview() {
 
     if (total === 0) {
         body.innerHTML = '<span style="opacity:.6;">Click Regenerate to see export details.</span>';
+        _setExportEnabled(false, 'Generate questions before exporting');
         return;
     }
 
@@ -269,9 +296,11 @@ function renderExportPreview() {
     const selMedium = document.getElementById('sel-medium')?.checked ?? true;
     const selHard   = document.getElementById('sel-hard')?.checked   ?? true;
     const selKey    = document.getElementById('sel-key')?.checked    ?? true;
-    const copies    = Math.max(1, parseInt(document.getElementById('bulkCount')?.value, 10) || 1);
+    const tierLimit = getBulkExportLimit();
+    const requestedCopies = Math.max(1, parseInt(document.getElementById('bulkCount')?.value, 10) || 1);
+    const copies = Math.min(requestedCopies, tierLimit, FREE_LIMITS.BULK_EXPORT_MAX);
+    const wasClamped = copies < requestedCopies;
     const pages     = state.questionsPerSet || 1;
-    const pageLabel = pages === 1 ? '1 page' : '2 pages';
     const isPro     = hasFeature(FEATURE.TWO_PAGE_MODE);
 
     const diffRows = [
@@ -280,14 +309,24 @@ function renderExportPreview() {
         { label: 'Hard',   n: hard,   color: '#ef4444', sel: selHard   },
     ].filter(r => r.sel && r.n > 0);
 
+    if (diffRows.length === 0 && !selKey) {
+        body.innerHTML = '<span style="opacity:.7;">No pages selected. Tick at least one row in <em>Page Selection &amp; Order</em> to enable export.</span>';
+        _setExportEnabled(false, 'Select at least one page to export');
+        return;
+    }
+
     let pageCount = 0;
+    let questionCount = 0;
     let html = '';
 
     for (const r of diffRows) {
         pageCount += pages;
+        questionCount += r.n;
+        const perPage = Math.max(1, Math.round(r.n / pages));
+        const pageStr = pages === 1 ? '1 page' : `2 pages · ~${perPage}/page`;
         html += `<div class="ep-row">
-            <span><span style="color:${r.color}; font-weight:700;">${r.label}</span>&nbsp;${r.n} question${r.n !== 1 ? 's' : ''}</span>
-            <span style="opacity:.7;">${pageLabel}</span>
+            <span><span style="color:${r.color}; font-weight:700;">${r.label}</span> · ${r.n} question${r.n !== 1 ? 's' : ''}</span>
+            <span style="opacity:.7;">${pageStr}</span>
         </div>`;
     }
 
@@ -296,30 +335,46 @@ function renderExportPreview() {
         const keyTotal = (selEasy ? easy : 0) + (selMedium ? medium : 0) + (selHard ? hard : 0);
         html += `<div class="ep-row">
             <span style="font-weight:600;">Answer Key</span>
-            <span style="opacity:.7;">${keyTotal} answer${keyTotal !== 1 ? 's' : ''}</span>
+            <span style="opacity:.7;">${keyTotal} answer${keyTotal !== 1 ? 's' : ''} · 1 page</span>
         </div>`;
     }
 
     html += `<hr class="ep-divider">`;
     if (copies > 1) {
+        const qPerCopy = questionCount;
         html += `<div class="ep-row" style="font-weight:600;">
+            <span>Per copy</span>
+            <span>${pageCount} page${pageCount !== 1 ? 's' : ''} · ${qPerCopy} question${qPerCopy !== 1 ? 's' : ''}</span>
+        </div>`;
+        html += `<div class="ep-row" style="font-weight:700;">
             <span>Total</span>
-            <span>${pageCount}&thinsp;pages &times;&thinsp;${copies}&thinsp;copies&nbsp;=&nbsp;${pageCount * copies}&thinsp;pages</span>
+            <span>${pageCount * copies}&thinsp;pages (${copies}&thinsp;copies)</span>
         </div>`;
     } else {
-        html += `<div class="ep-row" style="font-weight:600;">
+        html += `<div class="ep-row" style="font-weight:700;">
             <span>Total</span>
-            <span>${pageCount} page${pageCount !== 1 ? 's' : ''}</span>
+            <span>${pageCount} page${pageCount !== 1 ? 's' : ''} · ${questionCount} question${questionCount !== 1 ? 's' : ''}</span>
         </div>`;
     }
+
+    if (wasClamped) {
+        html += `<div class="ep-note" style="color:#d97706;"><i class="fas fa-exclamation-triangle" style="margin-right:3px;"></i> Capped from ${requestedCopies} to ${copies} copies (max for current plan).</div>`;
+    }
+
+    html += `<div class="ep-note" style="margin-top:6px;"><i class="fas fa-info-circle" style="color:#64748b; margin-right:3px;"></i> Counts auto-fit your current paper size, font scale, and zoom. Adjust those to fit more/fewer per page.</div>`;
 
     if (!isPro) {
         html += `<hr class="ep-divider">
-        <div class="ep-note"><i class="fas fa-tint" style="color:#6366f1; margin-right:3px;"></i> Free plan: watermark on every page</div>
-        <div class="ep-note"><i class="fas fa-font" style="color:#6366f1; margin-right:3px;"></i> Free plan: system font (Inter)</div>`;
+        <div class="ep-note"><i class="fas fa-tint" style="color:#6366f1; margin-right:3px;"></i> Free plan: watermark on every page</div>`;
     }
 
     body.innerHTML = html;
+
+    if (pageCount === 0) {
+        _setExportEnabled(false, 'Select at least one page to export');
+    } else {
+        _setExportEnabled(true);
+    }
 }
 
 function updateUI() {
@@ -340,6 +395,7 @@ function updateGlobalFontScale() {
         if (valDisp) valDisp.innerText = v.toFixed(2) + 'x';
         document.documentElement.style.setProperty('--global-font-scale', v);
         saveState();
+        renderActivePage();
     }
 }
 
@@ -360,6 +416,7 @@ function updatePaperSize() {
     document.documentElement.style.setProperty('--page-width',  isLetter ? '215.9mm' : '210mm');
     document.documentElement.style.setProperty('--page-height', isLetter ? '279.4mm' : '297mm');
     saveState();
+    renderActivePage();
 }
 
 function updatePageScales() {
@@ -447,9 +504,28 @@ function setTopicsAll(enabled) {
 }
 
 function updateTopicCount() {
-    const count = getActiveTopics().length;
+    const rawSelected = ALL_SUBTOPICS.filter(t => state.selectedTopics[t]).length;
+    const active = getActiveTopics().length;
     const el = document.getElementById('topic-count');
-    if (el) el.textContent = `${count} of ${ALL_SUBTOPICS.length} selected`;
+    if (el) {
+        const filtered = rawSelected - active;
+        if (filtered > 0 && active === 0) {
+            el.innerHTML = `<span style="color:#d97706;" title="${rawSelected} topic${rawSelected !== 1 ? 's' : ''} selected, all excluded by outcome filter">none active (all filtered)</span>`;
+        } else if (filtered > 0) {
+            el.innerHTML = `${active} active <span style="color:#d97706; font-size:10px;" title="${rawSelected} selected · ${filtered} excluded by outcome filter">(${filtered} filtered)</span>`;
+        } else if (rawSelected === 0) {
+            el.innerHTML = `<span style="color:#d97706;">none selected</span>`;
+        } else {
+            el.textContent = `${rawSelected} of ${ALL_SUBTOPICS.length} selected`;
+        }
+    }
+    _updateGenerateButtonState(active);
+}
+
+function _updateGenerateButtonState(active) {
+    const btn = document.getElementById('btn-generate');
+    if (!btn) return;
+    btn.classList.toggle('no-topics', active === 0);
 }
 
 /**
@@ -478,9 +554,13 @@ function renderOutcomes() {
     
     const activeFilterCodes = Object.keys(state.selectedOutcomes).filter(c => state.selectedOutcomes[c]);
     if (activeFilterCodes.length > 0) {
-        noticeContainer.innerHTML = `<div class="outcome-filter-notice" style="margin-top:8px;">
-            Generating questions for <strong>${activeFilterCodes.length}</strong> selected outcome${activeFilterCodes.length > 1 ? 's' : ''}.
-            <button class="outcome-filter-clear" onclick="clearOutcomeFilter()">Clear filter</button>
+        const pillsHtml = activeFilterCodes.map(c =>
+            `<span style="background:rgba(99,102,241,0.12);color:#6366f1;border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;">${c}</span>`
+        ).join(' ');
+        noticeContainer.innerHTML = `<div class="outcome-filter-notice" style="margin-top:8px; flex-wrap:wrap; gap:4px;">
+            <i class="fas fa-filter" style="font-size:10px; flex-shrink:0;"></i>
+            <span style="flex-shrink:0;">Filtering by:</span>${pillsHtml}
+            <button class="outcome-filter-clear" onclick="clearOutcomeFilter()">Clear</button>
         </div>`;
     } else {
         noticeContainer.innerHTML = '';
@@ -524,7 +604,8 @@ function renderOutcomes() {
 
 function toggleOutcomeFilter(code, checked) {
     state.selectedOutcomes[code] = checked;
-    renderOutcomes();    // re-render to update notice
+    renderOutcomes();
+    updateTopicCount();
     debouncedGenerate();
     saveState();
 }
@@ -532,14 +613,15 @@ function toggleOutcomeFilter(code, checked) {
 function clearOutcomeFilter() {
     Object.keys(state.selectedOutcomes).forEach(k => { state.selectedOutcomes[k] = false; });
     renderOutcomes();
+    updateTopicCount();
     debouncedGenerate();
     saveState();
 }
 
 function toggleSubOp(topic, opKey) {
     syncSettingsFromDOM();
-    // Update parent checkbox indeterminate state
     _updateParentCheckbox(topic);
+    updateTopicCount();
     saveState();
 }
 
