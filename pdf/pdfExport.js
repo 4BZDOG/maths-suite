@@ -775,6 +775,7 @@ export async function exportPDF() {
 
     if (L) { L.style.display = 'flex'; L.style.opacity = '1'; }
     if (T) T.innerText = 'Starting Export...';
+    if (B) B.style.width = '0%';
 
     try {
         if (T) T.innerText = 'Loading PDF Engine...';

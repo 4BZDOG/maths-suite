@@ -1074,26 +1074,6 @@ main {
     display: flex;
 }
 
-/* Page Scaling logic dynamically bound to text layers */
-#page1 {
-    --page-scale: var(--scale-notes, 1);
-}
-
-#page2 {
-    --page-scale: var(--scale-ws, 1);
-}
-
-#page3 {
-    --page-scale: var(--scale-cw, 1);
-}
-
-#page4 {
-    --page-scale: var(--scale-scr, 1);
-}
-
-#page5 {
-    --page-scale: var(--scale-key, 1);
-}
 
 .watermark-img {
     position: absolute;
@@ -2368,6 +2348,18 @@ table.mode-cw td.cell.empty {
 .clue-verb {
     font-weight: 700;
 }
+/* Difficulty instruction line between header and question grid */
+.page-instruction {
+    font-size: calc(0.72rem * var(--global-font-scale, 1));
+    font-weight: 700;
+    color: #475569;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 0 0 12px;
+    padding: 5px 0 6px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
 /* Cap-overflow notice shown at the bottom of a capped page */
 .problem-overflow-notice {
     grid-column: 1 / -1;
