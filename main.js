@@ -757,6 +757,29 @@ function clearWatermark() {
     showToast('Watermark removed');
 }
 
+function loadConfigFromFile(input) {
+    const f = input.files?.[0];
+    if (!f) return;
+    input.value = '';
+    if (!f.name.toLowerCase().endsWith('.json')) {
+        showToast('Only .json config files are supported.', 'error');
+        return;
+    }
+    const r = new FileReader();
+    r.onload = e => {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            applyStateToDOM(parsed);
+            generateAll();
+            showToast(`Config loaded from ${f.name}`);
+        } catch {
+            showToast('Invalid JSON — not a valid config file.', 'error');
+        }
+    };
+    r.onerror = () => showToast('Failed to read file.', 'error');
+    r.readAsText(f);
+}
+
 // =============================================================
 // Expose public API on window
 // =============================================================
@@ -790,6 +813,7 @@ window._puzzleApp = {
     clearWatermark,
     toggleOutcomeFilter,
     clearOutcomeFilter,
+    loadConfigFromFile,
     hardReset: () => hardReset(),
     undo: () => undo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),
     redo: () => redo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),

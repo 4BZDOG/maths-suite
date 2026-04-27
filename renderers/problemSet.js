@@ -27,7 +27,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:40px;">
             No ${difficultyLabel || ''} questions generated yet.<br>
             <small>Select topics and click Generate.</small></div>`;
-        return;
+        return 0;
     }
 
     // Optional outcomes header — compact strip of NESA outcome pills
