@@ -173,9 +173,9 @@ function _updateQuestionsPerPageSummary(nEasy, nMedium, nHard, pages) {
     const pageLabel = pages === 1 ? '1 page' : '2 pages';
     const perPage = (n) => pages > 1 ? `~${Math.ceil(n / pages)}/page` : '';
     const rows = [
-        { label: 'Easy',   n: nEasy,   color: '#10b981' },
-        { label: 'Medium', n: nMedium, color: '#f59e0b' },
-        { label: 'Hard',   n: nHard,   color: '#ef4444' },
+        { label: 'Easy',   icon: 'fa-seedling', n: nEasy,   color: '#10b981' },
+        { label: 'Medium', icon: 'fa-bolt',     n: nMedium, color: '#f59e0b' },
+        { label: 'Hard',   icon: 'fa-fire',     n: nHard,   color: '#ef4444' },
     ].filter(r => r.n > 0);
     if (rows.length === 0) {
         const generated = (state.generatedSets.easy?.length || 0) + (state.generatedSets.medium?.length || 0) + (state.generatedSets.hard?.length || 0);
@@ -188,7 +188,7 @@ function _updateQuestionsPerPageSummary(nEasy, nMedium, nHard, pages) {
     }
     el.innerHTML = rows.map(r => {
         const sub = pages > 1 ? ` <span style="opacity:0.65;">(${perPage(r.n)})</span>` : '';
-        return `<span style="color:${r.color}; font-weight:600;">${r.label}:</span> ${r.n} question${r.n !== 1 ? 's' : ''} across ${pageLabel}${sub}`;
+        return `<i class="fas ${r.icon}" style="color:${r.color}; font-size:9px; margin-right:4px;"></i><span style="color:${r.color}; font-weight:600;">${r.label}:</span> ${r.n} question${r.n !== 1 ? 's' : ''} across ${pageLabel}${sub}`;
     }).join('<br>');
 }
 
@@ -308,9 +308,9 @@ function renderExportPreview() {
     const isPro     = hasFeature(FEATURE.TWO_PAGE_MODE);
 
     const diffRows = [
-        { label: 'Easy',   n: easy,   color: '#10b981', sel: selEasy   },
-        { label: 'Medium', n: medium, color: '#f59e0b', sel: selMedium },
-        { label: 'Hard',   n: hard,   color: '#ef4444', sel: selHard   },
+        { label: 'Easy',   icon: 'fa-seedling', n: easy,   color: '#10b981', sel: selEasy   },
+        { label: 'Medium', icon: 'fa-bolt',     n: medium, color: '#f59e0b', sel: selMedium },
+        { label: 'Hard',   icon: 'fa-fire',     n: hard,   color: '#ef4444', sel: selHard   },
     ].filter(r => r.sel && r.n > 0);
 
     if (diffRows.length === 0 && !selKey) {
@@ -329,7 +329,7 @@ function renderExportPreview() {
         const perPage = Math.max(1, Math.round(r.n / pages));
         const pageStr = pages === 1 ? '1 page' : `2 pages · ~${perPage}/page`;
         html += `<div class="ep-row">
-            <span><span style="color:${r.color}; font-weight:700;">${r.label}</span> · ${r.n} question${r.n !== 1 ? 's' : ''}</span>
+            <span><i class="fas ${r.icon}" style="color:${r.color}; margin-right:5px; font-size:10px;"></i><span style="color:${r.color}; font-weight:700;">${r.label}</span> · ${r.n} question${r.n !== 1 ? 's' : ''}</span>
             <span style="opacity:.7;">${pageStr}</span>
         </div>`;
     }
@@ -338,7 +338,7 @@ function renderExportPreview() {
         pageCount += 1;
         const keyTotal = (selEasy ? easy : 0) + (selMedium ? medium : 0) + (selHard ? hard : 0);
         html += `<div class="ep-row">
-            <span style="font-weight:600;">Answer Key</span>
+            <span style="font-weight:600;"><i class="fas fa-key" style="color:#6366f1; margin-right:5px; font-size:10px;"></i>Answer Key</span>
             <span style="opacity:.7;">${keyTotal} answer${keyTotal !== 1 ? 's' : ''} · 1 page</span>
         </div>`;
     }

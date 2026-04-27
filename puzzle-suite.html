@@ -256,25 +256,25 @@
 
                         <label class="field-label">Per-Page Font Scale</label>
                         <div class="slider-row">
-                            <span class="slider-label">Easy</span>
+                            <span class="slider-label"><i class="fas fa-seedling" style="color:#10b981; font-size:9px; margin-right:4px;"></i>Easy</span>
                             <input type="range" id="scaleEasyFont" min="0.5" max="2.0" step="0.05" value="1"
                                 oninput="focusPage(1); updatePageScales()">
                             <span id="scaleEasyFontVal" class="slider-val">1.00x</span>
                         </div>
                         <div class="slider-row">
-                            <span class="slider-label">Medium</span>
+                            <span class="slider-label"><i class="fas fa-bolt" style="color:#f59e0b; font-size:9px; margin-right:4px;"></i>Medium</span>
                             <input type="range" id="scaleMediumFont" min="0.5" max="2.0" step="0.05" value="1"
                                 oninput="focusPage(2); updatePageScales()">
                             <span id="scaleMediumFontVal" class="slider-val">1.00x</span>
                         </div>
                         <div class="slider-row">
-                            <span class="slider-label">Hard</span>
+                            <span class="slider-label"><i class="fas fa-fire" style="color:#ef4444; font-size:9px; margin-right:4px;"></i>Hard</span>
                             <input type="range" id="scaleHardFont" min="0.5" max="2.0" step="0.05" value="1"
                                 oninput="focusPage(3); updatePageScales()">
                             <span id="scaleHardFontVal" class="slider-val">1.00x</span>
                         </div>
                         <div class="slider-row">
-                            <span class="slider-label">Answer Keys</span>
+                            <span class="slider-label"><i class="fas fa-key" style="color:#6366f1; font-size:9px; margin-right:4px;"></i>Key</span>
                             <input type="range" id="scaleKeyFont" min="0.5" max="2.0" step="0.05" value="1"
                                 oninput="focusPage(4); updatePageScales()">
                             <span id="scaleKeyFontVal" class="slider-val">1.00x</span>
@@ -291,7 +291,7 @@
                         
                         <!-- Area & Perimeter -->
                         <div style="margin-bottom:8px;">
-                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);">Area &amp; Perimeter</div>
+                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);"><i class="fas fa-vector-square" style="margin-right:5px; opacity:.55; font-size:10px;"></i>Area &amp; Perimeter</div>
                             <div style="display:flex; justify-content:space-between; max-width: 180px;">
                                 <label><input type="checkbox" id="form-area-perimeter-easy" onchange="renderActivePage(); saveState();" checked> Easy</label>
                                 <label><input type="checkbox" id="form-area-perimeter-medium" onchange="renderActivePage(); saveState();"> Med</label>
@@ -301,7 +301,7 @@
 
                         <!-- Pythagoras -->
                         <div style="margin-bottom:8px;">
-                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);">Pythagoras</div>
+                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);"><i class="fas fa-drafting-compass" style="margin-right:5px; opacity:.55; font-size:10px;"></i>Pythagoras</div>
                             <div style="display:flex; justify-content:space-between; max-width: 180px;">
                                 <label><input type="checkbox" id="form-pythagoras-easy" onchange="renderActivePage(); saveState();"> Easy</label>
                                 <label><input type="checkbox" id="form-pythagoras-medium" onchange="renderActivePage(); saveState();"> Med</label>
@@ -311,7 +311,7 @@
 
                         <!-- Circles -->
                         <div style="margin-bottom:8px;">
-                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);">Circles</div>
+                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);"><i class="fas fa-circle" style="margin-right:5px; opacity:.55; font-size:10px;"></i>Circles</div>
                             <div style="display:flex; justify-content:space-between; max-width: 180px;">
                                 <label><input type="checkbox" id="form-circles-easy" onchange="renderActivePage(); saveState();"> Easy</label>
                                 <label><input type="checkbox" id="form-circles-medium" onchange="renderActivePage(); saveState();"> Med</label>
@@ -321,7 +321,7 @@
 
                         <!-- Simple Interest -->
                         <div style="margin-bottom:8px;">
-                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);">Simple Interest</div>
+                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);"><i class="fas fa-chart-line" style="margin-right:5px; opacity:.55; font-size:10px;"></i>Simple Interest</div>
                             <div style="display:flex; justify-content:space-between; max-width: 180px;">
                                 <label><input type="checkbox" id="form-simple-interest-easy" onchange="renderActivePage(); saveState();"> Easy</label>
                                 <label><input type="checkbox" id="form-simple-interest-medium" onchange="renderActivePage(); saveState();"> Med</label>
@@ -331,7 +331,7 @@
                         
                         <!-- Compound Interest -->
                         <div style="margin-bottom:4px;">
-                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);">Compound Interest</div>
+                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);"><i class="fas fa-chart-bar" style="margin-right:5px; opacity:.55; font-size:10px;"></i>Compound Interest</div>
                             <div style="display:flex; justify-content:space-between; max-width: 180px;">
                                 <label><input type="checkbox" id="form-compound-interest-easy" onchange="renderActivePage(); saveState();"> Easy</label>
                                 <label><input type="checkbox" id="form-compound-interest-medium" onchange="renderActivePage(); saveState();"> Med</label>
@@ -346,25 +346,25 @@
                         <div class="card-header-inner"><i class="fas fa-list-ol"></i> Question Display</div>
                     </summary>
                     <div class="card-content">
-                        <label class="field-label">Columns</label>
+                        <label class="field-label"><i class="fas fa-columns" style="margin-right:4px; opacity:.7;"></i>Columns</label>
                         <select id="psCols" onchange="renderActivePage(); saveState();">
                             <option value="1">1 Column</option>
                             <option value="2" selected>2 Columns</option>
                         </select>
                         <hr class="form-divider">
-                        <div class="toggle-row"><label title="Show shape diagrams for geometry questions (triangles, rectangles, circles) with labelled measurements">Show Diagrams</label><label class="switch"><input
+                        <div class="toggle-row"><label title="Show shape diagrams for geometry questions (triangles, rectangles, circles) with labelled measurements"><i class="fas fa-shapes toggle-icon"></i>Show Diagrams</label><label class="switch"><input
                                     type="checkbox" id="psShowDiagrams" checked onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
                         <hr class="form-divider">
-                        <div class="toggle-row"><label>Show Topic Badge</label><label class="switch"><input
+                        <div class="toggle-row"><label><i class="fas fa-tag toggle-icon"></i>Show Topic Badge</label><label class="switch"><input
                                     type="checkbox" id="psShowTopic" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
                         <hr class="form-divider">
-                        <div class="toggle-row"><label title="Show all relevant NESA outcomes with full code and description at the top of each worksheet">Outcomes Header</label><label class="switch"><input
+                        <div class="toggle-row"><label title="Show all relevant NESA outcomes with full code and description at the top of each worksheet"><i class="fas fa-clipboard-list toggle-icon"></i>Outcomes Header</label><label class="switch"><input
                                     type="checkbox" id="psShowOutcomesHeader" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
                         <hr class="form-divider">
-                        <div class="toggle-row"><label title="Show outcome code chips on each individual question">Outcome Chips per Question</label><label class="switch"><input
+                        <div class="toggle-row"><label title="Show outcome code chips on each individual question"><i class="fas fa-circle-nodes toggle-icon"></i>Outcome Chips per Question</label><label class="switch"><input
                                     type="checkbox" id="psShowOutcomeChips" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
                     </div>
@@ -375,10 +375,10 @@
             <div id="panel-export" style="display:none" role="tabpanel">
                 <div class="export-card">
                     <div class="input-row" style="margin-bottom: 20px;">
-                        <label class="input-inline field-label" style="margin:0;">Filename</label>
+                        <label class="input-inline field-label" style="margin:0;"><i class="fas fa-file-signature" style="margin-right:4px; opacity:.7;"></i>Filename</label>
                         <input type="text" id="exportFilename" value="MathsQuiz" class="flex-2">
                     </div>
-                    <label class="field-label mb-8">Page Order (drag to reorder):</label>
+                    <label class="field-label mb-8"><i class="fas fa-sort" style="margin-right:4px; opacity:.7;"></i>Page Order (drag to reorder):</label>
                     <div id="page-order-list" class="sortable-list">
                         <div class="sortable-item" draggable="true" data-page="easy">
                             <i class="fas fa-grip-vertical drag-handle"></i><input type="checkbox" id="sel-easy"
@@ -398,14 +398,14 @@
                         </div>
                     </div>
                     <hr class="form-divider">
-                    <div class="toggle-row"><label>Export ID in Footer</label><label class="switch"><input
+                    <div class="toggle-row"><label><i class="fas fa-fingerprint toggle-icon"></i>Export ID in Footer</label><label class="switch"><input
                                 type="checkbox" id="showExportId" checked onchange="saveState()"><span
                                 class="slider-switch"></span></label></div>
                     <hr class="form-divider">
                     <div class="bulk-export-row">
                         <input type="number" id="bulkCount" value="1" min="1" max="50"
                             class="input-large-center" oninput="saveState(); renderExportPreview()">
-                        <span class="text-bold-small">Unique Copies (Bulk)</span>
+                        <span class="text-bold-small"><i class="fas fa-copy" style="margin-right:5px; opacity:.7;"></i>Unique Copies (Bulk)</span>
                     </div>
                     <p class="cap-page-hint" id="bulk-tier-note" style="display:none;">Free plan: bulk export up to 50 unique copies.</p>
                 </div>
@@ -555,7 +555,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=105"></script>
+    <script src="bundle.js?v=106"></script>
 </body>
 
 </html>
