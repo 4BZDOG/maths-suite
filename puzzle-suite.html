@@ -19,7 +19,7 @@
     <div id="drop-zone">
         <div class="drop-content">
             <i class="fas fa-file-import" style="font-size:3rem; margin-bottom:15px;"></i><br>
-            Drop text or config file to import
+            Drop a .json config file to restore settings
         </div>
     </div>
 
@@ -32,19 +32,7 @@
         </div>
     </div>
 
-    <div id="modal-overlay" role="presentation">
-        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-heading">
-            <h3 class="modal-title" id="modal-heading">Bulk Import</h3>
-            <p class="modal-desc">Paste CSV with columns <code>topic, difficulty, clue, answer, answerDisplay, notes</code> — or one answer per line (tab-separated answer &amp; clue). Clues are <strong>added</strong> to your existing bank.</p>
-            <textarea id="import-text"
-                placeholder="topic,difficulty,clue,answer,answerDisplay,notes&#10;Number,Easy,$12 \times 12$,144,144,MA4-INT-C-01&#10;Algebra,Medium,Solve: $3x - 7 = 14$,7,x = 7,MA4-ALG-C-01"></textarea>
-            <div class="modal-actions">
-                <button class="btn-sec btn-auto" onclick="closeModal()">Cancel</button>
-                <button class="btn-main btn-auto" onclick="processImport()">Import</button>
-            </div>
-        </div>
-    </div>
-    <input type="file" id="file-input" accept=".json,.txt,.csv" onchange="loadConfigFromFile(this)">
+    <input type="file" id="file-input" accept=".json" onchange="loadConfigFromFile(this)">
     <button class="toggle-sidebar" onclick="toggleSidebar()" title="Toggle Sidebar" aria-label="Toggle sidebar"><i
             class="fas fa-bars"></i></button>
 
@@ -55,20 +43,20 @@
             <div class="brand-actions">
                 <button onclick="toggleDarkMode()" title="Toggle Dark Mode" id="btn-dark"
                     aria-label="Toggle dark mode"><i class="fas fa-moon"></i></button>
-                <button onclick="downloadConfig()" title="Save config" aria-label="Save configuration"><i
+                <button onclick="downloadConfig()" title="Save config (Ctrl+S)" aria-label="Save configuration"><i
                         class="fas fa-save"></i></button>
                 <button onclick="document.getElementById('file-input').click()" title="Load config"
                     aria-label="Load configuration"><i class="fas fa-folder-open"></i></button>
-                <button onclick="hardReset()" title="Reset all" aria-label="Reset all settings and words"><i
-                        class="fas fa-redo"></i></button>
+                <button onclick="hardReset()" title="Reset all settings (cannot be undone)" aria-label="Reset all settings"><i
+                        class="fas fa-rotate-left"></i></button>
             </div>
         </div>
         <div class="nav-tabs" role="tablist" aria-label="Sidebar panels">
-            <div class="nav-tab active" onclick="switchTab('content')" data-tab="content" role="tab"
+            <div class="nav-tab active" onclick="switchTab('content')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" data-tab="content" role="tab"
                 aria-selected="true" tabindex="0"><i class="fas fa-list"></i> Editor</div>
-            <div class="nav-tab" onclick="switchTab('design')" data-tab="design" role="tab" aria-selected="false"
+            <div class="nav-tab" onclick="switchTab('design')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" data-tab="design" role="tab" aria-selected="false"
                 tabindex="-1"><i class="fas fa-sliders-h"></i> Settings</div>
-            <div class="nav-tab" onclick="switchTab('export')" data-tab="export" role="tab" aria-selected="false"
+            <div class="nav-tab" onclick="switchTab('export')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" data-tab="export" role="tab" aria-selected="false"
                 tabindex="-1"><i class="fas fa-download"></i> Export</div>
         </div>
         <div class="scroll-area">
@@ -187,7 +175,7 @@
                 </div>
                 <div id="questions-per-page-summary" style="font-size:11px; color:var(--text-muted); margin-bottom:8px; line-height:1.7;"></div>
 
-                <button id="btn-generate" class="btn-primary" style="width:100%; margin-top:4px;" onclick="generateAll()">
+                <button id="btn-generate" style="width:100%; margin-top:4px;" onclick="generateAll()" title="Regenerate questions (Ctrl+Enter)">
                     <i class="fas fa-bolt"></i> Regenerate
                 </button>
 
@@ -213,9 +201,9 @@
                     </summary>
                     <div class="card-content">
                         <label class="field-label">Main Title</label>
-                        <input type="text" id="titleInput" value="Maths Quiz" onkeyup="debouncedUpdateUI()">
+                        <input type="text" id="titleInput" value="Maths Quiz" oninput="updateUI(); saveState()">
                         <label class="field-label">Subtitle</label>
-                        <input type="text" id="subInput" value="Stage 4 Review" onkeyup="debouncedUpdateUI()">
+                        <input type="text" id="subInput" value="Stage 4 Review" oninput="updateUI(); saveState()">
                         <label class="field-label" style="margin-top:6px;">Title &amp; Subtitle Scale</label>
                         <div class="slider-row">
                             <input type="range" id="titleScale" min="0.4" max="1.5" step="0.05" value="1" oninput="updateTitleScale()">
@@ -236,8 +224,9 @@
                         </div>
                         <div class="slider-row" style="margin-top:8px;">
                             <span class="slider-label">Watermark Opacity</span>
-                            <input type="range" min="0" max="1" step="0.05" value="0.15"
+                            <input type="range" id="wmOpacity" min="0" max="1" step="0.05" value="0.15"
                                 oninput="updateOpacity(this.value)">
+                            <span id="wmOpacityVal" class="slider-val">0.15</span>
                         </div>
                         <button onclick="clearWatermark()" class="btn-remove-watermark"
                             aria-label="Remove watermark image">Remove Watermark</button>
@@ -371,7 +360,6 @@
                                     type="checkbox" id="psShowTopic" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
                         <hr class="form-divider">
-                        <hr class="form-divider">
                         <div class="toggle-row"><label title="Show all relevant NESA outcomes with full code and description at the top of each worksheet">Outcomes Header</label><label class="switch"><input
                                     type="checkbox" id="psShowOutcomesHeader" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
@@ -410,9 +398,6 @@
                         </div>
                     </div>
                     <hr class="form-divider">
-                    <div class="toggle-row"><label>Show Answer Key Page</label><label class="switch"><input
-                                type="checkbox" id="showAnswerKey" checked onchange="saveState()"><span
-                                class="slider-switch"></span></label></div>
                     <div class="toggle-row"><label>Export ID in Footer</label><label class="switch"><input
                                 type="checkbox" id="showExportId" checked onchange="saveState()"><span
                                 class="slider-switch"></span></label></div>
@@ -470,6 +455,8 @@
             <div class="zoom-controls">
                 <button class="zoom-btn" onclick="adjustZoom(-0.1)" aria-label="Zoom Out"><i
                         class="fas fa-minus"></i></button>
+                <span id="zoom-level" title="Double-click to reset zoom" ondblclick="resetZoom()"
+                    style="font-size:11px; font-weight:600; color:var(--text-muted); min-width:36px; text-align:center; cursor:default; user-select:none;">100%</span>
                 <button class="zoom-btn" onclick="adjustZoom(0.1)" aria-label="Zoom In"><i
                         class="fas fa-plus"></i></button>
             </div>

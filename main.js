@@ -17,7 +17,7 @@ import { generateMathsQuestions } from './generators/mathsQuestionGen.js';
 import { openModal, closeModal } from './ui/modal.js';
 import { setupSidebarResize, toggleSidebar, switchTab } from './ui/sidebar.js';
 import { toggleDarkMode } from './ui/darkMode.js';
-import { adjustZoom } from './ui/zoom.js';
+import { adjustZoom, resetZoom } from './ui/zoom.js';
 import { setupSortableList } from './ui/pageOrder.js';
 import { setupDragAndDrop } from './ui/dropZone.js';
 
@@ -91,6 +91,8 @@ function generateAll() {
     const total = (sets.easy?.length || 0) + (sets.medium?.length || 0) + (sets.hard?.length || 0);
     if (total === 0) showToast('No questions generated. Enable at least one operation per topic.', 'warning');
 
+    _pendingTopicChange = false;
+    _updateGenerateButtonState(getActiveTopics().length);
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bolt"></i> Regenerate'; }
 }
 
@@ -99,6 +101,8 @@ const debouncedUpdateUI = debounceFn(() => { saveState(); updateUI(); }, 500);
 
 // Stores the last rendered visible question counts; read by renderExportPreview()
 let _lastRenderedCounts = { easy: 0, medium: 0, hard: 0 };
+// Tracks whether topic/sub-op changes have been made since the last generateAll()
+let _pendingTopicChange = false;
 
 // =============================================================
 // Status badge
@@ -377,6 +381,10 @@ function renderExportPreview() {
     }
 }
 
+function _titleToFilename(t) {
+    return (t || 'MathsQuiz').replace(/[^a-z0-9-_\s]/gi, '').trim().replace(/\s+/g, '_').replace(/_+/g, '_').slice(0, 40) || 'MathsQuiz';
+}
+
 function updateUI() {
     const fsEl = document.getElementById('fontSelect');
     if (fsEl) document.documentElement.style.setProperty('--user-font', fsEl.value);
@@ -384,6 +392,8 @@ function updateUI() {
     const sub = document.getElementById('subInput')?.value || 'Stage 4 Review';
     document.querySelectorAll('.disp-title').forEach(el => el.innerText = t);
     document.querySelectorAll('.disp-sub').forEach(el => el.innerText = sub);
+    const filenameEl = document.getElementById('exportFilename');
+    if (filenameEl) filenameEl.value = _titleToFilename(t);
 }
 
 function updateGlobalFontScale() {
@@ -441,6 +451,7 @@ function showPage(n) {
     if (pEl) pEl.classList.add('visible');
     document.querySelectorAll('.page-btn').forEach((b, i) => b.classList.toggle('active', i + 1 === n));
     renderActivePage();
+    document.querySelector('.viewport')?.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function focusPage(n) {
@@ -472,7 +483,7 @@ function toggleTopic(topicName) {
         if (parentEl) parentEl.indeterminate = false;
     }
     saveState();
-    // Don't auto-regenerate — user clicks Regenerate explicitly
+    _pendingTopicChange = true;
     updateTopicCount();
     renderOutcomes();
 }
@@ -498,6 +509,7 @@ function setTopicsAll(enabled) {
             }
         }
     });
+    _pendingTopicChange = true;
     updateTopicCount();
     renderOutcomes();
     saveState();
@@ -526,6 +538,7 @@ function _updateGenerateButtonState(active) {
     const btn = document.getElementById('btn-generate');
     if (!btn) return;
     btn.classList.toggle('no-topics', active === 0);
+    btn.classList.toggle('pending', active > 0 && _pendingTopicChange);
 }
 
 /**
@@ -621,6 +634,7 @@ function clearOutcomeFilter() {
 function toggleSubOp(topic, opKey) {
     syncSettingsFromDOM();
     _updateParentCheckbox(topic);
+    _pendingTopicChange = true;
     updateTopicCount();
     saveState();
 }
@@ -695,6 +709,22 @@ function setPagesPerDifficulty(n) {
 // =============================================================
 // Watermark
 // =============================================================
+function _updateWatermarkUI() {
+    const wrapper = document.querySelector('.file-upload-wrapper');
+    const icon    = wrapper?.querySelector('.file-upload-icon');
+    const subtext = wrapper?.querySelector('.file-upload-subtext');
+    if (!wrapper) return;
+    if (state.watermarkSrc) {
+        wrapper.classList.add('has-watermark');
+        if (icon)    icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+        if (subtext) subtext.textContent = 'Watermark active · Click to replace';
+    } else {
+        wrapper.classList.remove('has-watermark');
+        if (icon)    icon.innerHTML = '<i class="fas fa-cloud-upload-alt"></i>';
+        if (subtext) subtext.textContent = 'Click to upload (Max 2MB)';
+    }
+}
+
 function handleImage(inp) {
     if (!inp.files[0]) return;
     if (inp.files[0].size > WATERMARK_MAX_BYTES) {
@@ -710,6 +740,7 @@ function handleImage(inp) {
             if (!img.closest('#page4')) { img.src = state.watermarkSrc; img.style.display = 'block'; }
         });
         saveState();
+        _updateWatermarkUI();
         showToast('Watermark added');
     };
     r.onerror = () => { showToast('Failed to read image file.', 'error'); inp.value = ''; };
@@ -718,6 +749,8 @@ function handleImage(inp) {
 
 function updateOpacity(v) {
     document.documentElement.style.setProperty('--wm-opacity', v);
+    const disp = document.getElementById('wmOpacityVal');
+    if (disp) disp.innerText = parseFloat(v).toFixed(2);
     saveState();
 }
 
@@ -727,7 +760,34 @@ function clearWatermark() {
     const bgU = document.getElementById('bgUpload');
     if (bgU) bgU.value = '';
     saveState();
+    _updateWatermarkUI();
     showToast('Watermark removed');
+}
+
+function loadConfigFromFile(input) {
+    const f = input.files?.[0];
+    if (!f) return;
+    input.value = '';
+    if (!f.name.toLowerCase().endsWith('.json')) {
+        showToast('Only .json config files are supported.', 'error');
+        return;
+    }
+    const r = new FileReader();
+    r.onload = e => {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            applyStateToDOM(parsed);
+            updateUI();
+            updateTopicCount();
+            renderOutcomes();
+            generateAll();
+            showToast(`Config loaded from ${f.name}`);
+        } catch {
+            showToast('Invalid JSON — not a valid config file.', 'error');
+        }
+    };
+    r.onerror = () => showToast('Failed to read file.', 'error');
+    r.readAsText(f);
 }
 
 // =============================================================
@@ -748,6 +808,7 @@ window._puzzleApp = {
     toggleSidebar,
     switchTab,
     adjustZoom: (d) => adjustZoom(d),
+    resetZoom,
     showPage,
     focusPage,
     updateUI,
@@ -762,6 +823,7 @@ window._puzzleApp = {
     clearWatermark,
     toggleOutcomeFilter,
     clearOutcomeFilter,
+    loadConfigFromFile,
     hardReset: () => hardReset(),
     undo: () => undo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),
     redo: () => redo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),
@@ -785,22 +847,34 @@ Object.assign(window, window._puzzleApp);
 // Initialisation
 // =============================================================
 window.addEventListener('load', async () => {
-    const overlay = document.getElementById('loading-overlay');
+    const overlay  = document.getElementById('loading-overlay');
+    const loadText = document.getElementById('loading-text');
+    const loadBar  = document.getElementById('loading-progress');
+    const _step = (msg, pct) => {
+        if (loadText) loadText.textContent = msg;
+        if (loadBar)  loadBar.style.width  = pct + '%';
+    };
     try {
+        _step('Restoring saved state…', 15);
         pruneExpiredSession();
         const saved = loadRawState();
         if (saved) applyStateToDOM(saved);
 
+        _step('Loading watermark…', 30);
         if (state.watermarkSrc) {
             document.querySelectorAll('.watermark-img').forEach(img => {
                 if (!img.closest('#page4')) { img.src = state.watermarkSrc; img.style.display = 'block'; }
             });
         }
+        _updateWatermarkUI();
 
+        _step('Building topic panels…', 45);
         _buildSubOpsPanels();
         _updateAllParentCheckboxes();
         pushHistory();
         renderTierUI();
+
+        _step('Generating questions…', 65);
         generateAll();
         updatePageScales();
         updateGlobalFontScale();
@@ -809,19 +883,27 @@ window.addEventListener('load', async () => {
         updateUI();
         updateTopicCount();
         renderOutcomes();
+        adjustZoom(0); // sync zoom display with restored state
 
+        _step('Setting up…', 90);
         setupSidebarResize();
         setupSortableList('#page-order-list', () => saveState());
         setupDragAndDrop((f) => {
-            // JSON config restore only (no CSV import needed anymore)
+            if (!f.name.toLowerCase().endsWith('.json')) {
+                showToast('Only .json config files are supported. Drop a file saved via Export Config.', 'error');
+                return;
+            }
             const r = new FileReader();
             r.onload = e => {
                 try {
                     const parsed = JSON.parse(e.target.result);
                     applyStateToDOM(parsed);
+                    updateUI();
+                    updateTopicCount();
+                    renderOutcomes();
                     generateAll();
-                    showToast('Config loaded');
-                } catch { showToast('Invalid JSON file', 'error'); }
+                    showToast(`Config loaded from ${f.name}`);
+                } catch { showToast('Invalid JSON — not a valid config file.', 'error'); }
             };
             r.onerror = () => showToast('Failed to read file.', 'error');
             r.readAsText(f);
@@ -829,11 +911,14 @@ window.addEventListener('load', async () => {
 
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') closeModal();
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }); }
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }); }
             if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }); }
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 's') { e.preventDefault(); downloadConfig(); }
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); generateAll(); }
         });
 
-        await new Promise(r => setTimeout(r, 300));
+        _step('Ready!', 100);
+        await new Promise(r => setTimeout(r, 250));
         if (overlay) overlay.style.opacity = '0';
         setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 600);
 

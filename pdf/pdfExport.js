@@ -289,21 +289,58 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
     pScale = pScale || scale;
 
     const cfg = state.settings;
-    const cols             = cfg.cols || 2;
-    const showTopic        = cfg.showTopic || false;
-    const showOutcomeChips = cfg.psShowOutcomeChips || false;
-    const capPages         = cfg.psCapPages || 0;
-    const showDiagrams     = cfg.showDiagrams !== false;   // default true
-    const stage            = DEFAULT_STAGE;
-    const DIAG_H           = 30 * pScale;  // allocated height (mm) per diagram
-    const availW           = PAGE_WIDTH - MARGIN * 2;
-    const colW             = (availW - (cols - 1) * 8) / cols;
-    const chipFontPt       = 5.5 * pScale;
+    const cols               = cfg.cols || 2;
+    const showTopic          = cfg.showTopic || false;
+    const showOutcomeChips   = cfg.psShowOutcomeChips || false;
+    const showOutcomesHeader = cfg.psShowOutcomesHeader || false;
+    const capPages           = cfg.psCapPages || 0;
+    const showDiagrams       = cfg.showDiagrams !== false;   // default true
+    const stage              = DEFAULT_STAGE;
+    const DIAG_H             = 30 * pScale;  // allocated height (mm) per diagram
+    const availW             = PAGE_WIDTH - MARGIN * 2;
+    const colW               = (availW - (cols - 1) * 8) / cols;
+    const chipFontPt         = 5.5 * pScale;
     const workingLineSpacing = 8 * pScale;
     const answerLineSpacing  = 8 * pScale;
     const itemGap            = 6 * pScale;
 
     let cy          = startY, col = 0;
+
+    // Optional outcomes header strip
+    if (showOutcomesHeader) {
+        const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
+        const outcomes = getOutcomesForTopics(activeTopics, stage);
+        if (outcomes.length > 0) {
+            const hdr_y = cy;
+            const hdr_h = 6 * pScale;
+            const hdr_pad = 2 * pScale;
+            doc.setFillColor(248, 250, 252);
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(MARGIN, hdr_y, availW, hdr_h, 1.5, 1.5, 'FD');
+            // Label
+            doc.setFont(pdfFont, 'bold');
+            doc.setFontSize(5.5 * pScale);
+            doc.setTextColor(148, 163, 184);
+            doc.text('OUTCOMES', MARGIN + hdr_pad, hdr_y + hdr_h / 2 + 1.8 * pScale);
+            // Outcome code pills
+            let px = MARGIN + hdr_pad + doc.getTextWidth('OUTCOMES') + 3 * pScale;
+            outcomes.forEach(o => {
+                const pillColor = o.appliesAll ? [99, 102, 241] : [16, 185, 129];
+                doc.setFont(pdfFont, 'bold');
+                doc.setFontSize(5.5 * pScale);
+                const codeW = doc.getTextWidth(o.code) + 3 * pScale;
+                if (px + codeW > MARGIN + availW - hdr_pad) return;
+                doc.setFillColor(...pillColor.map(c => Math.round(c * 0.15 + 255 * 0.85)));
+                doc.setDrawColor(...pillColor.map(c => Math.round(c * 0.3 + 255 * 0.7)));
+                doc.roundedRect(px, hdr_y + 1.2 * pScale, codeW, hdr_h - 2.4 * pScale, 1, 1, 'FD');
+                doc.setTextColor(...pillColor);
+                doc.text(o.code, px + 1.5 * pScale, hdr_y + hdr_h / 2 + 1.8 * pScale);
+                px += codeW + 2 * pScale;
+            });
+            cy += hdr_h + 3 * pScale;
+        }
+    }
     let rowMaxH     = 0;
     let overflowCount = 0;
     let pagesUsed   = 1;
@@ -738,6 +775,7 @@ export async function exportPDF() {
 
     if (L) { L.style.display = 'flex'; L.style.opacity = '1'; }
     if (T) T.innerText = 'Starting Export...';
+    if (B) B.style.width = '0%';
 
     try {
         if (T) T.innerText = 'Loading PDF Engine...';

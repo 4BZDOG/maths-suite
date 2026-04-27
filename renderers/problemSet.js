@@ -1,7 +1,7 @@
 // renderers/problemSet.js — Renders a set of maths questions (Easy/Medium/Hard)
 import { renderKaTeX } from './katexRender.js';
 import { esc, formatClue } from './htmlUtils.js';
-import { getTopicOutcomeCodes, DEFAULT_STAGE } from '../core/outcomes.js';
+import { getTopicOutcomeCodes, getOutcomesForTopics, DEFAULT_STAGE } from '../core/outcomes.js';
 import { renderDiagramSVG } from './diagramSVG.js';
 
 const TOPIC_COLOURS = {
@@ -14,23 +14,41 @@ const TOPIC_COLOURS = {
 export function renderProblemSet(container, questions, settings, difficultyLabel) {
     if (!container) return;
 
-    const cols             = settings.cols || 2;
-    const showTopic        = settings.showTopic || false;
-    const showOutcomeChips = settings.psShowOutcomeChips || false;
-    const capPages         = settings.psCapPages || 0;
-    const showDiagrams     = settings.showDiagrams !== false;   // default true
-    const stage            = settings.stage || DEFAULT_STAGE;
+    const cols               = settings.cols || 2;
+    const showTopic          = settings.showTopic || false;
+    const showOutcomeChips   = settings.psShowOutcomeChips || false;
+    const showOutcomesHeader = settings.psShowOutcomesHeader || false;
+    const capPages           = settings.psCapPages || 0;
+    const showDiagrams       = settings.showDiagrams !== false;   // default true
+    const stage              = settings.stage || DEFAULT_STAGE;
+    const activeTopics       = settings.activeTopics || [];
 
     if (!questions || questions.length === 0) {
         container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:40px;">
             No ${difficultyLabel || ''} questions generated yet.<br>
             <small>Select topics and click Generate.</small></div>`;
-        return;
+        return 0;
+    }
+
+    // Optional outcomes header — compact strip of NESA outcome pills
+    let outcomesHeaderHtml = '';
+    if (showOutcomesHeader && activeTopics.length > 0) {
+        const outcomes = getOutcomesForTopics(activeTopics, stage);
+        if (outcomes.length > 0) {
+            const pillsHtml = outcomes.map(o => {
+                const pillColor = o.appliesAll ? '#6366f1' : '#10b981';
+                return `<span style="display:inline-block;background:${pillColor}15;color:${pillColor};border:1px solid ${pillColor}30;border-radius:4px;padding:1px 6px;font-size:9.5px;font-weight:700;white-space:nowrap;" title="${esc(o.contentLabel)}: ${esc(o.statement)}">${esc(o.code)}</span>`;
+            }).join(' ');
+            outcomesHeaderHtml = `<div style="margin-bottom:8px;padding:5px 8px;background:var(--bg-page,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:6px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
+                <span style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted,#94a3b8);margin-right:2px;white-space:nowrap;">Outcomes</span>
+                ${pillsHtml}
+            </div>`;
+        }
     }
 
     const colStyle = cols === 1 ? 'grid-template-columns: 1fr' : 'grid-template-columns: 1fr 1fr';
 
-    let html = `<div class="problem-set-grid" style="display:grid; ${colStyle}; gap:18px 20px; padding:4px;">`;
+    let html = outcomesHeaderHtml + `<div class="problem-set-grid" style="display:grid; ${colStyle}; gap:18px 20px; padding:4px;">`;
 
     questions.forEach((item, i) => {
         const topicColor = TOPIC_COLOURS[item.topic] || '#64748b';
