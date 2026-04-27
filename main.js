@@ -843,15 +843,18 @@ window.addEventListener('load', async () => {
         setupSidebarResize();
         setupSortableList('#page-order-list', () => saveState());
         setupDragAndDrop((f) => {
-            // JSON config restore only (no CSV import needed anymore)
+            if (!f.name.toLowerCase().endsWith('.json')) {
+                showToast('Only .json config files are supported. Drop a file saved via Export Config.', 'error');
+                return;
+            }
             const r = new FileReader();
             r.onload = e => {
                 try {
                     const parsed = JSON.parse(e.target.result);
                     applyStateToDOM(parsed);
                     generateAll();
-                    showToast('Config loaded');
-                } catch { showToast('Invalid JSON file', 'error'); }
+                    showToast(`Config loaded from ${f.name}`);
+                } catch { showToast('Invalid JSON — not a valid config file.', 'error'); }
             };
             r.onerror = () => showToast('Failed to read file.', 'error');
             r.readAsText(f);

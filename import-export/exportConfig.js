@@ -13,9 +13,10 @@ export function downloadConfig() {
         settings:        state.settings,
         watermarkSrc:    state.watermarkSrc,
     });
+    const title = (state.settings.title || 'MathsQuiz').replace(/[^a-z0-9-_]/gi, '_').slice(0, 40);
     const a = document.createElement('a');
     a.href     = 'data:text/json;charset=utf-8,' + encodeURIComponent(payload);
-    a.download = 'maths-quiz-config.json';
+    a.download = `${title}-config.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
