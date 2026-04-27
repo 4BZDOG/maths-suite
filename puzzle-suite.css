@@ -2762,6 +2762,10 @@ table.mode-cw td.cell.empty {
 }
 #btn-generate:hover { background: var(--primary-hover); }
 #btn-generate:disabled { opacity: 0.6; cursor: not-allowed; }
+#btn-generate.no-topics { background: #94a3b8; }
+#btn-generate.no-topics:hover { background: #7c8fa3; }
+[data-theme="dark"] #btn-generate.no-topics { background: #475569; }
+[data-theme="dark"] #btn-generate.no-topics:hover { background: #334155; }
 
 /* Status row */
 .status-row {

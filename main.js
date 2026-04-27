@@ -56,12 +56,7 @@ function generateAll() {
     syncSettingsFromDOM();
     const topics = getActiveTopics();
 
-    // Show loading state on generate button
-    const btn = document.getElementById('btn-generate');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Generating…'; }
-
     if (topics.length === 0) {
-        // Distinguish: all topics unchecked vs outcome filter excluded everything
         const allSelected = ALL_SUBTOPICS.filter(t => state.selectedTopics[t]);
         const hasOutcomeFilter = Object.values(state.selectedOutcomes).some(Boolean);
         if (allSelected.length > 0 && hasOutcomeFilter) {
@@ -69,9 +64,12 @@ function generateAll() {
         } else {
             showToast('Select at least one topic to generate questions.', 'warning');
         }
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bolt"></i> Regenerate'; }
         return;
     }
+
+    // Show loading state only when we will actually generate
+    const btn = document.getElementById('btn-generate');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Generating…'; }
 
     // Always generate enough questions to fill the selected number of pages
     const GENERATE_COUNT = 30;
@@ -88,7 +86,6 @@ function generateAll() {
 
     setGeneratedSets(sets);
     renderActivePage();
-    updateStatus();
     saveState();
 
     const total = (sets.easy?.length || 0) + (sets.medium?.length || 0) + (sets.hard?.length || 0);
@@ -162,6 +159,7 @@ function renderActivePage() {
     _lastRenderedCounts = { easy: nEasy, medium: nMedium, hard: nHard };
     _updateQuestionsPerPageSummary(nEasy, nMedium, nHard, pages);
     _updatePageButtonLabels(nEasy, nMedium, nHard);
+    updateStatus();
     renderExportPreview();
 }
 
@@ -175,7 +173,15 @@ function _updateQuestionsPerPageSummary(nEasy, nMedium, nHard, pages) {
         { label: 'Medium', n: nMedium, color: '#f59e0b' },
         { label: 'Hard',   n: nHard,   color: '#ef4444' },
     ].filter(r => r.n > 0);
-    if (rows.length === 0) { el.innerHTML = '<span style="opacity:.6;">Click Regenerate to see question counts.</span>'; return; }
+    if (rows.length === 0) {
+        const generated = (state.generatedSets.easy?.length || 0) + (state.generatedSets.medium?.length || 0) + (state.generatedSets.hard?.length || 0);
+        if (generated > 0) {
+            el.innerHTML = '<span style="color:#d97706;"><i class="fas fa-exclamation-triangle" style="margin-right:3px;"></i>None fit — reduce font scale or switch to larger paper.</span>';
+        } else {
+            el.innerHTML = '<span style="opacity:.6;">Click Regenerate to see question counts.</span>';
+        }
+        return;
+    }
     el.innerHTML = rows.map(r => {
         const sub = pages > 1 ? ` <span style="opacity:0.65;">(${perPage(r.n)})</span>` : '';
         return `<span style="color:${r.color}; font-weight:600;">${r.label}:</span> ${r.n} question${r.n !== 1 ? 's' : ''} across ${pageLabel}${sub}`;
@@ -359,8 +365,7 @@ function renderExportPreview() {
 
     if (!isPro) {
         html += `<hr class="ep-divider">
-        <div class="ep-note"><i class="fas fa-tint" style="color:#6366f1; margin-right:3px;"></i> Free plan: watermark on every page</div>
-        <div class="ep-note"><i class="fas fa-font" style="color:#6366f1; margin-right:3px;"></i> Free plan: system font (Inter)</div>`;
+        <div class="ep-note"><i class="fas fa-tint" style="color:#6366f1; margin-right:3px;"></i> Free plan: watermark on every page</div>`;
     }
 
     body.innerHTML = html;
@@ -390,6 +395,7 @@ function updateGlobalFontScale() {
         if (valDisp) valDisp.innerText = v.toFixed(2) + 'x';
         document.documentElement.style.setProperty('--global-font-scale', v);
         saveState();
+        renderActivePage();
     }
 }
 
@@ -410,6 +416,7 @@ function updatePaperSize() {
     document.documentElement.style.setProperty('--page-width',  isLetter ? '215.9mm' : '210mm');
     document.documentElement.style.setProperty('--page-height', isLetter ? '279.4mm' : '297mm');
     saveState();
+    renderActivePage();
 }
 
 function updatePageScales() {
@@ -497,9 +504,28 @@ function setTopicsAll(enabled) {
 }
 
 function updateTopicCount() {
-    const count = getActiveTopics().length;
+    const rawSelected = ALL_SUBTOPICS.filter(t => state.selectedTopics[t]).length;
+    const active = getActiveTopics().length;
     const el = document.getElementById('topic-count');
-    if (el) el.textContent = `${count} of ${ALL_SUBTOPICS.length} selected`;
+    if (el) {
+        const filtered = rawSelected - active;
+        if (filtered > 0 && active === 0) {
+            el.innerHTML = `<span style="color:#d97706;" title="${rawSelected} topic${rawSelected !== 1 ? 's' : ''} selected, all excluded by outcome filter">none active (all filtered)</span>`;
+        } else if (filtered > 0) {
+            el.innerHTML = `${active} active <span style="color:#d97706; font-size:10px;" title="${rawSelected} selected · ${filtered} excluded by outcome filter">(${filtered} filtered)</span>`;
+        } else if (rawSelected === 0) {
+            el.innerHTML = `<span style="color:#d97706;">none selected</span>`;
+        } else {
+            el.textContent = `${rawSelected} of ${ALL_SUBTOPICS.length} selected`;
+        }
+    }
+    _updateGenerateButtonState(active);
+}
+
+function _updateGenerateButtonState(active) {
+    const btn = document.getElementById('btn-generate');
+    if (!btn) return;
+    btn.classList.toggle('no-topics', active === 0);
 }
 
 /**
@@ -528,9 +554,13 @@ function renderOutcomes() {
     
     const activeFilterCodes = Object.keys(state.selectedOutcomes).filter(c => state.selectedOutcomes[c]);
     if (activeFilterCodes.length > 0) {
-        noticeContainer.innerHTML = `<div class="outcome-filter-notice" style="margin-top:8px;">
-            Generating questions for <strong>${activeFilterCodes.length}</strong> selected outcome${activeFilterCodes.length > 1 ? 's' : ''}.
-            <button class="outcome-filter-clear" onclick="clearOutcomeFilter()">Clear filter</button>
+        const pillsHtml = activeFilterCodes.map(c =>
+            `<span style="background:rgba(99,102,241,0.12);color:#6366f1;border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;">${c}</span>`
+        ).join(' ');
+        noticeContainer.innerHTML = `<div class="outcome-filter-notice" style="margin-top:8px; flex-wrap:wrap; gap:4px;">
+            <i class="fas fa-filter" style="font-size:10px; flex-shrink:0;"></i>
+            <span style="flex-shrink:0;">Filtering by:</span>${pillsHtml}
+            <button class="outcome-filter-clear" onclick="clearOutcomeFilter()">Clear</button>
         </div>`;
     } else {
         noticeContainer.innerHTML = '';
@@ -574,7 +604,8 @@ function renderOutcomes() {
 
 function toggleOutcomeFilter(code, checked) {
     state.selectedOutcomes[code] = checked;
-    renderOutcomes();    // re-render to update notice
+    renderOutcomes();
+    updateTopicCount();
     debouncedGenerate();
     saveState();
 }
@@ -582,14 +613,15 @@ function toggleOutcomeFilter(code, checked) {
 function clearOutcomeFilter() {
     Object.keys(state.selectedOutcomes).forEach(k => { state.selectedOutcomes[k] = false; });
     renderOutcomes();
+    updateTopicCount();
     debouncedGenerate();
     saveState();
 }
 
 function toggleSubOp(topic, opKey) {
     syncSettingsFromDOM();
-    // Update parent checkbox indeterminate state
     _updateParentCheckbox(topic);
+    updateTopicCount();
     saveState();
 }
 
