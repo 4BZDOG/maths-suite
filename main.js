@@ -381,6 +381,10 @@ function renderExportPreview() {
     }
 }
 
+function _titleToFilename(t) {
+    return (t || 'MathsQuiz').replace(/[^a-z0-9-_\s]/gi, '').trim().replace(/\s+/g, '_').replace(/_+/g, '_').slice(0, 40) || 'MathsQuiz';
+}
+
 function updateUI() {
     const fsEl = document.getElementById('fontSelect');
     if (fsEl) document.documentElement.style.setProperty('--user-font', fsEl.value);
@@ -388,6 +392,8 @@ function updateUI() {
     const sub = document.getElementById('subInput')?.value || 'Stage 4 Review';
     document.querySelectorAll('.disp-title').forEach(el => el.innerText = t);
     document.querySelectorAll('.disp-sub').forEach(el => el.innerText = sub);
+    const filenameEl = document.getElementById('exportFilename');
+    if (filenameEl) filenameEl.value = _titleToFilename(t);
 }
 
 function updateGlobalFontScale() {

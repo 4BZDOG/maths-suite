@@ -47,16 +47,16 @@
                         class="fas fa-save"></i></button>
                 <button onclick="document.getElementById('file-input').click()" title="Load config"
                     aria-label="Load configuration"><i class="fas fa-folder-open"></i></button>
-                <button onclick="hardReset()" title="Reset all" aria-label="Reset all settings and words"><i
-                        class="fas fa-redo"></i></button>
+                <button onclick="hardReset()" title="Reset all settings (cannot be undone)" aria-label="Reset all settings"><i
+                        class="fas fa-rotate-left"></i></button>
             </div>
         </div>
         <div class="nav-tabs" role="tablist" aria-label="Sidebar panels">
-            <div class="nav-tab active" onclick="switchTab('content')" data-tab="content" role="tab"
+            <div class="nav-tab active" onclick="switchTab('content')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" data-tab="content" role="tab"
                 aria-selected="true" tabindex="0"><i class="fas fa-list"></i> Editor</div>
-            <div class="nav-tab" onclick="switchTab('design')" data-tab="design" role="tab" aria-selected="false"
+            <div class="nav-tab" onclick="switchTab('design')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" data-tab="design" role="tab" aria-selected="false"
                 tabindex="-1"><i class="fas fa-sliders-h"></i> Settings</div>
-            <div class="nav-tab" onclick="switchTab('export')" data-tab="export" role="tab" aria-selected="false"
+            <div class="nav-tab" onclick="switchTab('export')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" data-tab="export" role="tab" aria-selected="false"
                 tabindex="-1"><i class="fas fa-download"></i> Export</div>
         </div>
         <div class="scroll-area">

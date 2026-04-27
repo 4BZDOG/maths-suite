@@ -13,7 +13,7 @@ export function downloadConfig() {
         settings:        state.settings,
         watermarkSrc:    state.watermarkSrc,
     });
-    const title = (state.settings.title || 'MathsQuiz').replace(/[^a-z0-9-_]/gi, '_').slice(0, 40);
+    const title = (state.settings.title || 'MathsQuiz').replace(/[^a-z0-9-_\s]/gi, '').trim().replace(/\s+/g, '_').replace(/_+/g, '_').slice(0, 40) || 'MathsQuiz';
     const a = document.createElement('a');
     a.href     = 'data:text/json;charset=utf-8,' + encodeURIComponent(payload);
     a.download = `${title}-config.json`;
