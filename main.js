@@ -195,10 +195,16 @@ function _updateQuestionsPerPageSummary(nEasy, nMedium, nHard, pages) {
 function _updatePageButtonLabels(nEasy, nMedium, nHard) {
     const btns = document.querySelectorAll('.page-btn');
     if (btns.length < 4) return;
-    btns[0].textContent = nEasy   > 0 ? `Easy (${nEasy})`     : 'Easy';
-    btns[1].textContent = nMedium > 0 ? `Medium (${nMedium})` : 'Medium';
-    btns[2].textContent = nHard   > 0 ? `Hard (${nHard})`     : 'Hard';
-    // btns[3] is the Key button — no count needed
+    const ICONS  = ['fa-seedling', 'fa-bolt', 'fa-fire', 'fa-key'];
+    const labels = [
+        nEasy   > 0 ? `Easy (${nEasy})`     : 'Easy',
+        nMedium > 0 ? `Medium (${nMedium})` : 'Medium',
+        nHard   > 0 ? `Hard (${nHard})`     : 'Hard',
+        'Key',
+    ];
+    btns.forEach((btn, i) => {
+        btn.innerHTML = `<i class="fas ${ICONS[i]}"></i> ${labels[i]}`;
+    });
 }
 
 function renderTierUI() {
@@ -444,12 +450,22 @@ function updatePageScales() {
     renderActivePage();
 }
 
+const _PAGE_CRUMBS = [
+    { icon: 'fa-seedling', color: '#10b981', label: 'Easy Questions'   },
+    { icon: 'fa-bolt',     color: '#f59e0b', label: 'Medium Questions' },
+    { icon: 'fa-fire',     color: '#ef4444', label: 'Hard Questions'   },
+    { icon: 'fa-key',      color: '#6366f1', label: 'Answer Key'       },
+];
+
 function showPage(n) {
     setActivePage(n);
     document.querySelectorAll('.page').forEach(p => p.classList.remove('visible'));
     const pEl = document.getElementById('page' + n);
     if (pEl) pEl.classList.add('visible');
     document.querySelectorAll('.page-btn').forEach((b, i) => b.classList.toggle('active', i + 1 === n));
+    const c = _PAGE_CRUMBS[n - 1];
+    const crumb = document.getElementById('page-crumb');
+    if (crumb && c) crumb.innerHTML = `<i class="fas ${c.icon}" style="color:${c.color};"></i> ${c.label}`;
     renderActivePage();
     document.querySelector('.viewport')?.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -573,7 +589,7 @@ function renderOutcomes() {
         noticeContainer.innerHTML = `<div class="outcome-filter-notice" style="margin-top:8px; flex-wrap:wrap; gap:4px;">
             <i class="fas fa-filter" style="font-size:10px; flex-shrink:0;"></i>
             <span style="flex-shrink:0;">Filtering by:</span>${pillsHtml}
-            <button class="outcome-filter-clear" onclick="clearOutcomeFilter()">Clear</button>
+            <button class="outcome-filter-clear" onclick="clearOutcomeFilter()"><i class="fas fa-xmark" style="margin-right:3px; font-size:9px;"></i>Clear</button>
         </div>`;
     } else {
         noticeContainer.innerHTML = '';
@@ -688,7 +704,7 @@ function _buildSubOpsPanels() {
                 return `<label class="sub-op-row">
                     <input type="checkbox" id="subop-${topicId}-${op.key}" ${checked ? 'checked' : ''}
                            onchange="toggleSubOp('${t}', '${op.key}')">
-                    <span class="sub-op-name">${op.label}</span>
+                    <span class="sub-op-name"><i class="fas fa-angle-right sub-op-icon"></i>${op.label}</span>
                 </label>`;
             }).join('');
         }

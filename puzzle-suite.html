@@ -447,18 +447,19 @@
     <main>
         <div class="preview-toolbar">
             <div class="page-tabs">
-                <button class="page-btn active" onclick="showPage(1)"><i class="fas fa-seedling"></i> Easy</button>
-                <button class="page-btn" onclick="showPage(2)"><i class="fas fa-bolt"></i> Medium</button>
-                <button class="page-btn" onclick="showPage(3)"><i class="fas fa-fire"></i> Hard</button>
-                <button class="page-btn" onclick="showPage(4)"><i class="fas fa-key"></i> Key</button>
+                <button class="page-btn active" data-page="1" onclick="showPage(1)"><i class="fas fa-seedling"></i> Easy</button>
+                <button class="page-btn" data-page="2" onclick="showPage(2)"><i class="fas fa-bolt"></i> Medium</button>
+                <button class="page-btn" data-page="3" onclick="showPage(3)"><i class="fas fa-fire"></i> Hard</button>
+                <button class="page-btn" data-page="4" onclick="showPage(4)"><i class="fas fa-key"></i> Key</button>
             </div>
+            <div class="page-crumb" id="page-crumb"><i class="fas fa-seedling" style="color:#10b981;"></i> Easy Questions</div>
             <div class="zoom-controls">
-                <button class="zoom-btn" onclick="adjustZoom(-0.1)" aria-label="Zoom Out"><i
-                        class="fas fa-minus"></i></button>
-                <span id="zoom-level" title="Double-click to reset zoom" ondblclick="resetZoom()"
-                    style="font-size:11px; font-weight:600; color:var(--text-muted); min-width:36px; text-align:center; cursor:default; user-select:none;">100%</span>
-                <button class="zoom-btn" onclick="adjustZoom(0.1)" aria-label="Zoom In"><i
-                        class="fas fa-plus"></i></button>
+                <button class="zoom-btn" onclick="adjustZoom(-0.1)" aria-label="Zoom Out"><i class="fas fa-minus"></i></button>
+                <div class="zoom-display" title="Double-click to reset zoom" ondblclick="resetZoom()">
+                    <i class="fas fa-magnifying-glass zoom-display-icon"></i>
+                    <span id="zoom-level" style="cursor:default; user-select:none;">100%</span>
+                </div>
+                <button class="zoom-btn" onclick="adjustZoom(0.1)" aria-label="Zoom In"><i class="fas fa-plus"></i></button>
             </div>
         </div>
         <div class="viewport">
@@ -555,7 +556,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=106"></script>
+    <script src="bundle.js?v=107"></script>
 </body>
 
 </html>

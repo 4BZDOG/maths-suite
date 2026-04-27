@@ -979,12 +979,24 @@ main {
     border-bottom: 1px solid var(--border);
     padding: 10px 20px;
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
     gap: 16px;
     flex-shrink: 0;
     box-shadow: var(--shadow-sm);
     z-index: 20;
+}
+
+.page-crumb {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    opacity: 0.8;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    pointer-events: none;
+    white-space: nowrap;
 }
 
 .page-tabs {
@@ -1029,13 +1041,33 @@ main {
     border: 1px solid var(--border);
 }
 
+/* Difficulty-colored active states — higher specificity wins over .page-btn.active */
+.page-btn[data-page="1"].active { color: #10b981; border-bottom-color: #10b981; }
+.page-btn[data-page="2"].active { color: #f59e0b; border-bottom-color: #f59e0b; }
+.page-btn[data-page="3"].active { color: #ef4444; border-bottom-color: #ef4444; }
+
+.zoom-display {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 52px;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.zoom-display-icon {
+    font-size: 9px;
+    opacity: 0.55;
+}
+
 .zoom-controls {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-left: 20px;
     border-left: 1px solid var(--border);
-    padding-left: 20px;
+    padding-left: 16px;
 }
 
 .zoom-btn {
@@ -1652,9 +1684,11 @@ table.mode-cw td.cell.empty {
     }
 
     .zoom-controls {
-        margin-left: 8px;
+        margin-left: 0;
         padding-left: 8px;
     }
+
+    .page-crumb { display: none; }
 }
 
 .loading-icon {
@@ -2688,6 +2722,17 @@ table.mode-cw td.cell.empty {
 }
 .sub-op-name {
     font-weight: 400;
+    display: flex;
+    align-items: center;
+}
+
+.sub-op-icon {
+    width: 10px;
+    font-size: 8px;
+    opacity: 0.35;
+    flex-shrink: 0;
+    margin-right: 5px;
+    text-align: center;
 }
 
 /* Answer key 3-column grid */
