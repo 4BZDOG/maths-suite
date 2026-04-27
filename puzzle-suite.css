@@ -2774,6 +2774,10 @@ table.mode-cw td.cell.empty {
 #btn-generate.no-topics:hover { background: #7c8fa3; }
 [data-theme="dark"] #btn-generate.no-topics { background: #475569; }
 [data-theme="dark"] #btn-generate.no-topics:hover { background: #334155; }
+#btn-generate.pending { background: #d97706; }
+#btn-generate.pending:hover { background: #b45309; }
+[data-theme="dark"] #btn-generate.pending { background: #b45309; }
+[data-theme="dark"] #btn-generate.pending:hover { background: #92400e; }
 
 /* Status row */
 .status-row {

@@ -91,6 +91,8 @@ function generateAll() {
     const total = (sets.easy?.length || 0) + (sets.medium?.length || 0) + (sets.hard?.length || 0);
     if (total === 0) showToast('No questions generated. Enable at least one operation per topic.', 'warning');
 
+    _pendingTopicChange = false;
+    _updateGenerateButtonState(getActiveTopics().length);
     if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bolt"></i> Regenerate'; }
 }
 
@@ -99,6 +101,8 @@ const debouncedUpdateUI = debounceFn(() => { saveState(); updateUI(); }, 500);
 
 // Stores the last rendered visible question counts; read by renderExportPreview()
 let _lastRenderedCounts = { easy: 0, medium: 0, hard: 0 };
+// Tracks whether topic/sub-op changes have been made since the last generateAll()
+let _pendingTopicChange = false;
 
 // =============================================================
 // Status badge
@@ -472,7 +476,7 @@ function toggleTopic(topicName) {
         if (parentEl) parentEl.indeterminate = false;
     }
     saveState();
-    // Don't auto-regenerate — user clicks Regenerate explicitly
+    _pendingTopicChange = true;
     updateTopicCount();
     renderOutcomes();
 }
@@ -498,6 +502,7 @@ function setTopicsAll(enabled) {
             }
         }
     });
+    _pendingTopicChange = true;
     updateTopicCount();
     renderOutcomes();
     saveState();
@@ -526,6 +531,7 @@ function _updateGenerateButtonState(active) {
     const btn = document.getElementById('btn-generate');
     if (!btn) return;
     btn.classList.toggle('no-topics', active === 0);
+    btn.classList.toggle('pending', active > 0 && _pendingTopicChange);
 }
 
 /**
@@ -621,6 +627,7 @@ function clearOutcomeFilter() {
 function toggleSubOp(topic, opKey) {
     syncSettingsFromDOM();
     _updateParentCheckbox(topic);
+    _pendingTopicChange = true;
     updateTopicCount();
     saveState();
 }
