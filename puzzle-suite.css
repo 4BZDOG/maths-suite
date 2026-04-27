@@ -1594,6 +1594,14 @@ table.mode-cw td.cell.empty {
     border-left: 5px solid var(--danger);
 }
 
+.toast.warning {
+    border-left: 5px solid #f59e0b;
+}
+
+.toast.info {
+    border-left: 5px solid #3b82f6;
+}
+
 .toast i {
     font-size: 1.2rem;
 }
@@ -1604,6 +1612,14 @@ table.mode-cw td.cell.empty {
 
 .toast.error i {
     color: var(--danger);
+}
+
+.toast.warning i {
+    color: #d97706;
+}
+
+.toast.info i {
+    color: #3b82f6;
 }
 
 #file-input {

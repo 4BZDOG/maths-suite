@@ -43,7 +43,7 @@
             <div class="brand-actions">
                 <button onclick="toggleDarkMode()" title="Toggle Dark Mode" id="btn-dark"
                     aria-label="Toggle dark mode"><i class="fas fa-moon"></i></button>
-                <button onclick="downloadConfig()" title="Save config" aria-label="Save configuration"><i
+                <button onclick="downloadConfig()" title="Save config (Ctrl+S)" aria-label="Save configuration"><i
                         class="fas fa-save"></i></button>
                 <button onclick="document.getElementById('file-input').click()" title="Load config"
                     aria-label="Load configuration"><i class="fas fa-folder-open"></i></button>
@@ -175,7 +175,7 @@
                 </div>
                 <div id="questions-per-page-summary" style="font-size:11px; color:var(--text-muted); margin-bottom:8px; line-height:1.7;"></div>
 
-                <button id="btn-generate" class="btn-primary" style="width:100%; margin-top:4px;" onclick="generateAll()">
+                <button id="btn-generate" class="btn-primary" style="width:100%; margin-top:4px;" onclick="generateAll()" title="Regenerate questions (Ctrl+Enter)">
                     <i class="fas fa-bolt"></i> Regenerate
                 </button>
 

@@ -13,7 +13,7 @@ export function showToast(msg, type = 'success') {
     const t = document.createElement('div');
     t.className = `toast ${type}`;
     const icon = document.createElement('i');
-    const iconMap = { success: 'check-circle', warning: 'exclamation-triangle', error: 'times-circle' };
+    const iconMap = { success: 'check-circle', warning: 'exclamation-triangle', error: 'times-circle', info: 'info-circle' };
     icon.className = `fas fa-${iconMap[type] || 'exclamation-circle'}`;
     t.appendChild(icon);
     t.appendChild(document.createTextNode(' ' + msg));
