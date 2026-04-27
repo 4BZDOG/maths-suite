@@ -649,6 +649,14 @@ input:focus-visible+.slider-switch {
     background: var(--primary-light);
 }
 
+.file-upload-wrapper.has-watermark {
+    border-style: solid;
+    border-color: #10b981;
+}
+.file-upload-wrapper.has-watermark .file-upload-icon { color: #10b981; }
+.file-upload-wrapper.has-watermark:hover { border-color: #059669; background: #f0fdf4; }
+[data-theme="dark"] .file-upload-wrapper.has-watermark:hover { background: #052e16; }
+
 .file-upload-wrapper input {
     position: absolute;
     top: 0;

@@ -17,7 +17,7 @@ import { generateMathsQuestions } from './generators/mathsQuestionGen.js';
 import { openModal, closeModal } from './ui/modal.js';
 import { setupSidebarResize, toggleSidebar, switchTab } from './ui/sidebar.js';
 import { toggleDarkMode } from './ui/darkMode.js';
-import { adjustZoom } from './ui/zoom.js';
+import { adjustZoom, resetZoom } from './ui/zoom.js';
 import { setupSortableList } from './ui/pageOrder.js';
 import { setupDragAndDrop } from './ui/dropZone.js';
 
@@ -695,6 +695,22 @@ function setPagesPerDifficulty(n) {
 // =============================================================
 // Watermark
 // =============================================================
+function _updateWatermarkUI() {
+    const wrapper = document.querySelector('.file-upload-wrapper');
+    const icon    = wrapper?.querySelector('.file-upload-icon');
+    const subtext = wrapper?.querySelector('.file-upload-subtext');
+    if (!wrapper) return;
+    if (state.watermarkSrc) {
+        wrapper.classList.add('has-watermark');
+        if (icon)    icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+        if (subtext) subtext.textContent = 'Watermark active · Click to replace';
+    } else {
+        wrapper.classList.remove('has-watermark');
+        if (icon)    icon.innerHTML = '<i class="fas fa-cloud-upload-alt"></i>';
+        if (subtext) subtext.textContent = 'Click to upload (Max 2MB)';
+    }
+}
+
 function handleImage(inp) {
     if (!inp.files[0]) return;
     if (inp.files[0].size > WATERMARK_MAX_BYTES) {
@@ -710,6 +726,7 @@ function handleImage(inp) {
             if (!img.closest('#page4')) { img.src = state.watermarkSrc; img.style.display = 'block'; }
         });
         saveState();
+        _updateWatermarkUI();
         showToast('Watermark added');
     };
     r.onerror = () => { showToast('Failed to read image file.', 'error'); inp.value = ''; };
@@ -718,6 +735,8 @@ function handleImage(inp) {
 
 function updateOpacity(v) {
     document.documentElement.style.setProperty('--wm-opacity', v);
+    const disp = document.getElementById('wmOpacityVal');
+    if (disp) disp.innerText = parseFloat(v).toFixed(2);
     saveState();
 }
 
@@ -727,6 +746,7 @@ function clearWatermark() {
     const bgU = document.getElementById('bgUpload');
     if (bgU) bgU.value = '';
     saveState();
+    _updateWatermarkUI();
     showToast('Watermark removed');
 }
 
@@ -748,6 +768,7 @@ window._puzzleApp = {
     toggleSidebar,
     switchTab,
     adjustZoom: (d) => adjustZoom(d),
+    resetZoom,
     showPage,
     focusPage,
     updateUI,
@@ -796,6 +817,7 @@ window.addEventListener('load', async () => {
                 if (!img.closest('#page4')) { img.src = state.watermarkSrc; img.style.display = 'block'; }
             });
         }
+        _updateWatermarkUI();
 
         _buildSubOpsPanels();
         _updateAllParentCheckboxes();
@@ -809,6 +831,7 @@ window.addEventListener('load', async () => {
         updateUI();
         updateTopicCount();
         renderOutcomes();
+        adjustZoom(0); // sync zoom display with restored state
 
         setupSidebarResize();
         setupSortableList('#page-order-list', () => saveState());

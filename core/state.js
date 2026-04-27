@@ -117,6 +117,7 @@ export function syncSettingsFromDOM() {
     s.showAnswerKey  = getChk('showAnswerKey', s.showAnswerKey);
     s.showExportId   = getChk('showExportId', s.showExportId);
     s.showTopic             = getChk('psShowTopic',            s.showTopic);
+    s.psShowOutcomesHeader  = getChk('psShowOutcomesHeader',   s.psShowOutcomesHeader);
     s.psShowOutcomeChips    = getChk('psShowOutcomeChips',     s.psShowOutcomeChips);
     s.showDiagrams          = getChk('psShowDiagrams',         s.showDiagrams);
     s.cols                  = parseInt(getVal('psCols', s.cols), 10);
@@ -284,6 +285,10 @@ export function applyStateToDOM(s) {
 
     if (cfg.wmOpacity !== undefined) {
         document.documentElement.style.setProperty('--wm-opacity', cfg.wmOpacity);
+        const slider = document.getElementById('wmOpacity');
+        if (slider) slider.value = cfg.wmOpacity;
+        const disp = document.getElementById('wmOpacityVal');
+        if (disp) disp.innerText = parseFloat(cfg.wmOpacity).toFixed(2);
     }
 
     if (cfg.opts) {

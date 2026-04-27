@@ -236,8 +236,9 @@
                         </div>
                         <div class="slider-row" style="margin-top:8px;">
                             <span class="slider-label">Watermark Opacity</span>
-                            <input type="range" min="0" max="1" step="0.05" value="0.15"
+                            <input type="range" id="wmOpacity" min="0" max="1" step="0.05" value="0.15"
                                 oninput="updateOpacity(this.value)">
+                            <span id="wmOpacityVal" class="slider-val">0.15</span>
                         </div>
                         <button onclick="clearWatermark()" class="btn-remove-watermark"
                             aria-label="Remove watermark image">Remove Watermark</button>
@@ -371,7 +372,6 @@
                                     type="checkbox" id="psShowTopic" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
                         <hr class="form-divider">
-                        <hr class="form-divider">
                         <div class="toggle-row"><label title="Show all relevant NESA outcomes with full code and description at the top of each worksheet">Outcomes Header</label><label class="switch"><input
                                     type="checkbox" id="psShowOutcomesHeader" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
@@ -410,9 +410,6 @@
                         </div>
                     </div>
                     <hr class="form-divider">
-                    <div class="toggle-row"><label>Show Answer Key Page</label><label class="switch"><input
-                                type="checkbox" id="showAnswerKey" checked onchange="saveState()"><span
-                                class="slider-switch"></span></label></div>
                     <div class="toggle-row"><label>Export ID in Footer</label><label class="switch"><input
                                 type="checkbox" id="showExportId" checked onchange="saveState()"><span
                                 class="slider-switch"></span></label></div>
@@ -470,6 +467,8 @@
             <div class="zoom-controls">
                 <button class="zoom-btn" onclick="adjustZoom(-0.1)" aria-label="Zoom Out"><i
                         class="fas fa-minus"></i></button>
+                <span id="zoom-level" title="Double-click to reset zoom" ondblclick="resetZoom()"
+                    style="font-size:11px; font-weight:600; color:var(--text-muted); min-width:36px; text-align:center; cursor:default; user-select:none;">100%</span>
                 <button class="zoom-btn" onclick="adjustZoom(0.1)" aria-label="Zoom In"><i
                         class="fas fa-plus"></i></button>
             </div>
