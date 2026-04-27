@@ -990,7 +990,7 @@ main {
 }
 
 .page-btn {
-    padding: 8px 16px;
+    padding: 8px 14px;
     border-radius: 6px;
     border: none;
     background: transparent;
@@ -1000,9 +1000,14 @@ main {
     font-size: 0.85rem;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
     transition: 0.15s;
     font-family: inherit;
+}
+
+.page-btn i {
+    font-size: 0.75rem;
+    opacity: 0.8;
 }
 
 .page-btn:hover {
@@ -2436,6 +2441,25 @@ table.mode-cw td.cell.empty {
 .topic-toggle-name {
     flex: 1;
     font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.topic-icon {
+    width: 14px;
+    text-align: center;
+    font-size: 10px;
+    opacity: 0.55;
+    flex-shrink: 0;
+}
+
+.page-order-icon {
+    width: 14px;
+    text-align: center;
+    font-size: 11px;
+    opacity: 0.65;
+    margin-right: 6px;
 }
 
 /* Shared structure for all outcome code badges */

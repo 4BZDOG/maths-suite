@@ -64,13 +64,13 @@
             <!-- EDITOR TAB -->
             <div id="panel-content" role="tabpanel" aria-labelledby="panel-content-tab">
                 <!-- MATHS TOPICS -->
-                <div class="section-label" style="margin-top:8px;">MATHS TOPICS</div>
+                <div class="section-label" style="margin-top:8px;"><i class="fas fa-calculator" style="margin-right:5px; opacity:.65;"></i>MATHS TOPICS</div>
                 <div class="topic-toggles" id="topic-toggles">
                     <!-- Integers → MA4-INT-C-01 -->
                     <div class="topic-group">
                         <label class="topic-toggle-row">
                             <input type="checkbox" id="topic-Integers" checked onchange="toggleTopic('Integers')">
-                            <span class="topic-toggle-name">Computation with Integers</span>
+                            <span class="topic-toggle-name"><i class="fas fa-hashtag topic-icon"></i>Computation with Integers</span>
                             <span class="outcome-chip" title="Computation with integers">MA4-INT-C-01</span>
                             <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Integers')"><i class="fas fa-chevron-down"></i></button>
                         </label>
@@ -80,7 +80,7 @@
                     <div class="topic-group">
                         <label class="topic-toggle-row">
                             <input type="checkbox" id="topic-Decimals" checked onchange="toggleTopic('Decimals')">
-                            <span class="topic-toggle-name">Decimals</span>
+                            <span class="topic-toggle-name"><i class="fas fa-superscript topic-icon"></i>Decimals</span>
                             <span class="outcome-chip" title="Fractions, decimals and percentages">MA4-FRC-C-01</span>
                             <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Decimals')"><i class="fas fa-chevron-down"></i></button>
                         </label>
@@ -90,7 +90,7 @@
                     <div class="topic-group">
                         <label class="topic-toggle-row">
                             <input type="checkbox" id="topic-Rounding" checked onchange="toggleTopic('Rounding')">
-                            <span class="topic-toggle-name">Rounding</span>
+                            <span class="topic-toggle-name"><i class="fas fa-compress-arrows-alt topic-icon"></i>Rounding</span>
                             <span class="outcome-chip" title="Fractions, decimals and percentages">MA4-FRC-C-01</span>
                             <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Rounding')"><i class="fas fa-chevron-down"></i></button>
                         </label>
@@ -100,7 +100,7 @@
                     <div class="topic-group">
                         <label class="topic-toggle-row">
                             <input type="checkbox" id="topic-Fractions" checked onchange="toggleTopic('Fractions')">
-                            <span class="topic-toggle-name">Fractions</span>
+                            <span class="topic-toggle-name"><i class="fas fa-divide topic-icon"></i>Fractions</span>
                             <span class="outcome-chip" title="Fractions, decimals and percentages">MA4-FRC-C-01</span>
                             <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Fractions')"><i class="fas fa-chevron-down"></i></button>
                         </label>
@@ -110,7 +110,7 @@
                     <div class="topic-group">
                         <label class="topic-toggle-row">
                             <input type="checkbox" id="topic-Percentages" checked onchange="toggleTopic('Percentages')">
-                            <span class="topic-toggle-name">Percentages</span>
+                            <span class="topic-toggle-name"><i class="fas fa-percent topic-icon"></i>Percentages</span>
                             <span class="outcome-chip" title="Fractions, decimals and percentages">MA4-FRC-C-01</span>
                             <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Percentages')"><i class="fas fa-chevron-down"></i></button>
                         </label>
@@ -120,7 +120,7 @@
                     <div class="topic-group">
                         <label class="topic-toggle-row">
                             <input type="checkbox" id="topic-Algebra" checked onchange="toggleTopic('Algebra')">
-                            <span class="topic-toggle-name">Algebraic Techniques</span>
+                            <span class="topic-toggle-name"><i class="fas fa-x topic-icon"></i>Algebraic Techniques</span>
                             <span class="outcome-chip" title="Algebraic techniques, Equations, Linear relationships">MA4-ALG/EQU/LIN</span>
                             <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Algebra')"><i class="fas fa-chevron-down"></i></button>
                         </label>
@@ -130,7 +130,7 @@
                     <div class="topic-group">
                         <label class="topic-toggle-row">
                             <input type="checkbox" id="topic-Geometry" checked onchange="toggleTopic('Geometry')">
-                            <span class="topic-toggle-name">Measurement & Geometry</span>
+                            <span class="topic-toggle-name"><i class="fas fa-draw-polygon topic-icon"></i>Measurement &amp; Geometry</span>
                             <span class="outcome-chip" title="Area, Properties of geometrical figures, Angle relationships, Pythagoras' theorem, Length">MA4-ARE/GEO/ANG…</span>
                             <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Geometry')"><i class="fas fa-chevron-down"></i></button>
                         </label>
@@ -140,7 +140,7 @@
                     <div class="topic-group">
                         <label class="topic-toggle-row">
                             <input type="checkbox" id="topic-Statistics" checked onchange="toggleTopic('Statistics')">
-                            <span class="topic-toggle-name">Data Analysis</span>
+                            <span class="topic-toggle-name"><i class="fas fa-chart-bar topic-icon"></i>Data Analysis</span>
                             <span class="outcome-chip" title="Data classification and visualisation, Data analysis">MA4-DAT-C-01/02</span>
                             <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Statistics')"><i class="fas fa-chevron-down"></i></button>
                         </label>
@@ -150,7 +150,7 @@
                     <div class="topic-group">
                         <label class="topic-toggle-row">
                             <input type="checkbox" id="topic-Financial-Maths" onchange="toggleTopic('Financial Maths')">
-                            <span class="topic-toggle-name">Financial Mathematics</span>
+                            <span class="topic-toggle-name"><i class="fas fa-dollar-sign topic-icon"></i>Financial Mathematics</span>
                             <span class="outcome-chip" title="Ratios and rates">MA4-RAT-C-01</span>
                             <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Financial Maths')"><i class="fas fa-chevron-down"></i></button>
                         </label>
@@ -158,14 +158,14 @@
                     </div>
                 </div>
                 <div style="display:flex; gap:8px; margin-top:4px;">
-                    <button class="btn-sec" style="flex:1; font-size:11px;" onclick="setTopicsAll(true)">All</button>
-                    <button class="btn-sec" style="flex:1; font-size:11px;" onclick="setTopicsAll(false)">None</button>
+                    <button class="btn-sec" style="flex:1; font-size:11px;" onclick="setTopicsAll(true)"><i class="fas fa-check-double" style="margin-right:4px;"></i>All</button>
+                    <button class="btn-sec" style="flex:1; font-size:11px;" onclick="setTopicsAll(false)"><i class="fas fa-xmark" style="margin-right:4px;"></i>None</button>
                     <span id="topic-count" style="font-size:11px; color:var(--text-muted); align-self:center; flex:2; text-align:right;">8 of 9 selected</span>
                 </div>
 
                 <!-- NESA Outcomes injected dynamically into topic accordions via JS -->
 
-                <div class="section-label" style="margin-top:16px;">PAGES PER DIFFICULTY</div>
+                <div class="section-label" style="margin-top:16px;"><i class="fas fa-layer-group" style="margin-right:5px; opacity:.65;"></i>PAGES PER DIFFICULTY</div>
                 <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
                     <select id="questionsPerSet" class="wm-select" style="flex:1;" onchange="setPagesPerDifficulty(this.value)">
                         <option value="1" selected>1 page per difficulty</option>
@@ -229,7 +229,7 @@
                             <span id="wmOpacityVal" class="slider-val">0.15</span>
                         </div>
                         <button onclick="clearWatermark()" class="btn-remove-watermark"
-                            aria-label="Remove watermark image">Remove Watermark</button>
+                            aria-label="Remove watermark image"><i class="fas fa-trash" style="margin-right:5px; font-size:11px;"></i>Remove Watermark</button>
                     </div>
                 </details>
 
@@ -382,19 +382,19 @@
                     <div id="page-order-list" class="sortable-list">
                         <div class="sortable-item" draggable="true" data-page="easy">
                             <i class="fas fa-grip-vertical drag-handle"></i><input type="checkbox" id="sel-easy"
-                                checked onchange="saveState(); renderExportPreview()"><span>Easy Questions</span>
+                                checked onchange="saveState(); renderExportPreview()"><span><i class="fas fa-seedling page-order-icon"></i>Easy Questions</span>
                         </div>
                         <div class="sortable-item" draggable="true" data-page="medium">
                             <i class="fas fa-grip-vertical drag-handle"></i><input type="checkbox" id="sel-medium" checked
-                                onchange="saveState(); renderExportPreview()"><span>Medium Questions</span>
+                                onchange="saveState(); renderExportPreview()"><span><i class="fas fa-bolt page-order-icon"></i>Medium Questions</span>
                         </div>
                         <div class="sortable-item" draggable="true" data-page="hard">
                             <i class="fas fa-grip-vertical drag-handle"></i><input type="checkbox" id="sel-hard" checked
-                                onchange="saveState(); renderExportPreview()"><span>Hard Questions</span>
+                                onchange="saveState(); renderExportPreview()"><span><i class="fas fa-fire page-order-icon"></i>Hard Questions</span>
                         </div>
                         <div class="sortable-item" draggable="true" data-page="key">
                             <i class="fas fa-grip-vertical drag-handle"></i><input type="checkbox" id="sel-key" checked
-                                onchange="saveState(); renderExportPreview()"><span>Answer Key</span>
+                                onchange="saveState(); renderExportPreview()"><span><i class="fas fa-key page-order-icon"></i>Answer Key</span>
                         </div>
                     </div>
                     <hr class="form-divider">
@@ -447,10 +447,10 @@
     <main>
         <div class="preview-toolbar">
             <div class="page-tabs">
-                <button class="page-btn active" onclick="showPage(1)">Easy</button>
-                <button class="page-btn" onclick="showPage(2)">Medium</button>
-                <button class="page-btn" onclick="showPage(3)">Hard</button>
-                <button class="page-btn" onclick="showPage(4)">Key</button>
+                <button class="page-btn active" onclick="showPage(1)"><i class="fas fa-seedling"></i> Easy</button>
+                <button class="page-btn" onclick="showPage(2)"><i class="fas fa-bolt"></i> Medium</button>
+                <button class="page-btn" onclick="showPage(3)"><i class="fas fa-fire"></i> Hard</button>
+                <button class="page-btn" onclick="showPage(4)"><i class="fas fa-key"></i> Key</button>
             </div>
             <div class="zoom-controls">
                 <button class="zoom-btn" onclick="adjustZoom(-0.1)" aria-label="Zoom Out"><i
@@ -555,7 +555,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=104"></script>
+    <script src="bundle.js?v=105"></script>
 </body>
 
 </html>

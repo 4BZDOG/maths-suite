@@ -11,9 +11,9 @@ export function renderKeys(container, generatedSets, settings) {
     const stage              = settings?.stage                || 'Stage 4';
 
     const sets = [
-        { label: 'EASY',   color: '#10b981', questions: generatedSets.easy   || [] },
-        { label: 'MEDIUM', color: '#f59e0b', questions: generatedSets.medium || [] },
-        { label: 'HARD',   color: '#ef4444', questions: generatedSets.hard   || [] },
+        { label: 'EASY',   icon: 'fa-seedling', color: '#10b981', questions: generatedSets.easy   || [] },
+        { label: 'MEDIUM', icon: 'fa-bolt',     color: '#f59e0b', questions: generatedSets.medium || [] },
+        { label: 'HARD',   icon: 'fa-fire',     color: '#ef4444', questions: generatedSets.hard   || [] },
     ].filter(s => s.questions.length > 0);
 
     if (sets.length === 0) {
@@ -47,7 +47,7 @@ export function renderKeys(container, generatedSets, settings) {
 
     sets.forEach(set => {
         html += `<div class="key-section">
-            <div class="key-section-title" style="color:${set.color}; border-bottom: 2px solid ${set.color}40;">${set.label}</div>
+            <div class="key-section-title" style="color:${set.color}; border-bottom: 2px solid ${set.color}40;"><i class="fas ${set.icon}" style="margin-right:5px; opacity:.85;"></i>${set.label}</div>
             <ol class="key-list">`;
         set.questions.forEach((q, i) => {
             const ans = esc(q.answerDisplay || q.answer || '');
