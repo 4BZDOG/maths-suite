@@ -1,4 +1,6 @@
-# CLAUDE.md — Developer Notes for Claude
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Build & Run
 ```bash
@@ -6,6 +8,8 @@ bash build.sh                  # esbuild bundles main.js → bundle.js
 python3 -m http.server 8082    # serve at http://localhost:8082/puzzle-suite.html
 ```
 After any JS change: rebuild, then bump `?v=N` in `<script src="bundle.js?v=N">` (puzzle-suite.html line ~461) to bypass browser cache.
+
+> CI does **not** require a local build before pushing — GitHub Actions runs `bash build.sh` automatically on every push to `main`.
 
 ## Tech Stack
 - **No framework** — vanilla JS ES modules, bundled by esbuild
@@ -19,9 +23,10 @@ After any JS change: rebuild, then bump `?v=N` in `<script src="bundle.js?v=N">`
 
 ```
 maths-suite/
-├── main.js                    # Entry point, orchestration, window API (~543 lines)
-├── puzzle-suite.html          # App shell, UI markup (~480 lines)
+├── main.js                    # Entry point, orchestration, window API (~945 lines)
+├── puzzle-suite.html          # App shell, UI markup (~561 lines)
 ├── puzzle-suite.css           # All styles, cascade layer architecture (~60 KB)
+├── index.html                 # Redirect from / → puzzle-suite.html (GitHub Pages root)
 ├── bundle.js                  # esbuild output (do not edit)
 ├── build.sh                   # esbuild build script
 ├── package.json               # version 60.3.0, devDep: esbuild
@@ -36,6 +41,7 @@ maths-suite/
 │   ├── problemSet.js          # Maths question grid (difficulty bands, outcome chips)
 │   ├── katexRender.js         # KaTeX math rendering on .katex-target elements
 │   ├── htmlUtils.js           # esc() HTML escaping utility
+│   ├── diagramSVG.js          # Inline SVG diagrams for geometry questions (5 shapes)
 │   ├── notes.js               # Vocabulary notes/matching table
 │   ├── wordSearch.js          # Word search grid + word bank
 │   ├── crossword.js           # ACROSS/DOWN clue layout, auto-scales to fit page
@@ -44,8 +50,8 @@ maths-suite/
 │   └── keys.js                # Answer key page (4 mini-grids)
 │
 ├── pdf/                       # PDF export pipeline
-│   ├── pdfExport.js           # Orchestrator: creates doc, loops sets/pages (~575 lines)
-│   ├── pdfHelpers.js          # Shared drawing utilities, emoji canvas fallback (~386 lines)
+│   ├── pdfExport.js           # Orchestrator: creates doc, loops sets/pages (~918 lines)
+│   ├── pdfHelpers.js          # Shared drawing utilities, emoji canvas fallback (~392 lines)
 │   ├── pdfFonts.js            # Lazy font loader from CDN (~94 lines)
 │   ├── pdfDrawProblemSet.js   # Problem set page drawing (~186 lines)
 │   ├── pdfDrawNotes.js        # Notes/matching page drawing (~189 lines)
@@ -60,19 +66,20 @@ maths-suite/
 │   ├── toast.js               # showToast(msg, type) — transient notifications
 │   ├── zoom.js                # Preview zoom 0.5x–2x
 │   ├── pageOrder.js           # Sortable page ordering via drag handles
+│   ├── accessPanel.js         # Admin feature-flag override panel (modal)
 │   └── dropZone.js            # Drag-and-drop .json/.csv/.txt config import
 │
 ├── generators/
-│   └── mathsQuestionGen.js    # Seeded PRNG (Mulberry32), 9 topics × 3–5 ops (~600 lines)
+│   └── mathsQuestionGen.js    # Seeded PRNG (Mulberry32), 9 topics × 3–5 ops (~1013 lines)
 │
 ├── import-export/
 │   ├── exportConfig.js        # downloadConfig() — saves state as .json
 │   └── importWords.js         # CSV/JSON word list import via modal
 │
 ├── payments/
-│   ├── access.js              # Free tier limits, clampBulkExportCount() (max 3 sets)
-│   ├── config.js              # Payment provider config
-│   └── session.js             # Session/auth stub
+│   ├── access.js              # hasFeature(), tier API, feature override management
+│   ├── config.js              # TIER, FEATURE flags, TIER_FEATURES, GROUPS, FREE_LIMITS
+│   └── session.js             # Session/auth stub (get/set/clearSession)
 │
 ├── ai/
 │   └── aiGenerate.js          # BYOK AI word generation (Gemini, Groq, OpenAI, Anthropic, OpenRouter)
@@ -100,7 +107,7 @@ maths-suite/
 | State → DOM | `applyStateToDOM(saved)` | Once at init (restores saved session) |
 
 ### Window API (`main.js`)
-All functions exposed both as `window.fnName` (for HTML `onclick`/`oninput`) and on `window._puzzleApp` (for programmatic use). When adding a new function, add it to BOTH export blocks (~lines 343 and 392 in main.js).
+All functions exposed both as `window.fnName` (for HTML `onclick`/`oninput`) and on `window._puzzleApp` (~line 812). When adding a new function, add it to BOTH export blocks.
 
 **Key exported functions:**
 - `generateAll()` — Main generation trigger
@@ -137,7 +144,7 @@ CSS custom properties used throughout:
 2. Creates jsPDF doc with paper size from `cfg.paperSize`
 3. Loads custom font (Inter/Roboto/Lora/Comic) via `pdfFonts.js` (lazy, CDN)
 4. Builds a `ctx` context object via `buildCtx()` — carries doc, dimensions, scale, pdfFont, drawWatermark
-5. Loops over sets (bulk export, clamped to 3 for free tier), then page types in `cfg.pageOrder`
+5. Loops over sets (bulk export, clamped by `getBulkExportLimit()`), then page types in `cfg.pageOrder`
 6. Each page: `drawHeader(ctx, title, sub, instruction, isKey, setIndicator, pScale)` → returns Y where content starts
 7. Passes layout `{ x, y, w, h }` to each `drawXxx()` function
 
@@ -154,17 +161,27 @@ PDF fonts (helvetica + custom loaded fonts) don't support emoji. The canvas fall
 
 The crossword renderer auto-scales clues to fit one page via `_autoScaleCluesToFit()` after DOM insertion.
 
+### Geometry Diagrams (`renderers/diagramSVG.js`)
+`renderDiagramSVG(diagram)` returns an inline SVG string for geometry questions. Supported diagram types:
+- `rectangle` — labelled length/width, `?` for missing area/perimeter
+- `right-triangle` — Pythagoras layout with right-angle mark, missing side shown as `?`
+- `triangle-angles` — scalene triangle with two known angles, third as `?`
+- `triangle-area` — triangle with dashed height line and right-angle mark
+- `circle` — radius line with missing area or circumference label
+
+Shape outlines use `#10b981` (emerald); missing values use `#ef4444` (red). Labels use `currentColor` so they adapt to light/dark mode automatically.
+
 ### Question Generation (`generators/mathsQuestionGen.js`)
 - **Seeded PRNG**: Mulberry32 — deterministic and reproducible
 - **9 topics**: Integers, Decimals, Rounding, Fractions, Percentages, Algebra, Geometry, Statistics, Financial Maths
 - **3–5 operations per topic** (add, subtract, multiply, divide, BODMAS, simplify, etc.)
-- Each question: `{id, topic, difficulty, clue, answer, answerDisplay, notes}`
+- Each question: `{id, topic, difficulty, clue, answer, answerDisplay, notes, diagram?}`
 - Difficulty controls working lines: Easy=0, Medium=1, Hard=2
 - NESA-aligned language using `CALC_VERBS` constant and keyword variety
+- Geometry questions may include a `diagram` object consumed by `renderDiagramSVG()`
 
 ### NESA Outcomes (`core/outcomes.js`)
 - `STAGE_OUTCOMES` — 16 outcome codes for Stage 4 (Year 7–8): MA4-INT-C-01, MA4-FRC-C-01, etc.
-- Each with statement and content label
 - `getOutcomesForTopics()`, `getTopicsForOutcomeCodes()` — bidirectional lookup
 - Outcome filter in sidebar reduces which topics/questions are shown
 
@@ -176,15 +193,39 @@ The crossword renderer auto-scales clues to fit one page via `_autoScaleCluesToF
 - **Pages 1 & 5 (Notes & Key)**: status dots reflect overall placement (WS or CW)
 - When switching pages, `showPage(n)` calls `_renderWordListAndStatus()` to update dots immediately
 
+### Feature Flag System (`payments/config.js` + `payments/access.js`)
+Features are gated by tier (`free`, `pro`, `admin`) and can be overridden per-session by an admin.
+
+```js
+// Check a feature anywhere in the app:
+if (!hasFeature(FEATURE.BULK_EXPORT)) { showToast('Pro only', 'warning'); return; }
+```
+
+Key constants in `payments/config.js`:
+- `TIER` — `{ FREE, PRO, ADMIN }`
+- `FEATURE` — enum of all feature keys (e.g. `BULK_EXPORT`, `AI_GENERATION`, `TWO_PAGE_MODE`)
+- `TIER_FEATURES` — maps each tier to a `Set` of enabled features
+- `FREE_LIMITS` — `{ BULK_EXPORT_MAX: 50, MONTHLY_EXPORTS: 10 }`
+- `GROUPS` — named feature bundles for the access panel (free, teacher_trial, school, pro, admin)
+
+Key functions in `payments/access.js`:
+- `hasFeature(key)` — checks overrides first, then tier defaults
+- `getCurrentTier()` — returns current session tier string
+- `setFeatureOverrides(map)` / `clearFeatureOverrides()` — admin override management
+- `getEffectiveFeatureMap()` — full map with source (`'tier'` or `'override'`) per feature
+- `getBulkExportLimit()` — returns the active bulk export ceiling for the current session
+
+### Admin Access Panel (`ui/accessPanel.js`)
+`openAccessPanel(onApply)` opens a modal letting an admin switch between group presets or toggle individual features. Changes are applied via `setFeatureOverrides()` and persist across reloads in the session. Functions exported to `window`:
+- `openAccessPanel`, `closeAccessPanel`
+- `applyGroupPreset(groupId)` — populates checkboxes from a named group
+- `acpFeatureChange()` — syncs group-preset button highlights after a checkbox change
+- `applyAccessOverrides()`, `resetAccessOverrides()`
+
 ### AI Word Generation (`ai/aiGenerate.js`)
 - BYOK (bring your own key): user supplies API key for Gemini, Groq, OpenAI, Anthropic, or OpenRouter
 - Planned: managed proxy via Cloudflare Worker for Pro tier (no key required)
 - Generates term/definition pairs for vocabulary puzzles
-
-### Access Control (`payments/access.js`)
-- `FREE_LIMITS` object defines quotas
-- `clampBulkExportCount(n)` — caps bulk PDF export at 3 sets for free tier
-- Future: server-side session validation for paid tiers
 
 ## Common Pitfalls
 - **Bundle caching**: `http.server` caches aggressively. Always bump `?v=N` after `build.sh`.
@@ -192,9 +233,9 @@ The crossword renderer auto-scales clues to fit one page via `_autoScaleCluesToF
 - **`innerText` vs `textContent`**: `innerText` returns `""` for elements inside collapsed `<details>`. Use `textContent` or call `syncSettingsFromDOM()` which uses `.value` / `.checked` (not innerText).
 - **`updatePageScales()` calls `renderActivePage()`**: it only re-renders the active page. After navigation, `showPage(n)` calls `renderActivePage()` automatically.
 - **`saveState()` is debounced 500 ms**: for sliders that need to immediately read state (e.g., `updateNotesStyles()`), always call `syncSettingsFromDOM()` first.
-- **Stale state on toggle changes**: `renderActivePage()` calls `syncSettingsFromDOM()` at the start so toggle/checkbox changes take effect immediately without waiting for the 500ms debounce. This ensures "Show Word Bank" and similar toggles update the preview instantly.
-- **Both window export blocks**: any new function in `main.js` must be added to BOTH the `window.fnName` block and the `window._puzzleApp` object.
-- **Answer key cap**: answer key trims to only the cap-to-1-page visible questions (see `b172deb`). Do not pass the full question list to the key renderer.
+- **Stale state on toggle changes**: `renderActivePage()` calls `syncSettingsFromDOM()` at the start so toggle/checkbox changes take effect immediately without waiting for the 500ms debounce.
+- **Both window export blocks**: any new function in `main.js` must be added to BOTH the `window.fnName` block and the `window._puzzleApp` object (~line 812).
+- **Answer key cap**: answer key trims to only the cap-to-1-page visible questions. Do not pass the full question list to the key renderer.
 
 ## Adding a New Setting
 1. Add default to `state.settings` in `core/state.js`
@@ -216,27 +257,4 @@ The crossword renderer auto-scales clues to fit one page via `_autoScaleCluesToF
 GitHub Actions (`.github/workflows/deploy.yml`) auto-deploys on every push to `main`:
 1. `npm ci` → `bash build.sh` → upload artifact → deploy to GitHub Pages
 2. Approx. 90s end-to-end
-
-## Recent Fixes & Improvements
-
-### Answer Key Fixes (post-v5)
-- Answer key now shows only cap-to-1-page visible questions (trimmed list, not full array)
-- Section label and outcomes header corrected in key layout
-- Outcome chips cap hint fixed
-
-### Question Language Variety (post-v5)
-- `CALC_VERBS` constant extracted in `mathsQuestionGen.js` for reuse
-- Increased variety using NESA maths keywords (compute, evaluate, determine, etc.)
-- `DEFAULT_STAGE` constant used in renderer for consistent stage labelling
-
-### Word List Button Spacing (v5)
-Fixed the word list reorder buttons being spaced too far from the word input. Changed the up/down button container from `flex:1` to `flex-shrink:0` (~24px natural width).
-
-### Emoji in PDF Instructions (v5)
-PDF instruction text now displays emoji correctly via `drawText()` canvas fallback in `pdfHelpers.js`.
-
-### Color-Code Active Words (v5)
-Word list status dots reflect placement in the currently-visible puzzle. `showPage(n)` triggers `_renderWordListAndStatus()`.
-
-### Stale State on Toggle Changes (v5)
-`renderActivePage()` now calls `syncSettingsFromDOM()` at the very start, so toggles like "Show Word Bank" take effect instantly.
+3. `index.html` at the repo root redirects `/` → `puzzle-suite.html` for a clean entry URL
