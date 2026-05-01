@@ -81,14 +81,16 @@ export function setAdminSession() {
 }
 
 /**
- * Placeholder for a real server round-trip.
- * Replace the body with a fetch to your /api/me endpoint.
+ * Re-validate the stored auth token with the Cloudflare Worker (/api/me).
+ * Updates the local session if tier or expiry has changed (e.g. renewal, cancellation).
+ * No-op when no token is stored or the worker URL is not yet configured.
+ * Imported lazily to avoid a circular dependency with payments/stripe.js.
  * @returns {Promise<Session>}
  */
 export async function refreshFromServer() {
-    // TODO: replace with real API call, e.g.:
-    // const resp = await fetch('/api/me', { headers: { Authorization: `Bearer ${getSession().token}` } });
-    // if (resp.ok) { const data = await resp.json(); setSession(data); }
+    // Lazy import avoids circular: session ← stripe ← config ← session
+    const { refreshSession } = await import('./stripe.js');
+    await refreshSession();
     return getSession();
 }
 

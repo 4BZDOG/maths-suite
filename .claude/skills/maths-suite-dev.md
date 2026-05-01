@@ -2,10 +2,11 @@
 name: maths-suite-dev
 description: >
   Development guide for maths-suite: a vanilla-JS, no-framework educational
-  puzzle app (word search, crossword, maths problem sets, PDF export).
-  Covers adding state settings, HTML renderers, PDF drawers, UI modules, and
-  question generators. Use whenever making feature changes, debugging, or
-  extending the app.
+  puzzle app (word search, crossword, maths problem sets, PDF export) with a
+  Stripe + Cloudflare Worker payments backend.
+  Covers adding state settings, HTML renderers, PDF drawers, UI modules,
+  question generators, feature flags, and Stripe integration.
+  Use whenever making feature changes, debugging, or extending the app.
 category: project
 ---
 
@@ -42,6 +43,8 @@ Always bump `?v=N` after every rebuild — `http.server` caches aggressively.
 | UI modules | `ui/*.js` | One-time setup + toggle actions |
 | Generators | `generators/mathsQuestionGen.js` | Seeded PRNG, 9 topics |
 | Orchestrator | `main.js` | Init, window API, routing |
+| Feature gates | `payments/access.js` + `payments/config.js` | `hasFeature()`, tier/group system |
+| Payments | `payments/stripe.js` + `stripe-worker/index.js` | Stripe Checkout + Cloudflare Worker |
 
 ---
 
@@ -51,7 +54,6 @@ Always bump `?v=N` after every rebuild — `http.server` caches aggressively.
    ```js
    settings: {
      myNewSetting: 'default',
-     // ...
    }
    ```
 
@@ -70,18 +72,61 @@ Always bump `?v=N` after every rebuild — `http.server` caches aggressively.
 
 5. **`main.js`** — add an update function, then export it in **both** blocks:
    ```js
-   // ~line 343 block:
+   // window.fnName block (Object.assign target):
    window.updateMyNewSetting = updateMyNewSetting;
-   // ~line 392 window._puzzleApp block:
+   // window._puzzleApp object:
    window._puzzleApp = { ..., updateMyNewSetting };
    ```
 
-6. **`main.js` init sequence** — call after `applyStateToDOM()`:
-   ```js
-   updateMyNewSetting();
-   ```
+6. **`main.js` init sequence** — call after `applyStateToDOM()`.
 
 7. **PDF**: if the setting affects PDF output, pass it via `cfg` (which is `state.settings`) or add it to `buildCtx()` in `pdf/pdfExport.js`.
+
+---
+
+## Checklist: Adding a New Feature Flag
+
+1. **`payments/config.js` → `FEATURE`** — add a new key:
+   ```js
+   export const FEATURE = Object.freeze({
+     MY_FEATURE: 'my_feature',
+     // ...
+   });
+   ```
+
+2. **`payments/config.js` → `TIER_FEATURES`** — decide which tier unlocks it:
+   ```js
+   [TIER.PRO]: new Set([
+     // existing features...
+     FEATURE.MY_FEATURE,
+   ]),
+   ```
+
+3. **`payments/config.js` → `FEATURE_META`** — add display metadata:
+   ```js
+   [FEATURE.MY_FEATURE]: { label: 'My Feature', desc: 'What it does', category: 'Content' },
+   ```
+   Valid categories: `'PDF / Export'`, `'Content'`, `'Config'`, `'Layout'`
+
+4. **Gate the feature wherever needed** using `hasFeature()`:
+   ```js
+   import { hasFeature, FEATURE } from './payments/access.js';
+
+   if (!hasFeature(FEATURE.MY_FEATURE)) {
+     showToast('My feature requires a Pro subscription.', 'warning');
+     return;
+   }
+   ```
+   Or use `requireFeature()` which calls showToast automatically:
+   ```js
+   if (!requireFeature(FEATURE.MY_FEATURE, showToast)) return;
+   ```
+
+5. **`payments/access.js` → `_upgradeMessage()`** — add an upgrade message for the feature.
+
+6. **`payments/config.js` → `GROUPS`** — add the feature to any relevant group presets (e.g. `teacher_trial`, `school`).
+
+The admin access panel (`ui/accessPanel.js`) picks up the new feature automatically from `FEATURE_META`.
 
 ---
 
@@ -95,27 +140,19 @@ import { renderKaTeX } from './katexRender.js';
 
 export function renderMyPage(container, data, settings) {
   if (!container) return;
-
-  const { someOption, cols } = settings;
-
   let html = `<div class="my-page-wrapper">`;
   for (const item of data) {
     html += `<div class="my-item">${esc(item.text)}</div>`;
   }
   html += `</div>`;
-
   container.innerHTML = html;
   renderKaTeX(container);   // only if content has LaTeX $...$
 }
 ```
 
-**Rules:**
 - Always use `esc()` for any user-supplied text injected into HTML.
-- Use `$...$` (inline) for LaTeX — never `$$` display mode.
 - Call `renderKaTeX(container)` *after* setting `innerHTML`.
-- Return a value (e.g. visible item count) only when the caller needs it.
-
-Register in `main.js` → `renderActivePage()` routing switch.
+- Register in `main.js` → `renderActivePage()` routing switch.
 
 ---
 
@@ -125,19 +162,16 @@ Create `pdf/pdfDrawMyPage.js`:
 
 ```js
 export function drawMyPage(ctx, data, startY, pScale, exportId) {
-  const { doc, PAGE_WIDTH, PAGE_HEIGHT, MARGIN, scale, pdfFont, drawWatermark } = ctx;
-
+  const { doc, PAGE_HEIGHT, MARGIN, scale, pdfFont, drawWatermark } = ctx;
   let cy = startY;
 
   for (const item of data) {
-    // Page overflow guard — always include this
     if (cy + 10 * scale > PAGE_HEIGHT - MARGIN - 10) {
       drawExportIdFooter(ctx, exportId, pScale);
       doc.addPage();
       drawWatermark();           // must redraw on every new page
       cy = MARGIN + 15 * scale;
     }
-
     doc.setFont(pdfFont, 'normal');
     doc.setFontSize(10 * pScale);
     doc.text(item.text, MARGIN, cy);
@@ -146,53 +180,125 @@ export function drawMyPage(ctx, data, startY, pScale, exportId) {
 }
 ```
 
-**Rules:**
-- `pScale` is the per-page font scale; `scale` is the global jsPDF unit scale.
+- `pScale` = per-page font scale; `scale` = global jsPDF unit scale.
 - Call `drawWatermark()` immediately after every `doc.addPage()`.
 - Call `drawExportIdFooter(ctx, exportId, pScale)` before adding a new page.
-- No return value — mutates `ctx.doc` in place.
-- Register the drawer in `pdf/pdfExport.js` page loop and add a `pageOrder` entry in `ui/pageOrder.js`.
+- Register the drawer in `pdf/pdfExport.js` page loop.
+- Add a `pageOrder` entry in `ui/pageOrder.js`.
 
 ---
 
 ## Checklist: Adding a New Question Generator (Topic)
 
-1. Add the topic to `SUB_OPS` in `generators/mathsQuestionGen.js`:
-   ```js
-   'MyTopic': [
-     { key: 'add', label: 'Add (+)' },
-     { key: 'subtract', label: 'Subtract (−)' },
-   ],
-   ```
-
-2. Write the generator function:
-   ```js
-   function genMyTopic(rng, diff, allowedOps) {
-     const OP_MAP = { '+': 'add', '-': 'subtract' };
-     let pool = diff === 'Easy' ? ['+'] : ['+', '-'];
-     if (allowedOps) pool = pool.filter(op => allowedOps.includes(OP_MAP[op]));
-     if (pool.length === 0) return null;
-
-     const op = rc(rng, pool);
-     const a = ri(rng, 1, 20);
-     const b = ri(rng, 1, 20);
-     const verb = rc(rng, CALC_VERBS);
-
-     return {
-       clue: `${verb} $${a} ${op} ${b}$`,
-       answer: String(op === '+' ? a + b : a - b),
-     };
-   }
-   ```
-
-3. Register in the dispatch table inside `generateMathsQuestions()`:
-   ```js
-   'MyTopic': genMyTopic,
-   ```
-
+1. Add the topic to `SUB_OPS` in `generators/mathsQuestionGen.js`.
+2. Write the generator function using `ri()`, `rc()`, `rf()` PRNG helpers.
+3. Register in the dispatch table inside `generateMathsQuestions()`.
 4. Add the NESA outcome mapping in `core/outcomes.js` if applicable.
 
-**PRNG helpers available:** `ri(rng, min, max)` → random int; `rc(rng, arr)` → random choice; `rf(rng)` → random float 0–1.
+**PRNG helpers:** `ri(rng, min, max)` → random int; `rc(rng, arr)` → random choice; `rf(rng)` → random float 0–1.
+
+---
+
+## Payments & Stripe — Architecture
+
+```
+Browser                     Cloudflare Worker              Stripe
+──────────                  ─────────────────              ──────
+initiateCheckout()  ──POST /api/checkout──►  POST /v1/checkout/sessions
+                    ◄── { url } ──────────   ◄── { url }
+window.location = url ──────────────────────────────────► Stripe Checkout
+                                                           (user pays)
+Stripe redirects to ?stripe_session=cs_xxx
+handleCheckoutReturn() ─POST /api/verify──►  GET /v1/checkout/sessions/cs_xxx
+                       ◄── { tier, token } ──────────────
+setSession(token) → localStorage
+
+(background on startup)
+refreshSession() ──GET /api/me──►  verify JWT, read KV
+                 ◄── { tier } ───  (updated by webhooks)
+
+(user manages billing)
+openCustomerPortal() ─POST /api/portal──►  POST /v1/billing_portal/sessions
+                     ◄── { url } ─────────
+window.location = url ─────────────────────────────────► Stripe Portal
+```
+
+**KV schema** (`SUBSCRIPTIONS` namespace):
+
+| Key | Value | TTL |
+|---|---|---|
+| `customer:{cid}` | `{ userId, tier, subscriptionId, status }` | none |
+| `user:{uid}` | `{ customerId, tier }` | none |
+| `verified:{cs_...}` | `{ token, tier, userId, expiresAt }` | 24 h |
+
+---
+
+## Checklist: Activating Stripe (when account details arrive)
+
+1. Fill in `payments/config.js` → `STRIPE_CONFIG`:
+   ```js
+   publishableKey: 'pk_live_...',
+   workerUrl:      'https://maths-suite-payments.YOUR.workers.dev',
+   prices: {
+     proMonthly: 'price_1ABC...',
+     proYearly:  'price_1XYZ...',
+   },
+   ```
+
+2. Create a KV namespace and deploy the worker:
+   ```bash
+   cd stripe-worker
+   npm install
+   wrangler kv:namespace create SUBSCRIPTIONS   # copy the ID into wrangler.toml
+   # edit wrangler.toml: set APP_URL
+   wrangler deploy
+   ```
+
+3. Set secrets (never commit these):
+   ```bash
+   wrangler secret put STRIPE_SECRET_KEY      # sk_live_...
+   wrangler secret put STRIPE_WEBHOOK_SECRET  # whsec_... from Stripe Dashboard
+   wrangler secret put JWT_SECRET             # openssl rand -base64 32
+   wrangler secret put PRICE_PRO_MONTHLY      # price_1ABC...
+   wrangler secret put PRICE_PRO_YEARLY       # price_1XYZ... (or leave blank)
+   ```
+
+4. Register `https://<worker-url>/api/webhooks` as a Stripe webhook endpoint.
+   Listen for: `customer.subscription.updated`, `customer.subscription.deleted`,
+   `invoice.payment_succeeded`, `invoice.payment_failed`.
+
+5. Rebuild and bump the bundle version:
+   ```bash
+   bash build.sh
+   # bump ?v=N in puzzle-suite.html
+   ```
+
+---
+
+## Checklist: Testing Stripe Locally
+
+```bash
+# 1. Start local app
+python3 -m http.server 8082
+
+# 2. Run worker locally (in stripe-worker/)
+wrangler dev --local
+
+# 3. Use Stripe CLI to forward webhooks to local worker
+stripe listen --forward-to http://localhost:8787/api/webhooks
+
+# 4. Trigger a test event
+stripe trigger customer.subscription.updated
+
+# 5. Test checkout flow with Stripe test card: 4242 4242 4242 4242
+```
+
+To simulate an active Pro session without going through checkout (for UI testing):
+```js
+// In browser console:
+setAdminMode(true)     // unlock all features
+setAdminMode(false)    // revert to free
+```
 
 ---
 
@@ -212,11 +318,9 @@ export function drawMyPage(ctx, data, startY, pScale, exportId) {
 
 Layers in ascending specificity: `base → layout → components → pages → utils`
 
-- **Dark-mode overrides** must be in `@layer components` or higher.  
-  Putting them in `@layer base` loses to component rules — they silently do nothing.
-- **CSS custom properties** are declared in `@layer base` on `:root`.  
-  Update them from JS with `document.documentElement.style.setProperty('--my-var', value)`.
-- **Dark mode** is driven by `data-theme="dark"` on `<body>` (not a class).
+- **Dark-mode overrides** must be in `@layer components` or higher.
+- **CSS custom properties** declared in `@layer base` on `:root`.
+- **Dark mode** driven by `data-theme="dark"` on `<body>` (not a class).
 
 ---
 
@@ -224,36 +328,43 @@ Layers in ascending specificity: `base → layout → components → pages → u
 
 | Gotcha | Fix |
 |---|---|
-| Old bundle after JS change | Rebuild (`bash build.sh`) **and** bump `?v=N` in `puzzle-suite.html` |
+| Old bundle after JS change | Rebuild (`bash build.sh`) **and** bump `?v=N` |
 | Setting not persisted on refresh | Ensure `syncSettingsFromDOM()` reads it and `applyStateToDOM()` restores it |
 | New function works in console but not HTML `onclick` | Add to **both** `window.fnName` and `window._puzzleApp` in `main.js` |
 | Dark-mode override not applying | Move CSS rule to `@layer components`, not `@layer base` |
-| Toggle change ignored in preview | `renderActivePage()` calls `syncSettingsFromDOM()` first — confirm the toggle's `id` matches `syncSettingsFromDOM()` read |
+| Toggle change ignored in preview | Confirm the toggle's `id` matches the `syncSettingsFromDOM()` read |
 | `innerText` returns `""` inside `<details>` | Use `.value` / `.checked` (as `syncSettingsFromDOM()` does) |
 | PDF emoji garbled | Wrap text with `drawText()` helper (canvas fallback in `pdfHelpers.js`) |
 | Watermark missing on extra PDF pages | Call `drawWatermark()` after every `doc.addPage()` |
 | Answer key shows too many questions | Pass the trimmed (cap-to-1-page) question list, not the full array |
-| Sub-ops filter has no effect | Check `state.selectedSubOps[topic]` — `null` means all enabled, empty array means all disabled |
+| Feature gate not enforcing | Check `hasFeature(FEATURE.X)` — override panel may be active (check `getActiveGroupId()`) |
+| Pro tier not showing after checkout | Ensure `handleCheckoutReturn()` runs before `renderTierUI()` in init |
+| Session not refreshing after cancellation | `refreshSession()` runs in background at startup; tier updates on next load |
 
 ---
 
 ## Key File Reference
 
-| Task | File | Lines (approx.) |
-|---|---|---|
-| Add state setting | `core/state.js` | 11–74 (defaults), 99–177 (sync), 179–325 (restore) |
-| Export new function | `main.js` | ~343 (window), ~392 (_puzzleApp) |
-| Init sequence | `main.js` | 865–945 |
-| PDF orchestration | `pdf/pdfExport.js` | full file |
-| PDF context object | `pdf/pdfExport.js` | `buildCtx()` |
-| PDF shared utils | `pdf/pdfHelpers.js` | `drawText()`, `hasEmoji()`, `drawHeader()` |
-| Page order config | `ui/pageOrder.js` | full file |
-| NESA outcomes | `core/outcomes.js` | `STAGE_OUTCOMES`, `getOutcomesForTopics()` |
-| Access control | `payments/access.js` | `FREE_LIMITS`, `clampBulkExportCount()` |
+| Task | File |
+|---|---|
+| Add state setting | `core/state.js` — defaults, `syncSettingsFromDOM()`, `applyStateToDOM()` |
+| Export new function | `main.js` — `window._puzzleApp` block (~line 826), then `Object.assign(window, ...)` |
+| Init sequence | `main.js` — `window.addEventListener('load', ...)` (~line 887) |
+| PDF orchestration | `pdf/pdfExport.js` |
+| PDF context object | `pdf/pdfExport.js` → `buildCtx()` |
+| PDF shared utils | `pdf/pdfHelpers.js` → `drawText()`, `hasEmoji()`, `drawHeader()` |
+| Page order config | `ui/pageOrder.js` |
+| NESA outcomes | `core/outcomes.js` → `STAGE_OUTCOMES`, `getOutcomesForTopics()` |
+| Feature flags | `payments/config.js` → `FEATURE`, `TIER_FEATURES`, `FEATURE_META`, `GROUPS` |
+| Feature gate API | `payments/access.js` → `hasFeature()`, `requireFeature()`, `getBulkExportLimit()` |
+| Session management | `payments/session.js` → `getSession()`, `setSession()`, `pruneExpiredSession()` |
+| Stripe client hooks | `payments/stripe.js` → `initiateCheckout()`, `handleCheckoutReturn()`, `refreshSession()` |
+| Stripe backend | `stripe-worker/index.js` → `/api/checkout`, `/api/verify`, `/api/me`, `/api/portal`, `/api/webhooks` |
+| Worker config | `stripe-worker/wrangler.toml` |
 
 ---
 
-## Example Commands
+## Useful Commands
 
 ```bash
 # Full dev cycle after a JS edit
@@ -266,8 +377,20 @@ ls -lh bundle.js
 grep -rn "myNewSetting" --include="*.js" .
 
 # Verify both window export blocks have a function
-grep -n "updateMyNewSetting" main.js
+grep -n "myFunction" main.js
 
 # Check localStorage key name (for migration notes)
 grep -n "puzzleSuiteV" core/storage.js
+
+# List all feature flag keys
+grep -A1 "FEATURE = " payments/config.js
+
+# Check which features a tier has
+node -e "const {TIER_FEATURES,TIER}=require('./payments/config.js'); console.log([...TIER_FEATURES[TIER.PRO]])"
+
+# Deploy Cloudflare Worker
+cd stripe-worker && wrangler deploy
+
+# Tail worker logs in real-time
+cd stripe-worker && wrangler tail
 ```

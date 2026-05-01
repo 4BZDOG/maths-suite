@@ -1,0 +1,50 @@
+# stripe-worker/wrangler.toml — Cloudflare Worker configuration
+#
+# ── Quick-start ───────────────────────────────────────────────────────────────
+# 1. Create a KV namespace:
+#      wrangler kv:namespace create SUBSCRIPTIONS
+#    Paste the returned ID into [[kv_namespaces]] below.
+#
+# 2. Deploy the worker:
+#      cd stripe-worker && npm install && wrangler deploy
+#
+# 3. Set secrets (never put these values in this file):
+#      wrangler secret put STRIPE_SECRET_KEY      # sk_live_... or sk_test_...
+#      wrangler secret put STRIPE_WEBHOOK_SECRET  # whsec_... from Stripe dashboard
+#      wrangler secret put JWT_SECRET             # random 32+ char string
+#      wrangler secret put PRICE_PRO_MONTHLY      # price_1ABC... (Stripe Dashboard → Products)
+#      wrangler secret put PRICE_PRO_YEARLY       # price_1XYZ... (leave blank if unused)
+#
+# 4. Copy the deployed worker URL into payments/config.js → STRIPE_CONFIG.workerUrl
+#
+# 5. Register a webhook endpoint in your Stripe Dashboard pointing to:
+#      https://<worker-url>/api/webhooks
+#    Events to listen for:
+#      customer.subscription.updated
+#      customer.subscription.deleted
+#      invoice.payment_succeeded
+#      invoice.payment_failed
+#
+# ── After going live ──────────────────────────────────────────────────────────
+# • Switch STRIPE_SECRET_KEY from sk_test_... to sk_live_...
+# • Update STRIPE_API_VERSION to the latest stable version
+# • Set APP_URL to your production GitHub Pages URL
+
+name = "maths-suite-payments"
+main = "index.js"
+compatibility_date = "2024-09-23"
+
+# ---- KV namespace -------------------------------------------
+# Replace the id with the output of: wrangler kv:namespace create SUBSCRIPTIONS
+[[kv_namespaces]]
+binding = "SUBSCRIPTIONS"
+id      = ""   # REPLACE: KV namespace ID
+
+# ---- Public vars (non-secret) --------------------------------
+[vars]
+# Your GitHub Pages origin — used for CORS and redirect URL validation.
+# No trailing slash. e.g. "https://your-username.github.io"
+APP_URL = ""   # REPLACE
+
+# Stripe API version to pin. Check https://stripe.com/docs/api/versioning for latest.
+STRIPE_API_VERSION = "2025-04-30"
