@@ -1,0 +1,32 @@
+# stripe-worker/wrangler.toml — Cloudflare Worker configuration
+#
+# Deploy:
+#   cd stripe-worker
+#   npm install
+#   wrangler deploy
+#
+# Set secrets (never put these in this file):
+#   wrangler secret put STRIPE_SECRET_KEY      # sk_live_... or sk_test_...
+#   wrangler secret put STRIPE_WEBHOOK_SECRET  # whsec_... from Stripe dashboard
+#   wrangler secret put JWT_SECRET             # random 32+ char string
+#
+# After deploying, copy the worker URL into payments/config.js → STRIPE_CONFIG.workerUrl
+# Then add the worker URL as a Stripe webhook endpoint in your Stripe dashboard,
+# listening for: checkout.session.completed, customer.subscription.updated,
+# customer.subscription.deleted, invoice.payment_failed, invoice.payment_succeeded
+
+name = "maths-suite-payments"
+main = "index.js"
+compatibility_date = "2024-09-23"
+
+# ---- KV namespace -------------------------------------------
+# Create with: wrangler kv:namespace create SUBSCRIPTIONS
+# Then replace the id below with the output ID.
+[[kv_namespaces]]
+binding = "SUBSCRIPTIONS"
+id      = ""   # REPLACE: paste the KV namespace ID here
+
+# ---- Public vars (non-secret) --------------------------------
+[vars]
+# REPLACE: your GitHub Pages URL (no trailing slash)
+APP_URL = "https://YOUR-USERNAME.github.io/maths-suite"

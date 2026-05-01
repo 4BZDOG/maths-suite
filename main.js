@@ -24,6 +24,7 @@ import { setupDragAndDrop } from './ui/dropZone.js';
 import { downloadConfig } from './import-export/exportConfig.js';
 import { hasFeature, FEATURE, PRICING, TIER, GROUPS, FREE_LIMITS, isAdmin, enableAdminMode, disableAdminMode, getActiveGroupId, getBulkExportLimit } from './payments/access.js';
 import { pruneExpiredSession } from './payments/session.js';
+import { handleCheckoutReturn, initiateCheckout, openCustomerPortal, isStripeConfigured } from './payments/stripe.js';
 import {
     openAccessPanel, closeAccessPanel,
     applyGroupPreset, acpFeatureChange,
@@ -251,13 +252,6 @@ function renderTierUI() {
     const bulkNote = document.getElementById('bulk-tier-note');
     if (bulkNote) bulkNote.style.display = (isPro || adminOn) ? 'none' : '';
 
-    // Wire CTA button href when a Stripe checkout URL is configured
-    const ctaBtn = document.getElementById('upsell-cta-btn');
-    if (ctaBtn) {
-        const url = PRICING?.[TIER.PRO]?.checkoutUrl;
-        if (url) { ctaBtn.href = url; ctaBtn.onclick = null; }
-    }
-
     renderExportPreview();
 }
 
@@ -274,6 +268,31 @@ function setAdminMode(on) {
 /** Open the access-control panel (admin only). */
 function openAccessPanelUI() {
     openAccessPanel(() => renderTierUI());
+}
+
+/**
+ * Called by the "Upgrade to Pro" button in the upsell strip.
+ * If Stripe is configured, starts the checkout flow.
+ * Otherwise falls back to the static checkout URL (if set) or shows a toast.
+ */
+async function _handleUpgradeClick(btn) {
+    if (isStripeConfigured()) {
+        const label = btn.textContent;
+        btn.disabled    = true;
+        btn.textContent = 'Loading…';
+        try {
+            await initiateCheckout('pro', 'monthly');
+        } catch (e) {
+            showToast('Could not start checkout. Please try again.', 'error');
+            btn.disabled    = false;
+            btn.textContent = label;
+        }
+        return;
+    }
+    // Fallback: static Stripe Payment Link (set PRICING[TIER.PRO].checkoutUrl in config.js)
+    const url = PRICING?.[TIER.PRO]?.checkoutUrl;
+    if (url) { window.open(url, '_blank', 'noopener'); return; }
+    showToast('Payment not yet configured — check back soon!', 'info');
 }
 
 function _setExportEnabled(enabled, reason) {
@@ -855,6 +874,9 @@ window._puzzleApp = {
     acpFeatureChange,
     applyAccessOverrides,
     resetAccessOverrides,
+    initiateCheckout,
+    openCustomerPortal,
+    _handleUpgradeClick,
 };
 
 Object.assign(window, window._puzzleApp);
@@ -873,6 +895,12 @@ window.addEventListener('load', async () => {
     try {
         _step('Restoring saved state…', 15);
         pruneExpiredSession();
+
+        // Handle Stripe Checkout return (?stripe_session=...) before restoring state
+        // so renderTierUI() below reflects the newly-purchased tier immediately.
+        const didCheckout = await handleCheckoutReturn();
+        if (didCheckout) showToast('Subscription activated — welcome to Pro!', 'success');
+
         const saved = loadRawState();
         if (saved) applyStateToDOM(saved);
 

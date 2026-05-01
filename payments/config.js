@@ -77,11 +77,36 @@ export const FREE_LIMITS = Object.freeze({
 // ---- Pricing display (for upgrade prompts) ------------------
 export const PRICING = Object.freeze({
     [TIER.PRO]: {
-        label:       'Pro',
-        monthlyUSD:  9.99,
-        yearlyUSD:   79.99,
-        // Replace with your real Stripe payment link or checkout URL:
-        checkoutUrl: null, // e.g. 'https://buy.stripe.com/your-link'
+        label:      'Pro',
+        monthlyUSD: 9.99,
+        yearlyUSD:  79.99,
+        // Populated dynamically via initiateCheckout(); not a static href.
+        checkoutUrl: null,
+    },
+});
+
+// ---- Stripe configuration -----------------------------------
+// Fill in these values once you have your Stripe account details.
+// NEVER commit live secret keys here — only publishable key + worker URL.
+//
+// To deploy the Cloudflare Worker:
+//   cd stripe-worker && npm install && wrangler deploy
+// Then set secrets via:
+//   wrangler secret put STRIPE_SECRET_KEY
+//   wrangler secret put STRIPE_WEBHOOK_SECRET
+//   wrangler secret put JWT_SECRET
+export const STRIPE_CONFIG = Object.freeze({
+    // REPLACE: your Stripe publishable key (starts with pk_live_ or pk_test_)
+    publishableKey: '',
+
+    // REPLACE: your deployed Cloudflare Worker URL
+    // e.g. 'https://maths-suite-payments.YOUR-SUBDOMAIN.workers.dev'
+    workerUrl: '',
+
+    // REPLACE: Stripe Price IDs from your dashboard (Stripe Dashboard → Products)
+    prices: {
+        proMonthly: '', // e.g. 'price_1ABC...'
+        proYearly:  '', // e.g. 'price_1XYZ...'
     },
 });
 
