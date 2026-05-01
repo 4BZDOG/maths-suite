@@ -111,13 +111,15 @@ async function handleCheckout(request, env) {
         allow_promotion_codes:     'true',
     });
 
-    // Write userId into subscription metadata so webhooks can link back to the user.
+    // Write userId into both the session and subscription metadata so
+    // handleVerify can read it from either object after checkout completes.
     if (userId) {
+        params.set('metadata[userId]', userId);
         params.set('subscription_data[metadata][userId]', userId);
     }
 
     // If we already have a Stripe customer for this userId, reuse it so the
-    // customer doesn't need to re-enter their details.
+    // customer doesn't need to re-enter their card details.
     if (userId) {
         const userRecord = await kvGet(env.SUBSCRIPTIONS, `user:${userId}`);
         if (userRecord?.customerId) {
@@ -125,10 +127,10 @@ async function handleCheckout(request, env) {
         }
     }
 
-    // Idempotency key: tie the checkout session to this user + price + day so
-    // network retries won't create duplicate sessions.
-    const idempotencyBase = `checkout:${userId ?? 'anon'}:${priceId}:${Math.floor(Date.now() / 86400000)}`;
-    const session = await stripePost(env, '/v1/checkout/sessions', params, idempotencyBase);
+    // No idempotency key for checkout sessions — each attempt should be fresh.
+    // A per-day key would return a stale (potentially expired) session URL to
+    // users who abandon and retry on the same day.
+    const session = await stripePost(env, '/v1/checkout/sessions', params);
 
     return json({ url: session.url }, 200, env, request);
 }
@@ -145,6 +147,11 @@ async function handleVerify(request, env) {
     if (!body?.sessionId) return json({ error: 'Missing sessionId' }, 400, env, request);
 
     const { sessionId } = body;
+
+    // Basic format guard — Stripe checkout session IDs always start with 'cs_'.
+    if (typeof sessionId !== 'string' || !sessionId.startsWith('cs_')) {
+        return json({ error: 'Invalid sessionId format' }, 400, env, request);
+    }
 
     // Idempotency: if we've already issued a JWT for this session, return it.
     const existing = await kvGet(env.SUBSCRIPTIONS, `verified:${sessionId}`);
@@ -196,8 +203,9 @@ async function handleVerify(request, env) {
     await Promise.all([
         kvPut(env.SUBSCRIPTIONS, `customer:${customerId}`, subRecord),
         kvPut(env.SUBSCRIPTIONS, `user:${userId}`, { customerId, tier }),
-        // Store the issued token so replay calls return the same JWT.
-        kvPut(env.SUBSCRIPTIONS, `verified:${sessionId}`, { token, tier, userId, expiresAt, processedAt: Date.now() }),
+        // Idempotency record — 24-hour TTL is enough to cover any duplicate redirect
+        // calls; after that the session_id is too old to be replayed anyway.
+        kvPut(env.SUBSCRIPTIONS, `verified:${sessionId}`, { token, tier, userId, expiresAt, processedAt: Date.now() }, { expirationTtl: 86400 }),
     ]);
 
     return json({ tier, userId, token, expiresAt }, 200, env, request);
@@ -235,6 +243,10 @@ async function handlePortal(request, env) {
 
     const payload = await verifyJwt(token, env.JWT_SECRET);
     if (!payload) return json({ error: 'Invalid or expired token' }, 401, env, request);
+
+    if (!payload.customerId) {
+        return json({ error: 'No billing account linked to this session' }, 400, env, request);
+    }
 
     const { returnUrl } = await request.json().catch(() => ({}));
 
@@ -456,9 +468,9 @@ async function kvGet(kv, key) {
     try { return JSON.parse(raw); } catch { return null; }
 }
 
-async function kvPut(kv, key, value) {
+async function kvPut(kv, key, value, options = {}) {
     if (!kv) return;
-    await kv.put(key, JSON.stringify(value));
+    await kv.put(key, JSON.stringify(value), options);
 }
 
 // ---- Misc helpers -------------------------------------------
@@ -478,11 +490,15 @@ function _extractBearer(request) {
     return auth.startsWith('Bearer ') ? auth.slice(7) : null;
 }
 
-// Returns 'pro' only for confirmed active/trialing subscriptions.
-// Returns 'free' for any other status (past_due, canceled, null, etc.).
+// Returns 'pro' for active, trialing, and past_due subscriptions.
+// past_due means Stripe is still retrying the payment — keep the user on Pro
+// during that grace period rather than cutting them off mid-retry cycle.
+// Returns 'free' for canceled, unpaid, incomplete_expired, or absent sub.
 function _tierFromSubscription(sub) {
     if (!sub) return 'free';
-    return (sub.status === 'active' || sub.status === 'trialing') ? 'pro' : 'free';
+    return (sub.status === 'active' || sub.status === 'trialing' || sub.status === 'past_due')
+        ? 'pro'
+        : 'free';
 }
 
 // Returns true if the URL's origin matches our known APP_URL.

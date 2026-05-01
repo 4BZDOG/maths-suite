@@ -24,7 +24,7 @@ import { setupDragAndDrop } from './ui/dropZone.js';
 import { downloadConfig } from './import-export/exportConfig.js';
 import { hasFeature, FEATURE, PRICING, TIER, GROUPS, FREE_LIMITS, isAdmin, enableAdminMode, disableAdminMode, getActiveGroupId, getBulkExportLimit } from './payments/access.js';
 import { pruneExpiredSession } from './payments/session.js';
-import { handleCheckoutReturn, initiateCheckout, openCustomerPortal, isStripeConfigured } from './payments/stripe.js';
+import { handleCheckoutReturn, initiateCheckout, openCustomerPortal, isStripeConfigured, refreshSession } from './payments/stripe.js';
 import {
     openAccessPanel, closeAccessPanel,
     applyGroupPreset, acpFeatureChange,
@@ -899,7 +899,14 @@ window.addEventListener('load', async () => {
         // Handle Stripe Checkout return (?stripe_session=...) before restoring state
         // so renderTierUI() below reflects the newly-purchased tier immediately.
         const didCheckout = await handleCheckoutReturn();
-        if (didCheckout) showToast('Subscription activated — welcome to Pro!', 'success');
+        if (didCheckout) {
+            showToast('Subscription activated — welcome to Pro!', 'success');
+        } else {
+            // Re-validate the stored JWT in the background so subscription
+            // cancellations or renewals (processed server-side via webhooks)
+            // are reflected on next page load without blocking the UI.
+            refreshSession().then(() => renderTierUI()).catch(() => {});
+        }
 
         const saved = loadRawState();
         if (saved) applyStateToDOM(saved);
