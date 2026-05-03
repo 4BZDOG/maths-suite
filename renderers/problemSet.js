@@ -30,11 +30,12 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         return 0;
     }
 
-    // Difficulty section header with icon
-    const diffIcon = difficultyLabel === 'Easy' ? '🟢' : difficultyLabel === 'Medium' ? '🟡' : '🔴';
+    // Difficulty section header — icons match the page nav buttons (seedling/bolt/fire)
+    const iconCls  = difficultyLabel === 'Easy' ? 'fa-seedling' : difficultyLabel === 'Medium' ? 'fa-bolt' : 'fa-fire';
+    const iconClr  = difficultyLabel === 'Easy' ? '#10b981'     : difficultyLabel === 'Medium' ? '#f59e0b'  : '#ef4444';
     const diffHeaderHtml = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;margin-top:16px;padding-top:12px;border-top:2px solid var(--border,#e2e8f0);">
-        <span style="font-size:16px;">${diffIcon}</span>
-        <span style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted,#64748b);">${difficultyLabel}</span>
+        <i class="fas ${iconCls}" style="color:${iconClr};font-size:13px;"></i>
+        <span style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:${iconClr};">${difficultyLabel}</span>
         <span style="flex:1;height:1px;background:var(--border,#e2e8f0);"></span>
     </div>`;
 
@@ -103,7 +104,17 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         </div>`;
     });
 
-    html += '</div>';
+    // Score bar — students fill in their mark and percentage
+    const totalQ = questions.length;
+    html += `</div><div class="problem-score-bar">
+        <span class="problem-score-label">Score:</span>
+        <span class="problem-score-blank"></span>
+        <span class="problem-score-sep">/ <strong>${totalQ}</strong></span>
+        <span class="problem-score-eq">=</span>
+        <span class="problem-score-blank"></span>
+        <span class="problem-score-pct">%</span>
+    </div>`;
+
     container.innerHTML = html;
     renderKaTeX(container);
 
