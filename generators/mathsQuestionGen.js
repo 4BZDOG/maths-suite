@@ -21,7 +21,11 @@ function ri(rng, min, max) { return Math.floor(rng() * (max - min + 1)) + min; }
 function rc(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
 function round(n, dp) { const f = Math.pow(10, dp); return Math.round(n * f) / f; }
 
-const CALC_VERBS = ['Calculate:', 'Evaluate:', 'Find the value of:', 'Work out:'];
+const CALC_VERBS   = ['Calculate:', 'Evaluate:', 'Find the value of:', 'Work out:'];
+const MULT_VERBS   = ['Calculate:', 'Evaluate:', 'Find the product:', 'Work out:'];
+const DIV_VERBS    = ['Calculate:', 'Evaluate:', 'Find the quotient:', 'Work out:'];
+const BODMAS_VERBS = ['Evaluate:', 'Calculate:', 'Apply order of operations to find:'];
+const SOLVE_VERBS  = ['Solve:', 'Find $x$:', 'Determine $x$:', 'Calculate $x$:', 'Find the value of $x$:'];
 
 function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 function lcm(a, b) { return (a * b) / gcd(a, b); }
@@ -137,18 +141,18 @@ function genIntegers(rng, diff, allowedOps) {
     if (op === '×') {
         const [lo, hi] = diff === 'Easy' ? [2, 12] : diff === 'Medium' ? [3, 25] : [12, 50];
         const a = ri(rng, lo, hi), b = ri(rng, lo, hi);
-        const verb = rc(rng, ['Calculate:', 'Evaluate:', 'Find the product:', 'Work out:']);
+        const verb = rc(rng, MULT_VERBS);
         return { clue: `${verb} $${a} \\times ${b}$`, answer: String(a * b) };
     }
     if (op === '÷') {
         const [lo, hi] = diff === 'Easy' ? [2, 12] : diff === 'Medium' ? [3, 20] : [6, 40];
         const b = ri(rng, lo, hi), ans = ri(rng, lo, hi);
-        const verb = rc(rng, ['Calculate:', 'Evaluate:', 'Find the quotient:', 'Work out:']);
+        const verb = rc(rng, DIV_VERBS);
         return { clue: `${verb} $${b * ans} \\div ${b}$`, answer: String(ans) };
     }
     if (op === 'bodmas') {
         const form = ri(rng, 0, 1);
-        const verb = rc(rng, ['Evaluate:', 'Calculate:', 'Apply order of operations to find:']);
+        const verb = rc(rng, BODMAS_VERBS);
         if (form === 0) {
             const a = ri(rng, 3, 25), b = ri(rng, 3, 15), c = ri(rng, 3, 15);
             return { clue: `${verb} $${a} + ${b} \\times ${c}$`, answer: String(a + b * c) };
@@ -203,7 +207,7 @@ function genDecimals(rng, diff, allowedOps) {
         const ans = round(a / b, 2);
         return { clue: `${verb} $${a} \\div ${b}$`, answer: String(ans) };
     }
-    const a = ri(rng, 100, 999) / 100, b = ri(rng, 100, Math.floor(a * 100) - 1) / 100;
+    const a = ri(rng, 101, 999) / 100, b = ri(rng, 100, Math.floor(a * 100) - 1) / 100;
     return { clue: `${verb} $${a} - ${b}$`, answer: String(round(a - b, 2)) };
 }
 
@@ -337,7 +341,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         }
         if (type === 1) {
             const den = rc(rng, [4, 5, 6, 8, 10]);
-            const n1 = ri(rng, 1, den - 2), n2 = ri(rng, 1, den - n1);
+            const n1 = ri(rng, 1, den - 2), n2 = ri(rng, 1, den - n1 - 1);
             const ans = fracStr(n1 + n2, den);
             return { clue: `${calcVerb} $\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}}$`, answer: ans };
         }
@@ -520,7 +524,7 @@ function genAlgebra(rng, diff, allowedOps) {
     const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : 2);
     if (type === -1) return null;
 
-    const solveVerb = rc(rng, ['Solve:', 'Find $x$:', 'Determine $x$:', 'Calculate $x$:', 'Find the value of $x$:']);
+    const solveVerb = rc(rng, SOLVE_VERBS);
     if (diff === 'Easy') {
         if (type === 0) {
             const ans = ri(rng, 1, 20), a = ri(rng, 1, 20);
@@ -989,8 +993,8 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
         if (!q) continue;
 
         const ans = String(q.answer);
-        // Skip if answer is too long (won't fit in grid) or contains invalid chars
-        if (!ans || ans.length > 10) continue;
+        // Skip empty, over-length, or numerically invalid answers
+        if (!ans || ans.length > 10 || ans === 'NaN' || ans === 'Infinity' || ans === '-Infinity') continue;
 
         // Prevent duplicate questions
         if (results.some(r => r.clue === q.clue)) continue;

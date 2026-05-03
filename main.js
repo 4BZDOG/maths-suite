@@ -2,7 +2,7 @@
 // main.js — Application entry point (Maths Question Sets Edition)
 // =============================================================
 import { state, ALL_SUBTOPICS, SUB_OPS, setGeneratedSets, setActivePage, updateSetting, applyStateToDOM, syncSettingsFromDOM } from './core/state.js';
-import { getOutcomesForTopics, getTopicsForOutcomeCodes } from './core/outcomes.js';
+import { getOutcomesForTopics, getTopicsForOutcomeCodes, DEFAULT_STAGE } from './core/outcomes.js';
 import { pushHistory, undo, redo } from './core/history.js';
 import { saveState, saveStateNow, loadRawState, hardReset } from './core/storage.js';
 
@@ -49,7 +49,7 @@ function getActiveTopics() {
     // If any outcomes are selected as a filter, restrict to matching topics only
     const filteredCodes = Object.keys(state.selectedOutcomes).filter(c => state.selectedOutcomes[c]);
     if (filteredCodes.length === 0) return allSelected;
-    const outcomeTopics = new Set(getTopicsForOutcomeCodes(filteredCodes, 'Stage 4'));
+    const outcomeTopics = new Set(getTopicsForOutcomeCodes(filteredCodes, DEFAULT_STAGE));
     return allSelected.filter(t => outcomeTopics.has(t));
 }
 
@@ -147,7 +147,8 @@ function renderActivePage() {
 
     // Always cap to the selected number of pages (1 or 2)
     const pages = state.questionsPerSet || 1;
-    const sWithTopics = { ...s, activeTopics: Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]), stage: 'Stage 4', psCapPages: pages };
+    const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
+    const sWithTopics = { ...s, activeTopics, stage: DEFAULT_STAGE, psCapPages: pages };
 
     const nEasy   = renderProblemSet(document.getElementById('p1-area'), sets.easy,   sWithTopics, 'Easy');
     const nMedium = renderProblemSet(document.getElementById('p2-area'), sets.medium, sWithTopics, 'Medium');
@@ -811,7 +812,12 @@ function loadConfigFromFile(input) {
     r.onload = e => {
         try {
             const parsed = JSON.parse(e.target.result);
-            applyStateToDOM(parsed);
+            if (parsed.settings)        Object.assign(state.settings, parsed.settings);
+            if (parsed.selectedTopics)  Object.assign(state.selectedTopics, parsed.selectedTopics);
+            if (parsed.selectedSubOps)  Object.assign(state.selectedSubOps, parsed.selectedSubOps);
+            if (parsed.questionsPerSet) state.questionsPerSet = parsed.questionsPerSet;
+            if (parsed.watermarkSrc)    state.watermarkSrc = parsed.watermarkSrc;
+            applyStateToDOM(state);
             updateUI();
             updateTopicCount();
             renderOutcomes();
@@ -825,11 +831,17 @@ function loadConfigFromFile(input) {
     r.readAsText(f);
 }
 
+function processImport() {
+    showToast('Custom question import coming soon.', 'info');
+}
+
 // =============================================================
 // Expose public API on window
 // =============================================================
 window._puzzleApp = {
     generateAll,
+    processImport,
+    loadConfigFromFile,
     toggleTopic,
     toggleSubOp,
     toggleTopicExpand,
@@ -858,7 +870,6 @@ window._puzzleApp = {
     clearWatermark,
     toggleOutcomeFilter,
     clearOutcomeFilter,
-    loadConfigFromFile,
     hardReset: () => hardReset(),
     undo: () => undo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),
     redo: () => redo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),

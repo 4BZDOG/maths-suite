@@ -1,14 +1,14 @@
 // renderers/keys.js — Answer Key: lists all questions with answers across 3 difficulty sets
 import { renderKaTeX } from './katexRender.js';
 import { esc, formatClue } from './htmlUtils.js';
-import { getOutcomesForTopics } from '../core/outcomes.js';
+import { getOutcomesForTopics, DEFAULT_STAGE } from '../core/outcomes.js';
 
 export function renderKeys(container, generatedSets, settings) {
     if (!container) return;
 
     const showOutcomesHeader = settings?.psShowOutcomesHeader || false;
     const activeTopics       = settings?.activeTopics         || [];
-    const stage              = settings?.stage                || 'Stage 4';
+    const stage              = settings?.stage                || DEFAULT_STAGE;
 
     const sets = [
         { label: 'EASY',   icon: 'fa-seedling', color: '#10b981', questions: generatedSets.easy   || [] },

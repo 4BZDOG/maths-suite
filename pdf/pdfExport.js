@@ -283,7 +283,7 @@ function createQuestionSets(cfg, seed) {
  * Draw a question page (Easy / Medium / Hard) in PDF.
  * Returns the number of questions that did NOT fit (overflow count).
  */
-function drawQuestionPage(ctx, questions, startY, pScale, exportId, diffLabel) {
+function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
     if (!questions || !questions.length) return 0;
     const { doc, PAGE_WIDTH, PAGE_HEIGHT, MARGIN, scale, pdfFont, drawWatermark } = ctx;
     pScale = pScale || scale;
@@ -714,7 +714,7 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
 
             doc.setDrawColor(220, 220, 220);
             doc.setLineWidth(0.1);
-            doc.line(cx, ky + 1.5 * scale, cx + colW, ky + 1.5 * scale);
+            doc.line(cx, ky + 1.5 * pScale, cx + colW, ky + 1.5 * pScale);
 
             ky += 6 * pScale;
         });
@@ -736,7 +736,11 @@ export async function exportPDF() {
 
     isExporting = true;
     const exportBtn = document.getElementById('export-btn-main');
-    if (exportBtn) exportBtn.disabled = true;
+    const exportBtnOrigHTML = exportBtn ? exportBtn.innerHTML : '';
+    if (exportBtn) {
+        exportBtn.disabled = true;
+        exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating…';
+    }
 
     const cfg = state.settings;
     const pageOrder   = cfg.pageOrder || ['easy', 'medium', 'hard', 'key'];
@@ -746,7 +750,7 @@ export async function exportPDF() {
     if (selectedPages.length === 0) {
         showToast('Select at least one page.', 'error');
         isExporting = false;
-        if (exportBtn) exportBtn.disabled = false;
+        if (exportBtn) { exportBtn.disabled = false; exportBtn.innerHTML = exportBtnOrigHTML; }
         return;
     }
 
@@ -860,21 +864,21 @@ export async function exportPDF() {
                     addPage();
                     const ps = getPScale('easy');
                     const sy = drawHeader(ctx, title, sub, 'EASY — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [16, 185, 129]);
-                    const overflow = drawQuestionPage(ctx, sets.easy, sy, ps, exportId, 'Easy');
+                    const overflow = drawQuestionPage(ctx, sets.easy, sy, ps, exportId);
                     visibleCounts.easy = (sets.easy || []).length - overflow;
 
                 } else if (pType === 'medium') {
                     addPage();
                     const ps = getPScale('medium');
                     const sy = drawHeader(ctx, title, sub, 'MEDIUM — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [245, 158, 11]);
-                    const overflow = drawQuestionPage(ctx, sets.medium, sy, ps, exportId, 'Medium');
+                    const overflow = drawQuestionPage(ctx, sets.medium, sy, ps, exportId);
                     visibleCounts.medium = (sets.medium || []).length - overflow;
 
                 } else if (pType === 'hard') {
                     addPage();
                     const ps = getPScale('hard');
                     const sy = drawHeader(ctx, title, sub, 'HARD — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [239, 68, 68]);
-                    const overflow = drawQuestionPage(ctx, sets.hard, sy, ps, exportId, 'Hard');
+                    const overflow = drawQuestionPage(ctx, sets.hard, sy, ps, exportId);
                     visibleCounts.hard = (sets.hard || []).length - overflow;
 
                 } else if (pType === 'key') {
@@ -912,7 +916,10 @@ export async function exportPDF() {
         showToast(`PDF export failed${detail}`, 'error');
     } finally {
         isExporting = false;
-        if (exportBtn) exportBtn.disabled = false;
+        if (exportBtn) {
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = exportBtnOrigHTML;
+        }
         if (L) { L.style.opacity = '0'; setTimeout(() => L.style.display = 'none', 300); }
     }
 }
