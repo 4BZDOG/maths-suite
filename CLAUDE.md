@@ -53,7 +53,6 @@ maths-suite/
 │   ├── pdfExport.js           # Orchestrator: creates doc, loops sets/pages (~918 lines)
 │   ├── pdfHelpers.js          # Shared drawing utilities, emoji canvas fallback (~392 lines)
 │   ├── pdfFonts.js            # Lazy font loader from CDN (~94 lines)
-│   ├── pdfDrawProblemSet.js   # Problem set page drawing (~186 lines)
 │   ├── pdfDrawNotes.js        # Notes/matching page drawing (~189 lines)
 │   ├── pdfDrawWordSearch.js   # Word search page drawing (~108 lines)
 │   ├── pdfDrawCrossword.js    # Crossword page drawing (~120 lines)

@@ -57,10 +57,10 @@ function _rectangle({ l, w: wv }) {
         // Shape
         `<rect x="${x0}" y="${y0}" width="${dw}" height="${dh}" ` +
         `fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2" rx="1"/>` +
-        // Length label below (centred)
-        _t(x0 + dw / 2, y0 + dh + 16, String(l)) +
-        // Width label left (oriented normally)
-        _t(x0 - 8, y0 + dh / 2 + 4, String(wv), { anchor: 'end' }) +
+        // Length label below (centred) — clear of bottom edge
+        _t(x0 + dw / 2, y0 + dh + 18, String(l)) +
+        // Width label left (oriented normally) — clear of left edge
+        _t(x0 - 12, y0 + dh / 2 + 4, String(wv), { anchor: 'end' }) +
         // Missing "?" centred in shape
         _t(x0 + dw / 2, y0 + dh / 2 + 5, '?', { missing: true, size: 14 });
 
@@ -102,10 +102,10 @@ function _rightTriangle({ a, b, c, missing }) {
         `fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
         // Right-angle mark
         _rightAngleMark(Ax, Ay, 9) +
-        // Leg a (below baseline)
-        _t((Ax + Bx) / 2, Ay + 16, aLabel, { missing: missing === 'a' }) +
-        // Leg b (left side, oriented normally)
-        _t(Ax - 8, (Ay + Cy) / 2 + 4, bLabel, { anchor: 'end', missing: missing === 'b' }) +
+        // Leg a (below baseline) — clear of bottom edge
+        _t((Ax + Bx) / 2, Ay + 18, aLabel, { missing: missing === 'a' }) +
+        // Leg b (left side, oriented normally) — clear of left edge
+        _t(Ax - 12, (Ay + Cy) / 2 + 4, bLabel, { anchor: 'end', missing: missing === 'b' }) +
         // Hypotenuse label at midpoint (points up-right)
         _t(lx, ly, `c\u202F=\u202F${cLabel}`, { anchor: 'middle', missing: missing === 'c', size: 11 });
 
@@ -160,12 +160,12 @@ function _triangleArea({ base, height }) {
         // Right-angle mark at foot of height
         `<polyline points="${ap.x + 6},${y0} ${ap.x + 6},${y0 - 6} ${ap.x},${y0 - 6}" ` +
         `fill="none" stroke="${GC}" stroke-width="1.2"/>` +
-        // Base label
-        _t(cx, y0 + 16, String(base)) +
-        // Height label (right of dashed line)
-        _t(ap.x + 22, (ap.y + y0) / 2 + 4, `h\u202F=\u202F${height}`, { anchor: 'start', size: 11 }) +
+        // Base label \u2014 clear of bottom edge
+        _t(cx, y0 + 18, String(base)) +
+        // Height label (right of dashed line) \u2014 generous clearance
+        _t(ap.x + 24, (ap.y + y0) / 2 + 4, `h\u202F=\u202F${height}`, { anchor: 'start', size: 11 }) +
         // Missing "?" for area (left of height line)
-        _t(cx - 22, (ap.y + y0) / 2 + 5, '?', { missing: true, size: 14 });
+        _t(cx - 24, (ap.y + y0) / 2 + 5, '?', { missing: true, size: 14 });
 
     return _svg(VW, VH, inner);
 }
