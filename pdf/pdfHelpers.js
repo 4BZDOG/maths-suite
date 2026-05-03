@@ -46,7 +46,14 @@ export function latexToText(str) {
         .replace(/\$\$([^$]+)\$\$/g, (_, m) => _parseLatex(_restoreDollars(m)))
         .replace(/\$([^$]+)\$/g, (_, m) => _parseLatex(_restoreDollars(m)));
     // Restore any remaining escaped dollar signs as literal $
-    return _restoreDollars(s);
+    s = _restoreDollars(s);
+    // Strip the small markdown-emphasis subset used in clue templates so
+    // PDF text doesn't contain stray asterisks. (Bold/italic-aware drawing
+    // is a future enhancement — for now we keep the words plain.)
+    s = s
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1$2');
+    return s;
 }
 
 function _parseLatex(s) {

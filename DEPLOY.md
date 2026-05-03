@@ -178,3 +178,13 @@ Push to main
 ```
 
 Total deploy time from push to live: **~90 seconds**.
+
+---
+
+## Stripe / Payments Worker
+
+Billing is handled by a separate Cloudflare Worker in [`stripe-worker/`](./stripe-worker/).
+It is **not** deployed by GitHub Actions — deploy it manually with `wrangler`.
+See [`stripe-worker/README.md`](./stripe-worker/README.md) for the full setup
+(KV namespace, secrets, webhook registration). For a project-agnostic
+overview of the billing pattern see [`STRIPE_INTEGRATION.md`](./STRIPE_INTEGRATION.md).

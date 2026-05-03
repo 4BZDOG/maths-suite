@@ -135,3 +135,13 @@ Items 1–4 alone fully enable the Free → Pro conversion funnel.
 - $45/year (= $3.75/mo effective) incentivises annual commits and reduces churn
 - $49/month/school is well below what a single teacher subscription would cost at scale (most schools have 5–50 teachers), making the per-teacher cost $1–10/month — easy to justify to a department head
 - Managed AI cost at scale: ~500 generations × avg 0.5¢/generation = ~$2.50 COGS per Pro user per month, leaving comfortable margin at $5
+
+---
+
+## Reusing this in another project
+
+The Stripe + Cloudflare Worker + tier/feature-gate plumbing is implemented
+generically and intended to be lifted into similar projects. See:
+
+- [`STRIPE_INTEGRATION.md`](./STRIPE_INTEGRATION.md) — architecture, file map, customisation checklist
+- [`stripe-worker/README.md`](./stripe-worker/README.md) — concrete deploy walkthrough

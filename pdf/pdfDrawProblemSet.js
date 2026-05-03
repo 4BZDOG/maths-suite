@@ -30,58 +30,60 @@ export function drawProblemSet(ctx, psItems, startY, pScale, exportId) {
     const { doc, PAGE_WIDTH, PAGE_HEIGHT, MARGIN, scale, pdfFont, drawWatermark, problemSetConfig } = ctx;
     pScale = pScale || scale;
 
-    const cols    = problemSetConfig?.cols || 2;
+    const cols      = problemSetConfig?.cols || 2;
     const showTopic = problemSetConfig?.showTopic || false;
-    const availW  = PAGE_WIDTH - MARGIN * 2;
-    const colW    = (availW - (cols - 1) * 8) / cols;
-    const rowH    = 18 * pScale;   // approx height per problem including answer line
+    const availW    = PAGE_WIDTH - MARGIN * 2;
+    const colW      = (availW - (cols - 1) * 8) / cols;
+    const colX      = Array.from({ length: cols }, (_, c) => MARGIN + c * (colW + 8));
+    const pageBottom = PAGE_HEIGHT - MARGIN - 10;
+    const newPageY   = MARGIN + 15 * scale;
 
-    let cx = MARGIN;
-    let cy = startY;
-    let col = 0;
+    let colY = colX.map(() => startY);
 
-    doc.setFont(pdfFont, 'normal');
-    doc.setFontSize(9 * pScale);
+    const drawItem = (item, i) => {
+        // Pre-measure so we can pick the shortest column AND check page bounds
+        const clueText  = latexToText(item.clue || '');
+        doc.setFont(pdfFont, 'normal');
+        doc.setFontSize(9 * pScale);
+        const clueLines = doc.splitTextToSize(clueText, colW - 14);
+        const itemH     = clueLines.length * 4.5 * pScale + 10;
 
-    psItems.forEach((item, i) => {
-        // Check if we need a new page
-        if (cy + rowH > PAGE_HEIGHT - MARGIN - 10) {
+        // Place into the column with the smallest current y (balanced fill).
+        let c = 0;
+        for (let k = 1; k < cols; k++) if (colY[k] < colY[c]) c = k;
+
+        // If even the shortest column would overflow the page, start a new page.
+        if (colY[c] + itemH > pageBottom) {
             drawExportIdFooter(ctx, exportId, pScale);
             doc.addPage();
             drawWatermark();
-            cx = MARGIN;
-            cy = MARGIN + 15 * scale;
-            col = 0;
+            colY = colX.map(() => newPageY);
+            c = 0;
         }
 
-        const itemX = col === 0 ? MARGIN : MARGIN + colW + 8;
+        const itemX = colX[c];
+        const cy    = colY[c];
 
-        // Problem number
         doc.setFont(pdfFont, 'bold');
         doc.setFontSize(9 * pScale);
         doc.setTextColor(100, 116, 139);
         doc.text(`${i + 1}.`, itemX, cy);
 
-        // Topic badge (small coloured dot)
         if (showTopic && item.topic) {
             const topicRgb = TOPIC_COLOURS[item.topic] || [100, 116, 139];
             doc.setFillColor(...topicRgb);
             doc.circle(itemX + 6, cy - 1.5, 1.2, 'F');
         }
 
-        // Clue text (LaTeX converted to Unicode)
-        const clueText = latexToText(item.clue || '');
         doc.setFont(pdfFont, 'normal');
         doc.setFontSize(9 * pScale);
         doc.setTextColor(15, 23, 42);
-        const clueLines = doc.splitTextToSize(clueText, colW - 14);
         clueLines.forEach((line, li) => {
             doc.text(line, itemX + 10, cy + li * 4.5 * pScale);
         });
 
         const lineY = cy + clueLines.length * 4.5 * pScale + 2;
 
-        // "Answer: ___" line
         doc.setFont(pdfFont, 'normal');
         doc.setFontSize(8 * pScale);
         doc.setTextColor(100, 116, 139);
@@ -90,20 +92,10 @@ export function drawProblemSet(ctx, psItems, startY, pScale, exportId) {
         doc.setLineWidth(0.3);
         doc.line(itemX + 20, lineY, itemX + colW - 4, lineY);
 
-        const itemH = clueLines.length * 4.5 * pScale + 10;
+        colY[c] += itemH;
+    };
 
-        // Move to next column or next row
-        if (cols === 2) {
-            if (col === 0) {
-                col = 1;
-            } else {
-                col = 0;
-                cy += itemH;
-            }
-        } else {
-            cy += itemH;
-        }
-    });
+    psItems.forEach(drawItem);
 
     drawExportIdFooter(ctx, exportId, pScale);
 }

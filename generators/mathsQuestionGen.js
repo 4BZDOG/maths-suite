@@ -241,7 +241,7 @@ function genRounding(rng, diff, allowedOps) {
         const frac = ri(rng, 1, 9);
         const n = whole + frac / 10;   // e.g. 7.3, 42.8 — always has .1–.9
         const ph = rc(rng, [
-            `Round $${n}$ to the nearest whole number`,
+            `Round $${n}$ to the nearest *whole number*`,
             `Write $${n}$ as a whole number (rounded)`,
         ]);
         return { clue: ph, answer: String(Math.round(n)) };
@@ -804,10 +804,10 @@ function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
             const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
             const pf = fOn ? ' Use $A = l \\times w$.' : '';
             const ph = rc(rng, [
-                `Find the area of a rectangle with length $${l}$ ${u} and width $${w}$ ${u}.${pf}`,
-                `Calculate the area of a rectangle: length $${l}$ ${u}, width $${w}$ ${u}.${pf}`,
+                `Find the *area* of a rectangle with length $${l}$ ${u} and width $${w}$ ${u}.${pf}`,
+                `Calculate the *area* of a rectangle: length $${l}$ ${u}, width $${w}$ ${u}.${pf}`,
                 `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its area.${pf}`,
-                `What is the area of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?${pf}`,
+                `What is the *area* of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?${pf}`,
             ]);
             return { clue: ph, answer: String(l * w), answerDisplay: `${l * w} ${u}²`, diagram: { type: 'rectangle', l, w, missing: 'area' } };
         }
@@ -816,10 +816,10 @@ function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
         const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
         const pf = fOn ? ' Use $P = 2l + 2w$.' : '';
         const ph = rc(rng, [
-            `Find the perimeter of a rectangle with length $${l}$ ${u} and width $${w}$ ${u}.${pf}`,
-            `Calculate the perimeter of a rectangle: length $${l}$ ${u}, width $${w}$ ${u}.${pf}`,
+            `Find the *perimeter* of a rectangle with length $${l}$ ${u} and width $${w}$ ${u}.${pf}`,
+            `Calculate the *perimeter* of a rectangle: length $${l}$ ${u}, width $${w}$ ${u}.${pf}`,
             `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its perimeter.${pf}`,
-            `What is the perimeter of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?${pf}`,
+            `What is the *perimeter* of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?${pf}`,
         ]);
         return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} ${u}`, diagram: { type: 'rectangle', l, w, missing: 'perimeter' } };
     }
@@ -832,8 +832,8 @@ function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
             const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
             const pf = fOn ? ' Use $A = \\frac{1}{2}bh$.' : '';
             const ph = rc(rng, [
-                `Find the area of a triangle with base $${b}$ ${u} and perpendicular height $${h}$ ${u}.${pf}`,
-                `Calculate the area of a triangle: base $${b}$ ${u}, height $${h}$ ${u}.${pf}`,
+                `Find the *area* of a triangle with base $${b}$ ${u} and perpendicular height $${h}$ ${u}.${pf}`,
+                `Calculate the *area* of a triangle: base $${b}$ ${u}, height $${h}$ ${u}.${pf}`,
                 `A triangle has base $${b}$ ${u} and height $${h}$ ${u}. Determine its area.${pf}`,
             ]);
             return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'triangle-area', base: b, height: h } };
@@ -846,9 +846,9 @@ function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
             const fOn = opts.showFormulas?.['pythagoras']?.[diff.toLowerCase()];
             const pf = fOn ? ' Use $a^2 + b^2 = c^2$.' : '';
             const ph = rc(rng, [
-                `A right-angled triangle has legs $${a * scale}$ ${u} and $${b * scale}$ ${u}. Find the hypotenuse.${pf}`,
-                `Calculate the hypotenuse of a right triangle with legs $${a * scale}$ ${u} and $${b * scale}$ ${u}.${pf}`,
-                `Determine the hypotenuse given legs of $${a * scale}$ ${u} and $${b * scale}$ ${u}.${pf}`,
+                `A right-angled triangle has legs $${a * scale}$ ${u} and $${b * scale}$ ${u}. Find the *hypotenuse*.${pf}`,
+                `Calculate the *hypotenuse* of a right triangle with legs $${a * scale}$ ${u} and $${b * scale}$ ${u}.${pf}`,
+                `Determine the *hypotenuse* given legs of $${a * scale}$ ${u} and $${b * scale}$ ${u}.${pf}`,
             ]);
             return { clue: ph, answer: String(c * scale), answerDisplay: `${c * scale} ${u}`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'c' } };
         }
@@ -859,10 +859,10 @@ function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
         const a2 = rc(rng, remaining);
         const a3 = 180 - a1 - a2;
         const ph = rc(rng, [
-            `A triangle has angles $${a1}$° and $${a2}$°. Find the third angle.`,
-            `Determine the missing angle in a triangle with angles $${a1}$° and $${a2}$°.`,
-            `Calculate the third angle of a triangle given angles of $${a1}$° and $${a2}$°.`,
-            `Two angles of a triangle are $${a1}$° and $${a2}$°. What is the third angle?`,
+            `A triangle has angles $${a1}$° and $${a2}$°. Find the **third** angle.`,
+            `Determine the **missing** angle in a triangle with angles $${a1}$° and $${a2}$°.`,
+            `Calculate the **third** angle of a triangle given angles of $${a1}$° and $${a2}$°.`,
+            `Two angles of a triangle are $${a1}$° and $${a2}$°. What is the **third** angle?`,
         ]);
         return { clue: ph, answer: String(a3), answerDisplay: `${a3}°`, diagram: { type: 'triangle-angles', a1, a2, a3, missing: 'a3' } };
     }
@@ -874,9 +874,9 @@ function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
         const fOn = opts.showFormulas?.['circles']?.[diff.toLowerCase()];
         const pf = fOn ? ' Use $A = \\pi r^2$.' : '';
         const ph = rc(rng, [
-            `Find the area of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
-            `Calculate the area of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
-            `Determine the area of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+            `Find the *area* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+            `Calculate the *area* of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+            `Determine the *area* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
         ]);
         return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'circle', r, missing: 'area' } };
     }
@@ -889,8 +889,8 @@ function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
         const pf = fOn ? ' Use $a^2 + b^2 = c^2$.' : '';
         const ph = rc(rng, [
             `A right triangle has hypotenuse $${c * scale}$ ${u} and one leg $${a * scale}$ ${u}. Find the other leg.${pf}`,
-            `Calculate the missing leg: hypotenuse $${c * scale}$ ${u}, known leg $${a * scale}$ ${u}.${pf}`,
-            `Determine the unknown side of a right triangle with hypotenuse $${c * scale}$ ${u} and leg $${a * scale}$ ${u}.${pf}`,
+            `Calculate the **missing** leg: hypotenuse $${c * scale}$ ${u}, known leg $${a * scale}$ ${u}.${pf}`,
+            `Determine the **unknown** side of a right triangle with hypotenuse $${c * scale}$ ${u} and leg $${a * scale}$ ${u}.${pf}`,
         ]);
         return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'b' } };
     }
@@ -900,9 +900,9 @@ function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
     const fOn = opts.showFormulas?.['circles']?.[diff.toLowerCase()];
     const pf = fOn ? ' Use $C = 2\\pi r$.' : '';
     const ph = rc(rng, [
-        `Find the circumference of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
-        `Calculate the circumference of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
-        `Determine the circumference of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+        `Find the *circumference* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+        `Calculate the *circumference* of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+        `Determine the *circumference* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
     ]);
     return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, diagram: { type: 'circle', r, missing: 'circumference' } };
 }
