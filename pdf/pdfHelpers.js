@@ -341,16 +341,19 @@ export function drawHeader(ctx, fullTitle, subText, instructions, isKey, setIndi
             doc.setTextColor(99, 102, 241);
             doc.text(setIndicator, PAGE_WIDTH - MARGIN, MARGIN + 4 * pScale, { align: 'right' });
         }
+        // Name and date fields with improved spacing and visual hierarchy
+        const fieldX = PAGE_WIDTH - 72;
+        const lineStart = PAGE_WIDTH - 57;
         doc.setFont(pdfFont, 'bold');
-        doc.setFontSize(8.5 * pScale);
-        doc.setTextColor(100, 116, 139);
-        doc.text('NAME:', PAGE_WIDTH - 72, MARGIN + 8 * pScale);
-        doc.setDrawColor(190, 200, 220);
-        doc.setLineWidth(0.4);
-        doc.setLineDashPattern([1, 1.5], 0);
-        doc.line(PAGE_WIDTH - 57, MARGIN + 8 * pScale, PAGE_WIDTH - MARGIN, MARGIN + 8 * pScale);
-        doc.text('DATE:', PAGE_WIDTH - 72, MARGIN + 16 * pScale);
-        doc.line(PAGE_WIDTH - 57, MARGIN + 16 * pScale, PAGE_WIDTH - MARGIN, MARGIN + 16 * pScale);
+        doc.setFontSize(7.5 * pScale);
+        doc.setTextColor(120, 130, 150);
+        doc.text('NAME:', fieldX, MARGIN + 7.5 * pScale);
+        doc.setDrawColor(200, 210, 230);
+        doc.setLineWidth(0.5);
+        doc.setLineDashPattern([1.5, 1.5], 0);
+        doc.line(lineStart, MARGIN + 8.5 * pScale, PAGE_WIDTH - MARGIN, MARGIN + 8.5 * pScale);
+        doc.text('DATE:', fieldX, MARGIN + 15.5 * pScale);
+        doc.line(lineStart, MARGIN + 16.5 * pScale, PAGE_WIDTH - MARGIN, MARGIN + 16.5 * pScale);
         doc.setLineDashPattern([], 0);
     }
 
