@@ -305,6 +305,10 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
     const itemGap            = 6 * pScale;
 
     let cy          = startY, col = 0;
+    // Per-column Y trackers for shortest-column placement (2-column mode).
+    // Items are dropped into whichever column is currently shorter, which
+    // balances height when one column has a tall item (e.g. a diagram).
+    let colY = [startY, startY];
 
     // Optional outcomes header strip
     if (showOutcomesHeader) {
@@ -339,6 +343,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
                 px += codeW + 2 * pScale;
             });
             cy += hdr_h + 3 * pScale;
+            colY = [cy, cy];   // header consumed space; reset both column trackers
         }
     }
     let rowMaxH     = 0;
@@ -400,27 +405,39 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
             + answerLineSpacing + 12 * pScale
             + metaH + itemGap;
 
-        // Overflow check — only fires at row start for 2-column layout
-        const isNewRow = cols === 2 ? col === 0 : true;
-        if (isNewRow && cy + itemH > PAGE_HEIGHT - MARGIN - 10) {
+        // Choose shortest column (2-col), then check whether even that
+        // column can fit the item before deciding to break to a new page.
+        if (cols === 2) {
+            col = colY[0] <= colY[1] ? 0 : 1;
+        }
+        const wouldOverflow = cols === 2
+            ? (Math.min(colY[0], colY[1]) + itemH > PAGE_HEIGHT - MARGIN - 10)
+            : (cy + itemH > PAGE_HEIGHT - MARGIN - 10);
+
+        if (wouldOverflow) {
             if (capPages > 0 && pagesUsed >= capPages) {
                 overflowCount = questions.length - i;
                 break;
             }
             pagesUsed++;
-            // Draw divider for this page before flipping to next
-            if (cols === 2) _drawColumnDivider(doc, MARGIN, colW, pageStartY, cy);
+            // Draw divider for this page before flipping to next.
+            // Use the deepest column as the divider's bottom so the rule
+            // matches the visible content extent on this page.
+            if (cols === 2) {
+                _drawColumnDivider(doc, MARGIN, colW, pageStartY, Math.max(colY[0], colY[1]));
+            }
             drawExportIdFooter(ctx, exportId, pScale);
             doc.addPage();
             drawWatermark();
             pageStartY = MARGIN + 15 * scale;
             cy         = pageStartY;
+            colY       = [pageStartY, pageStartY];
             col        = 0;
             rowMaxH    = 0;
         }
 
         const itemX = col === 0 ? MARGIN : MARGIN + colW + 8;
-        let drawY = cy;
+        let drawY = cols === 2 ? colY[col] : cy;
 
         // ── Question number (inline with clue) ───────────────────────
         doc.setFont(pdfFont, 'bold');
@@ -561,27 +578,22 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
             nextY -= 1;  // remove trailing inter-row gap
         }
 
-        const actualItemH = nextY - cy + itemGap;
-        rowMaxH = Math.max(rowMaxH, actualItemH);
+        const actualItemH = nextY - drawY + itemGap;
 
         if (cols === 2) {
-            if (col === 0) {
-                col = 1;
-            } else {
-                col = 0;
-                cy += rowMaxH;
-                rowMaxH = 0;
-            }
+            colY[col] += actualItemH;
+            // Track the deepest column for divider/page-break geometry.
+            cy = Math.max(colY[0], colY[1]);
         } else {
             cy += actualItemH;
         }
     }
 
-    // Flush last partial row
-    if (cols === 2 && col === 1) cy += rowMaxH;
-
-    // Draw column divider for this (final) page
-    if (cols === 2) _drawColumnDivider(doc, MARGIN, colW, pageStartY, cy);
+    // Final page: draw the divider down to the deepest column extent.
+    if (cols === 2) {
+        const dividerEnd = Math.max(colY[0], colY[1]);
+        _drawColumnDivider(doc, MARGIN, colW, pageStartY, dividerEnd);
+    }
 
     drawExportIdFooter(ctx, exportId, pScale);
     return overflowCount;
