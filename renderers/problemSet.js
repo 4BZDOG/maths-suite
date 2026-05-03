@@ -46,9 +46,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         }
     }
 
-    const colStyle = cols === 1 ? 'grid-template-columns: 1fr' : 'grid-template-columns: 1fr 1fr';
-
-    let html = outcomesHeaderHtml + `<div class="problem-set-grid" style="display:grid; ${colStyle}; gap:18px 20px; padding:4px;">`;
+    let html = outcomesHeaderHtml + `<div class="problem-set-grid" data-cols="${cols}">`;
 
     questions.forEach((item, i) => {
         const topicColor = TOPIC_COLOURS[item.topic] || '#64748b';
@@ -117,7 +115,13 @@ function _capToPages(container, total, capPages) {
     if (!page) return total;
 
     const wasHidden = !page.classList.contains('visible');
-    
+    const prevStyle = wasHidden ? {
+        display: page.style.display,
+        visibility: page.style.visibility,
+        position: page.style.position,
+        zIndex: page.style.zIndex,
+    } : null;
+
     // Temporarily show the page to measure rects accurately if it is hidden
     if (wasHidden) {
         page.style.display = 'block';
@@ -140,10 +144,10 @@ function _capToPages(container, total, capPages) {
     const grid = container.querySelector('.problem-set-grid');
     if (!grid) {
         if (wasHidden) {
-            page.style.display = '';
-            page.style.visibility = '';
-            page.style.position = '';
-            page.style.zIndex = '';
+            page.style.display = prevStyle.display;
+            page.style.visibility = prevStyle.visibility;
+            page.style.position = prevStyle.position;
+            page.style.zIndex = prevStyle.zIndex;
         }
         return total;
     }
@@ -168,10 +172,10 @@ function _capToPages(container, total, capPages) {
     }
 
     if (wasHidden) {
-        page.style.display = '';
-        page.style.visibility = '';
-        page.style.position = '';
-        page.style.zIndex = '';
+        page.style.display = prevStyle.display;
+        page.style.visibility = prevStyle.visibility;
+        page.style.position = prevStyle.position;
+        page.style.zIndex = prevStyle.zIndex;
     }
 
     return total - hiddenCount;

@@ -8,18 +8,39 @@ export function esc(str) {
         .replace(/"/g, '&quot;');
 }
 
+// Verb prefix matcher: only short, alpha-leading prefixes ending with ": ".
+// Tightened so clues containing an internal "<word>: " (e.g. ratios, list-style
+// prompts) don't get the wrong segment bolded.
+const VERB_RE = /^([A-Za-z][^:.$]{0,40}:\s)/;
+
+// Apply our small markdown subset (**bold**, *italic*) to an already
+// HTML-escaped string, while leaving any KaTeX math regions ($...$) untouched.
+function applyMarkdownEmphasis(escaped) {
+    // Split on math regions (preserves them as separate segments).
+    const parts = escaped.split(/(\$[^$]+\$)/g);
+    return parts.map(seg => {
+        if (seg.startsWith('$') && seg.endsWith('$')) return seg;
+        return seg
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1<em>$2</em>');
+    }).join('');
+}
+
 /**
- * Format a clue for HTML display. HTML-escapes the text and wraps any
- * leading instruction verb (text ending with ': ') in <strong> so it
- * renders bold — e.g. "Calculate: $2x+3$" or "Find $x$: $3x=9$".
- * The wrapped element keeps the katex-target class on the parent so
- * LaTeX inside the verb (like $x$) still renders correctly.
+ * Format a clue for HTML display.
+ *  - Wraps a leading instruction verb (e.g. "Calculate: ") in <strong class="clue-verb">.
+ *  - Supports a small markdown subset in the question body for emphasis:
+ *      **word** → bold, *word* → italic.
+ *  - Leaves $...$ math segments untouched so KaTeX still renders them.
  */
 export function formatClue(clue) {
     if (!clue) return '';
-    const m = String(clue).match(/^(.+?:\s)/);
+    const s = String(clue);
+    const m = s.match(VERB_RE);
     if (m) {
-        return `<strong class="clue-verb">${esc(m[1])}</strong>${esc(clue.slice(m[1].length))}`;
+        const verb = m[1];
+        const rest = s.slice(verb.length);
+        return `<strong class="clue-verb">${esc(verb)}</strong>${applyMarkdownEmphasis(esc(rest))}`;
     }
-    return esc(clue);
+    return applyMarkdownEmphasis(esc(s));
 }

@@ -2303,9 +2303,18 @@ table.mode-cw td.cell.empty {
     margin-left: 4px;
 }
 
-/* Problem Set page preview */
+/* Problem Set page preview — CSS multi-column flow auto-balances column heights
+   so a tall card (e.g. one with a geometry diagram) no longer leaves a large gap
+   in the adjacent column. `break-inside: avoid` keeps each card intact. */
 .problem-set-grid {
     width: 100%;
+    padding: 4px;
+}
+.problem-set-grid[data-cols="1"] { column-count: 1; }
+.problem-set-grid[data-cols="2"] {
+    column-count: 2;
+    column-gap: 20px;
+    column-fill: balance;
 }
 .problem-item {
     background: var(--bg-panel);
@@ -2317,6 +2326,10 @@ table.mode-cw td.cell.empty {
     gap: 0;
     font-family: var(--user-font);
     break-inside: avoid;
+    margin-bottom: 18px;
+    /* Multi-column items are inline-block by default for break-inside to work
+       reliably across browsers; width:100% keeps them filling the column. */
+    width: 100%;
 }
 /* Number + clue on the same line */
 .problem-clue-row {
