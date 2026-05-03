@@ -35,9 +35,12 @@ function simplify(n, d) {
     const g = gcd(Math.abs(n), Math.abs(d));
     return { n: n / g, d: d / g };
 }
+// Render an answer fraction in the same math-mode form as the question
+// (\frac{n}{d}) so HTML preview and answer key both show stacked fractions
+// rather than mixing "2/5" with the question's $\frac{2}{5}$.
 function fracStr(n, d) {
     const s = simplify(n, d);
-    return s.d === 1 ? String(s.n) : `${s.n}/${s.d}`;
+    return s.d === 1 ? String(s.n) : `$\\frac{${s.n}}{${s.d}}$`;
 }
 
 // ============================================================
@@ -528,19 +531,19 @@ function genAlgebra(rng, diff, allowedOps) {
     if (diff === 'Easy') {
         if (type === 0) {
             const ans = ri(rng, 1, 20), a = ri(rng, 1, 20);
-            return { clue: `${solveVerb} $x + ${a} = ${ans + a}$`, answer: String(ans), answerDisplay: `x = ${ans}` };
+            return { clue: `${solveVerb} $x + ${a} = ${ans + a}$`, answer: String(ans), answerDisplay: `$x = ${ans}$` };
         }
         const a = ri(rng, 2, 12), ans = ri(rng, 2, 12);
-        return { clue: `${solveVerb} $${a}x = ${a * ans}$`, answer: String(ans), answerDisplay: `x = ${ans}` };
+        return { clue: `${solveVerb} $${a}x = ${a * ans}$`, answer: String(ans), answerDisplay: `$x = ${ans}$` };
     }
     if (diff === 'Medium') {
         if (type === 0) {
             const a = ri(rng, 2, 6), ans = ri(rng, 1, 10), b = ri(rng, 1, 20);
-            return { clue: `${solveVerb} $${a}x + ${b} = ${a * ans + b}$`, answer: String(ans), answerDisplay: `x = ${ans}` };
+            return { clue: `${solveVerb} $${a}x + ${b} = ${a * ans + b}$`, answer: String(ans), answerDisplay: `$x = ${ans}$` };
         }
         if (type === 1) {
             const a = ri(rng, 2, 6), ans = ri(rng, 2, 10), b = ri(rng, 1, 10);
-            return { clue: `${solveVerb} $${a}x - ${b} = ${a * ans - b}$`, answer: String(ans), answerDisplay: `x = ${ans}` };
+            return { clue: `${solveVerb} $${a}x - ${b} = ${a * ans - b}$`, answer: String(ans), answerDisplay: `$x = ${ans}$` };
         }
         const a = ri(rng, 2, 6), b = ri(rng, 1, 12), n = ri(rng, 1, 8);
         const subVerb = rc(rng, [
@@ -556,7 +559,7 @@ function genAlgebra(rng, diff, allowedOps) {
         const ans = ri(rng, 1, 10);
         const a = ri(rng, 3, 8), c = ri(rng, 1, a - 1), b = ri(rng, 1, 20);
         const d = (a - c) * ans + b;
-        return { clue: `${solveVerb} $${a}x + ${b} = ${c}x + ${d}$`, answer: String(ans), answerDisplay: `x = ${ans}` };
+        return { clue: `${solveVerb} $${a}x + ${b} = ${c}x + ${d}$`, answer: String(ans), answerDisplay: `$x = ${ans}$` };
     }
     if (type === 1) {
         const a = ri(rng, 1, 4), b = ri(rng, 1, 15), n = ri(rng, 2, 6);
@@ -571,7 +574,7 @@ function genAlgebra(rng, diff, allowedOps) {
     }
     const a = ri(rng, 2, 5), bMult = ri(rng, 1, 8);
     const ans2 = -bMult;
-    return { clue: `${solveVerb} $${a}x + ${a * bMult} = 0$`, answer: String(ans2), answerDisplay: `x = ${ans2}` };
+    return { clue: `${solveVerb} $${a}x + ${a * bMult} = 0$`, answer: String(ans2), answerDisplay: `$x = ${ans2}$` };
 }
 
 // ============================================================

@@ -20,6 +20,10 @@ const _GC  = [16, 185, 129];   // emerald green
 const _GCF = [209, 250, 229];  // light green fill
 const _LC  = [80, 96, 116];    // slate label
 const _MC  = [239, 68, 68];    // red missing value
+// Uniform geometry weights so every shape feels part of the same set.
+const _STROKE_W   = 0.6;       // mm — primary shape outline
+const _AUX_W      = 0.4;       // mm — dashed/auxiliary lines (height, radius)
+const _LBL_OFFSET = 3;         // mm — clearance between labels and shape edges
 
 function _triLines(doc, pts, style) {
     // Draw a closed triangle given 3 {x,y} vertices using jsPDF triangle()
@@ -48,17 +52,17 @@ function _drawRectDiagramPDF(doc, { l, w: wv }, x0, y0, w, h, ps, font) {
 
     doc.setFillColor(..._GCF);
     doc.setDrawColor(..._GC);
-    doc.setLineWidth(0.45 * ps);
+    doc.setLineWidth(_STROKE_W);
     doc.rect(rx, ry, dw, dh, 'FD');
 
-    // Length label (below, centred)
+    // Length label (below, centred) — clear of bottom edge
     doc.setFont(font, 'normal');
     doc.setFontSize(8 * ps);
     doc.setTextColor(..._LC);
-    doc.text(String(l), rx + dw / 2, ry + dh + 3.5 * ps, { align: 'center' });
+    doc.text(String(l), rx + dw / 2, ry + dh + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
 
-    // Width label (left side, normally oriented)
-    doc.text(String(wv), rx - 2 * ps, ry + dh / 2 + 1.2 * ps, { align: 'right' });
+    // Width label (left of the rectangle) — clear of left edge
+    doc.text(String(wv), rx - _LBL_OFFSET, ry + dh / 2 + 1.2 * ps, { align: 'right' });
 
     // Missing "?" in centre
     doc.setFont(font, 'bold');
@@ -81,34 +85,34 @@ function _drawRightTriDiagramPDF(doc, { a, b, c, missing }, x0, y0, w, h, ps, fo
 
     doc.setFillColor(..._GCF);
     doc.setDrawColor(..._GC);
-    doc.setLineWidth(0.45 * ps);
+    doc.setLineWidth(_STROKE_W);
     _triLines(doc, [A, B, C], 'FD');
 
     const sq = 2.5 * ps;
-    doc.setLineWidth(0.35 * ps);
+    doc.setLineWidth(_AUX_W);
     _rightAnglePDF(doc, Ax, Ay, sq);
 
     const aLabel = missing === 'a' ? '?' : String(a);
     const bLabel = missing === 'b' ? '?' : String(b);
     const cLabel = missing === 'c' ? 'c = ?' : `c = ${c}`;
 
-    // Leg a (below)
+    // Leg a (below) — clear of bottom edge
     doc.setFont(font, missing === 'a' ? 'bold' : 'normal');
     doc.setFontSize(8 * ps);
     doc.setTextColor(...(missing === 'a' ? _MC : _LC));
-    doc.text(aLabel, (Ax + Ax + aPx) / 2, Ay + 3.5 * ps, { align: 'center' });
+    doc.text(aLabel, (Ax + Ax + aPx) / 2, Ay + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
 
-    // Leg b (left side, normally oriented)
+    // Leg b (left of the triangle) — clear of left edge
     doc.setFont(font, missing === 'b' ? 'bold' : 'normal');
     doc.setTextColor(...(missing === 'b' ? _MC : _LC));
-    doc.text(bLabel, Ax - 2 * ps, (Ay + Ay - bPx) / 2 + 1.2 * ps, { align: 'right' });
+    doc.text(bLabel, Ax - _LBL_OFFSET, (Ay + Ay - bPx) / 2 + 1.2 * ps, { align: 'right' });
 
-    // Hypotenuse label at midpoint, offset outward
+    // Hypotenuse label at midpoint, offset outward (3 mm clearance)
     const dx = B.x - C.x, dy = B.y - C.y;
     const len = Math.sqrt(dx * dx + dy * dy);
     const nx = dy / len, ny = -dx / len;
-    const hmx = (B.x + C.x) / 2 + nx * 4.8 * ps;
-    const hmy = (B.y + C.y) / 2 + ny * 4.8 * ps + 1.2 * ps;
+    const hmx = (B.x + C.x) / 2 + nx * (_LBL_OFFSET + 2.5);
+    const hmy = (B.y + C.y) / 2 + ny * (_LBL_OFFSET + 2.5) + 1.2 * ps;
     doc.setFont(font, missing === 'c' ? 'bold' : 'normal');
     doc.setFontSize(7.5 * ps);
     doc.setTextColor(...(missing === 'c' ? _MC : _LC));
@@ -127,21 +131,24 @@ function _drawTriAnglesDiagramPDF(doc, { a1, a2, a3, missing }, x0, y0, w, h, ps
 
     doc.setFillColor(..._GCF);
     doc.setDrawColor(..._GC);
-    doc.setLineWidth(0.45 * ps);
+    doc.setLineWidth(_STROKE_W);
     _triLines(doc, [A, B, C], 'FD');
 
     const a3Label = missing === 'a3' ? '?' : `${a3}\u00B0`;
 
     doc.setFontSize(8 * ps);
 
+    // Base-vertex angle labels \u2014 pulled in from the corners and lifted up
+    // a touch so they sit clearly inside the triangle, not on its hypotenuses.
     doc.setFont(font, 'normal');
     doc.setTextColor(..._LC);
-    doc.text(`${a1}\u00B0`, A.x + 4 * ps, A.y - 2.5 * ps, { align: 'left' });
-    doc.text(`${a2}\u00B0`, B.x - 4 * ps, B.y - 2.5 * ps, { align: 'right' });
+    doc.text(`${a1}\u00B0`, A.x + _LBL_OFFSET + 1.5 * ps, A.y - _LBL_OFFSET, { align: 'left' });
+    doc.text(`${a2}\u00B0`, B.x - _LBL_OFFSET - 1.5 * ps, B.y - _LBL_OFFSET, { align: 'right' });
 
+    // Apex-angle label \u2014 placed below the apex with full clearance
     doc.setFont(font, missing === 'a3' ? 'bold' : 'normal');
     doc.setTextColor(...(missing === 'a3' ? _MC : _LC));
-    doc.text(a3Label, C.x, C.y + 5.5 * ps, { align: 'center' });
+    doc.text(a3Label, C.x, C.y + _LBL_OFFSET + 2.5 * ps, { align: 'center' });
 }
 
 function _drawTriAreaDiagramPDF(doc, { base, height }, x0, y0, w, h, ps, font) {
@@ -157,36 +164,36 @@ function _drawTriAreaDiagramPDF(doc, { base, height }, x0, y0, w, h, ps, font) {
 
     doc.setFillColor(..._GCF);
     doc.setDrawColor(..._GC);
-    doc.setLineWidth(0.45 * ps);
+    doc.setLineWidth(_STROKE_W);
     _triLines(doc, [bl, br, ap], 'FD');
 
     // Dashed height line
     doc.setLineDashPattern([1.2, 1.2], 0);
     doc.setDrawColor(..._GC);
-    doc.setLineWidth(0.3 * ps);
+    doc.setLineWidth(_AUX_W);
     doc.line(ap.x, ap.y, ap.x, by);
     doc.setLineDashPattern([], 0);
 
     // Right-angle mark at height foot
     const sq = 2.2 * ps;
-    doc.setLineWidth(0.3 * ps);
+    doc.setLineWidth(_AUX_W);
     _rightAnglePDF(doc, ap.x, by, sq);
 
     doc.setFontSize(8 * ps);
 
-    // Base label
+    // Base label — clear of bottom edge
     doc.setFont(font, 'normal');
     doc.setTextColor(..._LC);
-    doc.text(String(base), cx, by + 4 * ps, { align: 'center' });
+    doc.text(String(base), cx, by + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
 
-    // Height label (right of dashed line)
-    doc.text(`h = ${height}`, ap.x + 3 * ps, (ap.y + by) / 2, { align: 'left' });
+    // Height label (right of dashed line) — generous clearance from the line
+    doc.text(`h = ${height}`, ap.x + _LBL_OFFSET, (ap.y + by) / 2, { align: 'left' });
 
-    // Missing "?" for area (left side)
+    // Missing "?" for area (inside triangle, left of dashed line)
     doc.setFont(font, 'bold');
     doc.setTextColor(..._MC);
     doc.setFontSize(10 * ps);
-    doc.text('?', cx - 8 * ps, (ap.y + by) / 2 + 1.5 * ps, { align: 'center' });
+    doc.text('?', cx - _LBL_OFFSET - 5 * ps, (ap.y + by) / 2 + 1.5 * ps, { align: 'center' });
 }
 
 function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
@@ -198,13 +205,13 @@ function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
 
     doc.setFillColor(..._GCF);
     doc.setDrawColor(..._GC);
-    doc.setLineWidth(0.45 * ps);
+    doc.setLineWidth(_STROKE_W);
     doc.circle(cx, cy, rPx, 'FD');
 
     // Dashed radius line (centre → right edge)
     doc.setLineDashPattern([1.2, 1.2], 0);
     doc.setDrawColor(..._GC);
-    doc.setLineWidth(0.3 * ps);
+    doc.setLineWidth(_AUX_W);
     doc.line(cx, cy, cx + rPx, cy);
     doc.setLineDashPattern([], 0);
 
@@ -212,18 +219,18 @@ function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
     doc.setFillColor(..._GC);
     doc.circle(cx, cy, 0.8, 'F');
 
-    // "r = X" label — centred above the radius line, clear of the circle edge
+    // "r = X" label — above the radius line, clear of the circle edge
     doc.setFontSize(8 * ps);
     doc.setFont(font, 'normal');
     doc.setTextColor(..._LC);
-    doc.text(`r = ${r}`, cx + rPx / 2, cy - rPx - 2.5 * ps, { align: 'center' });
+    doc.text(`r = ${r}`, cx + rPx / 2, cy - rPx - _LBL_OFFSET, { align: 'center' });
 
-    // Missing label — to the right of the circle with generous gap
+    // Missing label — to the right of the circle with consistent clearance
     const missText = missing === 'area' ? 'A = ?' : 'C = ?';
     doc.setFont(font, 'bold');
     doc.setFontSize(9.5 * ps);
     doc.setTextColor(..._MC);
-    doc.text(missText, cx + rPx + 5 * ps, cy + 1.5 * ps, { align: 'left' });
+    doc.text(missText, cx + rPx + _LBL_OFFSET + 2 * ps, cy + 1.5 * ps, { align: 'left' });
 }
 
 /**
@@ -300,9 +307,14 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
     const availW             = PAGE_WIDTH - MARGIN * 2;
     const colW               = (availW - (cols - 1) * 8) / cols;
     const chipFontPt         = 5.5 * pScale;
-    const workingLineSpacing = 8 * pScale;
-    const answerLineSpacing  = 8 * pScale;
+    // 5 mm working-line pitch matches standard graph paper so algebra
+    // students can keep equals-signs aligned across rows.
+    const workingLineSpacing = 5;
+    const answerLineSpacing  = 9 * pScale;
     const itemGap            = 6 * pScale;
+    // Padding between major item sections (12pt ≈ 4.2mm) — gives the
+    // question, working area and answer track distinct visual zones.
+    const SECTION_PAD        = 4.2 * pScale;
 
     let cy          = startY, col = 0;
     // Per-column Y trackers for shortest-column placement (2-column mode).
@@ -400,9 +412,9 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         }
         const hasDiagram = showDiagrams && !!item.diagram;
         const itemH = clueBlockH
-            + (hasDiagram ? DIAG_H + 2 * pScale : 0)
-            + (workingCount > 0 ? 5 + workingCount * workingLineSpacing : 0)
-            + answerLineSpacing + 12 * pScale
+            + (hasDiagram ? DIAG_H + SECTION_PAD : 0)
+            + (workingCount > 0 ? SECTION_PAD + workingCount * workingLineSpacing + SECTION_PAD : 0)
+            + answerLineSpacing + SECTION_PAD + 6 * pScale
             + metaH + itemGap;
 
         // Choose shortest column (2-col), then check whether even that
@@ -463,48 +475,56 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
             clueEndY = drawY + clueBlockH;
         }
 
-        let nextY = clueEndY + 5;
+        let nextY = clueEndY + SECTION_PAD;
 
         // ── Geometry diagram ─────────────────────────────────────────
         if (hasDiagram) {
             _drawDiagramInPDF(doc, item.diagram, itemX + 9, nextY, colW - 13, DIAG_H, pScale, pdfFont);
-            nextY += DIAG_H + 2 * pScale;
+            nextY += DIAG_H + SECTION_PAD;
         }
 
-        // ── Working lines ────────────────────────────────────────────
+        // ── Working area: 5 mm grid pitch for algebra alignment ─────
         if (workingCount > 0) {
             doc.setFont(pdfFont, 'normal');
             doc.setFontSize(6.5 * pScale);
             doc.setTextColor(160, 170, 185);
-            doc.text('Working:', clueX, nextY);
-            nextY += 2;
+            doc.text('Working', clueX, nextY);
+            nextY += SECTION_PAD;
             for (let wl = 0; wl < workingCount; wl++) {
                 nextY += workingLineSpacing;
-                doc.setDrawColor(200, 210, 225);
-                doc.setLineWidth(0.25);
-                doc.setLineDashPattern([0.6, 1.4], 0);
+                doc.setDrawColor(215, 222, 235);
+                doc.setLineWidth(0.2);
+                doc.setLineDashPattern([0.5, 1.5], 0);
                 doc.line(clueX, nextY, itemX + colW - 4, nextY);
                 doc.setLineDashPattern([], 0);
             }
-            nextY += 5;
+            nextY += SECTION_PAD;
         }
 
-        // ── Answer line ──────────────────────────────────────────────
+        // ── Answer line: right-aligned marking track ─────────────────
         const lineY = nextY + answerLineSpacing;
         doc.setFont(pdfFont, 'normal');
         doc.setFontSize(8 * pScale);
         doc.setTextColor(100, 116, 139);
-        doc.text('Answer:', clueX, lineY);
+        // Right edge of the line is the column edge; label sits to the
+        // left of a fixed-length track so teachers can scan answers in a
+        // consistent vertical "rail" down the page.
+        const rightEdge   = itemX + colW - 4;
+        const trackLength = Math.min(46 * pScale, colW - 26);
+        const trackStart  = rightEdge - trackLength;
+        doc.text('Answer:', trackStart - 2, lineY, { align: 'right' });
         doc.setDrawColor(150, 160, 180);
         doc.setLineWidth(0.4);
         doc.setLineDashPattern([0.8, 1.2], 0);
-        doc.line(clueX + 19, lineY, itemX + colW - 4, lineY);
+        doc.line(trackStart, lineY, rightEdge, lineY);
         doc.setLineDashPattern([], 0);
-        nextY = lineY;
+        nextY = lineY + SECTION_PAD;
 
         // ── Meta row: topic pill + outcome chips, centered in column ──
+        // Muted styling — these chips are administrative metadata and
+        // should not compete with the question text.
         if (hasMeta) {
-            nextY += 4 * pScale;
+            nextY += 2 * pScale;
             const chipH = 3.5 * pScale;
             const gap   = 2;
             // Build ordered pill list: topic first, then outcome chips
@@ -561,14 +581,16 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
                         doc.setTextColor(...p.rgb);
                         doc.text(p.text, px + 2, nextY);
                     } else {
-                        doc.setFont(pdfFont, 'bold');
+                        // Outcome code chip — neutral slate so it reads as
+                        // metadata, not a coloured callout.
+                        doc.setFont(pdfFont, 'normal');
                         doc.setFontSize(chipFontPt);
-                        doc.setFillColor(239, 238, 255);
+                        doc.setFillColor(243, 245, 250);
                         doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'F');
-                        doc.setDrawColor(99, 102, 241);
-                        doc.setLineWidth(0.2);
+                        doc.setDrawColor(210, 218, 230);
+                        doc.setLineWidth(0.15);
                         doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'S');
-                        doc.setTextColor(99, 102, 241);
+                        doc.setTextColor(120, 130, 150);
                         doc.text(p.text, px + 2, nextY);
                     }
                     px += p.w + gap;
@@ -706,8 +728,15 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
 
         let ky = cy + 8 * pScale;
 
+        // Reserve a fixed right-hand strip for the answer so all answers
+        // align in a vertical "marking rail" and clue text wraps cleanly
+        // to the left of it instead of being truncated with an ellipsis.
+        const ansStripW = Math.max(18 * pScale, colW * 0.32);
+        const clueW     = colW - ansStripW - 3;
+        const lineH     = 3.4 * pScale;
+
         sec.questions.forEach((q, i) => {
-            if (ky + 7 * pScale > PAGE_HEIGHT - MARGIN) return;
+            if (ky + 6 * pScale > PAGE_HEIGHT - MARGIN) return;
 
             const clueText = latexToText(q.clue || '');
             const ansText  = String(q.answerDisplay || q.answer || '');
@@ -715,20 +744,26 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             doc.setFont(pdfFont, 'normal');
             doc.setFontSize(7 * pScale);
             doc.setTextColor(100, 116, 139);
-            const maxClue = Math.floor(colW / (2.2 * pScale));
-            const clueShort = clueText.length > maxClue ? clueText.slice(0, maxClue - 2) + '…' : clueText;
-            doc.text(`${i + 1}. ${clueShort}`, cx, ky);
+            const clueLines = doc.splitTextToSize(`${i + 1}. ${clueText}`, clueW);
+            // Cap at 3 wrapped lines so a freak long clue can't blow up
+            // a key page; the rest is still summarised, not silently cut.
+            const shown = clueLines.slice(0, 3);
+            if (clueLines.length > shown.length) {
+                shown[shown.length - 1] = shown[shown.length - 1].replace(/.{0,2}$/, '…');
+            }
+            shown.forEach((line, li) => doc.text(line, cx, ky + li * lineH));
 
             doc.setFont(pdfFont, 'bold');
             doc.setFontSize(8 * pScale);
             doc.setTextColor(...sec.rgb);
             doc.text(ansText, cx + colW, ky, { align: 'right' });
 
+            const blockH = Math.max(shown.length * lineH, 5 * pScale);
             doc.setDrawColor(220, 220, 220);
             doc.setLineWidth(0.1);
-            doc.line(cx, ky + 1.5 * pScale, cx + colW, ky + 1.5 * pScale);
+            doc.line(cx, ky + blockH - 0.5, cx + colW, ky + blockH - 0.5);
 
-            ky += 6 * pScale;
+            ky += blockH + 1.4 * pScale;
         });
     });
 
