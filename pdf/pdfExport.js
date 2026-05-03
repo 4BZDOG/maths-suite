@@ -705,9 +705,9 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
     }
 
     const sections = [
-        { label: 'EASY',   rgb: DIFF_RGB.Easy,   questions: sets.easy   || [] },
-        { label: 'MEDIUM', rgb: DIFF_RGB.Medium,  questions: sets.medium || [] },
-        { label: 'HARD',   rgb: DIFF_RGB.Hard,    questions: sets.hard   || [] },
+        { label: '🟢 EASY',   rgb: DIFF_RGB.Easy,   questions: sets.easy   || [] },
+        { label: '🟡 MEDIUM', rgb: DIFF_RGB.Medium,  questions: sets.medium || [] },
+        { label: '🔴 HARD',   rgb: DIFF_RGB.Hard,    questions: sets.hard   || [] },
     ].filter(s => s.questions.length > 0);
 
     if (sections.length === 0) { drawExportIdFooter(ctx, exportId, pScale); return; }

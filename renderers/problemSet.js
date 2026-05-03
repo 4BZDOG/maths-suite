@@ -30,6 +30,14 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         return 0;
     }
 
+    // Difficulty section header with icon
+    const diffIcon = difficultyLabel === 'Easy' ? '🟢' : difficultyLabel === 'Medium' ? '🟡' : '🔴';
+    const diffHeaderHtml = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;margin-top:16px;padding-top:12px;border-top:2px solid var(--border,#e2e8f0);">
+        <span style="font-size:16px;">${diffIcon}</span>
+        <span style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted,#64748b);">${difficultyLabel}</span>
+        <span style="flex:1;height:1px;background:var(--border,#e2e8f0);"></span>
+    </div>`;
+
     // Optional outcomes header — compact strip of NESA outcome pills
     let outcomesHeaderHtml = '';
     if (showOutcomesHeader && activeTopics.length > 0) {
@@ -46,7 +54,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         }
     }
 
-    let html = outcomesHeaderHtml + `<div class="problem-set-grid" data-cols="${cols}">`;
+    let html = diffHeaderHtml + outcomesHeaderHtml + `<div class="problem-set-grid" data-cols="${cols}">`;
 
     questions.forEach((item, i) => {
         const topicColor = TOPIC_COLOURS[item.topic] || '#64748b';
@@ -164,12 +172,7 @@ function _capToPages(container, total, capPages) {
         }
     }
 
-    if (hiddenCount > 0) {
-        const notice = document.createElement('div');
-        notice.className = 'problem-overflow-notice';
-        notice.textContent = `+ ${hiddenCount} more question${hiddenCount > 1 ? 's' : ''} (not shown)`;
-        grid.appendChild(notice);
-    }
+    // Overflow notice removed — students should focus on visible questions only
 
     if (wasHidden) {
         page.style.display = prevStyle.display;
