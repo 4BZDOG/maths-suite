@@ -287,8 +287,18 @@
                         <div class="card-header-inner"><i class="fas fa-square-root-alt"></i> Formulas &amp; Hints</div>
                     </summary>
                     <div class="card-content" style="font-size:12px;">
-                        <p style="margin:0 0 10px 0; color:var(--text-muted); line-height:1.3;">Show formula hints for specific question types and difficulty levels.</p>
-                        
+                        <p style="margin:0 0 8px 0; color:var(--text-muted); line-height:1.3;">Show formula hints for specific question types and difficulty levels.</p>
+
+                        <!-- Bulk toggles -->
+                        <div class="formula-bulk-bar">
+                            <button type="button" class="formula-bulk-btn" onclick="setAllFormulaHints('all', true)" title="Enable hints for all subtopics and difficulties"><i class="fas fa-check-double"></i> All on</button>
+                            <button type="button" class="formula-bulk-btn" onclick="setAllFormulaHints('all', false)" title="Disable hints for all subtopics and difficulties"><i class="fas fa-times"></i> All off</button>
+                            <span class="formula-bulk-sep">·</span>
+                            <button type="button" class="formula-bulk-btn formula-bulk-diff" onclick="toggleFormulaHintColumn('easy')" style="color:#10b981;" title="Toggle Easy column for all subtopics">Easy</button>
+                            <button type="button" class="formula-bulk-btn formula-bulk-diff" onclick="toggleFormulaHintColumn('medium')" style="color:#f59e0b;" title="Toggle Medium column for all subtopics">Med</button>
+                            <button type="button" class="formula-bulk-btn formula-bulk-diff" onclick="toggleFormulaHintColumn('hard')" style="color:#ef4444;" title="Toggle Hard column for all subtopics">Hard</button>
+                        </div>
+
                         <!-- Area & Perimeter -->
                         <div style="margin-bottom:8px;">
                             <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);"><i class="fas fa-vector-square" style="margin-right:5px; opacity:.55; font-size:10px;"></i>Area &amp; Perimeter</div>
@@ -479,7 +489,7 @@
                             <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">DATE: ___________________</div>
                         </div>
                     </div>
-                    <div class="page-instruction" id="p1-instruction">🟢 EASY — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.</div>
+                    <div class="page-instruction" id="p1-instruction"><i class="fas fa-seedling" style="color:#10b981;margin-right:6px;"></i>EASY — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.</div>
                     <div class="p-area" id="p1-area" style="--page-scale: var(--scale-easy, 1)"></div>
                 </div>
             </div>
@@ -498,7 +508,7 @@
                             <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">DATE: ___________________</div>
                         </div>
                     </div>
-                    <div class="page-instruction" id="p2-instruction">🟡 MEDIUM — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.</div>
+                    <div class="page-instruction" id="p2-instruction"><i class="fas fa-bolt" style="color:#f59e0b;margin-right:6px;"></i>MEDIUM — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.</div>
                     <div class="p-area" id="p2-area" style="--page-scale: var(--scale-medium, 1)"></div>
                 </div>
             </div>
@@ -517,7 +527,7 @@
                             <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">DATE: ___________________</div>
                         </div>
                     </div>
-                    <div class="page-instruction" id="p3-instruction">🔴 HARD — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.</div>
+                    <div class="page-instruction" id="p3-instruction"><i class="fas fa-fire" style="color:#ef4444;margin-right:6px;"></i>HARD — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.</div>
                     <div class="p-area" id="p3-area" style="--page-scale: var(--scale-hard, 1)"></div>
                 </div>
             </div>
@@ -557,7 +567,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=112"></script>
+    <script src="bundle.js?v=113"></script>
 </body>
 
 </html>

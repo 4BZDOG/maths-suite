@@ -5,7 +5,7 @@ import { state, syncSettingsFromDOM } from '../core/state.js';
 import { showToast } from '../ui/toast.js';
 import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
 import { loadJSPDF, loadFontForPDF, FONT_SELECT_MAP } from './pdfFonts.js';
-import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue } from './pdfHelpers.js';
+import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue, drawText } from './pdfHelpers.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
 import { getOutcomesForTopics, getTopicOutcomeCodes, DEFAULT_STAGE } from '../core/outcomes.js';
@@ -1051,21 +1051,21 @@ export async function exportPDF() {
                 if (pType === 'easy') {
                     addPage();
                     const ps = getPScale('easy');
-                    const sy = drawHeader(ctx, title, sub, 'EASY — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [16, 185, 129]);
+                    const sy = drawHeader(ctx, title, sub, '🌱 EASY — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [16, 185, 129]);
                     const overflow = drawQuestionPage(ctx, sets.easy, sy, ps, exportId);
                     visibleCounts.easy = (sets.easy || []).length - overflow;
 
                 } else if (pType === 'medium') {
                     addPage();
                     const ps = getPScale('medium');
-                    const sy = drawHeader(ctx, title, sub, 'MEDIUM — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [245, 158, 11]);
+                    const sy = drawHeader(ctx, title, sub, '⚡ MEDIUM — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [245, 158, 11]);
                     const overflow = drawQuestionPage(ctx, sets.medium, sy, ps, exportId);
                     visibleCounts.medium = (sets.medium || []).length - overflow;
 
                 } else if (pType === 'hard') {
                     addPage();
                     const ps = getPScale('hard');
-                    const sy = drawHeader(ctx, title, sub, 'HARD — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [239, 68, 68]);
+                    const sy = drawHeader(ctx, title, sub, '🔥 HARD — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [239, 68, 68]);
                     const overflow = drawQuestionPage(ctx, sets.hard, sy, ps, exportId);
                     visibleCounts.hard = (sets.hard || []).length - overflow;
 
