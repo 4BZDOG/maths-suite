@@ -2430,6 +2430,21 @@ table.mode-cw td.cell.empty {
 .clue-verb {
     font-weight: 700;
 }
+/* Inline emphasis inside a clue body — kept in sync with the PDF inline
+   renderer so HTML preview and exported PDF look consistent.
+   <strong>: structural qualifier (e.g. "the **missing** length")
+   <em>:     operative noun (e.g. "the *area*", "the *median*") */
+.problem-clue strong {
+    font-weight: 700;
+    color: var(--text-main);
+}
+.problem-clue em {
+    /* teal-600 — matches drawColor in pdfExport's _drawClueInline italic fallback */
+    color: #0d9488;
+    font-style: italic;
+    font-weight: 500;
+}
+[data-theme="dark"] .problem-clue em { color: #2dd4bf; }   /* teal-400, AA on dark */
 /* Difficulty instruction line between header and question grid */
 .page-instruction {
     font-size: calc(0.72rem * var(--global-font-scale, 1));
