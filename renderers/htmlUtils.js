@@ -8,10 +8,21 @@ export function esc(str) {
         .replace(/"/g, '&quot;');
 }
 
-// Verb prefix matcher: only short, alpha-leading prefixes ending with ": ".
-// Tightened so clues containing an internal "<word>: " (e.g. ratios, list-style
-// prompts) don't get the wrong segment bolded.
-const VERB_RE = /^([A-Za-z][^:.$]{0,40}:\s)/;
+// Two-stage verb detection so emphasis is consistent across clue styles:
+//   1. VERB_PHRASE_RE — short prefix terminated by ": " (e.g. "Calculate:",
+//      "Find $x$:"). Excludes '*' so we never collide with inline italics.
+//   2. IMPERATIVE_RE  — fallback: the leading imperative word alone
+//      (e.g. "Find the area of a rectangle..." → bold just "Find").
+const VERB_PHRASE_RE = /^([A-Za-z][^:.*]{0,50}:\s)/;
+const IMPERATIVE_RE  = /^(Calculate|Evaluate|Find|Determine|Solve|Work out|Apply|Round|Estimate|Express|Simplify|Convert|Identify|Write|Show|Compute|Order|List|Describe|Compare|Increase|Decrease|What is|How many|How much|Use)\b/;
+
+export function detectVerb(s) {
+    const m1 = s.match(VERB_PHRASE_RE);
+    if (m1) return m1[1];
+    const m2 = s.match(IMPERATIVE_RE);
+    if (m2) return m2[1];
+    return null;
+}
 
 // Apply our small markdown subset (**bold**, *italic*) to an already
 // HTML-escaped string, while leaving any KaTeX math regions ($...$) untouched.
@@ -36,9 +47,8 @@ function applyMarkdownEmphasis(escaped) {
 export function formatClue(clue) {
     if (!clue) return '';
     const s = String(clue);
-    const m = s.match(VERB_RE);
-    if (m) {
-        const verb = m[1];
+    const verb = detectVerb(s);
+    if (verb) {
         const rest = s.slice(verb.length);
         return `<strong class="clue-verb">${applyMarkdownEmphasis(esc(verb))}</strong>${applyMarkdownEmphasis(esc(rest))}`;
     }

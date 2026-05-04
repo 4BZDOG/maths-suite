@@ -6,6 +6,7 @@ import { showToast } from '../ui/toast.js';
 import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
 import { loadJSPDF, loadFontForPDF, FONT_SELECT_MAP } from './pdfFonts.js';
 import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue, drawText } from './pdfHelpers.js';
+import { detectVerb } from '../renderers/htmlUtils.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
 import { getOutcomesForTopics, getTopicOutcomeCodes, DEFAULT_STAGE } from '../core/outcomes.js';
@@ -351,15 +352,13 @@ function _parseEmphasisSegments(text) {
  * @param {number} lineH  Line height (mm)
  * @returns {number}  Final baseline Y after last drawn character
  */
-// Matches leading verb prefix: "Calculate: ", "Find: ", etc. (same as HTML formatClue)
-const _VERB_RE = /^([A-Za-z][^:.$]{0,40}:\s)/;
-
 function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, lineH) {
-    // Auto-bold verb prefixes (Calculate:, Find:, etc.) to match HTML treatment
+    // Auto-bold verb prefixes (Calculate:, Find, etc.) to match HTML treatment.
+    // Uses the same two-stage detector as renderers/htmlUtils.js → detectVerb.
     let rawClue = clue;
-    const verbM = _VERB_RE.exec(rawClue);
-    if (verbM && !rawClue.startsWith('**')) {
-        rawClue = `**${verbM[1]}**${rawClue.slice(verbM[0].length)}`;
+    if (!rawClue.startsWith('**')) {
+        const verb = detectVerb(rawClue);
+        if (verb) rawClue = `**${verb}**${rawClue.slice(verb.length)}`;
     }
 
     // Convert LaTeX regions to unicode first, keeping emphasis markers
