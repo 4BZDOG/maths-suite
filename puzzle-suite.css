@@ -2452,6 +2452,33 @@ table.mode-cw td.cell.empty {
     font-style: italic;
 }
 
+/* Score bar at the bottom of each difficulty section */
+.problem-score-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--border, #e2e8f0);
+    font-size: calc(0.82rem * var(--global-font-scale, 1) * var(--page-scale, 1));
+    color: var(--text-muted, #64748b);
+}
+.problem-score-label {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.85em;
+}
+.problem-score-blank {
+    display: inline-block;
+    width: 52px;
+    border-bottom: 1.5px solid var(--text-muted, #94a3b8);
+    height: 1em;
+}
+.problem-score-sep,
+.problem-score-eq,
+.problem-score-pct { color: var(--text-muted, #64748b); }
+
 /* Number Search clue list label */
 .ns-clue-label {
     font-size: 0.75rem;

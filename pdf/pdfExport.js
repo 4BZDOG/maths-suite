@@ -269,6 +269,85 @@ const TOPIC_COLOURS_RGB = {
     'Fractions': [59, 130, 246], 'Percentages': [59, 130, 246],
 };
 
+// Diff icons (Unicode) — emoji go via canvas fallback in drawText().
+// Ordered to match the project's seedling/bolt/fire convention.
+const DIFF_ICONS = { Easy: '🌱', Medium: '⚡', Hard: '🔥' };
+
+/**
+ * Parse a clue string (AFTER LaTeX→text conversion but with emphasis markers
+ * still present) into an array of {t, bold, italic} segments.
+ */
+function _parseEmphasisSegments(text) {
+    const segs = [];
+    // Match ** bold ** and * italic * markers
+    const re = /(\*\*([^*]+)\*\*|\*([^*\s][^*]*?)\*)(?!\*)/g;
+    let lastIdx = 0, m;
+    while ((m = re.exec(text)) !== null) {
+        if (m.index > lastIdx) segs.push({ t: text.slice(lastIdx, m.index), bold: false, italic: false });
+        if (m[0].startsWith('**')) segs.push({ t: m[2], bold: true,  italic: false });
+        else                        segs.push({ t: m[3], bold: false, italic: true  });
+        lastIdx = m.index + m[0].length;
+    }
+    if (lastIdx < text.length) segs.push({ t: text.slice(lastIdx), bold: false, italic: false });
+    return segs;
+}
+
+/**
+ * Draw clue text inline, switching font weight for **bold** and *italic* markers.
+ * LaTeX is converted to unicode before rendering.
+ * Returns the Y baseline of the last drawn line.
+ *
+ * @param {object} doc    jsPDF instance
+ * @param {string} clue   Raw clue string (with LaTeX and emphasis markers)
+ * @param {number} x      Left edge of text column (mm)
+ * @param {number} y      Baseline Y for first line (mm)
+ * @param {number} maxW   Maximum line width (mm)
+ * @param {number} fontSizePt
+ * @param {string} pdfFont
+ * @param {number[]} color  [r, g, b]
+ * @param {number} lineH  Line height (mm)
+ * @returns {number}  Final baseline Y after last drawn character
+ */
+function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, lineH) {
+    // Convert LaTeX regions to unicode first, keeping emphasis markers
+    const withLatex = latexToText(
+        clue.replace(/\*\*([^*]+)\*\*/g, '\x01$1\x01')  // protect ** with control chars
+            .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1\x02$2\x02')  // protect * with control chars
+    )
+    .replace(/\x01([^\x01]*)\x01/g, '**$1**')   // restore bold markers
+    .replace(/\x02([^\x02]*)\x02/g, '*$1*');    // restore italic markers
+
+    const segs = _parseEmphasisSegments(withLatex);
+    let curX = x, curY = y;
+
+    for (const seg of segs) {
+        // Italic only works natively for Helvetica; custom fonts only have normal/bold
+        const style = seg.bold ? 'bold'
+            : (seg.italic && pdfFont === 'helvetica' ? 'italic' : 'normal');
+        doc.setFont(pdfFont, style);
+        doc.setFontSize(fontSizePt);
+        doc.setTextColor(...color);
+
+        // Split segment into tokens (words + spaces) to support mid-segment wrapping
+        const tokens = seg.t.match(/\S+|\s+/g) || [];
+        for (const token of tokens) {
+            const tw = doc.getTextWidth(token);
+            if (token.trim() === '') {
+                curX += tw;
+                continue;
+            }
+            if (curX + tw > x + maxW + 0.5 && curX > x) {
+                curY += lineH;
+                curX  = x;
+                doc.setFont(pdfFont, style);  // re-apply after Y advance
+            }
+            doc.text(token, curX, curY);
+            curX += tw;
+        }
+    }
+    return curY;
+}
+
 const DIFF_RGB = { Easy: [16, 185, 129], Medium: [245, 158, 11], Hard: [239, 68, 68] };
 
 /**
@@ -279,10 +358,11 @@ function createQuestionSets(cfg, seed) {
     if (topics.length === 0) return null;
     const n = 30; // always generate enough to fill the selected page count
     const subOpsFilter = Object.keys(state.selectedSubOps).length > 0 ? state.selectedSubOps : null;
+    const showFormulas = state.settings.showFormulas;
     return {
-        easy:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Easy',   count: n, seed }),
-        medium: generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Medium', count: n, seed: seed + 1 }),
-        hard:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Hard',   count: n, seed: seed + 2 }),
+        easy:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Easy',   count: n, seed,         showFormulas }),
+        medium: generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Medium', count: n, seed: seed+1, showFormulas }),
+        hard:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Hard',   count: n, seed: seed+2, showFormulas }),
     };
 }
 
@@ -466,13 +546,10 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
             });
             clueEndY = drawY + r.belowBaseline + 1;
         } else {
-            doc.setFont(pdfFont, 'normal');
-            doc.setFontSize(9 * pScale);
-            doc.setTextColor(15, 23, 42);
-            clueLines.forEach((line, li) => {
-                doc.text(line, clueX, drawY + li * 4.5 * pScale);
-            });
-            clueEndY = drawY + clueBlockH;
+            // Inline renderer: switches to bold/italic for **word** / *word* markers
+            const lastLineY = _drawClueInline(doc, item.clue || '', clueX, drawY,
+                colW - 14, 9 * pScale, pdfFont, [15, 23, 42], 4.5 * pScale);
+            clueEndY = lastLineY + 1.5 * pScale;  // small cap-height clearance
         }
 
         let nextY = clueEndY + SECTION_PAD;
@@ -617,6 +694,33 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         _drawColumnDivider(doc, MARGIN, colW, pageStartY, dividerEnd);
     }
 
+    // Score footer — students fill in mark and percentage
+    const placedCount = questions.length - overflowCount;
+    const scoreY = PAGE_HEIGHT - MARGIN - 3 * pScale;
+    doc.setFont(pdfFont, 'bold');
+    doc.setFontSize(7.5 * pScale);
+    doc.setTextColor(120, 130, 150);
+    const scoreLabel = `Score:`;
+    const scoreSep   = `/ ${placedCount}  =`;
+    const scorePct   = `%`;
+    const blankW     = 18 * pScale;
+    const scoreGap   =  3 * pScale;
+
+    // Right-aligned block: "Score: ___ / N = ___ %"
+    let sx = PAGE_WIDTH - MARGIN;
+    doc.text(scorePct, sx, scoreY); sx -= doc.getTextWidth(scorePct) + scoreGap;
+    // Blank for percentage
+    doc.setDrawColor(150, 160, 180); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5,1],0);
+    doc.line(sx - blankW, scoreY, sx, scoreY); sx -= blankW + scoreGap;
+    doc.setLineDashPattern([], 0);
+    doc.setFont(pdfFont, 'bold'); doc.setFontSize(7.5 * pScale); doc.setTextColor(120, 130, 150);
+    doc.text(scoreSep, sx, scoreY, { align: 'right' }); sx -= doc.getTextWidth(scoreSep) + scoreGap;
+    // Blank for score
+    doc.setDrawColor(150, 160, 180); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5,1],0);
+    doc.line(sx - blankW, scoreY, sx, scoreY); sx -= blankW + scoreGap;
+    doc.setLineDashPattern([], 0);
+    doc.text(scoreLabel, sx, scoreY, { align: 'right' });
+
     drawExportIdFooter(ctx, exportId, pScale);
     return overflowCount;
 }
@@ -705,9 +809,9 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
     }
 
     const sections = [
-        { label: '🟢 EASY',   rgb: DIFF_RGB.Easy,   questions: sets.easy   || [] },
-        { label: '🟡 MEDIUM', rgb: DIFF_RGB.Medium,  questions: sets.medium || [] },
-        { label: '🔴 HARD',   rgb: DIFF_RGB.Hard,    questions: sets.hard   || [] },
+        { key: 'Easy',   rgb: DIFF_RGB.Easy,   questions: sets.easy   || [] },
+        { key: 'Medium', rgb: DIFF_RGB.Medium,  questions: sets.medium || [] },
+        { key: 'Hard',   rgb: DIFF_RGB.Hard,    questions: sets.hard   || [] },
     ].filter(s => s.questions.length > 0);
 
     if (sections.length === 0) { drawExportIdFooter(ctx, exportId, pScale); return; }
@@ -717,11 +821,12 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
     sections.forEach((sec, si) => {
         const cx = MARGIN + si * (colW + 6);
 
-        // Section title
-        doc.setFont(pdfFont, 'bold');
-        doc.setFontSize(9 * pScale);
-        doc.setTextColor(...sec.rgb);
-        doc.text(sec.label, cx, cy);
+        // Section title — use drawText() so emoji renders via canvas fallback
+        const icon  = DIFF_ICONS[sec.key] || '';
+        const label = `${icon} ${sec.key.toUpperCase()}`;
+        drawText(doc, label, cx, cy, {
+            fontSizePt: 9 * pScale, bold: true, color: sec.rgb, pdfFont,
+        });
         doc.setDrawColor(...sec.rgb);
         doc.setLineWidth(0.4);
         doc.line(cx, cy + 2 * scale, cx + colW, cy + 2 * scale);
@@ -736,7 +841,7 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
         const lineH     = 3.4 * pScale;
 
         sec.questions.forEach((q, i) => {
-            if (ky + 6 * pScale > PAGE_HEIGHT - MARGIN) return;
+            if (ky + 6 * pScale > PAGE_HEIGHT - MARGIN - 12 * pScale) return;
 
             const clueText = latexToText(q.clue || '');
             const ansText  = String(q.answerDisplay || q.answer || '');
@@ -765,7 +870,43 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
 
             ky += blockH + 1.4 * pScale;
         });
+
+        // Per-section score footer: ___ / N
+        const secTotal = sec.questions.length;
+        const scoreStr = `/ ${secTotal}`;
+        const scoreFontPt = 7.5 * pScale;
+        const scoreBlankW = 16 * pScale;
+        const scoreBottom = PAGE_HEIGHT - MARGIN - 3 * pScale;
+        doc.setDrawColor(...sec.rgb); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5, 1], 0);
+        doc.line(cx, scoreBottom, cx + scoreBlankW, scoreBottom);
+        doc.setLineDashPattern([], 0);
+        doc.setFont(pdfFont, 'bold'); doc.setFontSize(scoreFontPt); doc.setTextColor(...sec.rgb);
+        doc.text(scoreStr, cx + scoreBlankW + 2, scoreBottom);
     });
+
+    // Overall total: ___ / N_total = ___% — centered below all columns
+    const totalQ    = sections.reduce((s, sec) => s + sec.questions.length, 0);
+    const totalY    = PAGE_HEIGHT - MARGIN - 3 * pScale;
+    const totalFontPt = 7.5 * pScale;
+    const totalBlankW = 18 * pScale;
+    const totalX    = PAGE_WIDTH / 2;
+
+    doc.setFont(pdfFont, 'bold'); doc.setFontSize(totalFontPt); doc.setTextColor(80, 90, 110);
+    const totalLabel = `TOTAL:`;
+    const totalSep   = `/ ${totalQ}  =`;
+    const totalPct   = `%`;
+    let tx = totalX - (doc.getTextWidth(totalLabel) + totalBlankW + 4 + doc.getTextWidth(totalSep) + totalBlankW + 4 + doc.getTextWidth(totalPct)) / 2;
+    doc.text(totalLabel, tx, totalY); tx += doc.getTextWidth(totalLabel) + 4;
+    doc.setDrawColor(150, 160, 180); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5, 1], 0);
+    doc.line(tx, totalY, tx + totalBlankW, totalY); tx += totalBlankW + 4;
+    doc.setLineDashPattern([], 0);
+    doc.setFont(pdfFont, 'bold'); doc.setFontSize(totalFontPt); doc.setTextColor(80, 90, 110);
+    doc.text(totalSep, tx, totalY); tx += doc.getTextWidth(totalSep) + 4;
+    doc.setDrawColor(150, 160, 180); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5, 1], 0);
+    doc.line(tx, totalY, tx + totalBlankW, totalY); tx += totalBlankW + 4;
+    doc.setLineDashPattern([], 0);
+    doc.setFont(pdfFont, 'bold'); doc.setFontSize(totalFontPt); doc.setTextColor(80, 90, 110);
+    doc.text(totalPct, tx, totalY);
 
     drawExportIdFooter(ctx, exportId, pScale);
 }

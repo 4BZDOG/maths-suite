@@ -40,7 +40,7 @@ export function formatClue(clue) {
     if (m) {
         const verb = m[1];
         const rest = s.slice(verb.length);
-        return `<strong class="clue-verb">${esc(verb)}</strong>${applyMarkdownEmphasis(esc(rest))}`;
+        return `<strong class="clue-verb">${applyMarkdownEmphasis(esc(verb))}</strong>${applyMarkdownEmphasis(esc(rest))}`;
     }
     return applyMarkdownEmphasis(esc(s));
 }
