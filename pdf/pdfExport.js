@@ -274,6 +274,49 @@ const TOPIC_COLOURS_RGB = {
 const DIFF_ICONS = { Easy: '🌱', Medium: '⚡', Hard: '🔥' };
 
 /**
+ * Draw a "Label: ___ / N = ___ %" score row.
+ * Right-anchored: the % glyph ends exactly at `rightX`. The block grows leftward.
+ *
+ * @param {object} doc        jsPDF
+ * @param {number} rightX     Right edge (where % ends)
+ * @param {number} y          Baseline Y
+ * @param {string} label      Label text (e.g. "Score:" or "TOTAL:")
+ * @param {number} count      Total marks (the N in "/ N")
+ * @param {object} opts       { fontPt, blankW, gap, color, lineColor, pdfFont }
+ * @returns {number}          Left X of the drawn block
+ */
+function _drawScoreLine(doc, rightX, y, label, count, opts) {
+    const { fontPt, blankW, gap, color, lineColor, pdfFont } = opts;
+    doc.setFont(pdfFont, 'bold'); doc.setFontSize(fontPt); doc.setTextColor(...color);
+
+    const pctStr = '%';
+    const sepStr = `/ ${count}  =`;
+
+    // Walk right→left, drawing each piece anchored to its right edge.
+    let x = rightX;
+    doc.text(pctStr, x, y, { align: 'right' });
+    x -= doc.getTextWidth(pctStr) + gap;
+
+    doc.setDrawColor(...lineColor); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5, 1], 0);
+    doc.line(x - blankW, y, x, y);
+    doc.setLineDashPattern([], 0);
+    x -= blankW + gap;
+
+    doc.setFont(pdfFont, 'bold'); doc.setFontSize(fontPt); doc.setTextColor(...color);
+    doc.text(sepStr, x, y, { align: 'right' });
+    x -= doc.getTextWidth(sepStr) + gap;
+
+    doc.setDrawColor(...lineColor); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5, 1], 0);
+    doc.line(x - blankW, y, x, y);
+    doc.setLineDashPattern([], 0);
+    x -= blankW + gap;
+
+    doc.setFont(pdfFont, 'bold'); doc.setFontSize(fontPt); doc.setTextColor(...color);
+    doc.text(label, x, y, { align: 'right' });
+    return x - doc.getTextWidth(label);
+}
+
+/**
  * Parse a clue string (AFTER LaTeX→text conversion but with emphasis markers
  * still present) into an array of {t, bold, italic} segments.
  */
@@ -694,32 +737,17 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         _drawColumnDivider(doc, MARGIN, colW, pageStartY, dividerEnd);
     }
 
-    // Score footer — students fill in mark and percentage
+    // Score footer — right-aligned "Score: ___ / N = ___ %"
     const placedCount = questions.length - overflowCount;
-    const scoreY = PAGE_HEIGHT - MARGIN - 3 * pScale;
-    doc.setFont(pdfFont, 'bold');
-    doc.setFontSize(7.5 * pScale);
-    doc.setTextColor(120, 130, 150);
-    const scoreLabel = `Score:`;
-    const scoreSep   = `/ ${placedCount}  =`;
-    const scorePct   = `%`;
-    const blankW     = 18 * pScale;
-    const scoreGap   =  3 * pScale;
-
-    // Right-aligned block: "Score: ___ / N = ___ %"
-    let sx = PAGE_WIDTH - MARGIN;
-    doc.text(scorePct, sx, scoreY); sx -= doc.getTextWidth(scorePct) + scoreGap;
-    // Blank for percentage
-    doc.setDrawColor(150, 160, 180); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5,1],0);
-    doc.line(sx - blankW, scoreY, sx, scoreY); sx -= blankW + scoreGap;
-    doc.setLineDashPattern([], 0);
-    doc.setFont(pdfFont, 'bold'); doc.setFontSize(7.5 * pScale); doc.setTextColor(120, 130, 150);
-    doc.text(scoreSep, sx, scoreY, { align: 'right' }); sx -= doc.getTextWidth(scoreSep) + scoreGap;
-    // Blank for score
-    doc.setDrawColor(150, 160, 180); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5,1],0);
-    doc.line(sx - blankW, scoreY, sx, scoreY); sx -= blankW + scoreGap;
-    doc.setLineDashPattern([], 0);
-    doc.text(scoreLabel, sx, scoreY, { align: 'right' });
+    _drawScoreLine(doc, PAGE_WIDTH - MARGIN, PAGE_HEIGHT - MARGIN - 3 * pScale,
+        'Score:', placedCount, {
+            fontPt:    7.5 * pScale,
+            blankW:    18 * pScale,
+            gap:        3 * pScale,
+            color:     [120, 130, 150],
+            lineColor: [150, 160, 180],
+            pdfFont,
+        });
 
     drawExportIdFooter(ctx, exportId, pScale);
     return overflowCount;
@@ -871,42 +899,36 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             ky += blockH + 1.4 * pScale;
         });
 
-        // Per-section score footer: ___ / N
-        const secTotal = sec.questions.length;
-        const scoreStr = `/ ${secTotal}`;
-        const scoreFontPt = 7.5 * pScale;
-        const scoreBlankW = 16 * pScale;
-        const scoreBottom = PAGE_HEIGHT - MARGIN - 3 * pScale;
+        // Per-section score: small "___ / N" anchored to top of the footer band.
+        // Section row sits ABOVE the centered TOTAL row to avoid overlap when a
+        // middle column would collide with the page-centered total.
+        const secTotal     = sec.questions.length;
+        const sectionRowY  = PAGE_HEIGHT - MARGIN - 11 * pScale;
+        const scoreFontPt  = 7   * pScale;
+        const scoreBlankW  = 14  * pScale;
         doc.setDrawColor(...sec.rgb); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5, 1], 0);
-        doc.line(cx, scoreBottom, cx + scoreBlankW, scoreBottom);
+        doc.line(cx, sectionRowY, cx + scoreBlankW, sectionRowY);
         doc.setLineDashPattern([], 0);
         doc.setFont(pdfFont, 'bold'); doc.setFontSize(scoreFontPt); doc.setTextColor(...sec.rgb);
-        doc.text(scoreStr, cx + scoreBlankW + 2, scoreBottom);
+        doc.text(`/ ${secTotal}`, cx + scoreBlankW + 2, sectionRowY);
     });
 
-    // Overall total: ___ / N_total = ___% — centered below all columns
-    const totalQ    = sections.reduce((s, sec) => s + sec.questions.length, 0);
-    const totalY    = PAGE_HEIGHT - MARGIN - 3 * pScale;
-    const totalFontPt = 7.5 * pScale;
-    const totalBlankW = 18 * pScale;
-    const totalX    = PAGE_WIDTH / 2;
+    // Thin divider between section rail and total row
+    const dividerY = PAGE_HEIGHT - MARGIN - 8 * pScale;
+    doc.setDrawColor(220, 225, 235); doc.setLineWidth(0.3);
+    doc.line(MARGIN, dividerY, PAGE_WIDTH - MARGIN, dividerY);
 
-    doc.setFont(pdfFont, 'bold'); doc.setFontSize(totalFontPt); doc.setTextColor(80, 90, 110);
-    const totalLabel = `TOTAL:`;
-    const totalSep   = `/ ${totalQ}  =`;
-    const totalPct   = `%`;
-    let tx = totalX - (doc.getTextWidth(totalLabel) + totalBlankW + 4 + doc.getTextWidth(totalSep) + totalBlankW + 4 + doc.getTextWidth(totalPct)) / 2;
-    doc.text(totalLabel, tx, totalY); tx += doc.getTextWidth(totalLabel) + 4;
-    doc.setDrawColor(150, 160, 180); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5, 1], 0);
-    doc.line(tx, totalY, tx + totalBlankW, totalY); tx += totalBlankW + 4;
-    doc.setLineDashPattern([], 0);
-    doc.setFont(pdfFont, 'bold'); doc.setFontSize(totalFontPt); doc.setTextColor(80, 90, 110);
-    doc.text(totalSep, tx, totalY); tx += doc.getTextWidth(totalSep) + 4;
-    doc.setDrawColor(150, 160, 180); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5, 1], 0);
-    doc.line(tx, totalY, tx + totalBlankW, totalY); tx += totalBlankW + 4;
-    doc.setLineDashPattern([], 0);
-    doc.setFont(pdfFont, 'bold'); doc.setFontSize(totalFontPt); doc.setTextColor(80, 90, 110);
-    doc.text(totalPct, tx, totalY);
+    // Overall total: "TOTAL: ___ / N = ___ %", right-aligned to the page edge
+    const totalQ = sections.reduce((s, sec) => s + sec.questions.length, 0);
+    _drawScoreLine(doc, PAGE_WIDTH - MARGIN, PAGE_HEIGHT - MARGIN - 3 * pScale,
+        'TOTAL:', totalQ, {
+            fontPt:    8 * pScale,
+            blankW:   18 * pScale,
+            gap:       3 * pScale,
+            color:     [80, 90, 110],
+            lineColor: [120, 130, 150],
+            pdfFont,
+        });
 
     drawExportIdFooter(ctx, exportId, pScale);
 }
