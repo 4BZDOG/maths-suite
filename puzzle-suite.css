@@ -2452,10 +2452,38 @@ table.mode-cw td.cell.empty {
     font-style: italic;
 }
 
-/* Score bar at the bottom of each difficulty section */
+/* Formula hints bulk toggle bar */
+.formula-bulk-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px 0 8px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+}
+.formula-bulk-btn {
+    background: var(--bg-page, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    color: var(--text-main);
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.formula-bulk-btn:hover { background: var(--bg-hover, #e2e8f0); }
+.formula-bulk-diff { font-weight: 700; }
+.formula-bulk-sep { color: var(--text-muted); margin: 0 2px; }
+
+/* Score bar at the bottom-right of each difficulty section */
 .problem-score-bar {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 6px;
     margin-top: 14px;
     padding: 8px 10px;

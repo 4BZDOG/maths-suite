@@ -836,6 +836,37 @@ function processImport() {
 }
 
 // =============================================================
+// Formula hints bulk toggles
+// =============================================================
+const FORMULA_GROUPS = ['area-perimeter', 'pythagoras', 'circles', 'simple-interest', 'compound-interest'];
+const FORMULA_DIFFS  = ['easy', 'medium', 'hard'];
+
+function _setFormulaCheckbox(group, diff, val) {
+    const el = document.getElementById(`form-${group}-${diff}`);
+    if (el) el.checked = !!val;
+}
+
+function setAllFormulaHints(scope, val) {
+    if (scope === 'all') {
+        FORMULA_GROUPS.forEach(g => FORMULA_DIFFS.forEach(d => _setFormulaCheckbox(g, d, val)));
+    } else if (FORMULA_DIFFS.includes(scope)) {
+        FORMULA_GROUPS.forEach(g => _setFormulaCheckbox(g, scope, val));
+    }
+    saveState();
+    renderActivePage();
+}
+
+function toggleFormulaHintColumn(diff) {
+    if (!FORMULA_DIFFS.includes(diff)) return;
+    // If any in this column is unchecked, turn them all on; otherwise turn all off
+    const anyUnchecked = FORMULA_GROUPS.some(g => {
+        const el = document.getElementById(`form-${g}-${diff}`);
+        return el && !el.checked;
+    });
+    setAllFormulaHints(diff, anyUnchecked);
+}
+
+// =============================================================
 // Expose public API on window
 // =============================================================
 window._puzzleApp = {
@@ -888,6 +919,8 @@ window._puzzleApp = {
     initiateCheckout,
     openCustomerPortal,
     _handleUpgradeClick,
+    setAllFormulaHints,
+    toggleFormulaHintColumn,
 };
 
 Object.assign(window, window._puzzleApp);
