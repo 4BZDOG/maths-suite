@@ -56,6 +56,13 @@ export function latexToText(str) {
     return s;
 }
 
+const _SUP_MAP = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','n':'ⁿ','x':'ˣ','+':'⁺','-':'⁻'};
+function _toSuperscript(s) {
+    const result = [...s].map(c => _SUP_MAP[c] || c).join('');
+    // If every char was mapped cleanly, use it; else fall back to ^(s)
+    return result === s && !_SUP_MAP[s[0]] ? `^(${s})` : result;
+}
+
 function _parseLatex(s) {
     return s
         // Escaped special chars (must come first)
@@ -78,10 +85,9 @@ function _parseLatex(s) {
         .replace(/\\sqrt\s+(\S+)/g,    '√$1')
         // Fractions: \frac{a}{b} → a/b
         .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1/$2')
-        // Superscripts: ^2 → ²  ^3 → ³  ^n → ^(n)
-        .replace(/\^2\b/g,          '²')
-        .replace(/\^3\b/g,          '³')
-        .replace(/\^\{([^}]+)\}/g,  '^($1)')
+        // Superscripts: convert to Unicode superscript characters
+        .replace(/\^\{([^}]+)\}/g,  (_, inner) => _toSuperscript(inner))
+        .replace(/\^(\w+)/g,        (_, exp)   => _toSuperscript(exp))
         // Subscripts: _n → (n)
         .replace(/\_\{([^}]+)\}/g,  '($1)')
         // Trig functions: keep as-is but remove backslash
