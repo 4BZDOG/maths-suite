@@ -2350,7 +2350,15 @@ table.mode-cw td.cell.empty {
     color: var(--text-main);
     line-height: 1.5;
     flex: 1;
+    /* min-width:0 is required so a flex child can shrink below its
+       intrinsic content width. Without it, an inline-block KaTeX formula
+       (e.g. "$A = \frac{1}{2}bh$") forces the clue wider than the column,
+       causing the text to bleed into the adjacent column in 2-col layout. */
+    min-width: 0;
+    overflow-wrap: break-word;
 }
+/* Same containment fix at the row level so the whole flex chain shrinks. */
+.problem-clue-row { min-width: 0; }
 .problem-working-area {
     display: flex;
     flex-direction: column;
