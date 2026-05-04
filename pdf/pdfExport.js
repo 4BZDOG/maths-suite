@@ -364,12 +364,21 @@ function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, line
     let curX = x, curY = y;
 
     for (const seg of segs) {
-        // Italic only works natively for Helvetica; custom fonts only have normal/bold
-        const style = seg.bold ? 'bold'
-            : (seg.italic && pdfFont === 'helvetica' ? 'italic' : 'normal');
+        // Bold uses font weight (works on every font we ship).
+        // Italic: helvetica supports it natively; custom fonts (Inter/Roboto/
+        // Lora/Comic) only ship normal+bold TTFs, so we substitute a teal
+        // accent color so the emphasis is still visible to students.
+        const isBold     = !!seg.bold;
+        const isItalic   = !!seg.italic;
+        const useNativeItalic = isItalic && pdfFont === 'helvetica';
+        const style = isBold ? 'bold'
+            : (useNativeItalic ? 'italic' : 'normal');
+        const drawColor = (isItalic && !useNativeItalic)
+            ? [13, 148, 136]   // teal-600: visible italic substitute
+            : color;
         doc.setFont(pdfFont, style);
         doc.setFontSize(fontSizePt);
-        doc.setTextColor(...color);
+        doc.setTextColor(...drawColor);
 
         // Split segment into tokens (words + spaces) to support mid-segment wrapping
         const tokens = seg.t.match(/\S+|\s+/g) || [];
@@ -383,6 +392,7 @@ function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, line
                 curY += lineH;
                 curX  = x;
                 doc.setFont(pdfFont, style);  // re-apply after Y advance
+                doc.setTextColor(...drawColor);
             }
             doc.text(token, curX, curY);
             curX += tw;

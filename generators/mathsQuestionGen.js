@@ -264,17 +264,17 @@ function genRounding(rng, diff, allowedOps) {
             const n = ri(rng, 100, 9999) / 100;
             const display = n.toFixed(2);
             const ph = rc(rng, [
-                `Round $${display}$ to 1 decimal place`,
-                `Write $${display}$ correct to 1 decimal place`,
-                `Express $${display}$ to 1 decimal place`,
+                `Round $${display}$ to *1 decimal place*`,
+                `Write $${display}$ correct to *1 decimal place*`,
+                `Express $${display}$ to *1 decimal place*`,
             ]);
             return { clue: ph, answer: String(round(n, 1)) };
         }
         const n = ri(rng, 1000, 99999) / 1000;
         const display = n.toFixed(3);
         const ph = rc(rng, [
-            `Round $${display}$ to 2 decimal places`,
-            `Write $${display}$ correct to 2 decimal places`,
+            `Round $${display}$ to *2 decimal places*`,
+            `Write $${display}$ correct to *2 decimal places*`,
             `Express $${display}$ to 2 d.p.`,
         ]);
         return { clue: ph, answer: String(round(n, 2)) };
@@ -355,9 +355,9 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         const ans = fracStr(num, den);
         const ph = rc(rng, [
             `Simplify $\\frac{${num}}{${den}}$`,
-            `Write $\\frac{${num}}{${den}}$ in its simplest form`,
-            `Express $\\frac{${num}}{${den}}$ in lowest terms`,
-            `Reduce $\\frac{${num}}{${den}}$ to its simplest form`,
+            `Write $\\frac{${num}}{${den}}$ in its *simplest form*`,
+            `Express $\\frac{${num}}{${den}}$ in *lowest terms*`,
+            `Reduce $\\frac{${num}}{${den}}$ to its *simplest form*`,
         ]);
         return { clue: ph, answer: ans };
     }
@@ -380,9 +380,9 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         const num = ri(rng, 1, den - 1);
         const ans = round(num / den, 4);
         const ph = rc(rng, [
-            `Convert $\\frac{${num}}{${den}}$ to a decimal`,
-            `Express $\\frac{${num}}{${den}}$ as a decimal`,
-            `Write $\\frac{${num}}{${den}}$ as a decimal number`,
+            `Convert $\\frac{${num}}{${den}}$ to a *decimal*`,
+            `Express $\\frac{${num}}{${den}}$ as a *decimal*`,
+            `Write $\\frac{${num}}{${den}}$ as a *decimal number*`,
         ]);
         return { clue: ph, answer: String(ans) };
     }
@@ -458,7 +458,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             const ctx = rc(rng, ['a price', 'a value', 'an amount', 'a score']);
             const ph = rc(rng, [
                 `Increase $${orig}$ by $${pct}\\%$`,
-                `A ${ctx} of $${orig}$ is increased by $${pct}\\%$. Find the new ${ctx}.`,
+                `A ${ctx} of $${orig}$ is increased by $${pct}\\%$. Find the **new** ${ctx}.`,
                 `Calculate the result of increasing $${orig}$ by $${pct}\\%$`,
             ]);
             return { clue: ph, answer: String(ans) };
@@ -483,9 +483,9 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
         const pct = rc(rng, [10, 20, 25, 50]);
         const final = round(orig * (1 + pct / 100), 2);
         const ph = rc(rng, [
-            `After a $${pct}\\%$ increase the value is $${final}$. Find the original.`,
-            `A quantity increases by $${pct}\\%$ to become $${final}$. Determine the original value.`,
-            `The result after a $${pct}\\%$ increase is $${final}$. Calculate the original amount.`,
+            `After a $${pct}\\%$ increase the value is $${final}$. Find the **original**.`,
+            `A quantity increases by $${pct}\\%$ to become $${final}$. Determine the **original** value.`,
+            `The result after a $${pct}\\%$ increase is $${final}$. Calculate the **original** amount.`,
         ]);
         return { clue: ph, answer: String(orig) };
     }
@@ -494,9 +494,9 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
         const pct = rc(rng, [10, 20, 25, 50]);
         const newVal = round(orig * (1 + pct / 100), 2);
         const ph = rc(rng, [
-            `A price rises from $\\$${orig}$ to $\\$${newVal}$. What is the percentage increase?`,
-            `Calculate the percentage increase from $\\$${orig}$ to $\\$${newVal}$.`,
-            `Determine the percentage change when a value goes from $${orig}$ to $${newVal}$.`,
+            `A price rises from $\\$${orig}$ to $\\$${newVal}$. What is the *percentage increase*?`,
+            `Calculate the *percentage increase* from $\\$${orig}$ to $\\$${newVal}$.`,
+            `Determine the *percentage change* when a value goes from $${orig}$ to $${newVal}$.`,
         ]);
         return { clue: ph, answer: String(pct), answerDisplay: `${pct}%` };
     }
@@ -598,20 +598,20 @@ function genStatistics(rng, diff, allowedOps, _depth = 0) {
             const sum = data.reduce((a, b) => a + b, 0);
             if (sum % n !== 0) return genStatistics(rng, diff, allowedOps, _depth + 1);
             const ph = rc(rng, [
-                `Find the mean of $${data.join(', ')}$`,
-                `Calculate the mean of $${data.join(', ')}$`,
-                `Determine the mean of: $${data.join(', ')}$`,
-                `What is the mean of $${data.join(', ')}$?`,
+                `Find the *mean* of $${data.join(', ')}$`,
+                `Calculate the *mean* of $${data.join(', ')}$`,
+                `Determine the *mean* of: $${data.join(', ')}$`,
+                `What is the *mean* of $${data.join(', ')}$?`,
             ]);
             return { clue: ph, answer: String(sum / n) };
         }
         const n = (ri(rng, 2, 4) * 2) - 1;
         const data = Array.from({ length: n }, () => ri(rng, 1, 30)).sort((a, b) => a - b);
         const ph = rc(rng, [
-            `Find the median of $${data.join(', ')}$`,
-            `State the median of $${data.join(', ')}$`,
-            `Determine the median of: $${data.join(', ')}$`,
-            `What is the median of $${data.join(', ')}$?`,
+            `Find the *median* of $${data.join(', ')}$`,
+            `State the *median* of $${data.join(', ')}$`,
+            `Determine the *median* of: $${data.join(', ')}$`,
+            `What is the *median* of $${data.join(', ')}$?`,
         ]);
         return { clue: ph, answer: String(data[Math.floor(n / 2)]) };
     }
@@ -620,10 +620,10 @@ function genStatistics(rng, diff, allowedOps, _depth = 0) {
             const n = ri(rng, 4, 7);
             const data = Array.from({ length: n }, () => ri(rng, 1, 40));
             const ph = rc(rng, [
-                `Find the range of $${data.join(', ')}$`,
-                `Calculate the range of $${data.join(', ')}$`,
-                `Determine the range of: $${data.join(', ')}$`,
-                `What is the range of $${data.join(', ')}$?`,
+                `Find the *range* of $${data.join(', ')}$`,
+                `Calculate the *range* of $${data.join(', ')}$`,
+                `Determine the *range* of: $${data.join(', ')}$`,
+                `What is the *range* of $${data.join(', ')}$?`,
             ]);
             return { clue: ph, answer: String(Math.max(...data) - Math.min(...data)) };
         }
@@ -634,10 +634,10 @@ function genStatistics(rng, diff, allowedOps, _depth = 0) {
             });
             const data = [...others, mode, mode].sort((a, b) => a - b);
             const ph = rc(rng, [
-                `Identify the mode of $${data.join(', ')}$`,
-                `State the mode of $${data.join(', ')}$`,
-                `Find the mode of $${data.join(', ')}$`,
-                `What is the mode of $${data.join(', ')}$?`,
+                `Identify the *mode* of $${data.join(', ')}$`,
+                `State the *mode* of $${data.join(', ')}$`,
+                `Find the *mode* of $${data.join(', ')}$`,
+                `What is the *mode* of $${data.join(', ')}$?`,
             ]);
             return { clue: ph, answer: String(mode) };
         }
@@ -646,9 +646,9 @@ function genStatistics(rng, diff, allowedOps, _depth = 0) {
         const sum = data.reduce((a, b) => a + b, 0);
         if (sum % n !== 0) return genStatistics(rng, diff, allowedOps, _depth + 1);
         const ph = rc(rng, [
-            `Calculate the mean of $${data.join(', ')}$`,
-            `Find the mean of $${data.join(', ')}$`,
-            `Determine the mean of: $${data.join(', ')}$`,
+            `Calculate the *mean* of $${data.join(', ')}$`,
+            `Find the *mean* of $${data.join(', ')}$`,
+            `Determine the *mean* of: $${data.join(', ')}$`,
         ]);
         return { clue: ph, answer: String(sum / n) };
     }
@@ -660,9 +660,9 @@ function genStatistics(rng, diff, allowedOps, _depth = 0) {
         const iqr = q3 - q1;
         if (!Number.isInteger(iqr)) return genStatistics(rng, diff, allowedOps, _depth + 1);
         const ph = rc(rng, [
-            `Find the interquartile range of $${data.join(', ')}$`,
-            `Calculate the IQR of $${data.join(', ')}$`,
-            `Determine the interquartile range of: $${data.join(', ')}$`,
+            `Find the *interquartile range* of $${data.join(', ')}$`,
+            `Calculate the *IQR* of $${data.join(', ')}$`,
+            `Determine the *interquartile range* of: $${data.join(', ')}$`,
         ]);
         return { clue: ph, answer: String(iqr) };
     }
@@ -671,9 +671,9 @@ function genStatistics(rng, diff, allowedOps, _depth = 0) {
     const med = (data[n / 2 - 1] + data[n / 2]) / 2;
     if (!Number.isInteger(med)) return genStatistics(rng, diff, allowedOps, _depth + 1);
     const ph = rc(rng, [
-        `Find the median of $${data.join(', ')}$`,
-        `Calculate the median of $${data.join(', ')}$`,
-        `Determine the median of: $${data.join(', ')}$`,
+        `Find the *median* of $${data.join(', ')}$`,
+        `Calculate the *median* of $${data.join(', ')}$`,
+        `Determine the *median* of: $${data.join(', ')}$`,
     ]);
     return { clue: ph, answer: String(med) };
 }
@@ -702,8 +702,8 @@ function genFinancial(rng, diff, allowedOps, opts = {}, _depth = 0) {
             const fOn = opts.showFormulas?.['simple-interest']?.[diff.toLowerCase()];
             const pf = fOn ? ' Use $I = Prn$.' : '';
             const ph = rc(rng, [
-                `Calculate the simple interest on $\\$${P}$ at $${r}\\%$ p.a. for ${yrs}.${pf}`,
-                `Find the simple interest earned on $\\$${P}$ invested at $${r}\\%$ per year for ${yrs}.${pf}`,
+                `Calculate the *simple interest* on $\\$${P}$ at $${r}\\%$ p.a. for ${yrs}.${pf}`,
+                `Find the *simple interest* earned on $\\$${P}$ invested at $${r}\\%$ per year for ${yrs}.${pf}`,
                 `Determine the interest on $\\$${P}$ at $${r}\\%$ p.a. for ${yrs}.${pf}`,
             ]);
             return { clue: ph, answer: String(I), answerDisplay: `$${I}` };
@@ -735,8 +735,8 @@ function genFinancial(rng, diff, allowedOps, opts = {}, _depth = 0) {
         const fOn = opts.showFormulas?.['simple-interest']?.[diff.toLowerCase()];
         const pf = fOn ? ' Use $I = Prn$.' : '';
         const ph = rc(rng, [
-            `Calculate the simple interest on $\\$${P}$ at $${r}\\%$ p.a. for $${t}$ years.${pf}`,
-            `Find the simple interest earned on a $\\$${P}$ investment at $${r}\\%$ p.a. over $${t}$ years.${pf}`,
+            `Calculate the *simple interest* on $\\$${P}$ at $${r}\\%$ p.a. for $${t}$ years.${pf}`,
+            `Find the *simple interest* earned on a $\\$${P}$ investment at $${r}\\%$ p.a. over $${t}$ years.${pf}`,
             `Determine the interest on $\\$${P}$ at $${r}\\%$ per annum for $${t}$ years.${pf}`,
         ]);
         return { clue: ph, answer: String(I), answerDisplay: `$${I}` };
@@ -769,9 +769,9 @@ function genFinancial(rng, diff, allowedOps, opts = {}, _depth = 0) {
     const pct = rc(rng, [5, 10, 20, 25, 50]);
     const sell = round(cost + cost * pct / 100, 2);
     const ph = rc(rng, [
-        `An item costs $\\$${cost}$ and sells for $\\$${sell}$. Calculate the percentage profit.`,
-        `Find the percentage profit: cost $\\$${cost}$, selling price $\\$${sell}$.`,
-        `Determine the profit percentage given a cost of $\\$${cost}$ and a selling price of $\\$${sell}$.`,
+        `An item costs $\\$${cost}$ and sells for $\\$${sell}$. Calculate the *percentage profit*.`,
+        `Find the *percentage profit*: cost $\\$${cost}$, selling price $\\$${sell}$.`,
+        `Determine the *profit percentage* given a cost of $\\$${cost}$ and a selling price of $\\$${sell}$.`,
     ]);
     return { clue: ph, answer: String(pct), answerDisplay: `${pct}%` };
 }
