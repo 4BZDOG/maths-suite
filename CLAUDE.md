@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run
 ```bash
 bash build.sh                  # esbuild bundles main.js → bundle.js
-python3 -m http.server 8082    # serve at http://localhost:8082/puzzle-suite.html
+npm run start                  # python3 -m http.server 8082
+# open http://localhost:8082/puzzle-suite.html
 ```
 After any JS change: rebuild, then bump `?v=N` in `<script src="bundle.js?v=N">` (puzzle-suite.html line ~461) to bypass browser cache.
 
@@ -77,8 +78,14 @@ maths-suite/
 │
 ├── payments/
 │   ├── access.js              # hasFeature(), tier API, feature override management
-│   ├── config.js              # TIER, FEATURE flags, TIER_FEATURES, GROUPS, FREE_LIMITS
-│   └── session.js             # Session/auth stub (get/set/clearSession)
+│   ├── config.js              # TIER, FEATURE flags, TIER_FEATURES, GROUPS, FREE_LIMITS, STRIPE_CONFIG
+│   ├── session.js             # Session/auth stub (get/set/clearSession)
+│   └── stripe.js              # Client-side Stripe flow: initiateCheckout, handleCheckoutReturn, refreshSession
+│
+├── stripe-worker/             # Cloudflare Worker — server-side Stripe proxy (deployed via wrangler)
+│   ├── index.js               # Routes: /api/checkout, /api/verify, /api/me, /api/portal, /api/webhooks
+│   ├── wrangler.toml          # Worker name, APP_URL var, KV namespace bindings
+│   └── package.json
 │
 ├── ai/
 │   └── aiGenerate.js          # BYOK AI word generation (Gemini, Groq, OpenAI, Anthropic, OpenRouter)
@@ -117,12 +124,14 @@ All functions exposed both as `window.fnName` (for HTML `onclick`/`oninput`) and
 - `toggleDarkMode()`, `adjustZoom(d)`, `switchTab(t)` — UI controls
 
 ### Initialization sequence (`main.js`, on `window.load`)
-1. Load saved state from localStorage (`loadRawState()`)
-2. Restore watermark images
-3. Build sub-operation panels dynamically
-4. Generate initial question sets (`generateAll()`)
-5. Setup sidebar resize, drag-drop, keyboard shortcuts
-6. Fade out loading overlay
+1. Handle Stripe checkout return (`handleCheckoutReturn()`) — consumes `?stripe_session=` before any state restore
+2. Refresh session tier from worker (`refreshSession()`) — silently updates stored JWT
+3. Load saved state from localStorage (`loadRawState()`)
+4. Restore watermark images
+5. Build sub-operation panels dynamically
+6. Generate initial question sets (`generateAll()`)
+7. Setup sidebar resize, drag-drop, keyboard shortcuts
+8. Fade out loading overlay
 
 ### CSS Layer Architecture
 Layers in order (higher = wins): `base` → `layout` → `components` → `pages` → `utils`
@@ -221,6 +230,20 @@ Key functions in `payments/access.js`:
 - `acpFeatureChange()` — syncs group-preset button highlights after a checkbox change
 - `applyAccessOverrides()`, `resetAccessOverrides()`
 
+### Stripe Payments (`payments/stripe.js` + `stripe-worker/`)
+Architecture: Browser → Cloudflare Worker (`stripe-worker/`) → Stripe API. The browser never holds a Stripe secret key.
+
+Key client functions in `payments/stripe.js`:
+- `initiateCheckout(tier, interval)` — POSTs to `/api/checkout`, redirects to Stripe-hosted Checkout
+- `handleCheckoutReturn()` — detects `?stripe_session=`, POSTs to `/api/verify`, stores JWT; call **before** restoring app state
+- `refreshSession()` — GETs `/api/me` to re-validate stored JWT; no-op if unconfigured
+- `openCustomerPortal()` — POSTs to `/api/portal`, redirects to Stripe billing portal
+- `isStripeConfigured()` — returns `true` only when `STRIPE_CONFIG.workerUrl` and a price ID are set
+
+`STRIPE_CONFIG` in `payments/config.js` holds `publishableKey`, `workerUrl`, and `prices.{proMonthly,proYearly}` — all empty by default. Fill before going live (see `STRIPE_INTEGRATION.md`).
+
+To deploy the worker: `cd stripe-worker && npm install && wrangler deploy`, then set secrets via `wrangler secret put STRIPE_SECRET_KEY` etc.
+
 ### AI Word Generation (`ai/aiGenerate.js`)
 - BYOK (bring your own key): user supplies API key for Gemini, Groq, OpenAI, Anthropic, or OpenRouter
 - Planned: managed proxy via Cloudflare Worker for Pro tier (no key required)
@@ -257,3 +280,5 @@ GitHub Actions (`.github/workflows/deploy.yml`) auto-deploys on every push to `m
 1. `npm ci` → `bash build.sh` → upload artifact → deploy to GitHub Pages
 2. Approx. 90s end-to-end
 3. `index.html` at the repo root redirects `/` → `puzzle-suite.html` for a clean entry URL
+
+The Cloudflare Worker (`stripe-worker/`) is **not** deployed by GitHub Actions — deploy it manually with `wrangler`. See `stripe-worker/README.md` for the full setup (KV namespace, secrets, webhook registration).
