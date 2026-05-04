@@ -6,7 +6,7 @@ import { showToast } from '../ui/toast.js';
 import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
 import { loadJSPDF, loadFontForPDF, FONT_SELECT_MAP } from './pdfFonts.js';
 import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue, drawText } from './pdfHelpers.js';
-import { detectVerb } from '../renderers/htmlUtils.js';
+import { detectVerb, detectMidVerb } from '../renderers/htmlUtils.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
 import { getOutcomesForTopics, getTopicOutcomeCodes, DEFAULT_STAGE } from '../core/outcomes.js';
@@ -358,7 +358,17 @@ function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, line
     let rawClue = clue;
     if (!rawClue.startsWith('**')) {
         const verb = detectVerb(rawClue);
-        if (verb) rawClue = `**${verb}**${rawClue.slice(verb.length)}`;
+        if (verb) {
+            rawClue = `**${verb}**${rawClue.slice(verb.length)}`;
+        } else {
+            // Try mid-sentence imperative ("A rectangle has...Determine its area.")
+            const mid = detectMidVerb(rawClue);
+            if (mid) {
+                rawClue = rawClue.slice(0, mid.index)
+                        + `**${mid.verb}**`
+                        + rawClue.slice(mid.index + mid.verb.length);
+            }
+        }
     }
 
     // Convert LaTeX regions to unicode first, keeping emphasis markers

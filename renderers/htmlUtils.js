@@ -14,7 +14,14 @@ export function esc(str) {
 //   2. IMPERATIVE_RE  — fallback: the leading imperative word alone
 //      (e.g. "Find the area of a rectangle..." → bold just "Find").
 const VERB_PHRASE_RE = /^([A-Za-z][^:.*]{0,50}:\s)/;
-const IMPERATIVE_RE  = /^(Approximate|Calculate|Compare|Compute|Convert|Decrease|Describe|Determine|Estimate|Evaluate|Express|Find|How many|How much|Identify|Increase|Label|List|Order|Reduce|Round|Show|Simplify|Solve|State|Substitute|Use|What is|Work out|Write)\b/;
+const IMPERATIVE_LIST = 'Approximate|Calculate|Compare|Compute|Convert|Decrease|Describe|Determine|Estimate|Evaluate|Express|Find|How many|How much|Identify|Increase|Label|List|Order|Reduce|Round|Show|Simplify|Solve|State|Substitute|Use|What is|Work out|Write';
+const IMPERATIVE_RE  = new RegExp(`^(${IMPERATIVE_LIST})\\b`);
+// Mid-sentence imperative: catches clues like "A rectangle has...Determine its
+// area." (verb after ". ") and "If y = 2x + 5, find y when x = 3" (lowercase
+// verb after ", "). Allows either case so both styles are picked up.
+const MID_IMPERATIVE_RE = new RegExp(
+    `([.,]\\s+)(${IMPERATIVE_LIST}|${IMPERATIVE_LIST.toLowerCase()})\\b`
+);
 
 export function detectVerb(s) {
     const m1 = s.match(VERB_PHRASE_RE);
@@ -22,6 +29,15 @@ export function detectVerb(s) {
     const m2 = s.match(IMPERATIVE_RE);
     if (m2) return m2[1];
     return null;
+}
+
+/** Find a mid-sentence imperative verb (after a "." sentence break).
+ *  Returns { index, verb } where index is the start of the verb word
+ *  in the original string, or null. */
+export function detectMidVerb(s) {
+    const m = s.match(MID_IMPERATIVE_RE);
+    if (!m) return null;
+    return { index: m.index + m[1].length, verb: m[2] };
 }
 
 // Apply our small markdown subset (**bold**, *italic*) to an already
@@ -51,6 +67,15 @@ export function formatClue(clue) {
     if (verb) {
         const rest = s.slice(verb.length);
         return `<strong class="clue-verb">${applyMarkdownEmphasis(esc(verb))}</strong>${applyMarkdownEmphasis(esc(rest))}`;
+    }
+    // No leading verb — try mid-sentence ("A rectangle has...Determine its area.")
+    const mid = detectMidVerb(s);
+    if (mid) {
+        const before = s.slice(0, mid.index);
+        const after  = s.slice(mid.index + mid.verb.length);
+        return applyMarkdownEmphasis(esc(before))
+            + `<strong class="clue-verb">${esc(mid.verb)}</strong>`
+            + applyMarkdownEmphasis(esc(after));
     }
     return applyMarkdownEmphasis(esc(s));
 }
