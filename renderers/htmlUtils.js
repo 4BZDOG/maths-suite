@@ -14,7 +14,7 @@ export function esc(str) {
 //   2. IMPERATIVE_RE  — fallback: the leading imperative word alone
 //      (e.g. "Find the area of a rectangle..." → bold just "Find").
 const VERB_PHRASE_RE = /^([A-Za-z][^:.*]{0,50}:\s)/;
-const IMPERATIVE_RE  = /^(Calculate|Evaluate|Find|Determine|Solve|Work out|Apply|Round|Estimate|Express|Simplify|Convert|Identify|Write|Show|Compute|Order|List|Describe|Compare|Increase|Decrease|What is|How many|How much|Use)\b/;
+const IMPERATIVE_RE  = /^(Approximate|Calculate|Compare|Compute|Convert|Decrease|Describe|Determine|Estimate|Evaluate|Express|Find|How many|How much|Identify|Increase|Label|List|Order|Reduce|Round|Show|Simplify|Solve|State|Substitute|Use|What is|Work out|Write)\b/;
 
 export function detectVerb(s) {
     const m1 = s.match(VERB_PHRASE_RE);
