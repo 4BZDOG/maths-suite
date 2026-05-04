@@ -351,11 +351,21 @@ function _parseEmphasisSegments(text) {
  * @param {number} lineH  Line height (mm)
  * @returns {number}  Final baseline Y after last drawn character
  */
+// Matches leading verb prefix: "Calculate: ", "Find: ", etc. (same as HTML formatClue)
+const _VERB_RE = /^([A-Za-z][^:.$]{0,40}:\s)/;
+
 function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, lineH) {
+    // Auto-bold verb prefixes (Calculate:, Find:, etc.) to match HTML treatment
+    let rawClue = clue;
+    const verbM = _VERB_RE.exec(rawClue);
+    if (verbM && !rawClue.startsWith('**')) {
+        rawClue = `**${verbM[1]}**${rawClue.slice(verbM[0].length)}`;
+    }
+
     // Convert LaTeX regions to unicode first, keeping emphasis markers
     const withLatex = latexToText(
-        clue.replace(/\*\*([^*]+)\*\*/g, '\x01$1\x01')  // protect ** with control chars
-            .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1\x02$2\x02')  // protect * with control chars
+        rawClue.replace(/\*\*([^*]+)\*\*/g, '\x01$1\x01')  // protect ** with control chars
+               .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1\x02$2\x02')  // protect * with control chars
     )
     .replace(/\x01([^\x01]*)\x01/g, '**$1**')   // restore bold markers
     .replace(/\x02([^\x02]*)\x02/g, '*$1*');    // restore italic markers
