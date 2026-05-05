@@ -45,56 +45,92 @@ function fracStr(n, d) {
 
 // ============================================================
 // SUB_OPS metadata — defines selectable sub-operations per topic.
-// Each entry: { key, label }
+// Each entry: { key, label, stages?, pathway? }
+//   stages  - which stages include this op (default: both)
+//   pathway - 'path' means Stage 5.3 Path only; omit for core
 // ============================================================
 export const SUB_OPS = {
     'Integers': [
-        { key: 'add', label: 'Add (+)' },
+        { key: 'add',      label: 'Add (+)' },
         { key: 'subtract', label: 'Subtract (−)' },
         { key: 'multiply', label: 'Multiply (×)' },
-        { key: 'divide', label: 'Divide (÷)' },
-        { key: 'bodmas', label: 'BODMAS' },
+        { key: 'divide',   label: 'Divide (÷)' },
+        { key: 'bodmas',   label: 'BODMAS' },
     ],
     'Decimals': [
-        { key: 'add-subtract', label: 'Add / Subtract' },
+        { key: 'add-subtract',   label: 'Add / Subtract' },
         { key: 'multiply-divide', label: 'Multiply / Divide' },
     ],
     'Rounding': [
-        { key: 'nearest', label: 'Nearest 10 / 100 / 1000' },
+        { key: 'nearest',        label: 'Nearest 10 / 100 / 1000' },
         { key: 'decimal-places', label: 'Decimal places' },
-        { key: 'sig-figs', label: 'Significant figures' },
+        { key: 'sig-figs',       label: 'Significant figures' },
     ],
     'Fractions': [
-        { key: 'fraction-of', label: 'Fraction of amount' },
-        { key: 'add-subtract', label: 'Add / Subtract' },
+        { key: 'fraction-of',     label: 'Fraction of amount' },
+        { key: 'add-subtract',    label: 'Add / Subtract' },
         { key: 'multiply-divide', label: 'Multiply / Divide' },
         { key: 'simplify-convert', label: 'Simplify / Convert' },
     ],
     'Percentages': [
-        { key: 'find-pct', label: 'Find percentage' },
+        { key: 'find-pct',        label: 'Find percentage' },
         { key: 'increase-decrease', label: 'Increase / Decrease' },
-        { key: 'reverse-change', label: 'Reverse / % change' },
+        { key: 'reverse-change',  label: 'Reverse / % change' },
     ],
     'Algebra': [
-        { key: 'solve', label: 'Solve equations' },
+        { key: 'solve',        label: 'Solve equations' },
         { key: 'substitution', label: 'Substitution' },
+        // Stage 5 core
+        { key: 'expand',          label: 'Expand expressions',     stages: ['Stage 5'] },
+        { key: 'factorise',       label: 'Factorise expressions',  stages: ['Stage 5'] },
+        { key: 'quadratic-solve', label: 'Solve quadratics',       stages: ['Stage 5'] },
+        { key: 'indices-laws',    label: 'Index laws',             stages: ['Stage 5'] },
+        // Stage 5.3 Path
+        { key: 'simultaneous',   label: 'Simultaneous equations', stages: ['Stage 5'], pathway: 'path' },
+        { key: 'surds-simplify', label: 'Simplify surds',         stages: ['Stage 5'], pathway: 'path' },
+        { key: 'surds-operate',  label: 'Add / Multiply surds',   stages: ['Stage 5'], pathway: 'path' },
     ],
     'Geometry': [
         { key: 'area-perimeter', label: 'Area / Perimeter' },
-        { key: 'pythagoras', label: 'Pythagoras' },
-        { key: 'angles', label: 'Angles' },
-        { key: 'circles', label: 'Circles' },
+        { key: 'pythagoras',     label: 'Pythagoras' },
+        { key: 'angles',         label: 'Angles' },
+        { key: 'circles',        label: 'Circles' },
+        // Stage 5
+        { key: 'surface-area',      label: 'Surface area',          stages: ['Stage 5'] },
+        { key: 'composite-volume',  label: 'Composite volume',       stages: ['Stage 5'] },
+        { key: 'similar-triangles', label: 'Similar triangles',      stages: ['Stage 5'] },
     ],
     'Statistics': [
         { key: 'mean-median', label: 'Mean / Median' },
-        { key: 'mode-range', label: 'Mode / Range' },
-        { key: 'iqr', label: 'Interquartile range' },
+        { key: 'mode-range',  label: 'Mode / Range' },
+        { key: 'iqr',         label: 'Interquartile range' },
+        // Stage 5
+        { key: 'five-number-summary', label: 'Five-number summary', stages: ['Stage 5'] },
+        { key: 'bivariate',           label: 'Bivariate data',      stages: ['Stage 5'] },
     ],
     'Financial Maths': [
-        { key: 'simple-interest', label: 'Simple interest' },
+        { key: 'simple-interest',   label: 'Simple interest' },
         { key: 'compound-interest', label: 'Compound interest' },
-        { key: 'markup-profit', label: 'Markup / Profit' },
-        { key: 'gst', label: 'GST' },
+        { key: 'markup-profit',     label: 'Markup / Profit' },
+        { key: 'gst',               label: 'GST' },
+        // Stage 5
+        { key: 'depreciation',    label: 'Depreciation',       stages: ['Stage 5'] },
+        { key: 'compound-period', label: 'Compound (periods)', stages: ['Stage 5'] },
+    ],
+    // Stage 5 only topics
+    'Trigonometry': [
+        { key: 'find-side',    label: 'Find a side (SOHCAHTOA)', stages: ['Stage 5'] },
+        { key: 'find-angle',   label: 'Find an angle',           stages: ['Stage 5'] },
+        { key: 'applications', label: 'Real-world applications', stages: ['Stage 5'] },
+        // Path
+        { key: 'obtuse-angles', label: 'Obtuse angles',  stages: ['Stage 5'], pathway: 'path' },
+        { key: 'bearings',      label: 'Bearings (true)', stages: ['Stage 5'], pathway: 'path' },
+    ],
+    'Non-linear Relationships': [
+        { key: 'parabola-features', label: 'Parabola: features',    stages: ['Stage 5'] },
+        // Path
+        { key: 'parabola-sketch',   label: 'Parabola: sketch',      stages: ['Stage 5'], pathway: 'path' },
+        { key: 'identify-graph',    label: 'Identify graph type',   stages: ['Stage 5'], pathway: 'path' },
     ],
 };
 
@@ -515,9 +551,9 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
 }
 
 // ============================================================
-// ALGEBRA
+// ALGEBRA (Stage 4 core)
 // ============================================================
-function genAlgebra(rng, diff, allowedOps) {
+function _genAlgebraCore(rng, diff, allowedOps) {
     const maps = {
         Easy: { 'solve': [0, 1] },
         Medium: { 'solve': [0, 1], 'substitution': [2] },
@@ -578,9 +614,9 @@ function genAlgebra(rng, diff, allowedOps) {
 }
 
 // ============================================================
-// STATISTICS
+// STATISTICS (Stage 4 core)
 // ============================================================
-function genStatistics(rng, diff, allowedOps, _depth = 0) {
+function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
     if (_depth > 30) return null;
     const maps = {
         Easy: { 'mean-median': [0, 1] },
@@ -596,7 +632,7 @@ function genStatistics(rng, diff, allowedOps, _depth = 0) {
             const n = ri(rng, 3, 5);
             const data = Array.from({ length: n }, () => ri(rng, 1, 20));
             const sum = data.reduce((a, b) => a + b, 0);
-            if (sum % n !== 0) return genStatistics(rng, diff, allowedOps, _depth + 1);
+            if (sum % n !== 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
             const ph = rc(rng, [
                 `Find the *mean* of $${data.join(', ')}$`,
                 `Calculate the *mean* of $${data.join(', ')}$`,
@@ -644,7 +680,7 @@ function genStatistics(rng, diff, allowedOps, _depth = 0) {
         const n = ri(rng, 4, 6);
         const data = Array.from({ length: n }, () => ri(rng, 5, 30));
         const sum = data.reduce((a, b) => a + b, 0);
-        if (sum % n !== 0) return genStatistics(rng, diff, allowedOps, _depth + 1);
+        if (sum % n !== 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
         const ph = rc(rng, [
             `Calculate the *mean* of $${data.join(', ')}$`,
             `Find the *mean* of $${data.join(', ')}$`,
@@ -658,7 +694,7 @@ function genStatistics(rng, diff, allowedOps, _depth = 0) {
         const q1 = (data[1] + data[2]) / 2;
         const q3 = (data[5] + data[6]) / 2;
         const iqr = q3 - q1;
-        if (!Number.isInteger(iqr)) return genStatistics(rng, diff, allowedOps, _depth + 1);
+        if (!Number.isInteger(iqr)) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
         const ph = rc(rng, [
             `Find the *interquartile range* of $${data.join(', ')}$`,
             `Calculate the *IQR* of $${data.join(', ')}$`,
@@ -669,7 +705,7 @@ function genStatistics(rng, diff, allowedOps, _depth = 0) {
     const n = rc(rng, [4, 6]);
     const data = Array.from({ length: n }, () => ri(rng, 1, 30)).sort((a, b) => a - b);
     const med = (data[n / 2 - 1] + data[n / 2]) / 2;
-    if (!Number.isInteger(med)) return genStatistics(rng, diff, allowedOps, _depth + 1);
+    if (!Number.isInteger(med)) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
     const ph = rc(rng, [
         `Find the *median* of $${data.join(', ')}$`,
         `Calculate the *median* of $${data.join(', ')}$`,
@@ -679,9 +715,9 @@ function genStatistics(rng, diff, allowedOps, _depth = 0) {
 }
 
 // ============================================================
-// FINANCIAL MATHS
+// FINANCIAL MATHS (Stage 4 core)
 // ============================================================
-function genFinancial(rng, diff, allowedOps, opts = {}, _depth = 0) {
+function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
         Easy: { 'simple-interest': [0], 'gst': [1] },
@@ -722,7 +758,7 @@ function genFinancial(rng, diff, allowedOps, opts = {}, _depth = 0) {
             const cost = ri(rng, 5, 20) * 10;
             const pctProfit = rc(rng, [10, 20, 25, 50]);
             const sell = round(cost * (1 + pctProfit / 100), 2);
-            if (!Number.isInteger(sell)) return genFinancial(rng, diff, allowedOps, opts, _depth + 1);
+            if (!Number.isInteger(sell)) return _genFinancialCore(rng, diff, allowedOps, opts, _depth + 1);
             const ph = rc(rng, [
                 `Find the selling price: cost $\\$${cost}$, mark-up $${pctProfit}\\%$`,
                 `An item costs $\\$${cost}$. Calculate the selling price after a $${pctProfit}\\%$ mark-up.`,
@@ -789,7 +825,7 @@ function _geoUnit(maxVal) {
     return 'km';
 }
 
-function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
+function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
         Easy: { 'area-perimeter': [0, 1] },
@@ -858,7 +894,7 @@ function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
         const angles = [30, 40, 45, 50, 60, 70, 80, 90];
         const a1 = rc(rng, angles);
         const remaining = angles.filter(a => a < 180 - a1 && a !== a1);
-        if (remaining.length === 0) return genGeometry(rng, diff, allowedOps, opts, _depth + 1);
+        if (remaining.length === 0) return _genGeometryCore(rng, diff, allowedOps, opts, _depth + 1);
         const a2 = rc(rng, remaining);
         const a3 = 180 - a1 - a2;
         const ph = rc(rng, [
@@ -911,31 +947,505 @@ function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
 }
 
 // ============================================================
+// === STAGE 5 GENERATORS ===
+// ============================================================
+
+// ---- Algebra Stage 5 operations ----------------------------
+function _genAlgebraOp(rng, diff, op) {
+    const verb = rc(rng, ['Expand:', 'Expand and simplify:']);
+
+    if (op === 'expand') {
+        if (diff === 'Easy') {
+            const a = ri(rng, 1, 7), b = ri(rng, 1, 7);
+            const mid = a + b, last = a * b;
+            return { clue: `${verb} $(x + ${a})(x + ${b})$`, answer: `x²+${mid}x+${last}`, answerDisplay: `$x^2 + ${mid}x + ${last}$` };
+        }
+        if (diff === 'Medium') {
+            const a = ri(rng, 1, 7), b = ri(rng, 1, 7);
+            const mid = a - b, last = -a * b;
+            const mStr = mid >= 0 ? `+${mid}` : `${mid}`;
+            const lStr = last >= 0 ? `+${last}` : `${last}`;
+            return { clue: `${verb} $(x + ${a})(x - ${b})$`, answer: `x²${mStr}x${lStr}`, answerDisplay: `$x^2 ${mid >= 0 ? '+' : ''}${mid}x ${last >= 0 ? '+' : ''}${last}$` };
+        }
+        // Hard: (ax + b)(cx + d)
+        const a = ri(rng, 2, 3), b = ri(rng, 1, 5), c = ri(rng, 2, 3), d = ri(rng, 1, 5);
+        const lead = a * c, mid2 = a * d + b * c, last2 = b * d;
+        const m2Str = mid2 >= 0 ? `+${mid2}` : `${mid2}`;
+        return { clue: `${rc(rng, ['Expand:', 'Expand and simplify:'])} $(${a}x + ${b})(${c}x + ${d})$`, answer: `${lead}x²${m2Str}x+${last2}`, answerDisplay: `$${lead}x^2 ${mid2 >= 0 ? '+' : ''}${mid2}x + ${last2}$` };
+    }
+
+    if (op === 'factorise') {
+        if (diff === 'Easy') {
+            // x² + (a+b)x + ab = (x+a)(x+b), a,b ∈ [1,7] so answer fits ≤10 chars
+            const a = ri(rng, 1, 7), b = ri(rng, 1, 7);
+            const mid = a + b, last = a * b;
+            return { clue: `Factorise: $x^2 + ${mid}x + ${last}$`, answer: `(x+${a})(x+${b})`, answerDisplay: `$(x + ${a})(x + ${b})$` };
+        }
+        if (diff === 'Medium') {
+            // Perfect square: (x+a)² = x² + 2ax + a²
+            const a = ri(rng, 2, 6);
+            return { clue: `Factorise: $x^2 + ${2 * a}x + ${a * a}$`, answer: `(x+${a})²`, answerDisplay: `$(x + ${a})^2$` };
+        }
+        // Hard: difference of two squares
+        const n = ri(rng, 2, 7);
+        return { clue: `Factorise: $x^2 - ${n * n}$`, answer: `(x+${n})(x-${n})`, answerDisplay: `$(x + ${n})(x - ${n})$` };
+    }
+
+    if (op === 'quadratic-solve') {
+        const sv = rc(rng, SOLVE_VERBS);
+        if (diff === 'Easy') {
+            // x² = c → x = ±√c, use perfect squares
+            const n = ri(rng, 2, 9);
+            return { clue: `${sv} $x^2 = ${n * n}$`, answer: `±${n}`, answerDisplay: `$x = \\pm ${n}$` };
+        }
+        if (diff === 'Medium') {
+            // (x-a)(x-b) = 0 where a,b > 0, a ≠ b
+            const a = ri(rng, 1, 7), b = ri(rng, 1, 7);
+            if (a === b) { const b2 = a + 1; const mid = -(a + b2), last = a * b2; return { clue: `${sv} $x^2 ${mid}x + ${last} = 0$`, answer: `x=${a},${b2}`, answerDisplay: `$x = ${a}$ or $x = ${b2}$` }; }
+            const mid = -(a + b), last = a * b;
+            const mStr = mid >= 0 ? `+ ${mid}` : `- ${Math.abs(mid)}`;
+            return { clue: `${sv} $x^2 ${mStr}x + ${last} = 0$`, answer: `x=${a},${b}`, answerDisplay: `$x = ${a}$ or $x = ${b}$` };
+        }
+        // Hard: (x-a)(x+b) = 0, one negative root
+        const a = ri(rng, 2, 6), b = ri(rng, 1, 5);
+        const mid = a - b, last = -a * b;
+        const mStr = mid >= 0 ? `+ ${mid}` : `- ${Math.abs(mid)}`;
+        const lStr = last >= 0 ? `+ ${last}` : `- ${Math.abs(last)}`;
+        return { clue: `${sv} $x^2 ${mStr}x ${lStr} = 0$`, answer: `x=${a},-${b}`, answerDisplay: `$x = ${a}$ or $x = -${b}$` };
+    }
+
+    if (op === 'indices-laws') {
+        const sv = rc(rng, CALC_VERBS);
+        if (diff === 'Easy') {
+            // a^m × a^n = a^(m+n), evaluate numerically
+            const base = ri(rng, 2, 4), m = ri(rng, 1, 3), n = ri(rng, 1, 3);
+            const ans = Math.pow(base, m + n);
+            if (ans > 9999) return null;
+            return { clue: `${sv} $${base}^${m} \\times ${base}^${n}$`, answer: String(ans), answerDisplay: `$${ans}$` };
+        }
+        if (diff === 'Medium') {
+            // a^m ÷ a^n, express as a^(m-n) and evaluate
+            const base = ri(rng, 2, 4), n2 = ri(rng, 1, 2), extra = ri(rng, 1, 2);
+            const m2 = n2 + extra;
+            const ans = Math.pow(base, extra);
+            return { clue: `${sv} $${base}^${m2} \\div ${base}^${n2}$`, answer: String(ans), answerDisplay: `$${ans}$` };
+        }
+        // Hard: (a^m)^n = a^(mn)
+        const base = ri(rng, 2, 3), m3 = ri(rng, 2, 3), n3 = ri(rng, 2, 3);
+        const ans3 = Math.pow(base, m3 * n3);
+        if (ans3 > 9999) return null;
+        return { clue: `${sv} $(${base}^${m3})^${n3}$`, answer: String(ans3), answerDisplay: `$${ans3}$` };
+    }
+
+    if (op === 'simultaneous') {
+        const sv = rc(rng, SOLVE_VERBS).replace('$x$', '$x$ and $y$').replace('x', 'x and y');
+        const x = ri(rng, 1, 8), y = ri(rng, 1, 8);
+        if (diff === 'Easy') {
+            // x + y = a, x - y = b → easy elimination
+            const a = x + y, b = x - y;
+            return { clue: `Solve: $x + y = ${a}$ and $x - y = ${b}$`, answer: `x=${x},y=${y}`, answerDisplay: `$x = ${x},\\ y = ${y}$` };
+        }
+        if (diff === 'Medium') {
+            const c1 = ri(rng, 2, 4);
+            const a2 = c1 * x + y, b2 = x + y;
+            return { clue: `Solve: $${c1}x + y = ${a2}$ and $x + y = ${b2}$`, answer: `x=${x},y=${y}`, answerDisplay: `$x = ${x},\\ y = ${y}$` };
+        }
+        const c1 = ri(rng, 2, 3), c2 = ri(rng, 2, 3);
+        const a3 = c1 * x + c2 * y, b3 = x + c2 * y;
+        return { clue: `Solve: $${c1}x + ${c2}y = ${a3}$ and $x + ${c2}y = ${b3}$`, answer: `x=${x},y=${y}`, answerDisplay: `$x = ${x},\\ y = ${y}$` };
+    }
+
+    if (op === 'surds-simplify') {
+        const sv = rc(rng, ['Simplify:', 'Simplify the surd:']);
+        // √(k²n) = k√n
+        const k = ri(rng, 2, 5), n = rc(rng, [2, 3, 5, 6, 7]);
+        const radicand = k * k * n;
+        return { clue: `${sv} $\\sqrt{${radicand}}$`, answer: `${k}√${n}`, answerDisplay: `$${k}\\sqrt{${n}}$` };
+    }
+
+    if (op === 'surds-operate') {
+        const sv = rc(rng, ['Simplify:', 'Evaluate:']);
+        const k1 = ri(rng, 1, 4), k2 = ri(rng, 1, 4), n = rc(rng, [2, 3, 5, 6]);
+        if (diff === 'Easy') {
+            const sum = k1 + k2;
+            return { clue: `${sv} $${k1}\\sqrt{${n}} + ${k2}\\sqrt{${n}}$`, answer: `${sum}√${n}`, answerDisplay: `$${sum}\\sqrt{${n}}$` };
+        }
+        // Multiply surds: k1√n × k2√n = k1k2n
+        const prod = k1 * k2 * n;
+        return { clue: `${sv} $${k1}\\sqrt{${n}} \\times ${k2}\\sqrt{${n}}$`, answer: String(prod), answerDisplay: `$${prod}$` };
+    }
+
+    return null;
+}
+
+// ---- Statistics Stage 5 operations -------------------------
+function _genStatisticsS5Op(rng, diff, op) {
+    if (op === 'five-number-summary') {
+        // Ask for one element of the five-number summary
+        const n = 8;
+        const data = Array.from({ length: n }, () => ri(rng, 1, 30)).sort((a, b) => a - b);
+        const q1 = (data[1] + data[2]) / 2;
+        const q3 = (data[5] + data[6]) / 2;
+        if (!Number.isInteger(q1) || !Number.isInteger(q3)) return null;
+        const choice = rc(rng, ['Q1', 'Q3', 'median', 'IQR']);
+        let ans, clueQ;
+        if (choice === 'Q1') { ans = q1; clueQ = 'Find **Q1** (lower quartile)'; }
+        else if (choice === 'Q3') { ans = q3; clueQ = 'Find **Q3** (upper quartile)'; }
+        else if (choice === 'median') {
+            const med = (data[3] + data[4]) / 2;
+            if (!Number.isInteger(med)) return null;
+            ans = med; clueQ = 'Find the **median**';
+        } else {
+            ans = q3 - q1; clueQ = 'Find the **interquartile range (IQR)**';
+        }
+        return { clue: `${clueQ} of: $${data.join(', ')}$`, answer: String(ans) };
+    }
+
+    if (op === 'bivariate') {
+        // Given a line of best fit, predict a value
+        const m = ri(rng, 1, 5), c = ri(rng, 0, 10), x = ri(rng, 2, 10);
+        const y = m * x + c;
+        const ph = rc(rng, [
+            `A line of best fit is $y = ${m}x + ${c}$. Predict $y$ when $x = ${x}$.`,
+            `The equation of the line of best fit is $y = ${m}x + ${c}$. Find $y$ when $x = ${x}$.`,
+            `Using $y = ${m}x + ${c}$, calculate the predicted value of $y$ for $x = ${x}$.`,
+        ]);
+        return { clue: ph, answer: String(y), answerDisplay: `$y = ${y}$` };
+    }
+    return null;
+}
+
+// ---- Geometry Stage 5 operations ----------------------------
+function _genGeometryS5Op(rng, diff, op) {
+    if (op === 'surface-area') {
+        const l = ri(rng, 2, 10), w = ri(rng, 2, 8), h = ri(rng, 2, 8);
+        const u = _geoUnit(Math.max(l, w, h));
+        const sa = 2 * (l * w + l * h + w * h);
+        const ph = rc(rng, [
+            `Find the *surface area* of a rectangular prism: length $${l}$ ${u}, width $${w}$ ${u}, height $${h}$ ${u}.`,
+            `Calculate the *total surface area* of a rectangular box with dimensions $${l}$ ${u} × $${w}$ ${u} × $${h}$ ${u}.`,
+            `A rectangular prism has dimensions $${l}$ ${u} by $${w}$ ${u} by $${h}$ ${u}. Find its surface area.`,
+        ]);
+        return { clue: ph, answer: String(sa), answerDisplay: `${sa} ${u}²` };
+    }
+
+    if (op === 'composite-volume') {
+        // Two rectangular prisms joined
+        const l1 = ri(rng, 3, 10), w1 = ri(rng, 2, 8), h1 = ri(rng, 2, 6);
+        const l2 = ri(rng, 2, l1), w2 = ri(rng, 2, w1), h2 = ri(rng, 2, 5);
+        const u = 'm';
+        const v = l1 * w1 * h1 + l2 * w2 * h2;
+        const ph = rc(rng, [
+            `A composite solid consists of two rectangular prisms. Prism A: $${l1}$ m × $${w1}$ m × $${h1}$ m. Prism B: $${l2}$ m × $${w2}$ m × $${h2}$ m. Find the *total volume*.`,
+            `Find the *combined volume* of two rectangular prisms: Prism 1 has dimensions $${l1}\\times${w1}\\times${h1}$ m and Prism 2 has dimensions $${l2}\\times${w2}\\times${h2}$ m.`,
+        ]);
+        return { clue: ph, answer: String(v), answerDisplay: `${v} m³` };
+    }
+
+    if (op === 'similar-triangles') {
+        // Two similar triangles; find a missing side
+        const scale = ri(rng, 2, 4);
+        const a = ri(rng, 3, 8), b = ri(rng, 3, 8), c = ri(rng, 3, 8);
+        const u = 'cm';
+        const ph = rc(rng, [
+            `Two similar triangles have corresponding sides. If one triangle has a side of $${a}$ ${u} and the *corresponding* side of the larger triangle is $${a * scale}$ ${u}, find the side corresponding to $${b}$ ${u}.`,
+            `A triangle with a side of $${a}$ ${u} is similar to a larger triangle with a corresponding side of $${a * scale}$ ${u}. Find the length of the side that corresponds to $${b}$ ${u}.`,
+        ]);
+        return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}` };
+    }
+    return null;
+}
+
+// ---- Financial Stage 5 operations ---------------------------
+function _genFinancialS5Op(rng, diff, op) {
+    if (!op) op = diff === 'Hard' ? 'compound-period' : 'depreciation';
+
+    if (op === 'depreciation') {
+        const P = ri(rng, 3, 20) * 1000, r = rc(rng, [5, 10, 15, 20]), t = ri(rng, 1, 3);
+        if (diff === 'Easy') {
+            // Straight-line: annual loss = P × r%
+            const annualLoss = P * r / 100;
+            const ph = rc(rng, [
+                `A car worth $\\$${P}$ depreciates at $${r}\\%$ per year (straight-line). Find the *annual depreciation*.`,
+                `Using straight-line depreciation, find the annual loss on $\\$${P}$ at $${r}\\%$ p.a.`,
+            ]);
+            return { clue: ph, answer: String(annualLoss), answerDisplay: `$${annualLoss}` };
+        }
+        // Reducing balance: V = P(1-r/100)^t
+        const V = round(P * Math.pow(1 - r / 100, t), 2);
+        const ph = rc(rng, [
+            `A machine worth $\\$${P}$ depreciates at $${r}\\%$ p.a. (reducing balance). Find its value after $${t}$ year${t > 1 ? 's' : ''}.`,
+            `Using $V = P(1 - r)^n$, find the value of $\\$${P}$ after $${t}$ year${t > 1 ? 's' : ''} at $${r}\\%$ p.a. depreciation.`,
+        ]);
+        return { clue: ph, answer: String(V), answerDisplay: `$${V}` };
+    }
+
+    // compound-period: compounding more than once per year
+    const P2 = ri(rng, 2, 10) * 1000;
+    const rAnnual = rc(rng, [6, 8, 12]);
+    const nPer = rc(rng, [2, 4, 12]); // half-yearly, quarterly, monthly
+    const periodLabel = nPer === 2 ? 'half-yearly' : nPer === 4 ? 'quarterly' : 'monthly';
+    const t2 = ri(rng, 1, 2);
+    const A = round(P2 * Math.pow(1 + rAnnual / 100 / nPer, nPer * t2), 2);
+    const ph = rc(rng, [
+        `$\\$${P2}$ is invested at $${rAnnual}\\%$ p.a. compounded ${periodLabel} for $${t2}$ year${t2 > 1 ? 's' : ''}. Find the total amount.`,
+        `Find the future value of $\\$${P2}$ compounded ${periodLabel} at $${rAnnual}\\%$ p.a. over $${t2}$ year${t2 > 1 ? 's' : ''}.`,
+    ]);
+    return { clue: ph, answer: String(A), answerDisplay: `$${A}` };
+}
+
+// ---- Trigonometry (Stage 5 new topic) -----------------------
+const TRIG_TRIPLES = [
+    { a: 3, b: 4, c: 5 }, { a: 5, b: 12, c: 13 }, { a: 6, b: 8, c: 10 },
+    { a: 8, b: 15, c: 17 }, { a: 9, b: 12, c: 15 }, { a: 7, b: 24, c: 25 },
+];
+
+function genTrigonometry(rng, diff, allowedOps) {
+    const OPS = ['find-side', 'find-angle', 'applications', 'obtuse-angles', 'bearings'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+
+    if (op === 'find-side') {
+        const triple = rc(rng, TRIG_TRIPLES);
+        const scale = ri(rng, 1, 3);
+        const opp = triple.a * scale, adj = triple.b * scale, hyp = triple.c * scale;
+        const u = _geoUnit(hyp);
+        const angleA = round(Math.atan2(opp, adj) * 180 / Math.PI, 1);
+        const choice = rc(rng, diff === 'Easy' ? ['sin'] : ['sin', 'cos', 'tan']);
+        let clue, answer, answerDisplay, diagramAngle, diagramFind;
+        if (choice === 'sin') {
+            // sin(A) = opp/hyp → find opp given hyp and angle
+            const scale2 = ri(rng, 3, 8);
+            const hyp2 = triple.c * scale2;
+            const opp2 = triple.a * scale2;
+            const u2 = _geoUnit(hyp2);
+            const angle2 = round(Math.atan2(triple.a, triple.b) * 180 / Math.PI, 1);
+            clue = rc(rng, [
+                `Find the *opposite* side of a right triangle with hypotenuse $${hyp2}$ ${u2} and angle $${angle2}$°. Use $\\sin(${angle2}°) \\approx ${round(Math.sin(angle2 * Math.PI / 180), 3)}$.`,
+                `A right-angled triangle has hypotenuse $${hyp2}$ ${u2} and an angle of $${angle2}$°. Find the *opposite* side. Use $\\sin(${angle2}°) \\approx ${round(Math.sin(angle2 * Math.PI / 180), 3)}$.`,
+            ]);
+            answer = String(opp2);
+            answerDisplay = `${opp2} ${u2}`;
+            diagramAngle = angle2; diagramFind = 'opp';
+            return { clue, answer, answerDisplay, diagram: { type: 'right-triangle-trig', opp: opp2, adj: triple.b * scale2, hyp: hyp2, angle: angle2, missing: 'opp' } };
+        }
+        if (choice === 'cos') {
+            const scale2 = ri(rng, 3, 8);
+            const hyp2 = triple.c * scale2;
+            const adj2 = triple.b * scale2;
+            const u2 = _geoUnit(hyp2);
+            const angle2 = round(Math.atan2(triple.a, triple.b) * 180 / Math.PI, 1);
+            clue = rc(rng, [
+                `Find the *adjacent* side of a right triangle with hypotenuse $${hyp2}$ ${u2} and angle $${angle2}$°. Use $\\cos(${angle2}°) \\approx ${round(Math.cos(angle2 * Math.PI / 180), 3)}$.`,
+            ]);
+            answer = String(adj2);
+            answerDisplay = `${adj2} ${u2}`;
+            return { clue, answer, answerDisplay, diagram: { type: 'right-triangle-trig', opp: triple.a * scale2, adj: adj2, hyp: hyp2, angle: angle2, missing: 'adj' } };
+        }
+        // tan
+        const angle2 = round(Math.atan2(triple.a, triple.b) * 180 / Math.PI, 1);
+        const adj2 = adj, opp2 = opp;
+        const u2 = _geoUnit(Math.max(opp2, adj2));
+        clue = rc(rng, [
+            `Find the *opposite* side of a right triangle with adjacent $${adj2}$ ${u2} and angle $${angle2}$°. Use $\\tan(${angle2}°) \\approx ${round(Math.tan(angle2 * Math.PI / 180), 3)}$.`,
+        ]);
+        return { clue, answer: String(opp2), answerDisplay: `${opp2} ${u2}`, diagram: { type: 'right-triangle-trig', opp: opp2, adj: adj2, hyp: hyp, angle: angle2, missing: 'opp' } };
+    }
+
+    if (op === 'find-angle') {
+        const triple = rc(rng, TRIG_TRIPLES);
+        const scale = ri(rng, 1, 3);
+        const opp = triple.a * scale, adj = triple.b * scale, hyp = triple.c * scale;
+        const u = _geoUnit(hyp);
+        const ratio = rc(rng, ['tan', 'sin', 'cos']);
+        let theta;
+        if (ratio === 'tan') theta = round(Math.atan2(opp, adj) * 180 / Math.PI, 1);
+        else if (ratio === 'sin') theta = round(Math.asin(opp / hyp) * 180 / Math.PI, 1);
+        else theta = round(Math.acos(adj / hyp) * 180 / Math.PI, 1);
+        const ph = rc(rng, [
+            `Find the angle $\\theta$ in a right triangle with opposite $${opp}$ ${u} and adjacent $${adj}$ ${u}.`,
+            `Calculate the angle $\\theta$ given opposite $= ${opp}$ ${u} and adjacent $= ${adj}$ ${u} in a right triangle.`,
+            `A right triangle has legs $${opp}$ ${u} and $${adj}$ ${u}. Find the smaller angle $\\theta$.`,
+        ]);
+        return { clue: ph, answer: `${theta}°`, answerDisplay: `$\\theta = ${theta}$°`, diagram: { type: 'right-triangle-trig', opp, adj, hyp, angle: theta, missing: 'angle' } };
+    }
+
+    if (op === 'applications') {
+        // Real-world: angle of elevation
+        const triple = rc(rng, TRIG_TRIPLES);
+        const scale = ri(rng, 2, 5);
+        const height = triple.a * scale, dist = triple.b * scale;
+        const angle = round(Math.atan2(height, dist) * 180 / Math.PI, 1);
+        const ph = rc(rng, [
+            `A ladder leans against a wall. The base is $${dist}$ m from the wall and the ladder reaches $${height}$ m up the wall. Find the angle the ladder makes with the ground.`,
+            `From a point $${dist}$ m away from a building, the *angle of elevation* to the top is measured. If the building is $${height}$ m tall, find the angle of elevation.`,
+        ]);
+        return { clue: ph, answer: `${angle}°`, answerDisplay: `${angle}°` };
+    }
+
+    if (op === 'obtuse-angles') {
+        // Sine rule: a/sin A = b/sin B
+        const A = rc(rng, [30, 45, 60]), a = ri(rng, 4, 10);
+        const B = rc(rng, [20, 35, 50, 120, 135]);
+        const b = round(a * Math.sin(B * Math.PI / 180) / Math.sin(A * Math.PI / 180), 1);
+        if (b < 1 || b > 30) return null;
+        const ph = rc(rng, [
+            `In a triangle, $a = ${a}$ cm, $\\angle A = ${A}$° and $\\angle B = ${B}$°. Use the *sine rule* to find side $b$.`,
+            `Using the sine rule: $a = ${a}$ cm, $A = ${A}$°, $B = ${B}$°. Find $b$.`,
+        ]);
+        return { clue: ph, answer: String(b), answerDisplay: `${b} cm` };
+    }
+
+    if (op === 'bearings') {
+        const dist = ri(rng, 2, 15) * 10;
+        const bearing = rc(rng, [30, 45, 60, 120, 150, 210, 240, 300, 315, 330]);
+        const radians = bearing * Math.PI / 180;
+        const eastward = round(dist * Math.sin(radians), 1);
+        const northward = round(dist * Math.cos(radians), 1);
+        const ph = `A ship travels $${dist}$ km on a bearing of $${String(bearing).padStart(3,'0')}$°T. How far *east* (or west) of its starting point is it?`;
+        const absE = Math.abs(eastward);
+        const dir = eastward >= 0 ? 'east' : 'west';
+        return { clue: ph, answer: String(absE), answerDisplay: `${absE} km ${dir}` };
+    }
+
+    return null;
+}
+
+// ---- Non-linear Relationships (Stage 5 new topic) -----------
+function genNonLinear(rng, diff, allowedOps) {
+    const OPS = ['parabola-features', 'parabola-sketch', 'identify-graph'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+
+    if (op === 'parabola-features') {
+        // y = (x - h)² + k → vertex (h, k)
+        const h = ri(rng, -4, 6), k = ri(rng, -4, 6);
+        const hStr = h >= 0 ? `- ${h}` : `+ ${Math.abs(h)}`;
+        if (diff === 'Easy') {
+            const ph = rc(rng, [
+                `State the *vertex* of the parabola $y = (x ${hStr})^2 + ${k}$.`,
+                `Find the *vertex* of $y = (x ${hStr})^2 + ${k}$.`,
+                `What is the *turning point* of $y = (x ${hStr})^2 + ${k}$?`,
+            ]);
+            return { clue: ph, answer: `(${h},${k})`, answerDisplay: `$(${h}, ${k})$`, diagram: { type: 'parabola', h, k, a: 1 } };
+        }
+        if (diff === 'Medium') {
+            // Axis of symmetry from vertex form
+            const ph = `State the *axis of symmetry* of $y = (x ${hStr})^2 + ${k}$.`;
+            return { clue: ph, answer: `x=${h}`, answerDisplay: `$x = ${h}$`, diagram: { type: 'parabola', h, k, a: 1 } };
+        }
+        // Hard: expanded form → find axis of symmetry using x = -b/2a
+        const b = -2 * h, c = h * h + k;
+        const bStr = b >= 0 ? `+ ${b}` : `- ${Math.abs(b)}`;
+        const cStr = c >= 0 ? `+ ${c}` : `- ${Math.abs(c)}`;
+        const ph = `Find the *axis of symmetry* of $y = x^2 ${bStr}x ${cStr}$ using $x = -\\dfrac{b}{2a}$.`;
+        return { clue: ph, answer: `x=${h}`, answerDisplay: `$x = ${h}$` };
+    }
+
+    if (op === 'parabola-sketch') {
+        const a = rc(rng, [1, -1, 2, -2]), h2 = ri(rng, -3, 3), k2 = ri(rng, -3, 3);
+        const opens = a > 0 ? 'upward' : 'downward';
+        const ph = rc(rng, [
+            `For $y = ${a === 1 ? '' : a === -1 ? '-' : a}(x ${h2 >= 0 ? '- ' + h2 : '+ ' + Math.abs(h2)})^2 ${k2 >= 0 ? '+ ' + k2 : '- ' + Math.abs(k2)}$, state the vertex and direction it opens.`,
+        ]);
+        return { clue: ph, answer: `(${h2},${k2})${opens[0].toUpperCase()}`, answerDisplay: `Vertex $(${h2}, ${k2})$, opens ${opens}`, diagram: { type: 'parabola', h: h2, k: k2, a } };
+    }
+
+    if (op === 'identify-graph') {
+        const graphs = [
+            { eq: 'y = x²', type: 'parabola' },
+            { eq: 'y = 2^x', type: 'exponential' },
+            { eq: 'xy = 4', type: 'hyperbola' },
+            { eq: 'y = -x²', type: 'parabola' },
+            { eq: 'y = 3^x', type: 'exponential' },
+        ];
+        const g = rc(rng, graphs);
+        const ph = rc(rng, [
+            `Identify the type of graph represented by $${g.eq}$.`,
+            `What type of curve does $${g.eq}$ represent?`,
+            `Name the graph: $${g.eq}$.`,
+        ]);
+        return { clue: ph, answer: g.type, answerDisplay: g.type };
+    }
+
+    return null;
+}
+
+// ---- Stage 5 wrappers for existing generators ---------------
+// Each public function delegates S5-only ops to the Stage 5 helper,
+// falling back to the original Stage 4 core for S4 ops.
+function genAlgebra(rng, diff, allowedOps, opts = {}) {
+    const S5_KEYS = ['expand', 'factorise', 'quadratic-solve', 'indices-laws', 'simultaneous', 'surds-simplify', 'surds-operate'];
+    const s5Active = S5_KEYS.filter(k => allowedOps && allowedOps.includes(k));
+    const s4Active = ['solve', 'substitution'].filter(k => !allowedOps || allowedOps.includes(k));
+    if (s5Active.length > 0 && (!s4Active.length || rng() < 0.5)) {
+        return _genAlgebraOp(rng, diff, rc(rng, s5Active));
+    }
+    return _genAlgebraCore(rng, diff, allowedOps, opts);
+}
+
+function genStatistics(rng, diff, allowedOps, opts = {}, _depth = 0) {
+    const S5_KEYS = ['five-number-summary', 'bivariate'];
+    const s5Active = S5_KEYS.filter(k => allowedOps && allowedOps.includes(k));
+    const s4Active = ['mean-median', 'mode-range', 'iqr'].filter(k => !allowedOps || allowedOps.includes(k));
+    if (s5Active.length > 0 && (!s4Active.length || rng() < 0.5)) {
+        return _genStatisticsS5Op(rng, diff, rc(rng, s5Active));
+    }
+    return _genStatisticsCore(rng, diff, allowedOps, _depth);
+}
+
+function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
+    const S5_KEYS = ['surface-area', 'composite-volume', 'similar-triangles'];
+    const s5Active = S5_KEYS.filter(k => allowedOps && allowedOps.includes(k));
+    const s4Active = ['area-perimeter', 'pythagoras', 'angles', 'circles'].filter(k => !allowedOps || allowedOps.includes(k));
+    if (s5Active.length > 0 && (!s4Active.length || rng() < 0.5)) {
+        return _genGeometryS5Op(rng, diff, rc(rng, s5Active));
+    }
+    return _genGeometryCore(rng, diff, allowedOps, opts, _depth);
+}
+
+function genFinancial(rng, diff, allowedOps, opts = {}, _depth = 0) {
+    const S5_KEYS = ['depreciation', 'compound-period'];
+    const s5Active = S5_KEYS.filter(k => allowedOps && allowedOps.includes(k));
+    const s4Active = ['simple-interest', 'compound-interest', 'markup-profit', 'gst'].filter(k => !allowedOps || allowedOps.includes(k));
+    if (s5Active.length > 0 && (!s4Active.length || rng() < 0.5)) {
+        return _genFinancialS5Op(rng, diff, rc(rng, s5Active));
+    }
+    return _genFinancialCore(rng, diff, allowedOps, opts, _depth);
+}
+
+// ============================================================
 // DISPATCH table
 // ============================================================
 const GENERATORS = {
-    'Integers': genIntegers,
-    'Decimals': genDecimals,
-    'Rounding': genRounding,
-    'Fractions': genFractions,
-    'Percentages': genPercentages,
-    'Algebra': genAlgebra,
-    'Geometry': genGeometry,
-    'Statistics': genStatistics,
-    'Financial Maths': genFinancial,
+    'Integers':                 genIntegers,
+    'Decimals':                 genDecimals,
+    'Rounding':                 genRounding,
+    'Fractions':                genFractions,
+    'Percentages':              genPercentages,
+    'Algebra':                  genAlgebra,
+    'Geometry':                 genGeometry,
+    'Statistics':               genStatistics,
+    'Financial Maths':          genFinancial,
+    'Trigonometry':             genTrigonometry,
+    'Non-linear Relationships': genNonLinear,
 };
 
 // Map generator sub-topic → clue bank topic field
 const TOPIC_MAP = {
-    'Integers': 'Number',
-    'Decimals': 'Number',
-    'Rounding': 'Number',
-    'Fractions': 'Number',
-    'Percentages': 'Number',
-    'Algebra': 'Algebra',
-    'Geometry': 'Geometry',
-    'Statistics': 'Statistics',
-    'Financial Maths': 'Financial Maths',
+    'Integers':                 'Number',
+    'Decimals':                 'Number',
+    'Rounding':                 'Number',
+    'Fractions':                'Number',
+    'Percentages':              'Number',
+    'Algebra':                  'Algebra',
+    'Geometry':                 'Geometry',
+    'Statistics':               'Statistics',
+    'Financial Maths':          'Financial Maths',
+    'Trigonometry':             'Trigonometry',
+    'Non-linear Relationships': 'Algebra',
 };
 
 const ALL_SUBTOPICS = Object.keys(GENERATORS);
@@ -948,9 +1458,11 @@ const ALL_SUBTOPICS = Object.keys(GENERATORS);
  * @param {number}  opts.count       - number of questions to generate
  * @param {number}  [opts.seed]      - optional seed (uses Date.now() if omitted)
  * @param {object}  [opts.subOpsFilter] - { topic: [allowedOpKeys] } or null for all
+ * @param {string}  [opts.stage]     - 'Stage 4' | 'Stage 5' (default 'Stage 4')
+ * @param {boolean} [opts.includePath] - include Stage 5.3 Path ops (default false)
  * @returns {Array} clue bank items
  */
-export function generateMathsQuestions({ subTopic = 'All', subTopics = null, subOpsFilter = null, difficulty = 'All', count = 10, seed, showFormulas } = {}) {
+export function generateMathsQuestions({ subTopic = 'All', subTopics = null, subOpsFilter = null, difficulty = 'All', count = 10, seed, showFormulas, stage = 'Stage 4', includePath = false } = {}) {
     const rng = mulberry32(seed != null ? seed : Date.now());
 
     // subTopics array takes priority over subTopic string
@@ -961,6 +1473,17 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
     } else {
         subtopics = subTopic === 'All' ? ALL_SUBTOPICS : [subTopic];
     }
+
+    // Filter to topics that have at least one op available for the current stage
+    subtopics = subtopics.filter(t => {
+        const ops = SUB_OPS[t];
+        if (!ops) return false;
+        return ops.some(op =>
+            (!op.stages || op.stages.includes(stage)) &&
+            (op.pathway !== 'path' || includePath)
+        );
+    });
+
     const diffs = difficulty === 'All' ? ['Easy', 'Medium', 'Hard'] : [difficulty];
 
     // Build a balanced topic plan: cycle through shuffled topics so every
@@ -988,16 +1511,33 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
         const gen = GENERATORS[st];
         if (!gen) continue;
 
-        // Pass the allowed sub-ops for this topic (null = all allowed)
-        const allowedOps = subOpsFilter?.[st] || null;
+        // Compute stage-allowed keys for this topic
+        const stageAllowedKeys = (SUB_OPS[st] || [])
+            .filter(op =>
+                (!op.stages || op.stages.includes(stage)) &&
+                (op.pathway !== 'path' || includePath)
+            )
+            .map(op => op.key);
+
+        // Intersect with user's sub-op filter if present
+        const userFilter = subOpsFilter?.[st] || null;
+        let allowedOps;
+        if (stageAllowedKeys.length < (SUB_OPS[st]?.length ?? 0)) {
+            allowedOps = userFilter
+                ? userFilter.filter(k => stageAllowedKeys.includes(k))
+                : stageAllowedKeys;
+            if (allowedOps.length === 0) continue;
+        } else {
+            allowedOps = userFilter;
+        }
 
         let q;
-        try { q = gen(rng, diff, allowedOps, { showFormulas }); } catch (e) { console.error(e); continue; }
+        try { q = gen(rng, diff, allowedOps, { showFormulas, stage, includePath }); } catch (e) { console.error(e); continue; }
         if (!q) continue;
 
         const ans = String(q.answer);
-        // Skip empty, over-length, or numerically invalid answers
-        if (!ans || ans.length > 10 || ans === 'NaN' || ans === 'Infinity' || ans === '-Infinity') continue;
+        // Skip empty, over-length, or numerically invalid answers (limit raised to 20 for algebraic/Stage 5 answers)
+        if (!ans || ans.length > 20 || ans === 'NaN' || ans === 'Infinity' || ans === '-Infinity') continue;
 
         // Prevent duplicate questions
         if (results.some(r => r.clue === q.clue)) continue;

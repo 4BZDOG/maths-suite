@@ -2,7 +2,7 @@
 // main.js — Application entry point (Maths Question Sets Edition)
 // =============================================================
 import { state, ALL_SUBTOPICS, SUB_OPS, setGeneratedSets, setActivePage, updateSetting, applyStateToDOM, syncSettingsFromDOM } from './core/state.js';
-import { getOutcomesForTopics, getTopicsForOutcomeCodes, DEFAULT_STAGE } from './core/outcomes.js';
+import { getOutcomesForTopics, getTopicsForOutcomeCodes, getTopicsForStage, STAGE_OUTCOMES, STRANDS, TOPIC_STRAND_MAP } from './core/outcomes.js';
 import { pushHistory, undo, redo } from './core/history.js';
 import { saveState, saveStateNow, loadRawState, hardReset } from './core/storage.js';
 
@@ -36,6 +36,20 @@ import {
 // =============================================================
 const WATERMARK_MAX_BYTES = 2e6;
 
+const TOPIC_META = {
+    'Integers':                 { label: 'Computation with Integers',  icon: 'fas fa-hashtag' },
+    'Decimals':                 { label: 'Decimals',                    icon: 'fas fa-superscript' },
+    'Rounding':                 { label: 'Rounding',                    icon: 'fas fa-compress-arrows-alt' },
+    'Fractions':                { label: 'Fractions',                   icon: 'fas fa-divide' },
+    'Percentages':              { label: 'Percentages',                  icon: 'fas fa-percent' },
+    'Algebra':                  { label: 'Algebraic Techniques',         icon: 'fas fa-x' },
+    'Geometry':                 { label: 'Measurement & Geometry',       icon: 'fas fa-draw-polygon' },
+    'Statistics':               { label: 'Data Analysis',               icon: 'fas fa-chart-bar' },
+    'Financial Maths':          { label: 'Financial Mathematics',        icon: 'fas fa-dollar-sign' },
+    'Trigonometry':             { label: 'Trigonometry',                 icon: 'fas fa-drafting-compass' },
+    'Non-linear Relationships': { label: 'Non-linear Relationships',     icon: 'fas fa-chart-line' },
+};
+
 const debounceFn = (func, wait) => {
     let t;
     return (...args) => { clearTimeout(t); t = setTimeout(() => func(...args), wait); };
@@ -45,11 +59,12 @@ const debounceFn = (func, wait) => {
 // Generation
 // =============================================================
 function getActiveTopics() {
-    const allSelected = ALL_SUBTOPICS.filter(t => state.selectedTopics[t]);
+    const stageTopics = new Set(getTopicsForStage(state.stage));
+    const allSelected = ALL_SUBTOPICS.filter(t => state.selectedTopics[t] && stageTopics.has(t));
     // If any outcomes are selected as a filter, restrict to matching topics only
     const filteredCodes = Object.keys(state.selectedOutcomes).filter(c => state.selectedOutcomes[c]);
     if (filteredCodes.length === 0) return allSelected;
-    const outcomeTopics = new Set(getTopicsForOutcomeCodes(filteredCodes, DEFAULT_STAGE));
+    const outcomeTopics = new Set(getTopicsForOutcomeCodes(filteredCodes, state.stage));
     return allSelected.filter(t => outcomeTopics.has(t));
 }
 
@@ -80,9 +95,9 @@ function generateAll() {
     const subOpsFilter = Object.keys(state.selectedSubOps).length > 0 ? state.selectedSubOps : null;
 
     const sets = {
-        easy:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Easy',   count: GENERATE_COUNT, seed, showFormulas: state.settings.showFormulas }),
-        medium: generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Medium', count: GENERATE_COUNT, seed: seed + 1, showFormulas: state.settings.showFormulas }),
-        hard:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Hard',   count: GENERATE_COUNT, seed: seed + 2, showFormulas: state.settings.showFormulas }),
+        easy:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Easy',   count: GENERATE_COUNT, seed, showFormulas: state.settings.showFormulas, stage: state.stage, includePath: state.includePath }),
+        medium: generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Medium', count: GENERATE_COUNT, seed: seed + 1, showFormulas: state.settings.showFormulas, stage: state.stage, includePath: state.includePath }),
+        hard:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Hard',   count: GENERATE_COUNT, seed: seed + 2, showFormulas: state.settings.showFormulas, stage: state.stage, includePath: state.includePath }),
     };
 
     setGeneratedSets(sets);
@@ -148,7 +163,7 @@ function renderActivePage() {
     // Always cap to the selected number of pages (1 or 2)
     const pages = state.questionsPerSet || 1;
     const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
-    const sWithTopics = { ...s, activeTopics, stage: DEFAULT_STAGE, psCapPages: pages };
+    const sWithTopics = { ...s, activeTopics, stage: state.stage, psCapPages: pages };
 
     const nEasy   = renderProblemSet(document.getElementById('p1-area'), sets.easy,   sWithTopics, 'Easy');
     const nMedium = renderProblemSet(document.getElementById('p2-area'), sets.medium, sWithTopics, 'Medium');
@@ -526,12 +541,12 @@ function toggleTopic(topicName) {
 
 function setTopicsAll(enabled) {
     pushHistory();
-    ALL_SUBTOPICS.forEach(t => {
+    const stageTopics = getTopicsForStage(state.stage);
+    stageTopics.forEach(t => {
         state.selectedTopics[t] = enabled;
         const id = 'topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
         const el = document.getElementById(id);
         if (el) { el.checked = enabled; el.indeterminate = false; }
-        // Also set all sub-op checkboxes to match
         const ops = SUB_OPS[t];
         if (ops) {
             ops.forEach(op => {
@@ -539,9 +554,9 @@ function setTopicsAll(enabled) {
                 if (subEl) subEl.checked = enabled;
             });
             if (enabled) {
-                delete state.selectedSubOps[t]; // all enabled = default
+                delete state.selectedSubOps[t];
             } else {
-                state.selectedSubOps[t] = []; // none enabled
+                state.selectedSubOps[t] = [];
             }
         }
     });
@@ -552,7 +567,8 @@ function setTopicsAll(enabled) {
 }
 
 function updateTopicCount() {
-    const rawSelected = ALL_SUBTOPICS.filter(t => state.selectedTopics[t]).length;
+    const stageTopics = getTopicsForStage(state.stage);
+    const rawSelected = stageTopics.filter(t => state.selectedTopics[t]).length;
     const active = getActiveTopics().length;
     const el = document.getElementById('topic-count');
     if (el) {
@@ -564,7 +580,7 @@ function updateTopicCount() {
         } else if (rawSelected === 0) {
             el.innerHTML = `<span style="color:#d97706;">none selected</span>`;
         } else {
-            el.textContent = `${rawSelected} of ${ALL_SUBTOPICS.length} selected`;
+            el.textContent = `${rawSelected} of ${stageTopics.length} selected`;
         }
     }
     _updateGenerateButtonState(active);
@@ -623,10 +639,11 @@ function renderOutcomes() {
         const container = document.getElementById('outcomes-for-' + topicId);
         if (!container) return;
         
-        const outcomes = getOutcomesForTopics([t], 'Stage 4');
+        const outcomes = getOutcomesForTopics([t], state.stage, state.includePath);
         if (outcomes.length === 0) return;
 
-        let html = '<div style="margin-top:12px; margin-bottom: 6px; font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;"><i class="fas fa-graduation-cap"></i> STAGE 4 OUTCOMES</div>';
+        const stageYears = STAGE_OUTCOMES[state.stage]?.years ?? '';
+        let html = `<div style="margin-top:12px; margin-bottom: 6px; font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;"><i class="fas fa-graduation-cap"></i> ${state.stage.toUpperCase()} OUTCOMES ${stageYears ? '· ' + stageYears : ''}</div>`;
         
         html += outcomes.map(o => {
             const isSelected = !!state.selectedOutcomes[o.code];
@@ -690,8 +707,12 @@ function toggleTopicExpand(topicName) {
 }
 
 function _updateParentCheckbox(topicName) {
-    const ops = SUB_OPS[topicName];
-    if (!ops) return;
+    const allOps = SUB_OPS[topicName];
+    if (!allOps) return;
+    const ops = allOps.filter(op =>
+        (!op.stages || op.stages.includes(state.stage)) &&
+        (op.pathway !== 'path' || state.includePath)
+    );
     const id = 'topic-' + topicName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
     const parentEl = document.getElementById(id);
     if (!parentEl) return;
@@ -710,28 +731,160 @@ function _updateAllParentCheckboxes() {
 }
 
 function _buildSubOpsPanels() {
-    ALL_SUBTOPICS.forEach(t => {
-        const ops = SUB_OPS[t];
+    const stageTopics = getTopicsForStage(state.stage);
+    stageTopics.forEach(t => {
+        const allOps = SUB_OPS[t] || [];
+        const ops = allOps.filter(op =>
+            (!op.stages || op.stages.includes(state.stage)) &&
+            (op.pathway !== 'path' || state.includePath)
+        );
         const topicId = t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
         const container = document.getElementById('subs-' + topicId);
         if (!container) return;
-        
+
         let html = '';
-        if (ops && ops.length > 0) {
+        if (ops.length > 0) {
             const enabledOps = state.selectedSubOps[t];
             html += ops.map(op => {
                 const checked = enabledOps ? enabledOps.includes(op.key) : true;
+                const pathBadge = op.pathway === 'path'
+                    ? ' <span style="font-size:9px;background:rgba(99,102,241,0.12);color:#6366f1;border-radius:3px;padding:0 3px;margin-left:2px;">5.3</span>'
+                    : '';
                 return `<label class="sub-op-row">
                     <input type="checkbox" id="subop-${topicId}-${op.key}" ${checked ? 'checked' : ''}
                            onchange="toggleSubOp('${t}', '${op.key}')">
-                    <span class="sub-op-name"><i class="fas fa-angle-right sub-op-icon"></i>${op.label}</span>
+                    <span class="sub-op-name"><i class="fas fa-angle-right sub-op-icon"></i>${op.label}${pathBadge}</span>
                 </label>`;
             }).join('');
         }
-        
+
         html += `<div id="outcomes-for-${topicId}" class="topic-outcomes-wrapper" style="padding: 0 4px 6px;"></div>`;
         container.innerHTML = html;
     });
+}
+
+function renderTopicTogglesByStrand() {
+    const stageTopics = getTopicsForStage(state.stage);
+    const container   = document.getElementById('topic-toggles');
+    if (!container) return;
+
+    let html = '<div class="topic-toggles">';
+
+    STRANDS.forEach(strand => {
+        const topicsInStrand = stageTopics.filter(t => TOPIC_STRAND_MAP[t] === strand);
+        if (topicsInStrand.length === 0) return;
+
+        html += `<div class="strand-heading">${strand}</div>`;
+
+        topicsInStrand.forEach(t => {
+            const meta    = TOPIC_META[t] || { label: t, icon: 'fas fa-circle' };
+            const topicId = t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+            const checked = state.selectedTopics[t] ? 'checked' : '';
+
+            // Primary non-WM outcome code for chip label
+            const outcomes = getOutcomesForTopics([t], state.stage, state.includePath)
+                .filter(o => !o.appliesAll);
+            const chipCode  = outcomes[0]?.code ?? '';
+            const chipTitle = outcomes[0]?.contentLabel ?? '';
+            const chipHtml  = chipCode
+                ? `<span class="outcome-chip" title="${chipTitle}">${chipCode}</span>`
+                : '';
+
+            html += `<div class="topic-group">
+                <label class="topic-toggle-row">
+                    <input type="checkbox" id="topic-${topicId}" ${checked}
+                           onchange="toggleTopic('${t}')">
+                    <span class="topic-toggle-name"><i class="${meta.icon} topic-icon"></i>${meta.label}</span>
+                    ${chipHtml}
+                    <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('${t}')">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                </label>
+                <div class="topic-subtypes" id="subs-${topicId}" style="display:none;"></div>
+            </div>`;
+        });
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+
+    _buildSubOpsPanels();
+    _updateAllParentCheckboxes();
+    renderOutcomes();
+    updateTopicCount();
+}
+
+function setStage(newStage) {
+    if (newStage === state.stage) return;
+    const newTopics = new Set(getTopicsForStage(newStage));
+
+    // Drop topics not available in new stage and toast for each selected one
+    getTopicsForStage(state.stage).forEach(t => {
+        if (!newTopics.has(t) && state.selectedTopics[t]) {
+            delete state.selectedTopics[t];
+            delete state.selectedSubOps[t];
+            showToast(`${t} hidden — not in ${newStage}`, 'warning');
+        }
+    });
+
+    state.stage = newStage;
+    state.includePath = false;
+    Object.keys(state.selectedOutcomes).forEach(k => { state.selectedOutcomes[k] = false; });
+
+    // Auto-update subtitle if it still matches the old stage default
+    const subInput = document.getElementById('subInput');
+    if (subInput) {
+        const defaults = { 'Stage 4': 'Stage 4 Review', 'Stage 5': 'Stage 5 Review' };
+        if (Object.values(defaults).includes(subInput.value.trim())) {
+            subInput.value = defaults[newStage] ?? `${newStage} Review`;
+            updateUI();
+        }
+    }
+
+    // Show/hide path toggle
+    const pathWrapper = document.getElementById('path-toggle-wrapper');
+    if (pathWrapper) pathWrapper.style.display = newStage === 'Stage 5' ? 'block' : 'none';
+    const pathChk = document.getElementById('include-path-toggle');
+    if (pathChk) pathChk.checked = false;
+
+    renderTopicTogglesByStrand();
+    saveState();
+    debouncedGenerate();
+}
+
+function setIncludePath(checked) {
+    if (!checked) {
+        // Remove any currently selected path-only ops
+        const stageTopics = getTopicsForStage(state.stage);
+        stageTopics.forEach(t => {
+            const allOps  = SUB_OPS[t] || [];
+            const pathKeys = allOps.filter(op => op.pathway === 'path').map(op => op.key);
+            if (pathKeys.length === 0) return;
+
+            if (!state.selectedSubOps[t]) {
+                // Was "all ops selected" — now we must exclude path ops explicitly
+                const coreKeys = allOps
+                    .filter(op => (!op.stages || op.stages.includes(state.stage)) && op.pathway !== 'path')
+                    .map(op => op.key);
+                state.selectedSubOps[t] = coreKeys;
+                showToast(`5.3 Path operations removed from ${t}`, 'info');
+            } else {
+                const before = state.selectedSubOps[t].length;
+                state.selectedSubOps[t] = state.selectedSubOps[t].filter(k => !pathKeys.includes(k));
+                if (state.selectedSubOps[t].length < before) {
+                    showToast(`5.3 Path operations removed from ${t}`, 'info');
+                }
+            }
+        });
+    }
+
+    state.includePath = checked;
+    _buildSubOpsPanels();
+    _updateAllParentCheckboxes();
+    renderOutcomes();
+    updateTopicCount();
+    saveState();
+    debouncedGenerate();
 }
 
 function setPagesPerDifficulty(n) {
@@ -909,6 +1062,9 @@ window._puzzleApp = {
     debouncedUpdateUI,
     saveState,
     renderOutcomes,
+    setStage,
+    setIncludePath,
+    renderTopicTogglesByStrand,
     setAdminMode,
     openAccessPanel: openAccessPanelUI,
     closeAccessPanel,
@@ -964,8 +1120,10 @@ window.addEventListener('load', async () => {
         _updateWatermarkUI();
 
         _step('Building topic panels…', 45);
-        _buildSubOpsPanels();
-        _updateAllParentCheckboxes();
+        // Restore path toggle visibility before rendering topics
+        const pathWrapper = document.getElementById('path-toggle-wrapper');
+        if (pathWrapper) pathWrapper.style.display = state.stage === 'Stage 5' ? 'block' : 'none';
+        renderTopicTogglesByStrand();
         pushHistory();
         renderTierUI();
 

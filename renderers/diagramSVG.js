@@ -196,15 +196,130 @@ function _circle({ r, missing }) {
     return _svg(VW, VH, inner);
 }
 
+// ─── Right Triangle — Trigonometry (SOHCAHTOA) ───────────────────────────────
+// diagram: { type:'right-triangle-trig', opp, adj, hyp, angle, missing:'opp'|'adj'|'hyp'|'angle' }
+// Layout: right-angle at bottom-left, theta at bottom-right, apex top-left.
+function _rightTriangleTrig({ opp, adj, hyp, angle, missing }) {
+    const VW = 200, VH = 130;
+    const adjPx = 100, oppPx = 72;
+
+    // Vertices: right-angle=A (bottom-left), theta=B (bottom-right), apex=C (top-left)
+    const Ax = 28, Ay = VH - 18;
+    const Bx = Ax + adjPx, By = Ay;
+    const Cx = Ax, Cy = Ay - oppPx;
+
+    const adjLabel = missing === 'adj' ? '?' : String(adj);
+    const oppLabel = missing === 'opp' ? '?' : String(opp);
+    const hypLabel = missing === 'hyp' ? '?' : String(hyp);
+    const angLabel = missing === 'angle' ? '?' : `${angle}°`;
+
+    // Hypotenuse midpoint + outward normal for label placement
+    const hmx = (Bx + Cx) / 2;
+    const hmy = (By + Cy) / 2;
+    const dx = Bx - Cx, dy = By - Cy;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const nx = dy / len, ny = -dx / len;
+    const lx = hmx + nx * 22;
+    const ly = hmy + ny * 22 + 4;
+
+    // Angle arc at B (theta vertex) — small arc from adj leg up toward hyp
+    const arcR = 18;
+    // Angle of hypotenuse from B (pointing toward C)
+    const hypAngle = Math.atan2(Cy - By, Cx - Bx); // negative (goes left+up)
+    const arcX1 = Bx + arcR * Math.cos(0);          // 180° = along adj toward A
+    const arcY1 = By + arcR * Math.sin(0);
+    const arcX2 = Bx + arcR * Math.cos(hypAngle);
+    const arcY2 = By + arcR * Math.sin(hypAngle);
+    const arcSweep = 0; // counter-clockwise
+
+    const inner =
+        // Triangle
+        `<polygon points="${Ax},${Ay} ${Bx},${By} ${Cx},${Cy}" ` +
+        `fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
+        // Right-angle mark at A
+        _rightAngleMark(Ax, Ay, 8) +
+        // Angle arc at B
+        `<path d="M ${arcX1},${arcY1} A ${arcR},${arcR} 0 0,${arcSweep} ${arcX2},${arcY2}" ` +
+        `fill="none" stroke="${GC}" stroke-width="1.4"/>` +
+        // θ label inside arc
+        _t(Bx - 28, By - 10, `θ = ${angLabel}`,
+            { anchor: 'end', missing: missing === 'angle', size: 10 }) +
+        // adj label below baseline
+        _t((Ax + Bx) / 2, Ay + 16, `adj = ${adjLabel}`,
+            { anchor: 'middle', missing: missing === 'adj', size: 10 }) +
+        // opp label left of vertical
+        _t(Ax - 6, (Ay + Cy) / 2 + 4, `opp = ${oppLabel}`,
+            { anchor: 'end', missing: missing === 'opp', size: 10 }) +
+        // hyp label along hypotenuse
+        _t(lx, ly, `hyp = ${hypLabel}`,
+            { anchor: 'middle', missing: missing === 'hyp', size: 10 });
+
+    return _svg(VW, VH, inner);
+}
+
+// ─── Parabola y = a(x−h)² + k ────────────────────────────────────────────────
+// diagram: { type:'parabola', h, k, a }
+function _parabola({ h, k, a }) {
+    const VW = 180, VH = 130;
+    // Coordinate origin in SVG pixels
+    const ox = 60, oy = 72;
+    const scaleX = 22, scaleY = 18;
+
+    // Clamp so the curve stays inside the viewbox
+    const xMin = -2.2, xMax = 2.2;
+    const numPts = 30;
+    const pts = [];
+    for (let i = 0; i <= numPts; i++) {
+        const xc = xMin + (xMax - xMin) * (i / numPts);
+        const yc = a * (xc - h) * (xc - h) + k;
+        const px = ox + xc * scaleX;
+        const py = oy - yc * scaleY;
+        if (py > 4 && py < VH - 4) pts.push(`${px.toFixed(1)},${py.toFixed(1)}`);
+    }
+
+    // Axis limits in SVG px
+    const axisLeft = 8, axisRight = VW - 8;
+    const axisTop  = 8, axisBottom = VH - 10;
+
+    // Vertex in SVG coords
+    const vx = ox + h * scaleX;
+    const vy = oy - k * scaleY;
+    const vertexVisible = vx > 10 && vx < VW - 10 && vy > 10 && vy < VH - 10;
+
+    const inner =
+        // X-axis
+        `<line x1="${axisLeft}" y1="${oy}" x2="${axisRight}" y2="${oy}" ` +
+        `stroke="currentColor" stroke-width="1.2" opacity="0.45"/>` +
+        // Y-axis
+        `<line x1="${ox}" y1="${axisTop}" x2="${ox}" y2="${axisBottom}" ` +
+        `stroke="currentColor" stroke-width="1.2" opacity="0.45"/>` +
+        // Axis labels
+        _t(axisRight - 2, oy - 5, 'x', { anchor: 'end', size: 10 }) +
+        _t(ox + 5, axisTop + 8, 'y', { anchor: 'start', size: 10 }) +
+        // Parabola curve
+        (pts.length > 1
+            ? `<polyline points="${pts.join(' ')}" fill="none" stroke="${GC}" stroke-width="2" stroke-linejoin="round"/>`
+            : '') +
+        // Vertex dot + label
+        (vertexVisible
+            ? `<circle cx="${vx.toFixed(1)}" cy="${vy.toFixed(1)}" r="3.5" fill="${MC}"/>` +
+              _t(vx + 8, vy - 6, `(${h},${k})`, { anchor: 'start', missing: true, size: 9 })
+            : '');
+
+    return _svg(VW, VH, inner);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 export function renderDiagramSVG(diagram) {
     if (!diagram) return '';
     switch (diagram.type) {
-        case 'rectangle':        return _rectangle(diagram);
-        case 'right-triangle':   return _rightTriangle(diagram);
-        case 'triangle-angles':  return _triangleAngles(diagram);
-        case 'triangle-area':    return _triangleArea(diagram);
-        case 'circle':           return _circle(diagram);
+        case 'rectangle':           return _rectangle(diagram);
+        case 'right-triangle':      return _rightTriangle(diagram);
+        case 'triangle-angles':     return _triangleAngles(diagram);
+        case 'triangle-area':       return _triangleArea(diagram);
+        case 'circle':              return _circle(diagram);
+        case 'right-triangle-trig': return _rightTriangleTrig(diagram);
+        case 'parabola':            return _parabola(diagram);
         default: return '';
     }
 }
