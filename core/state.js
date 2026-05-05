@@ -7,9 +7,10 @@
 import { ALL_SUBTOPICS, SUB_OPS } from '../generators/mathsQuestionGen.js';
 export { ALL_SUBTOPICS, SUB_OPS };
 import { STAGE_OUTCOMES } from './outcomes.js';
+export { STAGE_OUTCOMES };
 
 export const state = {
-    // Which subtopics are enabled for generation
+    // Which subtopics are enabled for generation (includes Stage 5-only topics, defaulting true)
     selectedTopics: {
         'Integers': true,
         'Decimals': true,
@@ -20,10 +21,18 @@ export const state = {
         'Geometry': true,
         'Statistics': true,
         'Financial Maths': false,
+        'Trigonometry': true,
+        'Non-linear Relationships': true,
     },
 
     // Granular sub-operation selection per topic (null entry or missing = all enabled)
     selectedSubOps: {},
+
+    // Active NESA stage ('Stage 4' | 'Stage 5')
+    stage: 'Stage 4',
+
+    // Whether to include 5.3 Path content (Stage 5 only)
+    includePath: false,
 
     // Outcome filter: keyed by NESA outcome code, true = selected for generation filter.
     // Empty (all false) means no filter — all selected topics are used.
@@ -144,6 +153,12 @@ export function syncSettingsFromDOM() {
     if (pol.length) s.pageOrder = Array.from(pol).map(el => el.dataset.page);
     s.sidebarWidth = document.documentElement.style.getPropertyValue('--sidebar-width') || s.sidebarWidth;
 
+    // Sync stage and includePath
+    const stageEl = document.querySelector('input[name="stage-selector"]:checked');
+    if (stageEl) state.stage = stageEl.value;
+    const pathEl = document.getElementById('include-path-toggle');
+    if (pathEl) state.includePath = pathEl.checked;
+
     // Sync selectedTopics from checkboxes
     ALL_SUBTOPICS.forEach(t => {
         const el = document.getElementById('topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, ''));
@@ -179,6 +194,18 @@ export function syncSettingsFromDOM() {
 export function applyStateToDOM(s) {
     const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
     const setChk = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.checked = val; };
+
+    // Restore stage + includePath
+    if (s.stage) {
+        state.stage = s.stage;
+        const radio = document.querySelector(`input[name="stage-selector"][value="${s.stage}"]`);
+        if (radio) radio.checked = true;
+    }
+    if (s.includePath !== undefined) {
+        state.includePath = !!s.includePath;
+        const pathEl = document.getElementById('include-path-toggle');
+        if (pathEl) pathEl.checked = state.includePath;
+    }
 
     // Restore selectedTopics
     if (s.selectedTopics) {

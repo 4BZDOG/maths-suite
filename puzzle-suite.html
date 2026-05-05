@@ -63,104 +63,32 @@
 
             <!-- EDITOR TAB -->
             <div id="panel-content" role="tabpanel" aria-labelledby="panel-content-tab">
-                <!-- MATHS TOPICS -->
-                <div class="section-label" style="margin-top:8px;"><i class="fas fa-calculator" style="margin-right:5px; opacity:.65;"></i>MATHS TOPICS</div>
-                <div class="topic-toggles" id="topic-toggles">
-                    <!-- Integers → MA4-INT-C-01 -->
-                    <div class="topic-group">
-                        <label class="topic-toggle-row">
-                            <input type="checkbox" id="topic-Integers" checked onchange="toggleTopic('Integers')">
-                            <span class="topic-toggle-name"><i class="fas fa-hashtag topic-icon"></i>Computation with Integers</span>
-                            <span class="outcome-chip" title="Computation with integers">MA4-INT-C-01</span>
-                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Integers')"><i class="fas fa-chevron-down"></i></button>
-                        </label>
-                        <div class="topic-subtypes" id="subs-Integers" style="display:none;"></div>
-                    </div>
-                    <!-- Decimals → MA4-FRC-C-01 -->
-                    <div class="topic-group">
-                        <label class="topic-toggle-row">
-                            <input type="checkbox" id="topic-Decimals" checked onchange="toggleTopic('Decimals')">
-                            <span class="topic-toggle-name"><i class="fas fa-superscript topic-icon"></i>Decimals</span>
-                            <span class="outcome-chip" title="Fractions, decimals and percentages">MA4-FRC-C-01</span>
-                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Decimals')"><i class="fas fa-chevron-down"></i></button>
-                        </label>
-                        <div class="topic-subtypes" id="subs-Decimals" style="display:none;"></div>
-                    </div>
-                    <!-- Rounding → MA4-FRC-C-01 -->
-                    <div class="topic-group">
-                        <label class="topic-toggle-row">
-                            <input type="checkbox" id="topic-Rounding" checked onchange="toggleTopic('Rounding')">
-                            <span class="topic-toggle-name"><i class="fas fa-compress-arrows-alt topic-icon"></i>Rounding</span>
-                            <span class="outcome-chip" title="Fractions, decimals and percentages">MA4-FRC-C-01</span>
-                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Rounding')"><i class="fas fa-chevron-down"></i></button>
-                        </label>
-                        <div class="topic-subtypes" id="subs-Rounding" style="display:none;"></div>
-                    </div>
-                    <!-- Fractions → MA4-FRC-C-01 -->
-                    <div class="topic-group">
-                        <label class="topic-toggle-row">
-                            <input type="checkbox" id="topic-Fractions" checked onchange="toggleTopic('Fractions')">
-                            <span class="topic-toggle-name"><i class="fas fa-divide topic-icon"></i>Fractions</span>
-                            <span class="outcome-chip" title="Fractions, decimals and percentages">MA4-FRC-C-01</span>
-                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Fractions')"><i class="fas fa-chevron-down"></i></button>
-                        </label>
-                        <div class="topic-subtypes" id="subs-Fractions" style="display:none;"></div>
-                    </div>
-                    <!-- Percentages → MA4-FRC-C-01 -->
-                    <div class="topic-group">
-                        <label class="topic-toggle-row">
-                            <input type="checkbox" id="topic-Percentages" checked onchange="toggleTopic('Percentages')">
-                            <span class="topic-toggle-name"><i class="fas fa-percent topic-icon"></i>Percentages</span>
-                            <span class="outcome-chip" title="Fractions, decimals and percentages">MA4-FRC-C-01</span>
-                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Percentages')"><i class="fas fa-chevron-down"></i></button>
-                        </label>
-                        <div class="topic-subtypes" id="subs-Percentages" style="display:none;"></div>
-                    </div>
-                    <!-- Algebra → MA4-ALG-C-01, MA4-EQU-C-01, MA4-LIN-C-01 -->
-                    <div class="topic-group">
-                        <label class="topic-toggle-row">
-                            <input type="checkbox" id="topic-Algebra" checked onchange="toggleTopic('Algebra')">
-                            <span class="topic-toggle-name"><i class="fas fa-x topic-icon"></i>Algebraic Techniques</span>
-                            <span class="outcome-chip" title="Algebraic techniques, Equations, Linear relationships">MA4-ALG/EQU/LIN</span>
-                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Algebra')"><i class="fas fa-chevron-down"></i></button>
-                        </label>
-                        <div class="topic-subtypes" id="subs-Algebra" style="display:none;"></div>
-                    </div>
-                    <!-- Geometry → MA4-ARE/GEO/ANG/PYT/LEN -->
-                    <div class="topic-group">
-                        <label class="topic-toggle-row">
-                            <input type="checkbox" id="topic-Geometry" checked onchange="toggleTopic('Geometry')">
-                            <span class="topic-toggle-name"><i class="fas fa-draw-polygon topic-icon"></i>Measurement &amp; Geometry</span>
-                            <span class="outcome-chip" title="Area, Properties of geometrical figures, Angle relationships, Pythagoras' theorem, Length">MA4-ARE/GEO/ANG…</span>
-                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Geometry')"><i class="fas fa-chevron-down"></i></button>
-                        </label>
-                        <div class="topic-subtypes" id="subs-Geometry" style="display:none;"></div>
-                    </div>
-                    <!-- Statistics → MA4-DAT-C-01, MA4-DAT-C-02 -->
-                    <div class="topic-group">
-                        <label class="topic-toggle-row">
-                            <input type="checkbox" id="topic-Statistics" checked onchange="toggleTopic('Statistics')">
-                            <span class="topic-toggle-name"><i class="fas fa-chart-bar topic-icon"></i>Data Analysis</span>
-                            <span class="outcome-chip" title="Data classification and visualisation, Data analysis">MA4-DAT-C-01/02</span>
-                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Statistics')"><i class="fas fa-chevron-down"></i></button>
-                        </label>
-                        <div class="topic-subtypes" id="subs-Statistics" style="display:none;"></div>
-                    </div>
-                    <!-- Financial Maths → MA4-RAT-C-01 -->
-                    <div class="topic-group">
-                        <label class="topic-toggle-row">
-                            <input type="checkbox" id="topic-Financial-Maths" onchange="toggleTopic('Financial Maths')">
-                            <span class="topic-toggle-name"><i class="fas fa-dollar-sign topic-icon"></i>Financial Mathematics</span>
-                            <span class="outcome-chip" title="Ratios and rates">MA4-RAT-C-01</span>
-                            <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('Financial Maths')"><i class="fas fa-chevron-down"></i></button>
-                        </label>
-                        <div class="topic-subtypes" id="subs-Financial-Maths" style="display:none;"></div>
-                    </div>
+                <!-- STAGE SELECTOR -->
+                <div class="section-label" style="margin-top:8px;"><i class="fas fa-graduation-cap" style="margin-right:5px; opacity:.65;"></i>NESA STAGE</div>
+                <div class="stage-selector-group" role="group" aria-label="NESA Stage">
+                    <label class="stage-btn">
+                        <input type="radio" name="stage-selector" value="Stage 4" checked onchange="setStage('Stage 4')">
+                        <span>Stage 4 <span class="stage-years">Yr 7–8</span></span>
+                    </label>
+                    <label class="stage-btn">
+                        <input type="radio" name="stage-selector" value="Stage 5" onchange="setStage('Stage 5')">
+                        <span>Stage 5 <span class="stage-years">Yr 9–10</span></span>
+                    </label>
                 </div>
+                <div id="path-toggle-wrapper" style="display:none; margin-top:6px;">
+                    <label class="sub-op-row" style="padding:5px 10px; border-radius:6px; background:rgba(99,102,241,0.07); border:1px solid rgba(99,102,241,0.18);">
+                        <input type="checkbox" id="include-path-toggle" onchange="setIncludePath(this.checked)">
+                        <span class="sub-op-name" style="font-size:12px;"><i class="fas fa-road sub-op-icon"></i>Include 5.3 Path content</span>
+                    </label>
+                </div>
+
+                <!-- MATHS TOPICS — rendered dynamically by renderTopicTogglesByStrand() -->
+                <div class="section-label" style="margin-top:12px;"><i class="fas fa-calculator" style="margin-right:5px; opacity:.65;"></i>MATHS TOPICS</div>
+                <div id="topic-toggles"></div>
                 <div style="display:flex; gap:8px; margin-top:4px;">
                     <button class="btn-sec" style="flex:1; font-size:11px;" onclick="setTopicsAll(true)"><i class="fas fa-check-double" style="margin-right:4px;"></i>All</button>
                     <button class="btn-sec" style="flex:1; font-size:11px;" onclick="setTopicsAll(false)"><i class="fas fa-xmark" style="margin-right:4px;"></i>None</button>
-                    <span id="topic-count" style="font-size:11px; color:var(--text-muted); align-self:center; flex:2; text-align:right;">8 of 9 selected</span>
+                    <span id="topic-count" style="font-size:11px; color:var(--text-muted); align-self:center; flex:2; text-align:right;"></span>
                 </div>
 
                 <!-- NESA Outcomes injected dynamically into topic accordions via JS -->
@@ -567,7 +495,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=121"></script>
+    <script src="bundle.js?v=123"></script>
 </body>
 
 </html>

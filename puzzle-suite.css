@@ -2559,6 +2559,59 @@ table.mode-cw td.cell.empty {
 [data-theme="dark"] .wm-select { background: var(--input-bg); color: #f8fafc; border-color: var(--border); }
 [data-theme="dark"] .problem-item { background: #1e293b; border-color: var(--border); }
 
+/* Stage selector — segmented radio button group */
+.stage-selector-group {
+    display: flex;
+    gap: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin: 6px 0 4px;
+}
+.stage-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--input-bg);
+    color: var(--text-muted);
+    transition: background 0.15s, color 0.15s;
+    border-right: 1px solid var(--border);
+    user-select: none;
+    text-align: center;
+    line-height: 1.3;
+}
+.stage-btn:last-child { border-right: none; }
+.stage-btn input[type="radio"] { display: none; }
+.stage-btn:has(input:checked) {
+    background: var(--primary);
+    color: #fff;
+}
+.stage-years {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    opacity: 0.8;
+}
+[data-theme="dark"] .stage-btn { background: #1e293b; color: var(--text-muted); }
+[data-theme="dark"] .stage-btn:has(input:checked) { background: var(--primary); color: #fff; }
+
+/* Strand section heading inside topic list */
+.strand-heading {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 10px 4px 3px;
+    opacity: 0.75;
+}
+.strand-heading:first-child { padding-top: 4px; }
+
 /* Topic toggle rows in sidebar */
 .topic-toggles {
     display: flex;

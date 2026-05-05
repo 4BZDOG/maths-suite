@@ -9,7 +9,7 @@ import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, ha
 import { detectVerb, detectMidVerb } from '../renderers/htmlUtils.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
-import { getOutcomesForTopics, getTopicOutcomeCodes, DEFAULT_STAGE } from '../core/outcomes.js';
+import { getOutcomesForTopics, getTopicOutcomeCodes } from '../core/outcomes.js';
 
 let isExporting = false;
 
@@ -431,10 +431,12 @@ function createQuestionSets(cfg, seed) {
     const n = 30; // always generate enough to fill the selected page count
     const subOpsFilter = Object.keys(state.selectedSubOps).length > 0 ? state.selectedSubOps : null;
     const showFormulas = state.settings.showFormulas;
+    const stage        = state.stage ?? 'Stage 4';
+    const includePath  = state.includePath ?? false;
     return {
-        easy:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Easy',   count: n, seed,         showFormulas }),
-        medium: generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Medium', count: n, seed: seed+1, showFormulas }),
-        hard:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Hard',   count: n, seed: seed+2, showFormulas }),
+        easy:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Easy',   count: n, seed,         showFormulas, stage, includePath }),
+        medium: generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Medium', count: n, seed: seed+1, showFormulas, stage, includePath }),
+        hard:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Hard',   count: n, seed: seed+2, showFormulas, stage, includePath }),
     };
 }
 
@@ -454,7 +456,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
     const showOutcomesHeader = cfg.psShowOutcomesHeader || false;
     const capPages           = cfg.psCapPages || 0;
     const showDiagrams       = cfg.showDiagrams !== false;   // default true
-    const stage              = DEFAULT_STAGE;
+    const stage              = state.stage ?? 'Stage 4';
     const DIAG_H             = 30 * pScale;  // allocated height (mm) per diagram
     const availW             = PAGE_WIDTH - MARGIN * 2;
     const colW               = (availW - (cols - 1) * 8) / cols;
@@ -799,7 +801,7 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
 
     const cfg              = state.settings;
     const showOutcomesHdr  = cfg.psShowOutcomesHeader  || false;
-    const stage            = DEFAULT_STAGE;
+    const stage            = state.stage ?? 'Stage 4';
     const availW           = PAGE_WIDTH - MARGIN * 2;
 
     let cy = startY;

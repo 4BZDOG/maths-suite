@@ -4,7 +4,8 @@
 import { state, syncSettingsFromDOM } from './state.js';
 import { showToast } from '../ui/toast.js';
 
-const STORAGE_KEY     = 'puzzleSuiteV62';
+const STORAGE_KEY     = 'puzzleSuiteV63';
+const STORAGE_KEY_V62 = 'puzzleSuiteV62';
 const STORAGE_KEY_OLD = 'puzzleSuiteV61';
 const DEBOUNCE_MS     = 500;
 
@@ -18,6 +19,8 @@ export function saveStateNow() {
             selectedTopics:   state.selectedTopics,
             selectedSubOps:   state.selectedSubOps,
             selectedOutcomes: state.selectedOutcomes,
+            stage:            state.stage,
+            includePath:      state.includePath,
             questionsPerSet:  state.questionsPerSet,
             generatedSets:    state.generatedSets,
             settings:         state.settings,
@@ -56,17 +59,35 @@ export function saveState() {
     _saveTimer = setTimeout(saveStateNow, DEBOUNCE_MS);
 }
 
-// Load from localStorage and return raw parsed object (or null)
+// Load from localStorage and return raw parsed object (or null).
+// Migration chain: V63 → V62 → V61 (newest wins; older keys removed after successful write).
 export function loadRawState() {
     try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
-        const oldRaw = localStorage.getItem(STORAGE_KEY_OLD);
-        if (!oldRaw) return null;
-        // Migrate from previous key: persist under new key and remove old
-        localStorage.setItem(STORAGE_KEY, oldRaw);
+        const raw63 = localStorage.getItem(STORAGE_KEY);
+        if (raw63) return JSON.parse(raw63);
+
+        // Attempt V62 migration
+        const raw62 = localStorage.getItem(STORAGE_KEY_V62);
+        if (raw62) {
+            const parsed = JSON.parse(raw62);
+            // Inject V63-specific defaults if absent
+            if (!parsed.stage) parsed.stage = 'Stage 4';
+            if (parsed.includePath === undefined) parsed.includePath = false;
+            // Write V63 first, only remove V62 after successful write
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+            localStorage.removeItem(STORAGE_KEY_V62);
+            return parsed;
+        }
+
+        // Attempt V61 migration
+        const raw61 = localStorage.getItem(STORAGE_KEY_OLD);
+        if (!raw61) return null;
+        const parsed61 = JSON.parse(raw61);
+        if (!parsed61.stage) parsed61.stage = 'Stage 4';
+        if (parsed61.includePath === undefined) parsed61.includePath = false;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed61));
         localStorage.removeItem(STORAGE_KEY_OLD);
-        return JSON.parse(oldRaw);
+        return parsed61;
     } catch (e) {
         localStorage.removeItem(STORAGE_KEY);
         showToast('Saved data was corrupted and has been reset.', 'error');
@@ -77,5 +98,6 @@ export function loadRawState() {
 export function hardReset() {
     if (!confirm('Reset all questions and settings? This cannot be undone.')) return;
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY_V62);
     location.reload();
 }
