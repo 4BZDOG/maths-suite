@@ -1320,36 +1320,42 @@ function genNonLinear(rng, diff, allowedOps) {
     const op = rc(rng, pool);
 
     if (op === 'parabola-features') {
-        // y = (x - h)² + k → vertex (h, k)
-        const h = ri(rng, -4, 6), k = ri(rng, -4, 6);
-        const hStr = h >= 0 ? `- ${h}` : `+ ${Math.abs(h)}`;
+        // y = (x - h)² + k → vertex (h, k); avoid h = 0 to keep formatting tidy
+        const h = rc(rng, [-4, -3, -2, -1, 1, 2, 3, 4, 5, 6]);
+        const k = ri(rng, -4, 6);
+        const xPart = `(x ${h > 0 ? `- ${h}` : `+ ${Math.abs(h)}`})`;
+        const kPart = k === 0 ? '' : (k > 0 ? ` + ${k}` : ` - ${Math.abs(k)}`);
+        const eq = `${xPart}^2${kPart}`;
         if (diff === 'Easy') {
             const ph = rc(rng, [
-                `State the *vertex* of the parabola $y = (x ${hStr})^2 + ${k}$.`,
-                `Find the *vertex* of $y = (x ${hStr})^2 + ${k}$.`,
-                `What is the *turning point* of $y = (x ${hStr})^2 + ${k}$?`,
+                `State the *vertex* of the parabola $y = ${eq}$.`,
+                `Find the *vertex* of $y = ${eq}$.`,
+                `What is the *turning point* of $y = ${eq}$?`,
             ]);
             return { clue: ph, answer: `(${h},${k})`, answerDisplay: `$(${h}, ${k})$`, diagram: { type: 'parabola', h, k, a: 1 } };
         }
         if (diff === 'Medium') {
-            // Axis of symmetry from vertex form
-            const ph = `State the *axis of symmetry* of $y = (x ${hStr})^2 + ${k}$.`;
+            const ph = `State the *axis of symmetry* of $y = ${eq}$.`;
             return { clue: ph, answer: `x=${h}`, answerDisplay: `$x = ${h}$`, diagram: { type: 'parabola', h, k, a: 1 } };
         }
         // Hard: expanded form → find axis of symmetry using x = -b/2a
         const b = -2 * h, c = h * h + k;
-        const bStr = b >= 0 ? `+ ${b}` : `- ${Math.abs(b)}`;
-        const cStr = c >= 0 ? `+ ${c}` : `- ${Math.abs(c)}`;
-        const ph = `Find the *axis of symmetry* of $y = x^2 ${bStr}x ${cStr}$ using $x = -\\dfrac{b}{2a}$.`;
+        const bStr = b > 0 ? `+ ${b}x` : `- ${Math.abs(b)}x`;
+        const cStr = c === 0 ? '' : (c > 0 ? ` + ${c}` : ` - ${Math.abs(c)}`);
+        const ph = `Find the *axis of symmetry* of $y = x^2 ${bStr}${cStr}$ using $x = -\\dfrac{b}{2a}$.`;
         return { clue: ph, answer: `x=${h}`, answerDisplay: `$x = ${h}$` };
     }
 
     if (op === 'parabola-sketch') {
-        const a = rc(rng, [1, -1, 2, -2]), h2 = ri(rng, -3, 3), k2 = ri(rng, -3, 3);
+        const a = rc(rng, [1, -1, 2, -2]);
+        const h2 = rc(rng, [-3, -2, -1, 1, 2, 3]);
+        const k2 = ri(rng, -3, 3);
         const opens = a > 0 ? 'upward' : 'downward';
-        const ph = rc(rng, [
-            `For $y = ${a === 1 ? '' : a === -1 ? '-' : a}(x ${h2 >= 0 ? '- ' + h2 : '+ ' + Math.abs(h2)})^2 ${k2 >= 0 ? '+ ' + k2 : '- ' + Math.abs(k2)}$, state the vertex and direction it opens.`,
-        ]);
+        const aStr = a === 1 ? '' : a === -1 ? '-' : `${a}`;
+        const xPart = `(x ${h2 > 0 ? `- ${h2}` : `+ ${Math.abs(h2)}`})`;
+        const kPart = k2 === 0 ? '' : (k2 > 0 ? ` + ${k2}` : ` - ${Math.abs(k2)}`);
+        const eq = `${aStr}${xPart}^2${kPart}`;
+        const ph = `For $y = ${eq}$, state the vertex and direction it opens.`;
         return { clue: ph, answer: `(${h2},${k2})${opens[0].toUpperCase()}`, answerDisplay: `Vertex $(${h2}, ${k2})$, opens ${opens}`, diagram: { type: 'parabola', h: h2, k: k2, a } };
     }
 
@@ -1519,17 +1525,14 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
             )
             .map(op => op.key);
 
-        // Intersect with user's sub-op filter if present
+        // Intersect with user's sub-op filter if present.
+        // Always pass an explicit list (never null) so wrappers don't
+        // mis-detect "no filter" as "S4-only" for Stage 5 topics.
         const userFilter = subOpsFilter?.[st] || null;
-        let allowedOps;
-        if (stageAllowedKeys.length < (SUB_OPS[st]?.length ?? 0)) {
-            allowedOps = userFilter
-                ? userFilter.filter(k => stageAllowedKeys.includes(k))
-                : stageAllowedKeys;
-            if (allowedOps.length === 0) continue;
-        } else {
-            allowedOps = userFilter;
-        }
+        const allowedOps = userFilter
+            ? userFilter.filter(k => stageAllowedKeys.includes(k))
+            : stageAllowedKeys;
+        if (allowedOps.length === 0) continue;
 
         let q;
         try { q = gen(rng, diff, allowedOps, { showFormulas, stage, includePath }); } catch (e) { console.error(e); continue; }
