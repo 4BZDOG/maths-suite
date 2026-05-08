@@ -266,39 +266,86 @@ function genDecimals(rng, diff, allowedOps) {
     const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : 2);
     if (type === -1) return null;
 
-    const verb = rc(rng, CALC_VERBS);
     if (diff === 'Easy') {
         if (type === 0) {
             const a = ri(rng, 1, 9) / 10, b = ri(rng, 1, 9) / 10;
-            return { clue: `${verb} $${a} + ${b}$`, answer: String(round(a + b, 2)) };
+            const ph = rc(rng, [
+                `${rc(rng, CALC_VERBS)} $${a} + ${b}$`,
+                `Add $${a}$ to $${b}$`,
+                `Find the sum of $${a}$ and $${b}$`,
+                `What is $${a} + ${b}$?`,
+            ]);
+            return { clue: ph, answer: String(round(a + b, 2)) };
         }
         const a = ri(rng, 1, 9) / 10, b = ri(rng, 2, 9);
-        return { clue: `${verb} $${a} \\times ${b}$`, answer: String(round(a * b, 2)) };
+        const ph = rc(rng, [
+            `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
+            `Multiply $${a}$ by $${b}$`,
+            `Find the product of $${a}$ and $${b}$`,
+            `What is $${a} \\times ${b}$?`,
+        ]);
+        return { clue: ph, answer: String(round(a * b, 2)) };
     }
     if (diff === 'Medium') {
         if (type === 0) {
             const a = ri(rng, 10, 99) / 10, b = ri(rng, 10, 99) / 10;
-            return { clue: `${verb} $${a} + ${b}$`, answer: String(round(a + b, 2)) };
+            const ph = rc(rng, [
+                `${rc(rng, CALC_VERBS)} $${a} + ${b}$`,
+                `Add $${a}$ to $${b}$`,
+                `Find the sum of $${a}$ and $${b}$`,
+                `What is $${a} + ${b}$?`,
+            ]);
+            return { clue: ph, answer: String(round(a + b, 2)) };
         }
         if (type === 1) {
             const a = ri(rng, 20, 99) / 10, b = ri(rng, 1, Math.floor(a * 10) - 1) / 10;
-            return { clue: `${verb} $${a} - ${round(b, 1)}$`, answer: String(round(a - b, 2)) };
+            const ph = rc(rng, [
+                `${rc(rng, CALC_VERBS)} $${a} - ${round(b, 1)}$`,
+                `Subtract $${round(b, 1)}$ from $${a}$`,
+                `Find the difference of $${a}$ and $${round(b, 1)}$`,
+                `What is $${a} - ${round(b, 1)}$?`,
+            ]);
+            return { clue: ph, answer: String(round(a - b, 2)) };
         }
         const a = ri(rng, 10, 99) / 10, b = ri(rng, 10, 99) / 10;
-        return { clue: `${verb} $${a} \\times ${b}$`, answer: String(round(a * b, 2)) };
+        const ph = rc(rng, [
+            `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
+            `Multiply $${a}$ by $${b}$`,
+            `Find the product of $${a}$ and $${b}$`,
+            `What is $${a} \\times ${b}$?`,
+        ]);
+        return { clue: ph, answer: String(round(a * b, 2)) };
     }
     // Hard
     if (type === 0) {
         const a = ri(rng, 11, 99) / 10, b = ri(rng, 11, 99) / 10;
-        return { clue: `${verb} $${a} \\times ${b}$`, answer: String(round(a * b, 2)) };
+        const ph = rc(rng, [
+            `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
+            `Multiply $${a}$ by $${b}$`,
+            `Find the product of $${a}$ and $${b}$`,
+            `What is $${a} \\times ${b}$?`,
+        ]);
+        return { clue: ph, answer: String(round(a * b, 2)) };
     }
     if (type === 1) {
         const a = ri(rng, 10, 99) / 10, b = ri(rng, 10, 99) / 10;
         const ans = round(a / b, 2);
-        return { clue: `${verb} $${a} \\div ${b}$`, answer: String(ans) };
+        const ph = rc(rng, [
+            `${rc(rng, CALC_VERBS)} $${a} \\div ${b}$`,
+            `Divide $${a}$ by $${b}$`,
+            `Find the quotient of $${a}$ and $${b}$`,
+            `What is $${a} \\div ${b}$?`,
+        ]);
+        return { clue: ph, answer: String(ans) };
     }
     const a = ri(rng, 101, 999) / 100, b = ri(rng, 100, Math.floor(a * 100) - 1) / 100;
-    return { clue: `${verb} $${a} - ${b}$`, answer: String(round(a - b, 2)) };
+    const ph = rc(rng, [
+        `${rc(rng, CALC_VERBS)} $${a} - ${b}$`,
+        `Subtract $${b}$ from $${a}$`,
+        `Find the difference of $${a}$ and $${b}$`,
+        `What is $${a} - ${b}$?`,
+    ]);
+    return { clue: ph, answer: String(round(a - b, 2)) };
 }
 
 // ============================================================
@@ -461,7 +508,13 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             const d1 = ri(rng, 3, 7), n1 = ri(rng, 1, d1 - 1);
             const d2 = ri(rng, 3, 7), n2 = ri(rng, 1, d2 - 1);
             const ans = fracStr(n1 * n2, d1 * d2);
-            return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}}$`, answer: ans };
+            const ph = rc(rng, [
+                `${calcVerb} $\\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}}$`,
+                `Multiply $\\frac{${n1}}{${d1}}$ by $\\frac{${n2}}{${d2}}$`,
+                `Find the product of $\\frac{${n1}}{${d1}}$ and $\\frac{${n2}}{${d2}}$`,
+                `What is $\\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}}$?`,
+            ]);
+            return { clue: ph, answer: ans };
         }
         const den = rc(rng, [2, 4, 5, 8, 10, 20, 25]);
         const num = ri(rng, 1, den - 1);
@@ -479,7 +532,13 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         const d1 = ri(rng, 3, 8), n1 = ri(rng, 1, d1 - 1);
         const d2 = ri(rng, 3, 8), n2 = ri(rng, 1, d2 - 1);
         const ans = fracStr(n1 * d2, d1 * n2);
-        return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} \\div \\frac{${n2}}{${d2}}$`, answer: ans };
+        const ph = rc(rng, [
+            `${calcVerb} $\\frac{${n1}}{${d1}} \\div \\frac{${n2}}{${d2}}$`,
+            `Divide $\\frac{${n1}}{${d1}}$ by $\\frac{${n2}}{${d2}}$`,
+            `Find the quotient of $\\frac{${n1}}{${d1}}$ and $\\frac{${n2}}{${d2}}$`,
+            `What is $\\frac{${n1}}{${d1}} \\div \\frac{${n2}}{${d2}}$?`,
+        ]);
+        return { clue: ph, answer: ans };
     }
     const d1 = rc(rng, [3, 4, 5, 6]), d2 = rc(rng, [3, 4, 5, 6]);
     if (d1 === d2) return genFractions(rng, diff, allowedOps, _depth + 1);
@@ -515,6 +574,8 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             `Calculate $${pct}\\%$ of $${whole}$`,
             `Determine $${pct}\\%$ of $${whole}$`,
             `What is $${pct}\\%$ of $${whole}$?`,
+            `A discount of $${pct}\\%$ is applied to $\\$${whole}$. Find the discount amount.`,
+            `$${pct}\\%$ of a class of $${whole}$ students passed. How many students passed?`,
         ]);
         return { clue: ph, answer: String(ans), answerDisplay: String(ans) };
     }
@@ -547,6 +608,8 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
                 `Increase $${orig}$ by $${pct}\\%$`,
                 `A ${ctx} of $${orig}$ is increased by $${pct}\\%$. Find the **new** ${ctx}.`,
                 `Calculate the result of increasing $${orig}$ by $${pct}\\%$`,
+                `A price of $\\$${orig}$ increases by $${pct}\\%$. Find the **new** price.`,
+                `A score of $${orig}$ is raised by $${pct}\\%$. What is the **new** score?`,
             ]);
             return { clue: ph, answer: String(ans) };
         }
