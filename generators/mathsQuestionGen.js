@@ -21,11 +21,27 @@ function ri(rng, min, max) { return Math.floor(rng() * (max - min + 1)) + min; }
 function rc(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
 function round(n, dp) { const f = Math.pow(10, dp); return Math.round(n * f) / f; }
 
-const CALC_VERBS   = ['Calculate:', 'Evaluate:', 'Find the value of:', 'Work out:'];
-const MULT_VERBS   = ['Calculate:', 'Evaluate:', 'Find the product:', 'Work out:'];
-const DIV_VERBS    = ['Calculate:', 'Evaluate:', 'Find the quotient:', 'Work out:'];
-const BODMAS_VERBS = ['Evaluate:', 'Calculate:', 'Apply order of operations to find:'];
-const SOLVE_VERBS  = ['Solve:', 'Find $x$:', 'Determine $x$:', 'Calculate $x$:', 'Find the value of $x$:'];
+const CALC_VERBS   = ['Calculate:', 'Evaluate:', 'Find the value of:', 'Work out:', 'Determine:'];
+const MULT_VERBS   = ['Calculate:', 'Evaluate:', 'Find the product of:', 'Work out:', 'Find the result of:'];
+const DIV_VERBS    = ['Calculate:', 'Evaluate:', 'Find the quotient of:', 'Work out:', 'Divide:'];
+const BODMAS_VERBS = ['Evaluate:', 'Calculate:', 'Apply order of operations to find:', 'Work out:', 'Simplify:'];
+const SOLVE_VERBS  = ['Solve:', 'Find $x$:', 'Determine $x$:', 'Calculate $x$:', 'Find the value of $x$:', 'Solve for $x$:'];
+
+const ALGEBRA_VARS = ['x', 'n', 'm', 'k', 'p', 't'];
+function _solveVerbsFor(v) {
+    return [
+        `Solve:`,
+        `Find $${v}$:`,
+        `Determine $${v}$:`,
+        `Calculate $${v}$:`,
+        `Find the value of $${v}$:`,
+        `Solve for $${v}$:`,
+        `What is $${v}$?`,
+    ];
+}
+// Pairs [dependent, independent] for substitution questions
+const SUBST_PAIRS = [['y', 'x'], ['A', 't'], ['P', 'n'], ['C', 'm'], ['V', 'r'], ['h', 't'], ['d', 'n']];
+const DATA_CONTEXTS = ['scores', 'values', 'ages', 'heights (cm)', 'temperatures (°C)', 'distances (m)', 'results', 'times (s)'];
 
 function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 function lcm(a, b) { return (a * b) / gcd(a, b); }
@@ -168,36 +184,71 @@ function genIntegers(rng, diff, allowedOps) {
     if (op === '+') {
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, max);
-        const verb = rc(rng, CALC_VERBS);
-        return { clue: `${verb} $${a} + ${b}$`, answer: String(a + b) };
+        const clue = rc(rng, [
+            `${rc(rng, CALC_VERBS)} $${a} + ${b}$`,
+            `Find the *sum* of $${a}$ and $${b}$`,
+            `What is the total of $${a}$ and $${b}$?`,
+            `Add $${a}$ to $${b}$`,
+            `${rc(rng, CALC_VERBS)} $${a} + ${b}$`,
+        ]);
+        return { clue, answer: String(a + b) };
     }
     if (op === '-') {
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, a);
-        const verb = rc(rng, CALC_VERBS);
-        return { clue: `${verb} $${a} - ${b}$`, answer: String(a - b) };
+        const clue = rc(rng, [
+            `${rc(rng, CALC_VERBS)} $${a} - ${b}$`,
+            `Find the *difference* between $${a}$ and $${b}$`,
+            `Subtract $${b}$ from $${a}$`,
+            `What is $${a}$ minus $${b}$?`,
+            `${rc(rng, CALC_VERBS)} $${a} - ${b}$`,
+        ]);
+        return { clue, answer: String(a - b) };
     }
     if (op === '×') {
         const [lo, hi] = diff === 'Easy' ? [2, 12] : diff === 'Medium' ? [3, 25] : [12, 50];
         const a = ri(rng, lo, hi), b = ri(rng, lo, hi);
-        const verb = rc(rng, MULT_VERBS);
-        return { clue: `${verb} $${a} \\times ${b}$`, answer: String(a * b) };
+        const clue = rc(rng, [
+            `${rc(rng, MULT_VERBS)} $${a} \\times ${b}$`,
+            `Multiply $${a}$ by $${b}$`,
+            `What is $${a}$ multiplied by $${b}$?`,
+            `Find the *product* of $${a}$ and $${b}$`,
+        ]);
+        return { clue, answer: String(a * b) };
     }
     if (op === '÷') {
         const [lo, hi] = diff === 'Easy' ? [2, 12] : diff === 'Medium' ? [3, 20] : [6, 40];
         const b = ri(rng, lo, hi), ans = ri(rng, lo, hi);
-        const verb = rc(rng, DIV_VERBS);
-        return { clue: `${verb} $${b * ans} \\div ${b}$`, answer: String(ans) };
+        const clue = rc(rng, [
+            `${rc(rng, DIV_VERBS)} $${b * ans} \\div ${b}$`,
+            `Divide $${b * ans}$ by $${b}$`,
+            `What is $${b * ans}$ divided by $${b}$?`,
+            `Find the *quotient* of $${b * ans}$ and $${b}$`,
+        ]);
+        return { clue, answer: String(ans) };
     }
     if (op === 'bodmas') {
-        const form = ri(rng, 0, 1);
+        const form = ri(rng, 0, 4);
         const verb = rc(rng, BODMAS_VERBS);
         if (form === 0) {
             const a = ri(rng, 3, 25), b = ri(rng, 3, 15), c = ri(rng, 3, 15);
             return { clue: `${verb} $${a} + ${b} \\times ${c}$`, answer: String(a + b * c) };
         }
-        const a = ri(rng, 2, 15), b = ri(rng, 2, 15), c = ri(rng, 3, 12);
-        return { clue: `${verb} $(${a} + ${b}) \\times ${c}$`, answer: String((a + b) * c) };
+        if (form === 1) {
+            const a = ri(rng, 2, 15), b = ri(rng, 2, 15), c = ri(rng, 3, 12);
+            return { clue: `${verb} $(${a} + ${b}) \\times ${c}$`, answer: String((a + b) * c) };
+        }
+        if (form === 2) {
+            const a = ri(rng, 2, 9), b = ri(rng, 2, 8), c = ri(rng, 2, 9), d = ri(rng, 2, 6);
+            return { clue: `${verb} $${a} \\times ${b} + ${c} \\times ${d}$`, answer: String(a * b + c * d) };
+        }
+        if (form === 3) {
+            const b = ri(rng, 2, 12), c = ri(rng, 3, 10);
+            const a = ri(rng, b + 1, b + 15);
+            return { clue: `${verb} $(${a} - ${b}) \\times ${c}$`, answer: String((a - b) * c) };
+        }
+        const a = ri(rng, 3, 20), b = ri(rng, 2, 10), c = ri(rng, 2, 8);
+        return { clue: `${verb} $${a} - ${b} \\times ${c}$`, answer: String(a - b * c) };
     }
 }
 
@@ -563,30 +614,52 @@ function _genAlgebraCore(rng, diff, allowedOps) {
     const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : 2);
     if (type === -1) return null;
 
-    const solveVerb = rc(rng, SOLVE_VERBS);
+    const v = rc(rng, ALGEBRA_VARS);
+    const solveVerb = rc(rng, _solveVerbsFor(v));
+
     if (diff === 'Easy') {
         if (type === 0) {
             const ans = ri(rng, 1, 20), a = ri(rng, 1, 20);
-            return { clue: `${solveVerb} $x + ${a} = ${ans + a}$`, answer: String(ans), answerDisplay: `$x = ${ans}$` };
+            if (rng() < 0.35) {
+                const clue = rc(rng, [
+                    `A number increased by $${a}$ equals $${ans + a}$. Find the number.`,
+                    `When $${a}$ is added to a number, the result is $${ans + a}$. What is the number?`,
+                    `A number plus $${a}$ gives $${ans + a}$. Find the number.`,
+                    `Think of a number. Add $${a}$. The answer is $${ans + a}$. What is the number?`,
+                ]);
+                return { clue, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            }
+            return { clue: `${solveVerb} $${v} + ${a} = ${ans + a}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
         }
         const a = ri(rng, 2, 12), ans = ri(rng, 2, 12);
-        return { clue: `${solveVerb} $${a}x = ${a * ans}$`, answer: String(ans), answerDisplay: `$x = ${ans}$` };
+        if (rng() < 0.35) {
+            const clue = rc(rng, [
+                `A number multiplied by $${a}$ gives $${a * ans}$. Find the number.`,
+                `When a number is multiplied by $${a}$, the result is $${a * ans}$. What is the number?`,
+                `$${a}$ times a number equals $${a * ans}$. Find the number.`,
+                `Think of a number. Multiply it by $${a}$. The answer is $${a * ans}$. What is the number?`,
+            ]);
+            return { clue, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+        }
+        return { clue: `${solveVerb} $${a}${v} = ${a * ans}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
     }
     if (diff === 'Medium') {
         if (type === 0) {
             const a = ri(rng, 2, 6), ans = ri(rng, 1, 10), b = ri(rng, 1, 20);
-            return { clue: `${solveVerb} $${a}x + ${b} = ${a * ans + b}$`, answer: String(ans), answerDisplay: `$x = ${ans}$` };
+            return { clue: `${solveVerb} $${a}${v} + ${b} = ${a * ans + b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
         }
         if (type === 1) {
             const a = ri(rng, 2, 6), ans = ri(rng, 2, 10), b = ri(rng, 1, 10);
-            return { clue: `${solveVerb} $${a}x - ${b} = ${a * ans - b}$`, answer: String(ans), answerDisplay: `$x = ${ans}$` };
+            return { clue: `${solveVerb} $${a}${v} - ${b} = ${a * ans - b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
         }
+        const [fv, iv] = rc(rng, SUBST_PAIRS);
         const a = ri(rng, 2, 6), b = ri(rng, 1, 12), n = ri(rng, 1, 8);
         const subVerb = rc(rng, [
-            `If $y = ${a}x + ${b}$, find $y$ when $x = ${n}$`,
-            `Evaluate $y = ${a}x + ${b}$ when $x = ${n}$`,
-            `Calculate $y$ given $y = ${a}x + ${b}$ and $x = ${n}$`,
-            `Substitute $x = ${n}$ into $y = ${a}x + ${b}$`,
+            `If $${fv} = ${a}${iv} + ${b}$, find $${fv}$ when $${iv} = ${n}$`,
+            `Evaluate $${fv} = ${a}${iv} + ${b}$ when $${iv} = ${n}$`,
+            `Calculate $${fv}$ given $${fv} = ${a}${iv} + ${b}$ and $${iv} = ${n}$`,
+            `Substitute $${iv} = ${n}$ into $${fv} = ${a}${iv} + ${b}$`,
+            `Find the value of $${fv}$ if $${fv} = ${a}${iv} + ${b}$ and $${iv} = ${n}$`,
         ]);
         return { clue: subVerb, answer: String(a * n + b) };
     }
@@ -595,22 +668,23 @@ function _genAlgebraCore(rng, diff, allowedOps) {
         const ans = ri(rng, 1, 10);
         const a = ri(rng, 3, 8), c = ri(rng, 1, a - 1), b = ri(rng, 1, 20);
         const d = (a - c) * ans + b;
-        return { clue: `${solveVerb} $${a}x + ${b} = ${c}x + ${d}$`, answer: String(ans), answerDisplay: `$x = ${ans}$` };
+        return { clue: `${solveVerb} $${a}${v} + ${b} = ${c}${v} + ${d}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
     }
     if (type === 1) {
+        const [fv, iv] = rc(rng, SUBST_PAIRS);
         const a = ri(rng, 1, 4), b = ri(rng, 1, 15), n = ri(rng, 2, 6);
         const coeff = a === 1 ? '' : String(a);
         const subVerb = rc(rng, [
-            `If $y = ${coeff}x^2 + ${b}$, find $y$ when $x = ${n}$`,
-            `Evaluate $y = ${coeff}x^2 + ${b}$ when $x = ${n}$`,
-            `Calculate $y$ given $y = ${coeff}x^2 + ${b}$ and $x = ${n}$`,
-            `Substitute $x = ${n}$ into $y = ${coeff}x^2 + ${b}$`,
+            `If $${fv} = ${coeff}${iv}^2 + ${b}$, find $${fv}$ when $${iv} = ${n}$`,
+            `Evaluate $${fv} = ${coeff}${iv}^2 + ${b}$ when $${iv} = ${n}$`,
+            `Calculate $${fv}$ given $${fv} = ${coeff}${iv}^2 + ${b}$ and $${iv} = ${n}$`,
+            `Substitute $${iv} = ${n}$ into $${fv} = ${coeff}${iv}^2 + ${b}$`,
         ]);
         return { clue: subVerb, answer: String(a * n * n + b) };
     }
     const a = ri(rng, 2, 5), bMult = ri(rng, 1, 8);
     const ans2 = -bMult;
-    return { clue: `${solveVerb} $${a}x + ${a * bMult} = 0$`, answer: String(ans2), answerDisplay: `$x = ${ans2}$` };
+    return { clue: `${solveVerb} $${a}${v} + ${a * bMult} = 0$`, answer: String(ans2), answerDisplay: `$${v} = ${ans2}$` };
 }
 
 // ============================================================
@@ -627,6 +701,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
     const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : diff === 'Medium' ? 2 : 1);
     if (type === -1) return null;
 
+    const ctx = rc(rng, DATA_CONTEXTS);
     if (diff === 'Easy') {
         if (type === 0) {
             const n = ri(rng, 3, 5);
@@ -634,20 +709,22 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
             const sum = data.reduce((a, b) => a + b, 0);
             if (sum % n !== 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
             const ph = rc(rng, [
-                `Find the *mean* of $${data.join(', ')}$`,
-                `Calculate the *mean* of $${data.join(', ')}$`,
+                `Find the *mean* of: $${data.join(', ')}$`,
+                `Calculate the *mean* of these ${ctx}: $${data.join(', ')}$`,
                 `Determine the *mean* of: $${data.join(', ')}$`,
                 `What is the *mean* of $${data.join(', ')}$?`,
+                `The ${ctx} recorded are $${data.join(', ')}$. Find the *mean*.`,
             ]);
             return { clue: ph, answer: String(sum / n) };
         }
         const n = (ri(rng, 2, 4) * 2) - 1;
         const data = Array.from({ length: n }, () => ri(rng, 1, 30)).sort((a, b) => a - b);
         const ph = rc(rng, [
-            `Find the *median* of $${data.join(', ')}$`,
-            `State the *median* of $${data.join(', ')}$`,
+            `Find the *median* of: $${data.join(', ')}$`,
+            `State the *median* of these ${ctx}: $${data.join(', ')}$`,
             `Determine the *median* of: $${data.join(', ')}$`,
             `What is the *median* of $${data.join(', ')}$?`,
+            `The ${ctx} are $${data.join(', ')}$. Find the *median*.`,
         ]);
         return { clue: ph, answer: String(data[Math.floor(n / 2)]) };
     }
@@ -656,10 +733,11 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
             const n = ri(rng, 4, 7);
             const data = Array.from({ length: n }, () => ri(rng, 1, 40));
             const ph = rc(rng, [
-                `Find the *range* of $${data.join(', ')}$`,
-                `Calculate the *range* of $${data.join(', ')}$`,
+                `Find the *range* of: $${data.join(', ')}$`,
+                `Calculate the *range* of these ${ctx}: $${data.join(', ')}$`,
                 `Determine the *range* of: $${data.join(', ')}$`,
                 `What is the *range* of $${data.join(', ')}$?`,
+                `The ${ctx} are $${data.join(', ')}$. Find the *range*.`,
             ]);
             return { clue: ph, answer: String(Math.max(...data) - Math.min(...data)) };
         }
@@ -670,10 +748,11 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
             });
             const data = [...others, mode, mode].sort((a, b) => a - b);
             const ph = rc(rng, [
-                `Identify the *mode* of $${data.join(', ')}$`,
-                `State the *mode* of $${data.join(', ')}$`,
-                `Find the *mode* of $${data.join(', ')}$`,
+                `Identify the *mode* of: $${data.join(', ')}$`,
+                `State the *mode* of these ${ctx}: $${data.join(', ')}$`,
+                `Find the *mode* of: $${data.join(', ')}$`,
                 `What is the *mode* of $${data.join(', ')}$?`,
+                `The ${ctx} are $${data.join(', ')}$. Find the *mode*.`,
             ]);
             return { clue: ph, answer: String(mode) };
         }
@@ -682,9 +761,10 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
         const sum = data.reduce((a, b) => a + b, 0);
         if (sum % n !== 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
         const ph = rc(rng, [
-            `Calculate the *mean* of $${data.join(', ')}$`,
-            `Find the *mean* of $${data.join(', ')}$`,
+            `Calculate the *mean* of: $${data.join(', ')}$`,
+            `Find the *mean* of these ${ctx}: $${data.join(', ')}$`,
             `Determine the *mean* of: $${data.join(', ')}$`,
+            `The ${ctx} are $${data.join(', ')}$. Calculate the *mean*.`,
         ]);
         return { clue: ph, answer: String(sum / n) };
     }
@@ -696,9 +776,10 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
         const iqr = q3 - q1;
         if (!Number.isInteger(iqr)) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
         const ph = rc(rng, [
-            `Find the *interquartile range* of $${data.join(', ')}$`,
-            `Calculate the *IQR* of $${data.join(', ')}$`,
+            `Find the *interquartile range* of: $${data.join(', ')}$`,
+            `Calculate the *IQR* of these ${ctx}: $${data.join(', ')}$`,
             `Determine the *interquartile range* of: $${data.join(', ')}$`,
+            `The ${ctx} are $${data.join(', ')}$. Find the *IQR*.`,
         ]);
         return { clue: ph, answer: String(iqr) };
     }
@@ -707,9 +788,10 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
     const med = (data[n / 2 - 1] + data[n / 2]) / 2;
     if (!Number.isInteger(med)) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
     const ph = rc(rng, [
-        `Find the *median* of $${data.join(', ')}$`,
-        `Calculate the *median* of $${data.join(', ')}$`,
+        `Find the *median* of: $${data.join(', ')}$`,
+        `Calculate the *median* of these ${ctx}: $${data.join(', ')}$`,
         `Determine the *median* of: $${data.join(', ')}$`,
+        `The ${ctx} are $${data.join(', ')}$. Find the *median*.`,
     ]);
     return { clue: ph, answer: String(med) };
 }
