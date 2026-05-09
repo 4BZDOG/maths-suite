@@ -14,7 +14,7 @@ export function esc(str) {
 //   2. IMPERATIVE_RE  — fallback: the leading imperative word alone
 //      (e.g. "Find the area of a rectangle..." → bold just "Find").
 const VERB_PHRASE_RE = /^([A-Za-z][^:.*]{0,50}:\s)/;
-const IMPERATIVE_LIST = 'Approximate|Calculate|Compare|Compute|Convert|Decrease|Describe|Determine|Estimate|Evaluate|Express|Find|How many|How much|Identify|Increase|Label|List|Order|Reduce|Round|Show|Simplify|Solve|State|Substitute|Use|What is|Work out|Write';
+const IMPERATIVE_LIST = 'Approximate|Calculate|Compare|Compute|Convert|Decrease|Describe|Determine|Estimate|Evaluate|Expand|Express|Factorise|Find|How many|How much|Identify|Increase|Label|List|Order|Reduce|Round|Show|Simplify|Solve|State|Substitute|Use|What is|Work out|Write';
 const IMPERATIVE_RE  = new RegExp(`^(${IMPERATIVE_LIST})\\b`);
 // Mid-sentence imperative: catches clues like "A rectangle has...Determine its
 // area." (verb after ". ") and "If y = 2x + 5, find y when x = 3" (lowercase
@@ -54,21 +54,15 @@ function applyMarkdownEmphasis(escaped) {
 }
 
 /**
- * Format a clue for HTML display.
- *  - Wraps a leading instruction verb (e.g. "Calculate: ") in <strong class="clue-verb">.
- *  - Supports a small markdown subset in the question body for emphasis:
- *      **word** → bold, *word* → italic.
- *  - Leaves $...$ math segments untouched so KaTeX still renders them.
+ * Format a single line of clue text (no \n handling).
+ * Internal helper used by formatClue.
  */
-export function formatClue(clue) {
-    if (!clue) return '';
-    const s = String(clue);
+function _formatOneLine(s) {
     const verb = detectVerb(s);
     if (verb) {
         const rest = s.slice(verb.length);
         return `<strong class="clue-verb">${applyMarkdownEmphasis(esc(verb))}</strong>${applyMarkdownEmphasis(esc(rest))}`;
     }
-    // No leading verb — try mid-sentence ("A rectangle has...Determine its area.")
     const mid = detectMidVerb(s);
     if (mid) {
         const before = s.slice(0, mid.index);
@@ -78,4 +72,25 @@ export function formatClue(clue) {
             + applyMarkdownEmphasis(esc(after));
     }
     return applyMarkdownEmphasis(esc(s));
+}
+
+/**
+ * Format a clue for HTML display.
+ *  - Wraps a leading instruction verb (e.g. "Calculate: ") in <strong class="clue-verb">.
+ *  - Supports a small markdown subset in the question body for emphasis:
+ *      **word** → bold, *word* → italic.
+ *  - Leaves $...$ math segments untouched so KaTeX still renders them.
+ *  - Lines separated by \n render as block elements (equation on new line).
+ */
+export function formatClue(clue) {
+    if (!clue) return '';
+    const s = String(clue);
+    const nlIdx = s.indexOf('\n');
+    if (nlIdx !== -1) {
+        const stem = s.slice(0, nlIdx);
+        const eqs  = s.slice(nlIdx + 1).split('\n');
+        return _formatOneLine(stem)
+            + eqs.map(eq => `<span class="clue-newline">${applyMarkdownEmphasis(esc(eq.trim()))}</span>`).join('');
+    }
+    return _formatOneLine(s);
 }

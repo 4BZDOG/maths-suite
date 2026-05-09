@@ -40,7 +40,7 @@ function _rightAnglePDF(doc, vx, vy, sq) {
     doc.line(vx, vy - sq, vx + sq, vy - sq);   // horizontal top
 }
 
-function _drawRectDiagramPDF(doc, { l, w: wv }, x0, y0, w, h, ps, font) {
+function _drawRectDiagramPDF(doc, { l, w: wv, missing }, x0, y0, w, h, ps, font) {
     const aspect = l / wv;
     const maxW = w * 0.72, maxH = h * 0.60;
     let dw = aspect >= maxW / maxH ? maxW : maxH * aspect;
@@ -60,16 +60,17 @@ function _drawRectDiagramPDF(doc, { l, w: wv }, x0, y0, w, h, ps, font) {
     doc.setFont(font, 'normal');
     doc.setFontSize(8 * ps);
     doc.setTextColor(..._LC);
-    doc.text(String(l), rx + dw / 2, ry + dh + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
+    doc.text(`l = ${l}`, rx + dw / 2, ry + dh + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
 
     // Width label (left of the rectangle) — clear of left edge
-    doc.text(String(wv), rx - _LBL_OFFSET, ry + dh / 2 + 1.2 * ps, { align: 'right' });
+    doc.text(`w = ${wv}`, rx - _LBL_OFFSET, ry + dh / 2 + 1.2 * ps, { align: 'right' });
 
-    // Missing "?" in centre
+    // Missing value label in centre
+    const centreLabel = missing === 'area' ? 'A = ?' : 'P = ?';
     doc.setFont(font, 'bold');
-    doc.setFontSize(10 * ps);
+    doc.setFontSize(9 * ps);
     doc.setTextColor(..._MC);
-    doc.text('?', rx + dw / 2, ry + dh / 2 + 1.8 * ps, { align: 'center' });
+    doc.text(centreLabel, rx + dw / 2, ry + dh / 2 + 1.8 * ps, { align: 'center' });
 }
 
 function _drawRightTriDiagramPDF(doc, { a, b, c, missing }, x0, y0, w, h, ps, font) {
@@ -93,8 +94,8 @@ function _drawRightTriDiagramPDF(doc, { a, b, c, missing }, x0, y0, w, h, ps, fo
     doc.setLineWidth(_AUX_W);
     _rightAnglePDF(doc, Ax, Ay, sq);
 
-    const aLabel = missing === 'a' ? '?' : String(a);
-    const bLabel = missing === 'b' ? '?' : String(b);
+    const aLabel = missing === 'a' ? 'a = ?' : `a = ${a}`;
+    const bLabel = missing === 'b' ? 'b = ?' : `b = ${b}`;
     const cLabel = missing === 'c' ? 'c = ?' : `c = ${c}`;
 
     // Leg a (below) — clear of bottom edge
@@ -353,6 +354,19 @@ function _parseEmphasisSegments(text) {
  * @returns {number}  Final baseline Y after last drawn character
  */
 function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, lineH) {
+    // Multi-line clues (stem\nequation[\nequation2]) — draw stem, then each
+    // equation line indented on its own line with a full lineH gap.
+    const nlIdx = (clue || '').indexOf('\n');
+    if (nlIdx !== -1) {
+        const stem = clue.slice(0, nlIdx).trim();
+        const eqs  = clue.slice(nlIdx + 1).split('\n');
+        let curY = _drawClueInline(doc, stem, x, y, maxW, fontSizePt, pdfFont, color, lineH);
+        for (const eq of eqs) {
+            curY = _drawClueInline(doc, eq.trim(), x + 2, curY + lineH, maxW - 2, fontSizePt, pdfFont, color, lineH);
+        }
+        return curY;
+    }
+
     // Auto-bold verb prefixes (Calculate:, Find, etc.) to match HTML treatment.
     // Uses the same two-stage detector as renderers/htmlUtils.js → detectVerb.
     let rawClue = clue;
