@@ -232,23 +232,23 @@ function genIntegers(rng, diff, allowedOps) {
         const verb = rc(rng, BODMAS_VERBS);
         if (form === 0) {
             const a = ri(rng, 3, 25), b = ri(rng, 3, 15), c = ri(rng, 3, 15);
-            return { clue: `${verb} $${a} + ${b} \\times ${c}$`, answer: String(a + b * c) };
+            return { clue: `${verb}\n$${a} + ${b} \\times ${c}$`, answer: String(a + b * c) };
         }
         if (form === 1) {
             const a = ri(rng, 2, 15), b = ri(rng, 2, 15), c = ri(rng, 3, 12);
-            return { clue: `${verb} $(${a} + ${b}) \\times ${c}$`, answer: String((a + b) * c) };
+            return { clue: `${verb}\n$(${a} + ${b}) \\times ${c}$`, answer: String((a + b) * c) };
         }
         if (form === 2) {
             const a = ri(rng, 2, 9), b = ri(rng, 2, 8), c = ri(rng, 2, 9), d = ri(rng, 2, 6);
-            return { clue: `${verb} $${a} \\times ${b} + ${c} \\times ${d}$`, answer: String(a * b + c * d) };
+            return { clue: `${verb}\n$${a} \\times ${b} + ${c} \\times ${d}$`, answer: String(a * b + c * d) };
         }
         if (form === 3) {
             const b = ri(rng, 2, 12), c = ri(rng, 3, 10);
             const a = ri(rng, b + 1, b + 15);
-            return { clue: `${verb} $(${a} - ${b}) \\times ${c}$`, answer: String((a - b) * c) };
+            return { clue: `${verb}\n$(${a} - ${b}) \\times ${c}$`, answer: String((a - b) * c) };
         }
         const a = ri(rng, 3, 20), b = ri(rng, 2, 10), c = ri(rng, 2, 8);
-        return { clue: `${verb} $${a} - ${b} \\times ${c}$`, answer: String(a - b * c) };
+        return { clue: `${verb}\n$${a} - ${b} \\times ${c}$`, answer: String(a - b * c) };
     }
 }
 
@@ -692,7 +692,7 @@ function _genAlgebraCore(rng, diff, allowedOps) {
                 ]);
                 return { clue, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
             }
-            return { clue: `${solveVerb} $${v} + ${a} = ${ans + a}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            return { clue: `${solveVerb}\n$${v} + ${a} = ${ans + a}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
         }
         const a = ri(rng, 2, 12), ans = ri(rng, 2, 12);
         if (rng() < 0.35) {
@@ -704,16 +704,16 @@ function _genAlgebraCore(rng, diff, allowedOps) {
             ]);
             return { clue, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
         }
-        return { clue: `${solveVerb} $${a}${v} = ${a * ans}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+        return { clue: `${solveVerb}\n$${a}${v} = ${a * ans}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
     }
     if (diff === 'Medium') {
         if (type === 0) {
             const a = ri(rng, 2, 6), ans = ri(rng, 1, 10), b = ri(rng, 1, 20);
-            return { clue: `${solveVerb} $${a}${v} + ${b} = ${a * ans + b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${a * ans + b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
         }
         if (type === 1) {
             const a = ri(rng, 2, 6), ans = ri(rng, 2, 10), b = ri(rng, 1, 10);
-            return { clue: `${solveVerb} $${a}${v} - ${b} = ${a * ans - b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            return { clue: `${solveVerb}\n$${a}${v} - ${b} = ${a * ans - b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
         }
         const [fv, iv] = rc(rng, SUBST_PAIRS);
         const a = ri(rng, 2, 6), b = ri(rng, 1, 12), n = ri(rng, 1, 8);
@@ -731,7 +731,7 @@ function _genAlgebraCore(rng, diff, allowedOps) {
         const ans = ri(rng, 1, 10);
         const a = ri(rng, 3, 8), c = ri(rng, 1, a - 1), b = ri(rng, 1, 20);
         const d = (a - c) * ans + b;
-        return { clue: `${solveVerb} $${a}${v} + ${b} = ${c}${v} + ${d}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+        return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${c}${v} + ${d}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
     }
     if (type === 1) {
         const [fv, iv] = rc(rng, SUBST_PAIRS);
@@ -747,7 +747,7 @@ function _genAlgebraCore(rng, diff, allowedOps) {
     }
     const a = ri(rng, 2, 5), bMult = ri(rng, 1, 8);
     const ans2 = -bMult;
-    return { clue: `${solveVerb} $${a}${v} + ${a * bMult} = 0$`, answer: String(ans2), answerDisplay: `$${v} = ${ans2}$` };
+    return { clue: `${solveVerb}\n$${a}${v} + ${a * bMult} = 0$`, answer: String(ans2), answerDisplay: `$${v} = ${ans2}$` };
 }
 
 // ============================================================
@@ -1103,20 +1103,21 @@ function _genAlgebraOp(rng, diff, op) {
         if (diff === 'Easy') {
             const a = ri(rng, 1, 7), b = ri(rng, 1, 7);
             const mid = a + b, last = a * b;
-            return { clue: `${verb} $(x + ${a})(x + ${b})$`, answer: `x²+${mid}x+${last}`, answerDisplay: `$x^2 + ${mid}x + ${last}$` };
+            return { clue: `${verb}\n$(x + ${a})(x + ${b})$`, answer: `x²+${mid}x+${last}`, answerDisplay: `$x^2 + ${mid}x + ${last}$` };
         }
         if (diff === 'Medium') {
             const a = ri(rng, 1, 7), b = ri(rng, 1, 7);
             const mid = a - b, last = -a * b;
             const mStr = mid >= 0 ? `+${mid}` : `${mid}`;
             const lStr = last >= 0 ? `+${last}` : `${last}`;
-            return { clue: `${verb} $(x + ${a})(x - ${b})$`, answer: `x²${mStr}x${lStr}`, answerDisplay: `$x^2 ${mid >= 0 ? '+' : ''}${mid}x ${last >= 0 ? '+' : ''}${last}$` };
+            return { clue: `${verb}\n$(x + ${a})(x - ${b})$`, answer: `x²${mStr}x${lStr}`, answerDisplay: `$x^2 ${mid >= 0 ? '+' : ''}${mid}x ${last >= 0 ? '+' : ''}${last}$` };
         }
         // Hard: (ax + b)(cx + d)
         const a = ri(rng, 2, 3), b = ri(rng, 1, 5), c = ri(rng, 2, 3), d = ri(rng, 1, 5);
         const lead = a * c, mid2 = a * d + b * c, last2 = b * d;
         const m2Str = mid2 >= 0 ? `+${mid2}` : `${mid2}`;
-        return { clue: `${rc(rng, ['Expand:', 'Expand and simplify:'])} $(${a}x + ${b})(${c}x + ${d})$`, answer: `${lead}x²${m2Str}x+${last2}`, answerDisplay: `$${lead}x^2 ${mid2 >= 0 ? '+' : ''}${mid2}x + ${last2}$` };
+        const expandVerb = rc(rng, ['Expand:', 'Expand and simplify:']);
+        return { clue: `${expandVerb}\n$(${a}x + ${b})(${c}x + ${d})$`, answer: `${lead}x²${m2Str}x+${last2}`, answerDisplay: `$${lead}x^2 ${mid2 >= 0 ? '+' : ''}${mid2}x + ${last2}$` };
     }
 
     if (op === 'factorise') {
@@ -1124,16 +1125,16 @@ function _genAlgebraOp(rng, diff, op) {
             // x² + (a+b)x + ab = (x+a)(x+b), a,b ∈ [1,7] so answer fits ≤10 chars
             const a = ri(rng, 1, 7), b = ri(rng, 1, 7);
             const mid = a + b, last = a * b;
-            return { clue: `Factorise: $x^2 + ${mid}x + ${last}$`, answer: `(x+${a})(x+${b})`, answerDisplay: `$(x + ${a})(x + ${b})$` };
+            return { clue: `Factorise:\n$x^2 + ${mid}x + ${last}$`, answer: `(x+${a})(x+${b})`, answerDisplay: `$(x + ${a})(x + ${b})$` };
         }
         if (diff === 'Medium') {
             // Perfect square: (x+a)² = x² + 2ax + a²
             const a = ri(rng, 2, 6);
-            return { clue: `Factorise: $x^2 + ${2 * a}x + ${a * a}$`, answer: `(x+${a})²`, answerDisplay: `$(x + ${a})^2$` };
+            return { clue: `Factorise:\n$x^2 + ${2 * a}x + ${a * a}$`, answer: `(x+${a})²`, answerDisplay: `$(x + ${a})^2$` };
         }
         // Hard: difference of two squares
         const n = ri(rng, 2, 7);
-        return { clue: `Factorise: $x^2 - ${n * n}$`, answer: `(x+${n})(x-${n})`, answerDisplay: `$(x + ${n})(x - ${n})$` };
+        return { clue: `Factorise:\n$x^2 - ${n * n}$`, answer: `(x+${n})(x-${n})`, answerDisplay: `$(x + ${n})(x - ${n})$` };
     }
 
     if (op === 'quadratic-solve') {
@@ -1141,71 +1142,70 @@ function _genAlgebraOp(rng, diff, op) {
         if (diff === 'Easy') {
             // x² = c → x = ±√c, use perfect squares
             const n = ri(rng, 2, 9);
-            return { clue: `${sv} $x^2 = ${n * n}$`, answer: `±${n}`, answerDisplay: `$x = \\pm ${n}$` };
+            return { clue: `${sv}\n$x^2 = ${n * n}$`, answer: `±${n}`, answerDisplay: `$x = \\pm ${n}$` };
         }
         if (diff === 'Medium') {
             // (x-a)(x-b) = 0 where a,b > 0, a ≠ b
             const a = ri(rng, 1, 7), b = ri(rng, 1, 7);
-            if (a === b) { const b2 = a + 1; const mid = -(a + b2), last = a * b2; return { clue: `${sv} $x^2 ${mid}x + ${last} = 0$`, answer: `x=${a},${b2}`, answerDisplay: `$x = ${a}$ or $x = ${b2}$` }; }
+            if (a === b) {
+                const b2 = a + 1;
+                const mid = -(a + b2), last = a * b2;
+                return { clue: `${sv}\n$x^2 ${mid}x + ${last} = 0$`, answer: `x=${a},${b2}`, answerDisplay: `$x = ${a}$ or $x = ${b2}$` };
+            }
             const mid = -(a + b), last = a * b;
             const mStr = mid >= 0 ? `+ ${mid}` : `- ${Math.abs(mid)}`;
-            return { clue: `${sv} $x^2 ${mStr}x + ${last} = 0$`, answer: `x=${a},${b}`, answerDisplay: `$x = ${a}$ or $x = ${b}$` };
+            return { clue: `${sv}\n$x^2 ${mStr}x + ${last} = 0$`, answer: `x=${a},${b}`, answerDisplay: `$x = ${a}$ or $x = ${b}$` };
         }
         // Hard: (x-a)(x+b) = 0, one negative root
         const a = ri(rng, 2, 6), b = ri(rng, 1, 5);
         const mid = a - b, last = -a * b;
         const mStr = mid >= 0 ? `+ ${mid}` : `- ${Math.abs(mid)}`;
         const lStr = last >= 0 ? `+ ${last}` : `- ${Math.abs(last)}`;
-        return { clue: `${sv} $x^2 ${mStr}x ${lStr} = 0$`, answer: `x=${a},-${b}`, answerDisplay: `$x = ${a}$ or $x = -${b}$` };
+        return { clue: `${sv}\n$x^2 ${mStr}x ${lStr} = 0$`, answer: `x=${a},-${b}`, answerDisplay: `$x = ${a}$ or $x = -${b}$` };
     }
 
     if (op === 'indices-laws') {
         const sv = rc(rng, CALC_VERBS);
         if (diff === 'Easy') {
-            // a^m × a^n = a^(m+n), evaluate numerically
             const base = ri(rng, 2, 4), m = ri(rng, 1, 3), n = ri(rng, 1, 3);
             const ans = Math.pow(base, m + n);
             if (ans > 9999) return null;
-            return { clue: `${sv} $${base}^${m} \\times ${base}^${n}$`, answer: String(ans), answerDisplay: `$${ans}$` };
+            return { clue: `${sv}\n$${base}^${m} \\times ${base}^${n}$`, answer: String(ans), answerDisplay: `$${ans}$` };
         }
         if (diff === 'Medium') {
-            // a^m ÷ a^n, express as a^(m-n) and evaluate
             const base = ri(rng, 2, 4), n2 = ri(rng, 1, 2), extra = ri(rng, 1, 2);
             const m2 = n2 + extra;
             const ans = Math.pow(base, extra);
-            return { clue: `${sv} $${base}^${m2} \\div ${base}^${n2}$`, answer: String(ans), answerDisplay: `$${ans}$` };
+            return { clue: `${sv}\n$${base}^${m2} \\div ${base}^${n2}$`, answer: String(ans), answerDisplay: `$${ans}$` };
         }
         // Hard: (a^m)^n = a^(mn)
         const base = ri(rng, 2, 3), m3 = ri(rng, 2, 3), n3 = ri(rng, 2, 3);
         const ans3 = Math.pow(base, m3 * n3);
         if (ans3 > 9999) return null;
-        return { clue: `${sv} $(${base}^${m3})^${n3}$`, answer: String(ans3), answerDisplay: `$${ans3}$` };
+        return { clue: `${sv}\n$(${base}^${m3})^${n3}$`, answer: String(ans3), answerDisplay: `$${ans3}$` };
     }
 
     if (op === 'simultaneous') {
-        const sv = rc(rng, SOLVE_VERBS).replace('$x$', '$x$ and $y$').replace('x', 'x and y');
         const x = ri(rng, 1, 8), y = ri(rng, 1, 8);
         if (diff === 'Easy') {
-            // x + y = a, x - y = b → easy elimination
             const a = x + y, b = x - y;
-            return { clue: `Solve: $x + y = ${a}$ and $x - y = ${b}$`, answer: `x=${x},y=${y}`, answerDisplay: `$x = ${x},\\ y = ${y}$` };
+            return { clue: `Solve:\n$x + y = ${a}$\n$x - y = ${b}$`, answer: `x=${x},y=${y}`, answerDisplay: `$x = ${x},\\ y = ${y}$` };
         }
         if (diff === 'Medium') {
             const c1 = ri(rng, 2, 4);
             const a2 = c1 * x + y, b2 = x + y;
-            return { clue: `Solve: $${c1}x + y = ${a2}$ and $x + y = ${b2}$`, answer: `x=${x},y=${y}`, answerDisplay: `$x = ${x},\\ y = ${y}$` };
+            return { clue: `Solve:\n$${c1}x + y = ${a2}$\n$x + y = ${b2}$`, answer: `x=${x},y=${y}`, answerDisplay: `$x = ${x},\\ y = ${y}$` };
         }
         const c1 = ri(rng, 2, 3), c2 = ri(rng, 2, 3);
         const a3 = c1 * x + c2 * y, b3 = x + c2 * y;
-        return { clue: `Solve: $${c1}x + ${c2}y = ${a3}$ and $x + ${c2}y = ${b3}$`, answer: `x=${x},y=${y}`, answerDisplay: `$x = ${x},\\ y = ${y}$` };
+        return { clue: `Solve:\n$${c1}x + ${c2}y = ${a3}$\n$x + ${c2}y = ${b3}$`, answer: `x=${x},y=${y}`, answerDisplay: `$x = ${x},\\ y = ${y}$` };
     }
 
     if (op === 'surds-simplify') {
         const sv = rc(rng, ['Simplify:', 'Simplify the surd:']);
-        // √(k²n) = k√n
         const k = ri(rng, 2, 5), n = rc(rng, [2, 3, 5, 6, 7]);
         const radicand = k * k * n;
-        return { clue: `${sv} $\\sqrt{${radicand}}$`, answer: `${k}√${n}`, answerDisplay: `$${k}\\sqrt{${n}}$` };
+        return { clue: `${sv}\n$\\sqrt{${radicand}}$`, answer: `${k}√${n}`, answerDisplay: `$${k}\\sqrt{${n}}$` };
     }
 
     if (op === 'surds-operate') {
@@ -1213,11 +1213,10 @@ function _genAlgebraOp(rng, diff, op) {
         const k1 = ri(rng, 1, 4), k2 = ri(rng, 1, 4), n = rc(rng, [2, 3, 5, 6]);
         if (diff === 'Easy') {
             const sum = k1 + k2;
-            return { clue: `${sv} $${k1}\\sqrt{${n}} + ${k2}\\sqrt{${n}}$`, answer: `${sum}√${n}`, answerDisplay: `$${sum}\\sqrt{${n}}$` };
+            return { clue: `${sv}\n$${k1}\\sqrt{${n}} + ${k2}\\sqrt{${n}}$`, answer: `${sum}√${n}`, answerDisplay: `$${sum}\\sqrt{${n}}$` };
         }
-        // Multiply surds: k1√n × k2√n = k1k2n
         const prod = k1 * k2 * n;
-        return { clue: `${sv} $${k1}\\sqrt{${n}} \\times ${k2}\\sqrt{${n}}$`, answer: String(prod), answerDisplay: `$${prod}$` };
+        return { clue: `${sv}\n$${k1}\\sqrt{${n}} \\times ${k2}\\sqrt{${n}}$`, answer: String(prod), answerDisplay: `$${prod}$` };
     }
 
     return null;

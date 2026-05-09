@@ -2359,6 +2359,13 @@ table.mode-cw td.cell.empty {
 }
 /* Same containment fix at the row level so the whole flex chain shrinks. */
 .problem-clue-row { min-width: 0; }
+/* Equation / expression on its own line beneath the question stem */
+.clue-newline {
+    display: block;
+    margin-top: 3px;
+    padding-left: 2px;
+    font-size: 1.05em;
+}
 .problem-working-area {
     display: flex;
     flex-direction: column;
