@@ -373,6 +373,90 @@ function _parabola({ h, k, a }) {
     return _svg(VW, VH, inner);
 }
 
+// ─── Parallelogram ───────────────────────────────────────────────────────────
+// diagram: { type:'parallelogram', base, height, missing:'area'|'perimeter' }
+function _parallelogram({ base, height, missing }) {
+    const VW = 184, VH = 110;
+    const bPx = Math.max(70, Math.min(130, base * 7));
+    const hPx = Math.max(30, Math.min(65, height * 6));
+    const skew = 20; // horizontal offset for the slant
+
+    const x0 = (VW - bPx - skew) / 2;
+    const y0 = (VH - hPx) / 2 - 6;
+
+    // 4 vertices: bottom-left, bottom-right, top-right, top-left
+    const pts = [
+        [x0, y0 + hPx],
+        [x0 + bPx, y0 + hPx],
+        [x0 + bPx + skew, y0],
+        [x0 + skew, y0],
+    ].map(([x, y]) => `${x},${y}`).join(' ');
+
+    const label = missing === 'area' ? 'A = ?' : 'P = ?';
+    const cx = x0 + bPx / 2 + skew / 2;
+    const cy = y0 + hPx / 2 + 5;
+
+    // Dashed height indicator line
+    const hx = x0 + bPx * 0.7;
+    const heightLine =
+        `<line x1="${hx + skew}" y1="${y0}" x2="${hx}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>` +
+        `<line x1="${hx - 4}" y1="${y0 + hPx - 4}" x2="${hx + 4}" y2="${y0 + hPx - 4}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        _t(hx + skew + 10, y0 + hPx / 2 + 4, `h = ${height}`, { anchor: 'start', size: 10 });
+
+    const inner =
+        `<polygon points="${pts}" fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
+        // base label
+        `<line x1="${x0+4}" y1="${y0+hPx+10}" x2="${x0+bPx-4}" y2="${y0+hPx+10}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        _t(x0 + bPx / 2, y0 + hPx + 22, `b = ${base}`) +
+        heightLine +
+        _t(cx, cy, label, { missing: true, size: 13 });
+
+    return _svg(VW, VH, inner);
+}
+
+// ─── Trapezium ────────────────────────────────────────────────────────────────
+// diagram: { type:'trapezium', a, b, height, missing:'area' }
+// a = top (shorter) parallel side, b = bottom (longer) parallel side
+function _trapezium({ a, b, height, missing }) {
+    const VW = 184, VH = 112;
+    const bPx = Math.max(80, Math.min(130, b * 7));
+    const hPx = Math.max(32, Math.min(62, height * 6));
+    const aPx = Math.max(30, Math.min(bPx - 10, a * 7));
+
+    const x0 = (VW - bPx) / 2;
+    const y0 = (VH - hPx) / 2 - 6;
+    const offset = (bPx - aPx) / 2; // indent for top edge
+
+    // 4 vertices: bottom-left, bottom-right, top-right, top-left
+    const pts = [
+        [x0, y0 + hPx],
+        [x0 + bPx, y0 + hPx],
+        [x0 + bPx - offset, y0],
+        [x0 + offset, y0],
+    ].map(([x, y]) => `${x},${y}`).join(' ');
+
+    const cx = x0 + bPx / 2;
+    const cy = y0 + hPx / 2 + 5;
+
+    // Dashed height indicator
+    const hx = x0 + bPx * 0.72;
+    const heightLine =
+        `<line x1="${hx}" y1="${y0}" x2="${hx}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>` +
+        _t(hx + 8, y0 + hPx / 2 + 4, `h = ${height}`, { anchor: 'start', size: 10 });
+
+    const inner =
+        `<polygon points="${pts}" fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
+        // bottom label
+        `<line x1="${x0+4}" y1="${y0+hPx+10}" x2="${x0+bPx-4}" y2="${y0+hPx+10}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        _t(cx, y0 + hPx + 22, `b = ${b}`) +
+        // top label
+        _t(cx, y0 - 6, `a = ${a}`) +
+        heightLine +
+        _t(cx - 15, cy, missing === 'area' ? 'A = ?' : '?', { missing: true, size: 13 });
+
+    return _svg(VW, VH, inner);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 export function renderDiagramSVG(diagram) {
     if (!diagram) return '';
@@ -384,6 +468,8 @@ export function renderDiagramSVG(diagram) {
         case 'circle':              return _circle(diagram);
         case 'right-triangle-trig': return _rightTriangleTrig(diagram);
         case 'parabola':            return _parabola(diagram);
+        case 'parallelogram':       return _parallelogram(diagram);
+        case 'trapezium':           return _trapezium(diagram);
         default: return '';
     }
 }

@@ -111,7 +111,12 @@ function generateAll() {
     saveState();
 
     const total = (sets.easy?.length || 0) + (sets.medium?.length || 0) + (sets.hard?.length || 0);
-    if (total === 0) showToast('No questions generated. Enable at least one operation per topic.', 'warning');
+    if (total === 0) {
+        showToast('No questions generated. Enable at least one operation per topic.', 'warning');
+    } else {
+        const totalFailed = (sets.easy?._failCount || 0) + (sets.medium?._failCount || 0) + (sets.hard?._failCount || 0);
+        if (totalFailed > 5) showToast(`${totalFailed} question slots couldn't be filled — try enabling more operations or topics.`, 'warning');
+    }
 
     _pendingTopicChange = false;
     _updateGenerateButtonState(getActiveTopics().length);

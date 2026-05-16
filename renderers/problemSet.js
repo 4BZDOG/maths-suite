@@ -87,8 +87,8 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
             ? `<div class="problem-diagram">${renderDiagramSVG(item.diagram)}</div>`
             : '';
 
-        // Working lines: Hard = 2, Medium = 1, Easy = 0
-        const workingCount = item.difficulty === 'Hard' ? 2 : item.difficulty === 'Medium' ? 1 : 0;
+        // Working lines: Hard = 3, Medium = 2, Easy = 1
+        const workingCount = item.difficulty === 'Hard' ? 3 : item.difficulty === 'Medium' ? 2 : 1;
         const workingHtml = workingCount > 0
             ? `<div class="problem-working-area">
                 <span class="problem-working-label">Working:</span>

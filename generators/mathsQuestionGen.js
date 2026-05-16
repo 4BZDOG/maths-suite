@@ -209,6 +209,15 @@ function genIntegers(rng, diff, allowedOps) {
         }
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, max);
+        // Easy: 30% chance of a real-world context
+        if (diff === 'Easy' && rng() < 0.3) {
+            const ctx = rc(rng, [
+                { stem: `A shop has $${a}$ apples and receives $${b}$ more. How many apples are there in total?`, ans: a + b },
+                { stem: `A student scores $${a}$ points on Monday and $${b}$ points on Tuesday. What is the total score?`, ans: a + b },
+                { stem: `There are $${a}$ students in class A and $${b}$ students in class B. How many students altogether?`, ans: a + b },
+            ]);
+            return { clue: ctx.stem, answer: String(ctx.ans) };
+        }
         const clue = rc(rng, [
             `${rc(rng, CALC_VERBS)} $${a} + ${b}$`,
             `Find the *sum* of $${a}$ and $${b}$`,
@@ -240,6 +249,16 @@ function genIntegers(rng, diff, allowedOps) {
                 `Find $-${a} - ${b}$`,
             ]);
             return { clue, answer: String(-a - b) };
+        }
+        // Easy: 20% chance of crossing zero (answer is negative) — introduces negatives gently
+        if (diff === 'Easy' && rng() < 0.2) {
+            const a2 = ri(rng, 1, 9), b2 = ri(rng, a2 + 1, a2 + 10);
+            const clue = rc(rng, [
+                `${rc(rng, CALC_VERBS)} $${a2} - ${b2}$`,
+                `What is $${a2} - ${b2}$?`,
+                `Subtract $${b2}$ from $${a2}$`,
+            ]);
+            return { clue, answer: String(a2 - b2) };
         }
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, a);
@@ -459,6 +478,15 @@ function genRounding(rng, diff, allowedOps) {
         if (type === 0) {
             const n = ri(rng, 100, 9999);
             const ans = Math.round(n / 10) * 10;
+            // 30% chance real-world context
+            if (rng() < 0.3) {
+                const ctx = rc(rng, [
+                    `A car park has $${n}$ spaces. Round this to the nearest $10$.`,
+                    `A school has $${n}$ students. Round to the nearest $10$.`,
+                    `A town has a population of $${n}$. Round to the nearest $10$.`,
+                ]);
+                return { clue: ctx, answer: String(ans) };
+            }
             const ph = rc(rng, [
                 `Round $${n}$ to the nearest $10$`,
                 `Write $${n}$ rounded to the nearest $10$`,
@@ -562,6 +590,16 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             const num = ri(rng, 1, den - 1);
             const whole = den * ri(rng, 2, 12);
             const ans = (num * whole) / den;
+            // 35% chance real-world context
+            if (rng() < 0.35) {
+                const ctx = rc(rng, [
+                    `A class has $${whole}$ students. $\\frac{${num}}{${den}}$ of them play sport. How many students play sport?`,
+                    `There are $${whole}$ lollies in a bag. Tom eats $\\frac{${num}}{${den}}$ of them. How many did Tom eat?`,
+                    `A pizza was cut into $${den}$ equal slices. If $${num}$ slice${num > 1 ? 's were' : ' was'} eaten, how many pieces of a $${whole}$-slice order is that?`,
+                    `A farm has $${whole}$ animals. $\\frac{${num}}{${den}}$ are cows. How many cows are there?`,
+                ]);
+                return { clue: ctx, answer: String(ans) };
+            }
             const ph = rc(rng, [
                 `Find $\\frac{${num}}{${den}}$ of $${whole}$`,
                 `Calculate $\\frac{${num}}{${den}}$ of $${whole}$`,
@@ -803,11 +841,13 @@ function _genAlgebraCore(rng, diff, allowedOps) {
     if (diff === 'Medium') {
         if (type === 0) {
             const a = ri(rng, 2, 6), ans = ri(rng, 1, 10), b = ri(rng, 1, 20);
-            return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${a * ans + b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            const worked = `$${a}${v} = ${a * ans + b} - ${b} = ${a * ans}$, so $${v} = ${ans}$`;
+            return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${a * ans + b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked };
         }
         if (type === 1) {
             const a = ri(rng, 2, 6), ans = ri(rng, 2, 10), b = ri(rng, 1, 10);
-            return { clue: `${solveVerb}\n$${a}${v} - ${b} = ${a * ans - b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            const worked = `$${a}${v} = ${a * ans - b} + ${b} = ${a * ans}$, so $${v} = ${ans}$`;
+            return { clue: `${solveVerb}\n$${a}${v} - ${b} = ${a * ans - b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked };
         }
         const [fv, iv] = rc(rng, SUBST_PAIRS);
         const a = ri(rng, 2, 6), b = ri(rng, 1, 12), n = ri(rng, 1, 8);
@@ -1077,8 +1117,37 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
 
     if (diff === 'Easy') {
         if (type === 0) {
+            const shapeForm = ri(rng, 0, 2); // 0=rectangle, 1=parallelogram, 2=trapezium
+            const u = diff === 'Easy' ? 'cm' : rc(rng, ['cm', 'm']);
+            if (shapeForm === 1) {
+                // Parallelogram: area = base × height
+                const base = ri(rng, 3, 12), height = ri(rng, 2, 8);
+                const ans = base * height;
+                const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
+                const pf = fOn ? ' Use $A = b \\times h$.' : '';
+                const ph = rc(rng, [
+                    `Find the *area* of a parallelogram with base $${base}$ ${u} and perpendicular height $${height}$ ${u}.${pf}`,
+                    `A parallelogram has base $${base}$ ${u} and height $${height}$ ${u}. Find its area.${pf}`,
+                    `Calculate the *area* of a parallelogram: base $${base}$ ${u}, height $${height}$ ${u}.${pf}`,
+                ]);
+                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'parallelogram', base, height, missing: 'area' } };
+            }
+            if (shapeForm === 2) {
+                // Trapezium: area = (a + b) × h / 2
+                const a = ri(rng, 2, 8) * 2, bTrap = ri(rng, a / 2 + 2, a + 6), height = ri(rng, 2, 8);
+                const ans = ((a + bTrap) * height) / 2;
+                if (!Number.isInteger(ans)) return _genGeometryCore(rng, diff, allowedOps, opts, _depth + 1);
+                const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
+                const pf = fOn ? ' Use $A = \\frac{1}{2}(a+b)h$.' : '';
+                const ph = rc(rng, [
+                    `Find the *area* of a trapezium with parallel sides $${a}$ ${u} and $${bTrap}$ ${u}, and height $${height}$ ${u}.${pf}`,
+                    `A trapezium has parallel sides of $${a}$ ${u} and $${bTrap}$ ${u} with a perpendicular height of $${height}$ ${u}. Find its area.${pf}`,
+                    `Calculate the *area* of a trapezium: parallel sides $${a}$ ${u} and $${bTrap}$ ${u}, height $${height}$ ${u}.${pf}`,
+                ]);
+                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'trapezium', a, b: bTrap, height, missing: 'area' } };
+            }
+            // shapeForm === 0: rectangle
             const l = ri(rng, 2, 15), w = ri(rng, 2, 12);
-            const u = _geoUnit(Math.max(l, w));
             const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
             const pf = fOn ? ' Use $A = l \\times w$.' : '';
             const ph = rc(rng, [
@@ -1148,7 +1217,8 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `Calculate the *hypotenuse* of a right triangle with legs $${a * scale}$ ${u} and $${b * scale}$ ${u}.${pf}`,
                 `Determine the *hypotenuse* given legs of $${a * scale}$ ${u} and $${b * scale}$ ${u}.${pf}`,
             ]);
-            return { clue: ph, answer: String(c * scale), answerDisplay: `${c * scale} ${u}`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'c' } };
+            const worked = `$${a*scale}^2 + ${b*scale}^2 = ${(a*scale)**2} + ${(b*scale)**2} = ${(c*scale)**2}$, so $c = ${c*scale}$ ${u}`;
+            return { clue: ph, answer: String(c * scale), answerDisplay: `${c * scale} ${u}`, worked, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'c' } };
         }
         if (type === 3) {
             // Co-interior (same-side interior) angles on parallel lines — sum to 180°
@@ -1202,7 +1272,8 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Calculate the **missing** leg: hypotenuse $${c * scale}$ ${u}, known leg $${a * scale}$ ${u}.${pf}`,
             `Determine the **unknown** side of a right triangle with hypotenuse $${c * scale}$ ${u} and leg $${a * scale}$ ${u}.${pf}`,
         ]);
-        return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'b' } };
+        const worked2 = `$${c*scale}^2 - ${a*scale}^2 = ${(c*scale)**2} - ${(a*scale)**2} = ${(b*scale)**2}$, so $b = ${b*scale}$ ${u}`;
+        return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}`, worked: worked2, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'b' } };
     }
     if (type === 3) {
         // Co-interior angles — parallel lines, harder context
@@ -2059,11 +2130,14 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
             clue: q.clue || '',
             answer: ans,
             answerDisplay: q.answerDisplay || ans,
-            notes: st,    // store sub-topic in notes for reference
+            notes: st,
             diagram: q.diagram || null,
+            worked: q.worked || null,
         });
     }
 
+    results._requested = count;
+    results._failCount = count - results.length;
     return results;
 }
 
