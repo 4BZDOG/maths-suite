@@ -209,24 +209,33 @@ function generateCW(wordList, seedIndex) {
 
 // ---- Scramble ------------------------------------------------
 
+// Returns true when a word is suitable for scrambling: pure letters only.
+// Math answers containing digits, operators, or brackets are excluded
+// because scrambling them produces meaningless notation.
+function _isScramblable(word) {
+    return /^[A-Za-z\s]+$/.test(word) && word.trim().length > 1;
+}
+
 function generateScramble(wordList) {
-    return wordList.map(w => {
-        let arr = w.word.split('');
-        let tries = 0, scrambled;
-        do {
-            for (let i = arr.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [arr[i], arr[j]] = [arr[j], arr[i]];
-            }
-            scrambled = arr.join('');
-            tries++;
-        } while (
-            (scrambled === w.word || PROFANITY.some(bw => scrambled.includes(bw))) &&
-            tries < 50 &&
-            w.word.length > 1
-        );
-        return { original: w.word, scrambled };
-    });
+    return wordList
+        .filter(w => _isScramblable(w.word))
+        .map(w => {
+            let arr = w.word.split('');
+            let tries = 0, scrambled;
+            do {
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                scrambled = arr.join('');
+                tries++;
+            } while (
+                (scrambled === w.word || PROFANITY.some(bw => scrambled.includes(bw))) &&
+                tries < 50 &&
+                w.word.length > 1
+            );
+            return { original: w.word, scrambled };
+        });
 }
 
 // ---- Message handler -----------------------------------------

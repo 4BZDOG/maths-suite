@@ -89,7 +89,13 @@ function generateAll() {
 
     // Always generate enough questions to fill the selected number of pages
     const GENERATE_COUNT = 30;
-    const seed = Date.now() + (state.settings.exportCount || 0) * 1_000_000;
+    const seedInput = document.getElementById('seed-input');
+    const lockedSeed = seedInput && seedInput.value.trim() !== '' ? parseInt(seedInput.value, 10) : null;
+    const seed = lockedSeed != null && !isNaN(lockedSeed)
+        ? lockedSeed
+        : Date.now() + (state.settings.exportCount || 0) * 1_000_000;
+    // Always write the used seed back so teachers can note it
+    if (seedInput) seedInput.value = seed;
 
     // Build sub-ops filter: only include topics where user has narrowed selection
     const subOpsFilter = Object.keys(state.selectedSubOps).length > 0 ? state.selectedSubOps : null;
@@ -1019,6 +1025,20 @@ function toggleFormulaHintColumn(diff) {
     setAllFormulaHints(diff, anyUnchecked);
 }
 
+// Seed input: clear it so next Generate picks a fresh auto-seed
+function syncSeedInput() {
+    // nothing to sync — value is read live in generateAll(); this exists for oninput
+}
+
+function copySeedToClipboard() {
+    const el = document.getElementById('seed-input');
+    const val = el && el.value.trim();
+    if (!val) { showToast('Generate questions first to get a seed.', 'info'); return; }
+    navigator.clipboard?.writeText(val)
+        .then(() => showToast(`Seed ${val} copied to clipboard.`, 'success'))
+        .catch(() => showToast(`Seed: ${val}`, 'info'));
+}
+
 // =============================================================
 // Expose public API on window
 // =============================================================
@@ -1077,6 +1097,8 @@ window._puzzleApp = {
     _handleUpgradeClick,
     setAllFormulaHints,
     toggleFormulaHintColumn,
+    syncSeedInput,
+    copySeedToClipboard,
 };
 
 Object.assign(window, window._puzzleApp);

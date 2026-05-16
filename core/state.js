@@ -23,6 +23,8 @@ export const state = {
         'Financial Maths': false,
         'Trigonometry': true,
         'Non-linear Relationships': true,
+        'Probability': true,
+        'Ratios & Rates': true,
     },
 
     // Granular sub-operation selection per topic (null entry or missing = all enabled)

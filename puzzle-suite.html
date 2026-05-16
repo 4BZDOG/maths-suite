@@ -107,6 +107,16 @@
                     <i class="fas fa-bolt"></i> Regenerate
                 </button>
 
+                <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
+                    <label for="seed-input" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);white-space:nowrap;">Seed:</label>
+                    <input id="seed-input" type="number" placeholder="auto" title="Enter a seed to reproduce this question set exactly"
+                        style="flex:1;font-size:11px;padding:3px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;background:var(--bg-page);color:var(--text-base);min-width:0;"
+                        oninput="syncSeedInput()" />
+                    <button class="btn-icon" onclick="copySeedToClipboard()" title="Copy seed" style="padding:3px 6px;font-size:11px;flex-shrink:0;">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+
                 <div class="status-row" style="margin-top:12px;">
                     <div id="status-icon" class="status-icon icon-warning"><i class="fas fa-exclamation"></i></div>
                     <span id="placed-count" style="font-size:12px; color:var(--text-muted);">0 questions</span>
@@ -495,7 +505,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=124"></script>
+    <script src="bundle.js?v=125"></script>
 </body>
 
 </html>
