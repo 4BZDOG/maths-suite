@@ -2089,12 +2089,14 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
 
     const results = [];
     let attempts = 0;
+    let planIdx = 0;
     const maxAttempts = count * 20;
 
     while (results.length < count && attempts < maxAttempts) {
         attempts++;
-        // Use the pre-planned topic for this slot; fall back to random if exhausted
-        const st = topicPlan[results.length] ?? rc(rng, subtopics);
+        // Advance planIdx on every attempt so a failing topic doesn't block the whole run
+        const st = topicPlan[planIdx % topicPlan.length];
+        planIdx++;
         const diff = rc(rng, diffs);
         const gen = GENERATORS[st];
         if (!gen) continue;
@@ -2121,8 +2123,9 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
         if (!q) continue;
 
         const ans = String(q.answer);
-        // Skip empty, over-length, or numerically invalid answers (limit raised to 20 for algebraic/Stage 5 answers)
-        if (!ans || ans.length > 20 || ans === 'NaN' || ans === 'Infinity' || ans === '-Infinity') continue;
+        // Skip empty, NaN, or numerically invalid answers; use answerDisplay length for the cap
+        const displayLen = String(q.answerDisplay || ans).length;
+        if (!ans || displayLen > 60 || ans === 'NaN' || ans === 'Infinity' || ans === '-Infinity') continue;
 
         // Prevent duplicate questions
         if (results.some(r => r.clue === q.clue)) continue;
