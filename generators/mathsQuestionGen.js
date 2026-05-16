@@ -187,7 +187,7 @@ function _pickType(rng, filtered, max) {
 // ============================================================
 function genIntegers(rng, diff, allowedOps) {
     const OP_MAP = { '+': 'add', '-': 'subtract', '×': 'multiply', '÷': 'divide', 'bodmas': 'bodmas' };
-    let pool = diff === 'Easy' ? ['+', '-', '×'] : diff === 'Hard' ? ['+', '-', '×', '÷', 'bodmas'] : ['+', '-', '×', '÷'];
+    let pool = diff === 'Easy' ? ['+', '-', '×'] : ['+', '-', '×', '÷', 'bodmas'];
     if (allowedOps) pool = pool.filter(op => allowedOps.includes(OP_MAP[op]));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
@@ -197,6 +197,19 @@ function genIntegers(rng, diff, allowedOps) {
         if (diff !== 'Easy' && rng() < 0.4) {
             const lim = diff === 'Medium' ? 40 : 150;
             const a = ri(rng, 2, lim), b = ri(rng, 2, lim);
+            const negA = rng() < 0.5;
+            const [aa, bb] = negA ? [-a, b] : [a, -b];
+            const expr = negA ? `${aa} + ${bb}` : `${aa} + (${bb})`;
+            const clue = rc(rng, [
+                `${rc(rng, CALC_VERBS)} $${expr}$`,
+                `What is $${expr}$?`,
+                `Find the value of $${expr}$`,
+            ]);
+            return { clue, answer: String(aa + bb) };
+        }
+        // Easy: 25% chance of simple negative-integer addition (e.g. −3 + 7, 5 + (−2))
+        if (diff === 'Easy' && rng() < 0.25) {
+            const a = ri(rng, 1, 12), b = ri(rng, 1, 12);
             const negA = rng() < 0.5;
             const [aa, bb] = negA ? [-a, b] : [a, -b];
             const expr = negA ? `${aa} + ${bb}` : `${aa} + (${bb})`;
@@ -300,6 +313,15 @@ function genIntegers(rng, diff, allowedOps) {
             ]);
             return { clue, answer: String(a * b) };
         }
+        // Easy: 20% chance of negative × positive (e.g. (−3) × 4)
+        if (diff === 'Easy' && rng() < 0.2) {
+            const clue = rc(rng, [
+                `${rc(rng, MULT_VERBS)} $(-${a}) \\times ${b}$`,
+                `Multiply $-${a}$ by $${b}$`,
+                `What is $(-${a}) \\times ${b}$?`,
+            ]);
+            return { clue, answer: String(-a * b) };
+        }
         const clue = rc(rng, [
             `${rc(rng, MULT_VERBS)} $${a} \\times ${b}$`,
             `Multiply $${a}$ by $${b}$`,
@@ -330,8 +352,12 @@ function genIntegers(rng, diff, allowedOps) {
         return { clue, answer: String(ans) };
     }
     if (op === 'bodmas') {
-        const form = ri(rng, 0, 6);
         const verb = rc(rng, BODMAS_VERBS);
+        // Medium: forms 0–4 (mixed ops and brackets, no exponents — Stage 4 core)
+        // Hard: forms 0–10 (all including exponents and nested brackets)
+        const maxForm = diff === 'Medium' ? 4 : 10;
+        const form = ri(rng, 0, maxForm);
+
         if (form === 0) {
             const a = ri(rng, 3, 25), b = ri(rng, 3, 15), c = ri(rng, 3, 15);
             return { clue: `${verb}\n$${a} + ${b} \\times ${c}$`, answer: String(a + b * c) };
@@ -353,15 +379,35 @@ function genIntegers(rng, diff, allowedOps) {
             const a = ri(rng, 3, 20), b = ri(rng, 2, 10), c = ri(rng, 2, 8);
             return { clue: `${verb}\n$${a} - ${b} \\times ${c}$`, answer: String(a - b * c) };
         }
+        // Hard-only forms — exponents and nested brackets
         if (form === 5) {
-            // exponent + addition: a² + b
+            // a^n + b  (n = 2 or 3)
             const base = ri(rng, 2, 7), exp = ri(rng, 2, 3), add = ri(rng, 2, 20);
-            const pow = Math.pow(base, exp);
-            return { clue: `${verb}\n$${base}^{${exp}} + ${add}$`, answer: String(pow + add) };
+            return { clue: `${verb}\n$${base}^{${exp}} + ${add}$`, answer: String(base ** exp + add) };
         }
-        // form === 6: squared bracket — (a + b)²
-        const a = ri(rng, 2, 8), b = ri(rng, 2, 8);
-        return { clue: `${verb}\n$(${a} + ${b})^2$`, answer: String((a + b) ** 2) };
+        if (form === 6) {
+            // (a + b)^2
+            const a = ri(rng, 2, 8), b = ri(rng, 2, 8);
+            return { clue: `${verb}\n$(${a} + ${b})^2$`, answer: String((a + b) ** 2) };
+        }
+        if (form === 7) {
+            // (a − b)^2
+            const b = ri(rng, 1, 7), a = ri(rng, b + 1, b + 8);
+            return { clue: `${verb}\n$(${a} - ${b})^2$`, answer: String((a - b) ** 2) };
+        }
+        if (form === 8) {
+            // a^2 + b × c
+            const a = ri(rng, 2, 9), b = ri(rng, 2, 8), c = ri(rng, 2, 7);
+            return { clue: `${verb}\n$${a}^2 + ${b} \\times ${c}$`, answer: String(a ** 2 + b * c) };
+        }
+        if (form === 9) {
+            // a × (b^2 − c)  where b^2 > c
+            const b = ri(rng, 3, 7), c = ri(rng, 1, b * b - 2), a = ri(rng, 2, 8);
+            return { clue: `${verb}\n$${a} \\times (${b}^2 - ${c})$`, answer: String(a * (b ** 2 - c)) };
+        }
+        // form === 10: (a + b)^2 − c × d
+        const a = ri(rng, 2, 6), b = ri(rng, 2, 6), c = ri(rng, 2, 5), d = ri(rng, 2, 5);
+        return { clue: `${verb}\n$(${a} + ${b})^2 - ${c} \\times ${d}$`, answer: String((a + b) ** 2 - c * d) };
     }
 }
 
