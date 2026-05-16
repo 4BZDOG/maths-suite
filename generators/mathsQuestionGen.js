@@ -1021,7 +1021,8 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `Find the *simple interest* earned on $\\$${P}$ invested at $${r}\\%$ per year for ${yrs}.${pf}`,
                 `Determine the interest on $\\$${P}$ at $${r}\\%$ p.a. for ${yrs}.${pf}`,
             ]);
-            return { clue: ph, answer: String(I), answerDisplay: `$${I}` };
+            const worked = `$I = Prn = ${P} \\times \\frac{${r}}{100} \\times ${t} = \\$${I}$`;
+            return { clue: ph, answer: String(I), answerDisplay: `$${I}`, worked };
         }
         const price = ri(rng, 5, 50) * 10;
         const ph = rc(rng, [
@@ -1054,7 +1055,8 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Find the *simple interest* earned on a $\\$${P}$ investment at $${r}\\%$ p.a. over $${t}$ years.${pf}`,
             `Determine the interest on $\\$${P}$ at $${r}\\%$ per annum for $${t}$ years.${pf}`,
         ]);
-        return { clue: ph, answer: String(I), answerDisplay: `$${I}` };
+        const workedSI = `$I = Prn = ${P} \\times \\frac{${r}}{100} \\times ${t} = \\$${I}$`;
+        return { clue: ph, answer: String(I), answerDisplay: `$${I}`, worked: workedSI };
     }
     // Hard
     if (type === 0) {
@@ -1258,7 +1260,8 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Calculate the *area* of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
             `Determine the *area* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
         ]);
-        return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'circle', r, missing: 'area' } };
+        const workedCircA = `$A = \\pi r^2 \\approx 3.14 \\times ${r}^2 = 3.14 \\times ${r*r} = ${ans}$ ${u}²`;
+        return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, worked: workedCircA, diagram: { type: 'circle', r, missing: 'area' } };
     }
     if (type === 1) {
         const triples = [[3, 4, 5], [5, 12, 13], [8, 15, 17]];
@@ -1315,7 +1318,8 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         `Calculate the *circumference* of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
         `Determine the *circumference* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
     ]);
-    return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, diagram: { type: 'circle', r, missing: 'circumference' } };
+    const workedCircC = `$C = 2\\pi r \\approx 2 \\times 3.14 \\times ${r} = ${ans}$ ${u}`;
+    return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, worked: workedCircC, diagram: { type: 'circle', r, missing: 'circumference' } };
 }
 
 // ============================================================

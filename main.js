@@ -665,6 +665,10 @@ function renderOutcomes() {
                 title="Filter generation to this outcome"
                 ${isSelected ? 'checked' : ''}
                 onchange="toggleOutcomeFilter('${o.code}', this.checked)">`;
+            const focusBtn = o.appliesAll ? '' : `<button
+                class="outcome-focus-btn"
+                title="Focus: enable only topics for ${o.code}"
+                onclick="focusOutcome('${o.code}')"><i class="fas fa-crosshairs"></i></button>`;
             return `<div class="${cls}">
                 ${chkHtml}
                 <span class="outcome-code-pill">${o.code}</span>
@@ -672,6 +676,7 @@ function renderOutcomes() {
                     <div class="outcome-content-label">${o.contentLabel}</div>
                     <div class="outcome-statement">${o.statement}</div>
                 </div>
+                ${focusBtn}
             </div>`;
         }).join('');
         
@@ -683,6 +688,32 @@ function toggleOutcomeFilter(code, checked) {
     state.selectedOutcomes[code] = checked;
     renderOutcomes();
     updateTopicCount();
+    debouncedGenerate();
+    saveState();
+}
+
+/**
+ * "Focus" a single outcome code: enable only the topics that map to it,
+ * disable all others, and clear any existing outcome filter.
+ */
+function focusOutcome(code) {
+    const matchingTopics = getTopicsForOutcomeCodes([code], state.stage);
+    if (matchingTopics.length === 0) {
+        showToast(`No topics found for ${code} at ${state.stage}`, 'warning');
+        return;
+    }
+    // Enable matching topics, disable all others
+    ALL_SUBTOPICS.forEach(t => {
+        state.selectedTopics[t] = matchingTopics.includes(t);
+        const el = document.getElementById('topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, ''));
+        if (el) el.checked = state.selectedTopics[t];
+    });
+    // Clear outcome filter so the focus is purely topic-driven
+    Object.keys(state.selectedOutcomes).forEach(k => { state.selectedOutcomes[k] = false; });
+    _updateAllParentCheckboxes();
+    updateTopicCount();
+    renderOutcomes();
+    showToast(`Topics filtered to ${code} — ${matchingTopics.join(', ')}`, 'success');
     debouncedGenerate();
     saveState();
 }
@@ -1078,6 +1109,7 @@ window._puzzleApp = {
     updateOpacity,
     clearWatermark,
     toggleOutcomeFilter,
+    focusOutcome,
     clearOutcomeFilter,
     hardReset: () => hardReset(),
     undo: () => undo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),

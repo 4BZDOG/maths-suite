@@ -7,8 +7,10 @@ import { renderDiagramSVG } from './diagramSVG.js';
 const TOPIC_COLOURS = {
     'Number': '#3b82f6', 'Algebra': '#8b5cf6', 'Geometry': '#10b981',
     'Statistics': '#f59e0b', 'Financial Maths': '#ef4444',
+    'Trigonometry': '#06b6d4', 'Probability': '#a855f7',
     'Integers': '#3b82f6', 'Decimals': '#3b82f6', 'Rounding': '#3b82f6',
     'Fractions': '#3b82f6', 'Percentages': '#3b82f6',
+    'Ratios & Rates': '#0ea5e9',
 };
 
 export function renderProblemSet(container, questions, settings, difficultyLabel) {

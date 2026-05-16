@@ -311,6 +311,7 @@ export function applyStateToDOM(s) {
     setChk('psShowTopic',           cfg.showTopic);
     setChk('psShowOutcomesHeader',  cfg.psShowOutcomesHeader);
     setChk('psShowOutcomeChips',    cfg.psShowOutcomeChips);
+    setChk('keyShowWorked',         cfg.keyShowWorked);
     setChk('psShowDiagrams',        cfg.showDiagrams);
     setVal('psCols',                cfg.cols);
 

@@ -2807,6 +2807,24 @@ table.mode-cw td.cell.empty {
 }
 .outcome-row:hover { background: rgba(99,102,241,0.06); }
 
+/* Outcome focus button — shown on hover */
+.outcome-focus-btn {
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 2px 5px;
+    font-size: 10px;
+    border: 1px solid rgba(99,102,241,0.3);
+    border-radius: 4px;
+    background: transparent;
+    color: #6366f1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+}
+.outcome-row:hover .outcome-focus-btn { opacity: 1; }
+[data-theme="dark"] .outcome-focus-btn { color: #a5b4fc; border-color: rgba(165,180,252,0.3); }
+
 /* Outcome filter checkbox */
 .outcome-filter-chk {
     flex-shrink: 0;
