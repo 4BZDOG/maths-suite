@@ -32,15 +32,6 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         return 0;
     }
 
-    // Difficulty section header — icons match the page nav buttons (seedling/bolt/fire)
-    const iconCls  = difficultyLabel === 'Easy' ? 'fa-seedling' : difficultyLabel === 'Medium' ? 'fa-bolt' : 'fa-fire';
-    const iconClr  = difficultyLabel === 'Easy' ? '#10b981'     : difficultyLabel === 'Medium' ? '#f59e0b'  : '#ef4444';
-    const diffHeaderHtml = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;margin-top:16px;padding-top:12px;border-top:2px solid var(--border,#e2e8f0);">
-        <i class="fas ${iconCls}" style="color:${iconClr};font-size:13px;"></i>
-        <span style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:${iconClr};">${difficultyLabel}</span>
-        <span style="flex:1;height:1px;background:var(--border,#e2e8f0);"></span>
-    </div>`;
-
     // Optional outcomes header — compact strip of NESA outcome pills
     let outcomesHeaderHtml = '';
     if (showOutcomesHeader && activeTopics.length > 0) {
@@ -57,7 +48,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         }
     }
 
-    let html = diffHeaderHtml + outcomesHeaderHtml + `<div class="problem-set-grid" data-cols="${cols}">`;
+    let html = outcomesHeaderHtml + `<div class="problem-set-grid" data-cols="${cols}">`;
 
     questions.forEach((item, i) => {
         const topicColor = TOPIC_COLOURS[item.topic] || '#64748b';
