@@ -92,12 +92,18 @@ function generateAll() {
     // Always generate enough questions to fill the selected number of pages
     const GENERATE_COUNT = 30;
     const seedInput = document.getElementById('seed-input');
-    const lockedSeed = seedInput && seedInput.value.trim() !== '' ? parseInt(seedInput.value, 10) : null;
+    // Only treat the seed as locked when the user typed it themselves —
+    // not when we auto-filled it after the previous Generate. Otherwise
+    // Regenerate would reuse the same seed and produce identical questions.
+    const userTyped = seedInput && seedInput.dataset.auto !== 'true' && seedInput.value.trim() !== '';
+    const lockedSeed = userTyped ? parseInt(seedInput.value, 10) : null;
     const seed = lockedSeed != null && !isNaN(lockedSeed)
         ? lockedSeed
         : Date.now() + (state.settings.exportCount || 0) * 1_000_000;
-    // Always write the used seed back so teachers can note it
-    if (seedInput) seedInput.value = seed;
+    if (seedInput) {
+        seedInput.value = seed;
+        seedInput.dataset.auto = 'true';
+    }
 
     // Build sub-ops filter: only include topics where user has narrowed selection
     const subOpsFilter = Object.keys(state.selectedSubOps).length > 0 ? state.selectedSubOps : null;
@@ -1063,9 +1069,11 @@ function toggleFormulaHintColumn(diff) {
     setAllFormulaHints(diff, anyUnchecked);
 }
 
-// Seed input: clear it so next Generate picks a fresh auto-seed
+// Seed input: clear the auto-fill marker so the next Generate respects the
+// user-typed value (locked seed) instead of treating it as a stale auto-fill.
 function syncSeedInput() {
-    // nothing to sync — value is read live in generateAll(); this exists for oninput
+    const el = document.getElementById('seed-input');
+    if (el) el.dataset.auto = 'false';
 }
 
 function copySeedToClipboard() {

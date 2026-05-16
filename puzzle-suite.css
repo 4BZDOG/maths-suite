@@ -2303,36 +2303,6 @@ table.mode-cw td.cell.empty {
     margin-left: 4px;
 }
 
-/* Student identity header (Name / Class / Date) */
-.problem-student-header {
-    display: flex;
-    gap: 16px;
-    margin-bottom: 8px;
-    padding: 5px 2px;
-    border-bottom: 1px solid var(--border, #e2e8f0);
-}
-.problem-student-field {
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
-    flex: 1;
-}
-.problem-student-field:first-child { flex: 2; }
-.problem-student-label {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-    color: var(--text-muted, #94a3b8);
-    white-space: nowrap;
-}
-.problem-student-line {
-    flex: 1;
-    border-bottom: 1px solid var(--text-muted, #94a3b8);
-    min-width: 60px;
-}
-.problem-student-line--short { min-width: 40px; }
-
 /* Problem Set page preview — CSS multi-column flow auto-balances column heights
    so a tall card (e.g. one with a geometry diagram) no longer leaves a large gap
    in the adjacent column. `break-inside: avoid` keeps each card intact. */
@@ -2438,6 +2408,13 @@ table.mode-cw td.cell.empty {
     height: 22px;
     border-bottom: 2px solid #cbd5e1;
     min-width: 60px;
+}
+.problem-answer-unit {
+    font-size: calc(0.75rem * var(--global-font-scale) * var(--page-scale));
+    font-weight: 600;
+    color: #64748b;
+    flex-shrink: 0;
+    font-family: 'Inter', sans-serif;
 }
 /* Geometry diagram — shown between question clue and working lines */
 .problem-diagram {
@@ -3091,7 +3068,32 @@ table.mode-cw td.cell.empty {
 
 .page-header-right {
     text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+    min-width: 180px;
+    flex-shrink: 0;
 }
+.page-header-right > div {
+    font-size: 11px;
+    color: var(--text-muted, #94a3b8);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    white-space: nowrap;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+}
+.hdr-line {
+    display: inline-block;
+    border-bottom: 1px solid currentColor;
+    width: 70px;
+    height: 0;
+    opacity: .55;
+}
+.hdr-line--wide { width: 140px; }
 
 .p-area {
     flex: 1;

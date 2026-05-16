@@ -530,6 +530,30 @@ function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, line
                 doc.setFont(pdfFont, style);  // re-apply after Y advance
                 doc.setTextColor(...drawColor);
             }
+            // Long token (e.g. "1/2(a+b)h." after LaTeX conversion) wider than
+            // the column — break it character-by-character so it wraps instead
+            // of overflowing into the adjacent column.
+            if (tw > maxW + 0.5) {
+                let buf = '';
+                for (const ch of token) {
+                    const next = buf + ch;
+                    if (curX + doc.getTextWidth(next) > x + maxW + 0.5 && buf) {
+                        doc.text(buf, curX, curY);
+                        curY += lineH;
+                        curX  = x;
+                        doc.setFont(pdfFont, style);
+                        doc.setTextColor(...drawColor);
+                        buf = ch;
+                    } else {
+                        buf = next;
+                    }
+                }
+                if (buf) {
+                    doc.text(buf, curX, curY);
+                    curX += doc.getTextWidth(buf);
+                }
+                continue;
+            }
             doc.text(token, curX, curY);
             curX += tw;
         }
@@ -569,7 +593,6 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
     const cfg = state.settings;
     const cols               = cfg.cols || 2;
     const showTopic          = cfg.showTopic || false;
-    const showStudentHeader  = cfg.psShowStudentHeader !== false;   // default true
     const showOutcomeChips   = cfg.psShowOutcomeChips || false;
     const showOutcomesHeader = cfg.psShowOutcomesHeader || false;
     const capPages           = cfg.psCapPages || 0;
@@ -593,36 +616,6 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
     // Items are dropped into whichever column is currently shorter, which
     // balances height when one column has a tall item (e.g. a diagram).
     let colY = [startY, startY];
-
-    // Optional student-identity header (Name / Class / Date)
-    if (showStudentHeader) {
-        const sh_h = 6 * pScale;
-        const sh_pad = 1.5 * pScale;
-        const sh_y = cy;
-        doc.setFont(pdfFont, 'bold');
-        doc.setFontSize(6 * pScale);
-        doc.setTextColor(100, 116, 139);
-        const labelBaseline = sh_y + sh_h / 2 + 1.8 * pScale;
-        // Three fields: Name (wider) + Class + Date, sharing the row width
-        const totalW = availW;
-        const nameW = totalW * 0.5;
-        const classW = totalW * 0.25;
-        const dateW = totalW * 0.25;
-        let fx = MARGIN;
-        const drawField = (label, fieldW) => {
-            doc.text(label, fx, labelBaseline);
-            const labelW = doc.getTextWidth(label) + sh_pad;
-            doc.setDrawColor(148, 163, 184);
-            doc.setLineWidth(0.3);
-            doc.line(fx + labelW, labelBaseline + 0.5, fx + fieldW - sh_pad, labelBaseline + 0.5);
-            fx += fieldW;
-        };
-        drawField('NAME:', nameW);
-        drawField('CLASS:', classW);
-        drawField('DATE:', dateW);
-        cy += sh_h + 1.5 * pScale;
-        colY = [cy, cy];
-    }
 
     // Optional outcomes header strip
     if (showOutcomesHeader) {
@@ -805,11 +798,17 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         doc.setFont(pdfFont, 'normal');
         doc.setFontSize(8 * pScale);
         doc.setTextColor(100, 116, 139);
+        // Easy difficulty: show the expected unit after the answer line so
+        // students know whether to write cm² / m / ° / etc. Hard/Medium
+        // omit the hint — students are expected to include the unit.
+        const showUnitHint = item.unit && item.difficulty === 'Easy';
+        const unitText  = showUnitHint ? ` ${latexToText(item.unit)}` : '';
+        const unitW     = unitText ? doc.getTextWidth(unitText) + 1 : 0;
         // Right edge of the line is the column edge; label sits to the
         // left of a fixed-length track so teachers can scan answers in a
         // consistent vertical "rail" down the page.
-        const rightEdge   = itemX + colW - 4;
-        const trackLength = Math.min(46 * pScale, colW - 26);
+        const rightEdge   = itemX + colW - 4 - unitW;
+        const trackLength = Math.min(46 * pScale, colW - 26 - unitW);
         const trackStart  = rightEdge - trackLength;
         doc.text('Answer:', trackStart - 2, lineY, { align: 'right' });
         doc.setDrawColor(150, 160, 180);
@@ -817,6 +816,12 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         doc.setLineDashPattern([0.8, 1.2], 0);
         doc.line(trackStart, lineY, rightEdge, lineY);
         doc.setLineDashPattern([], 0);
+        if (showUnitHint) {
+            doc.setFont(pdfFont, 'bold');
+            doc.setFontSize(8 * pScale);
+            doc.setTextColor(100, 116, 139);
+            doc.text(unitText.trim(), rightEdge + 1.5, lineY);
+        }
         nextY = lineY + SECTION_PAD;
 
         // ── Meta row: topic pill + outcome chips, centered in column ──
@@ -1078,24 +1083,21 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             ky += blockH + 1.4 * pScale;
         });
 
-        // Per-section score: small "___ / N" anchored to top of the footer band.
-        // Section row sits ABOVE the centered TOTAL row to avoid overlap when a
-        // middle column would collide with the page-centered total.
+        // Per-section score sits directly under the last question in this
+        // column so each "/ N" reads as the marker for the column above it.
+        // Clamp so it can't collide with the centered TOTAL row at the very
+        // bottom of the page.
         const secTotal     = sec.questions.length;
-        const sectionRowY  = PAGE_HEIGHT - MARGIN - 11 * pScale;
         const scoreFontPt  = 7   * pScale;
         const scoreBlankW  = 14  * pScale;
+        const maxScoreY    = PAGE_HEIGHT - MARGIN - 9 * pScale;
+        const sectionRowY  = Math.min(ky + 3 * pScale, maxScoreY);
         doc.setDrawColor(...sec.rgb); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5, 1], 0);
         doc.line(cx, sectionRowY, cx + scoreBlankW, sectionRowY);
         doc.setLineDashPattern([], 0);
         doc.setFont(pdfFont, 'bold'); doc.setFontSize(scoreFontPt); doc.setTextColor(...sec.rgb);
         doc.text(`/ ${secTotal}`, cx + scoreBlankW + 2, sectionRowY);
     });
-
-    // Thin divider between section rail and total row
-    const dividerY = PAGE_HEIGHT - MARGIN - 8 * pScale;
-    doc.setDrawColor(220, 225, 235); doc.setLineWidth(0.3);
-    doc.line(MARGIN, dividerY, PAGE_WIDTH - MARGIN, dividerY);
 
     // Overall total: "TOTAL: ___ / N = ___ %", right-aligned to the page edge
     const totalQ = sections.reduce((s, sec) => s + sec.questions.length, 0);

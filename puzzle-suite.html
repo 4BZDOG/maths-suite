@@ -109,8 +109,9 @@
 
                 <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
                     <label for="seed-input" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);white-space:nowrap;">Seed:</label>
-                    <input id="seed-input" type="number" placeholder="auto" title="Enter a seed to reproduce this question set exactly"
+                    <input id="seed-input" type="number" placeholder="auto" title="Enter a seed to reproduce this question set exactly, or leave blank for a fresh seed each time"
                         style="flex:1;font-size:11px;padding:3px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;background:var(--bg-page);color:var(--text-base);min-width:0;"
+                        data-auto="true"
                         oninput="syncSeedInput()" />
                     <button class="btn-icon" onclick="copySeedToClipboard()" title="Copy seed" style="padding:3px 6px;font-size:11px;flex-shrink:0;">
                         <i class="fas fa-copy"></i>
@@ -308,10 +309,6 @@
                                     type="checkbox" id="psShowTopic" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
                         <hr class="form-divider">
-                        <div class="toggle-row"><label title="Show Name / Class / Date row above the question grid"><i class="fas fa-user-edit toggle-icon"></i>Name / Class / Date Row</label><label class="switch"><input
-                                    type="checkbox" id="psShowStudentHeader" checked onchange="renderActivePage(); saveState();"><span
-                                    class="slider-switch"></span></label></div>
-                        <hr class="form-divider">
                         <div class="toggle-row"><label title="Show relevant NESA outcome codes and descriptions at the top of the Answer Key"><i class="fas fa-clipboard-list toggle-icon"></i>Outcomes Header</label><label class="switch"><input
                                     type="checkbox" id="psShowOutcomesHeader" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
@@ -430,8 +427,8 @@
                             <div class="disp-sub" style="font-size: calc(1rem * var(--title-scale)); color:var(--text-muted);">Stage 4 Review</div>
                         </div>
                         <div class="page-header-right">
-                            <div style="font-size:11px; color:var(--text-muted);">NAME: ___________________</div>
-                            <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">CLASS: ___________ DATE: __________</div>
+                            <div><span>Name:</span><span class="hdr-line hdr-line--wide"></span></div>
+                            <div><span>Class:</span><span class="hdr-line"></span><span style="margin-left:10px;">Date:</span><span class="hdr-line"></span></div>
                         </div>
                     </div>
                     <div class="page-instruction" id="p1-instruction"><i class="fas fa-seedling" style="color:#10b981;margin-right:6px;"></i>EASY — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.</div>
@@ -449,8 +446,8 @@
                             <div class="disp-sub" style="font-size: calc(1rem * var(--title-scale)); color:var(--text-muted);">Stage 4 Review</div>
                         </div>
                         <div class="page-header-right">
-                            <div style="font-size:11px; color:var(--text-muted);">NAME: ___________________</div>
-                            <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">CLASS: ___________ DATE: __________</div>
+                            <div><span>Name:</span><span class="hdr-line hdr-line--wide"></span></div>
+                            <div><span>Class:</span><span class="hdr-line"></span><span style="margin-left:10px;">Date:</span><span class="hdr-line"></span></div>
                         </div>
                     </div>
                     <div class="page-instruction" id="p2-instruction"><i class="fas fa-bolt" style="color:#f59e0b;margin-right:6px;"></i>MEDIUM — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.</div>
@@ -468,8 +465,8 @@
                             <div class="disp-sub" style="font-size: calc(1rem * var(--title-scale)); color:var(--text-muted);">Stage 4 Review</div>
                         </div>
                         <div class="page-header-right">
-                            <div style="font-size:11px; color:var(--text-muted);">NAME: ___________________</div>
-                            <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">CLASS: ___________ DATE: __________</div>
+                            <div><span>Name:</span><span class="hdr-line hdr-line--wide"></span></div>
+                            <div><span>Class:</span><span class="hdr-line"></span><span style="margin-left:10px;">Date:</span><span class="hdr-line"></span></div>
                         </div>
                     </div>
                     <div class="page-instruction" id="p3-instruction"><i class="fas fa-fire" style="color:#ef4444;margin-right:6px;"></i>HARD — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.</div>
@@ -512,7 +509,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=134"></script>
+    <script src="bundle.js?v=135"></script>
 </body>
 
 </html>

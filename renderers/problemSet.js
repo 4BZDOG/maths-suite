@@ -18,7 +18,6 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
 
     const cols               = settings.cols || 2;
     const showTopic          = settings.showTopic || false;
-    const showStudentHeader  = settings.psShowStudentHeader !== false;   // default true
     const showOutcomeChips   = settings.psShowOutcomeChips || false;
     const showOutcomesHeader = settings.psShowOutcomesHeader || false;
     const capPages           = settings.psCapPages || 0;
@@ -49,13 +48,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         }
     }
 
-    const studentHeaderHtml = showStudentHeader ? `<div class="problem-student-header">
-        <span class="problem-student-field"><span class="problem-student-label">Name:</span><span class="problem-student-line"></span></span>
-        <span class="problem-student-field"><span class="problem-student-label">Class:</span><span class="problem-student-line problem-student-line--short"></span></span>
-        <span class="problem-student-field"><span class="problem-student-label">Date:</span><span class="problem-student-line problem-student-line--short"></span></span>
-    </div>` : '';
-
-    let html = studentHeaderHtml + outcomesHeaderHtml + `<div class="problem-set-grid" data-cols="${cols}">`;
+    let html = outcomesHeaderHtml + `<div class="problem-set-grid" data-cols="${cols}">`;
 
     questions.forEach((item, i) => {
         const topicColor = TOPIC_COLOURS[item.topic] || '#64748b';
@@ -99,6 +92,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
             <div class="problem-answer-box">
                 <span class="problem-answer-label">Answer:</span>
                 <span class="problem-answer-line"></span>
+                ${item.unit && item.difficulty === 'Easy' ? `<span class="problem-answer-unit">${esc(item.unit)}</span>` : ''}
             </div>
             ${metaRowHtml}
         </div>`;

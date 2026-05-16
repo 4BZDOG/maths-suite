@@ -182,16 +182,23 @@ function _triangleAngles({ a1, a2, a3, missing }) {
 // ─── Triangle Area (base × height / 2) ───────────────────────────────────────
 // diagram: { type:'triangle-area', base, height }
 function _triangleArea({ base, height }) {
-    const VW = 184, VH = 124;
+    const VW = 220, VH = 124;
     const bPx = 128;
     const ratio = height / base;
     const hPx = Math.max(38, Math.min(76, bPx * ratio * 0.68));
 
-    const cx = VW / 2;
+    // Shift triangle slightly left so the external "h = X" label has room
+    // to sit clear of the right-hand triangle side.
+    const cx = VW / 2 - 16;
     const y0 = VH - 18;
     const bl = { x: cx - bPx / 2, y: y0 };
     const br = { x: cx + bPx / 2, y: y0 };
     const ap = { x: cx,           y: y0 - hPx };
+
+    // External vertical guide for the height label, parallel to the dashed
+    // height line but placed past the triangle's right edge so the label
+    // can't overlap the side.
+    const labelX = br.x + 18;
 
     const inner =
         `<polygon points="${bl.x},${bl.y} ${br.x},${br.y} ${ap.x},${ap.y}" ` +
@@ -202,12 +209,16 @@ function _triangleArea({ base, height }) {
         // Right-angle mark at foot of height (height meets base perpendicularly)
         `<polyline points="${ap.x+7},${y0} ${ap.x+7},${y0-7} ${ap.x},${y0-7}" ` +
         `fill="none" stroke="${GC}" stroke-width="1.3"/>` +
+        // External tick markers showing the height span to the right of the triangle
+        `<line x1="${labelX - 4}" y1="${ap.y}" x2="${labelX + 4}" y2="${ap.y}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        `<line x1="${labelX - 4}" y1="${y0}" x2="${labelX + 4}" y2="${y0}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        `<line x1="${labelX}" y1="${ap.y}" x2="${labelX}" y2="${y0}" stroke="${GC}" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>` +
         // Base label below (b = X)
         _t(cx, y0 + 17, `b = ${base}`, { size: 11 }) +
-        // Height label right of dashed line (h = X)
-        _t(ap.x + 24, (ap.y + y0) / 2 + 4, `h = ${height}`, { anchor: 'start', size: 11 }) +
+        // Height label to the right of the external guide
+        _t(labelX + 6, (ap.y + y0) / 2 + 4, `h = ${height}`, { anchor: 'start', size: 11 }) +
         // Missing area label inside triangle (left of height line)
-        _t(cx - 26, (ap.y + y0) / 2 + 5, 'A = ?', { missing: true, size: 13 });
+        _t(cx - 22, (ap.y + y0) / 2 + 5, 'A = ?', { missing: true, size: 13 });
 
     return _svg(VW, VH, inner);
 }
@@ -376,13 +387,14 @@ function _parabola({ h, k, a }) {
 // ─── Parallelogram ───────────────────────────────────────────────────────────
 // diagram: { type:'parallelogram', base, height, missing:'area'|'perimeter' }
 function _parallelogram({ base, height, missing }) {
-    const VW = 184, VH = 110;
+    const VW = 220, VH = 120;
     const bPx = Math.max(70, Math.min(130, base * 7));
     const hPx = Math.max(30, Math.min(65, height * 6));
     const skew = 20; // horizontal offset for the slant
 
-    const x0 = (VW - bPx - skew) / 2;
-    const y0 = (VH - hPx) / 2 - 6;
+    // Leave 28px on the right for the external height label
+    const x0 = (VW - bPx - skew - 28) / 2;
+    const y0 = (VH - hPx) / 2 - 4;
 
     // 4 vertices: bottom-left, bottom-right, top-right, top-left
     const pts = [
@@ -396,12 +408,15 @@ function _parallelogram({ base, height, missing }) {
     const cx = x0 + bPx / 2 + skew / 2;
     const cy = y0 + hPx / 2 + 5;
 
-    // Dashed height indicator line
-    const hx = x0 + bPx * 0.7;
+    // Dashed height indicator line, positioned just OUTSIDE the right edge of
+    // the parallelogram so the label doesn't collide with the slant.
+    const hx = x0 + bPx + skew + 12;
     const heightLine =
-        `<line x1="${hx + skew}" y1="${y0}" x2="${hx}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>` +
-        `<line x1="${hx - 4}" y1="${y0 + hPx - 4}" x2="${hx + 4}" y2="${y0 + hPx - 4}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
-        _t(hx + skew + 10, y0 + hPx / 2 + 4, `h = ${height}`, { anchor: 'start', size: 10 });
+        `<line x1="${hx}" y1="${y0}" x2="${hx}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>` +
+        // Small horizontal connector ticks at top and bottom of the height line
+        `<line x1="${hx - 3}" y1="${y0}" x2="${hx + 3}" y2="${y0}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        `<line x1="${hx - 3}" y1="${y0 + hPx}" x2="${hx + 3}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        _t(hx + 6, y0 + hPx / 2 + 4, `h = ${height}`, { anchor: 'start', size: 10 });
 
     const inner =
         `<polygon points="${pts}" fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
@@ -418,13 +433,14 @@ function _parallelogram({ base, height, missing }) {
 // diagram: { type:'trapezium', a, b, height, missing:'area' }
 // a = top (shorter) parallel side, b = bottom (longer) parallel side
 function _trapezium({ a, b, height, missing }) {
-    const VW = 184, VH = 112;
+    const VW = 220, VH = 120;
     const bPx = Math.max(80, Math.min(130, b * 7));
     const hPx = Math.max(32, Math.min(62, height * 6));
     const aPx = Math.max(30, Math.min(bPx - 10, a * 7));
 
-    const x0 = (VW - bPx) / 2;
-    const y0 = (VH - hPx) / 2 - 6;
+    // Leave 28px on the right for the external height label
+    const x0 = (VW - bPx - 28) / 2;
+    const y0 = (VH - hPx) / 2 - 2;
     const offset = (bPx - aPx) / 2; // indent for top edge
 
     // 4 vertices: bottom-left, bottom-right, top-right, top-left
@@ -438,11 +454,14 @@ function _trapezium({ a, b, height, missing }) {
     const cx = x0 + bPx / 2;
     const cy = y0 + hPx / 2 + 5;
 
-    // Dashed height indicator
-    const hx = x0 + bPx * 0.72;
+    // Dashed height indicator outside the right edge of the trapezium, so the
+    // label does not collide with the shape's diagonal side.
+    const hx = x0 + bPx + 12;
     const heightLine =
         `<line x1="${hx}" y1="${y0}" x2="${hx}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>` +
-        _t(hx + 8, y0 + hPx / 2 + 4, `h = ${height}`, { anchor: 'start', size: 10 });
+        `<line x1="${hx - 3}" y1="${y0}" x2="${hx + 3}" y2="${y0}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        `<line x1="${hx - 3}" y1="${y0 + hPx}" x2="${hx + 3}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        _t(hx + 6, y0 + hPx / 2 + 4, `h = ${height}`, { anchor: 'start', size: 10 });
 
     const inner =
         `<polygon points="${pts}" fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
@@ -452,7 +471,7 @@ function _trapezium({ a, b, height, missing }) {
         // top label
         _t(cx, y0 - 6, `a = ${a}`) +
         heightLine +
-        _t(cx - 15, cy, missing === 'area' ? 'A = ?' : '?', { missing: true, size: 13 });
+        _t(cx, cy, missing === 'area' ? 'A = ?' : '?', { missing: true, size: 13 });
 
     return _svg(VW, VH, inner);
 }

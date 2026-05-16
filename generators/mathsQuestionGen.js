@@ -1178,7 +1178,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                     `A parallelogram has base $${base}$ ${u} and height $${height}$ ${u}. Find its area.${pf}`,
                     `Calculate the *area* of a parallelogram: base $${base}$ ${u}, height $${height}$ ${u}.${pf}`,
                 ]);
-                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'parallelogram', base, height, missing: 'area' } };
+                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, diagram: { type: 'parallelogram', base, height, missing: 'area' } };
             }
             if (shapeForm === 2) {
                 // Trapezium: area = (a + b) × h / 2
@@ -1186,13 +1186,13 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 const ans = ((a + bTrap) * height) / 2;
                 if (!Number.isInteger(ans)) return _genGeometryCore(rng, diff, allowedOps, opts, _depth + 1);
                 const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
-                const pf = fOn ? ' Use $A = \\frac{1}{2}(a+b)h$.' : '';
+                const pf = fOn ? ' Use $A = \\frac{1}{2} \\times (a+b) \\times h$.' : '';
                 const ph = rc(rng, [
                     `Find the *area* of a trapezium with parallel sides $${a}$ ${u} and $${bTrap}$ ${u}, and height $${height}$ ${u}.${pf}`,
                     `A trapezium has parallel sides of $${a}$ ${u} and $${bTrap}$ ${u} with a perpendicular height of $${height}$ ${u}. Find its area.${pf}`,
                     `Calculate the *area* of a trapezium: parallel sides $${a}$ ${u} and $${bTrap}$ ${u}, height $${height}$ ${u}.${pf}`,
                 ]);
-                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'trapezium', a, b: bTrap, height, missing: 'area' } };
+                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, diagram: { type: 'trapezium', a, b: bTrap, height, missing: 'area' } };
             }
             // shapeForm === 0: rectangle
             const l = ri(rng, 2, 15), w = ri(rng, 2, 12);
@@ -1204,7 +1204,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its area.${pf}`,
                 `What is the *area* of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?${pf}`,
             ]);
-            return { clue: ph, answer: String(l * w), answerDisplay: `${l * w} ${u}²`, diagram: { type: 'rectangle', l, w, missing: 'area' } };
+            return { clue: ph, answer: String(l * w), answerDisplay: `${l * w} ${u}²`, unit: `${u}²`, diagram: { type: 'rectangle', l, w, missing: 'area' } };
         }
         if (type === 2) {
             // angles on a straight line / vertically opposite
@@ -1217,14 +1217,14 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                     `Angles on a straight line sum to 180°. If one angle is $${a}$°, find the other.`,
                     `What angle is supplementary to $${a}$°?`,
                 ]);
-                return { clue: ph, answer: String(x), answerDisplay: `${x}°` };
+                return { clue: ph, answer: String(x), answerDisplay: `${x}°`, unit: '°' };
             }
             const ph = rc(rng, [
                 `Two straight lines intersect. One angle is $${a}$°. State the *vertically opposite* angle.`,
                 `Find the angle *vertically opposite* to $${a}$°.`,
                 `Two lines cross. One angle measures $${a}$°. What is the *vertically opposite* angle?`,
             ]);
-            return { clue: ph, answer: String(a), answerDisplay: `${a}°` };
+            return { clue: ph, answer: String(a), answerDisplay: `${a}°`, unit: '°' };
         }
         const l = ri(rng, 3, 15), w = ri(rng, 2, l);
         const u = _geoUnit(Math.max(l, w));
@@ -1236,7 +1236,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its perimeter.${pf}`,
             `What is the *perimeter* of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?${pf}`,
         ]);
-        return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} ${u}`, diagram: { type: 'rectangle', l, w, missing: 'perimeter' } };
+        return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} ${u}`, unit: u, diagram: { type: 'rectangle', l, w, missing: 'perimeter' } };
     }
     if (diff === 'Medium') {
         if (type === 0) {
