@@ -9,6 +9,7 @@ export function renderKeys(container, generatedSets, settings) {
     const showOutcomesHeader = settings?.psShowOutcomesHeader || false;
     const activeTopics       = settings?.activeTopics         || [];
     const stage              = settings?.stage                || DEFAULT_STAGE;
+    const showWorked         = settings?.keyShowWorked        || false;
 
     const sets = [
         { label: 'EASY',   icon: 'fa-seedling', color: '#10b981', questions: generatedSets.easy   || [] },
@@ -51,12 +52,16 @@ export function renderKeys(container, generatedSets, settings) {
             <ol class="key-list">`;
         set.questions.forEach((q, i) => {
             const ans = esc(q.answerDisplay || q.answer || '');
+            const workedHtml = showWorked && q.worked
+                ? `<div class="key-worked katex-target" style="font-size:0.82em;color:var(--text-muted,#64748b);padding-left:18px;margin-top:2px;">${esc(q.worked)}</div>`
+                : '';
             html += `<li class="key-item">
                 <div class="key-item-row">
                     <span class="key-num">${i + 1}.</span>
                     <span class="key-clue katex-target">${formatClue(q.clue)}</span>
                     <span class="key-answer">${ans}</span>
                 </div>
+                ${workedHtml}
             </li>`;
         });
         html += '</ol></div>';

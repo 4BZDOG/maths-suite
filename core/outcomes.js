@@ -301,6 +301,20 @@ export const TOPIC_OUTCOME_MAP = {
             'Stage 5': ['MA5-FIN-C-01'],
         },
     },
+    'Probability': {
+        displayName: 'Probability',
+        outcomes: {
+            'Stage 4': ['MA4-PRO-C-01'],
+            'Stage 5': ['MA5-PRO-C-01'],
+        },
+    },
+    'Ratios & Rates': {
+        displayName: 'Ratios & Rates',
+        outcomes: {
+            'Stage 4': ['MA4-RAT-C-01'],
+            'Stage 5': ['MA5-RAT-C-01'],
+        },
+    },
     // Stage 5 only topics
     'Trigonometry': {
         displayName: 'Trigonometry',

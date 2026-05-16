@@ -7,8 +7,10 @@ import { renderDiagramSVG } from './diagramSVG.js';
 const TOPIC_COLOURS = {
     'Number': '#3b82f6', 'Algebra': '#8b5cf6', 'Geometry': '#10b981',
     'Statistics': '#f59e0b', 'Financial Maths': '#ef4444',
+    'Trigonometry': '#06b6d4', 'Probability': '#a855f7',
     'Integers': '#3b82f6', 'Decimals': '#3b82f6', 'Rounding': '#3b82f6',
     'Fractions': '#3b82f6', 'Percentages': '#3b82f6',
+    'Ratios & Rates': '#0ea5e9',
 };
 
 export function renderProblemSet(container, questions, settings, difficultyLabel) {
@@ -22,6 +24,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
     const showDiagrams       = settings.showDiagrams !== false;   // default true
     const stage              = settings.stage || DEFAULT_STAGE;
     const activeTopics       = settings.activeTopics || [];
+    const showStudentHeader  = settings.psShowStudentHeader !== false; // default true
 
     if (!questions || questions.length === 0) {
         container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:40px;">
@@ -55,7 +58,13 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         }
     }
 
-    let html = diffHeaderHtml + outcomesHeaderHtml + `<div class="problem-set-grid" data-cols="${cols}">`;
+    const studentHeaderHtml = showStudentHeader ? `<div class="problem-student-header">
+        <span class="problem-student-field"><span class="problem-student-label">Name:</span><span class="problem-student-line"></span></span>
+        <span class="problem-student-field"><span class="problem-student-label">Class:</span><span class="problem-student-line problem-student-line--short"></span></span>
+        <span class="problem-student-field"><span class="problem-student-label">Date:</span><span class="problem-student-line problem-student-line--short"></span></span>
+    </div>` : '';
+
+    let html = studentHeaderHtml + diffHeaderHtml + outcomesHeaderHtml + `<div class="problem-set-grid" data-cols="${cols}">`;
 
     questions.forEach((item, i) => {
         const topicColor = TOPIC_COLOURS[item.topic] || '#64748b';
@@ -80,8 +89,8 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
             ? `<div class="problem-diagram">${renderDiagramSVG(item.diagram)}</div>`
             : '';
 
-        // Working lines: Hard = 2, Medium = 1, Easy = 0
-        const workingCount = item.difficulty === 'Hard' ? 2 : item.difficulty === 'Medium' ? 1 : 0;
+        // Working lines: Hard = 3, Medium = 2, Easy = 1
+        const workingCount = item.difficulty === 'Hard' ? 3 : item.difficulty === 'Medium' ? 2 : 1;
         const workingHtml = workingCount > 0
             ? `<div class="problem-working-area">
                 <span class="problem-working-label">Working:</span>

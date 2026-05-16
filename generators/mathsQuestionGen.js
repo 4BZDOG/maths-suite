@@ -111,8 +111,7 @@ export const SUB_OPS = {
         { key: 'pythagoras',     label: 'Pythagoras' },
         { key: 'angles',         label: 'Angles' },
         { key: 'circles',        label: 'Circles' },
-        // Stage 5
-        { key: 'surface-area',      label: 'Surface area',          stages: ['Stage 5'] },
+        { key: 'surface-area',      label: 'Surface area' },
         { key: 'composite-volume',  label: 'Composite volume',       stages: ['Stage 5'] },
         { key: 'similar-triangles', label: 'Similar triangles',      stages: ['Stage 5'] },
     ],
@@ -148,6 +147,18 @@ export const SUB_OPS = {
         { key: 'parabola-sketch',   label: 'Parabola: sketch',      stages: ['Stage 5'], pathway: 'path' },
         { key: 'identify-graph',    label: 'Identify graph type',   stages: ['Stage 5'], pathway: 'path' },
     ],
+    'Probability': [
+        { key: 'theoretical',   label: 'Theoretical probability' },
+        { key: 'complementary', label: 'Complementary events' },
+        { key: 'multi-event',   label: 'Multi-event / Mutually exclusive' },
+    ],
+    'Ratios & Rates': [
+        { key: 'simplify',     label: 'Simplify a ratio' },
+        { key: 'divide-ratio', label: 'Divide in a ratio' },
+        { key: 'equivalent',   label: 'Equivalent ratios' },
+        { key: 'unit-rate',    label: 'Unit rate' },
+        { key: 'speed',        label: 'Speed / Distance / Time' },
+    ],
 };
 
 // Helper: check if a sub-op is allowed (null = all allowed)
@@ -182,8 +193,31 @@ function genIntegers(rng, diff, allowedOps) {
     const op = rc(rng, pool);
 
     if (op === '+') {
+        // Medium/Hard: 40% chance of a negative-integer variant
+        if (diff !== 'Easy' && rng() < 0.4) {
+            const lim = diff === 'Medium' ? 40 : 150;
+            const a = ri(rng, 2, lim), b = ri(rng, 2, lim);
+            const negA = rng() < 0.5;
+            const [aa, bb] = negA ? [-a, b] : [a, -b];
+            const expr = negA ? `${aa} + ${bb}` : `${aa} + (${bb})`;
+            const clue = rc(rng, [
+                `${rc(rng, CALC_VERBS)} $${expr}$`,
+                `What is $${expr}$?`,
+                `Find the value of $${expr}$`,
+            ]);
+            return { clue, answer: String(aa + bb) };
+        }
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, max);
+        // Easy: 30% chance of a real-world context
+        if (diff === 'Easy' && rng() < 0.3) {
+            const ctx = rc(rng, [
+                { stem: `A shop has $${a}$ apples and receives $${b}$ more. How many apples are there in total?`, ans: a + b },
+                { stem: `A student scores $${a}$ points on Monday and $${b}$ points on Tuesday. What is the total score?`, ans: a + b },
+                { stem: `There are $${a}$ students in class A and $${b}$ students in class B. How many students altogether?`, ans: a + b },
+            ]);
+            return { clue: ctx.stem, answer: String(ctx.ans) };
+        }
         const clue = rc(rng, [
             `${rc(rng, CALC_VERBS)} $${a} + ${b}$`,
             `Find the *sum* of $${a}$ and $${b}$`,
@@ -194,6 +228,38 @@ function genIntegers(rng, diff, allowedOps) {
         return { clue, answer: String(a + b) };
     }
     if (op === '-') {
+        // Medium/Hard: 40% chance of a negative-integer variant
+        if (diff !== 'Easy' && rng() < 0.4) {
+            const lim = diff === 'Medium' ? 40 : 150;
+            const a = ri(rng, 2, lim), b = ri(rng, 2, lim);
+            const form = ri(rng, 0, 1);
+            if (form === 0) {
+                // subtracting a negative: a − (−b) = a + b
+                const clue = rc(rng, [
+                    `${rc(rng, CALC_VERBS)} $${a} - (-${b})$`,
+                    `What is $${a} - (-${b})$?`,
+                    `Subtract $-${b}$ from $${a}$`,
+                ]);
+                return { clue, answer: String(a + b) };
+            }
+            // negative − positive: −a − b
+            const clue = rc(rng, [
+                `${rc(rng, CALC_VERBS)} $-${a} - ${b}$`,
+                `What is $-${a} - ${b}$?`,
+                `Find $-${a} - ${b}$`,
+            ]);
+            return { clue, answer: String(-a - b) };
+        }
+        // Easy: 20% chance of crossing zero (answer is negative) — introduces negatives gently
+        if (diff === 'Easy' && rng() < 0.2) {
+            const a2 = ri(rng, 1, 9), b2 = ri(rng, a2 + 1, a2 + 10);
+            const clue = rc(rng, [
+                `${rc(rng, CALC_VERBS)} $${a2} - ${b2}$`,
+                `What is $${a2} - ${b2}$?`,
+                `Subtract $${b2}$ from $${a2}$`,
+            ]);
+            return { clue, answer: String(a2 - b2) };
+        }
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, a);
         const clue = rc(rng, [
@@ -208,6 +274,32 @@ function genIntegers(rng, diff, allowedOps) {
     if (op === '×') {
         const [lo, hi] = diff === 'Easy' ? [2, 12] : diff === 'Medium' ? [3, 25] : [12, 50];
         const a = ri(rng, lo, hi), b = ri(rng, lo, hi);
+        // Medium/Hard: 40% chance of negative operand(s)
+        if (diff !== 'Easy' && rng() < 0.4) {
+            const negForm = diff === 'Hard' ? ri(rng, 0, 2) : ri(rng, 0, 1);
+            if (negForm === 0) {
+                const clue = rc(rng, [
+                    `${rc(rng, MULT_VERBS)} $(-${a}) \\times ${b}$`,
+                    `Multiply $-${a}$ by $${b}$`,
+                    `What is $(-${a}) \\times ${b}$?`,
+                ]);
+                return { clue, answer: String(-a * b) };
+            }
+            if (negForm === 1) {
+                const clue = rc(rng, [
+                    `${rc(rng, MULT_VERBS)} $${a} \\times (-${b})$`,
+                    `Multiply $${a}$ by $-${b}$`,
+                    `What is $${a} \\times (-${b})$?`,
+                ]);
+                return { clue, answer: String(-a * b) };
+            }
+            // Hard only: negative × negative
+            const clue = rc(rng, [
+                `${rc(rng, MULT_VERBS)} $(-${a}) \\times (-${b})$`,
+                `What is $(-${a}) \\times (-${b})$?`,
+            ]);
+            return { clue, answer: String(a * b) };
+        }
         const clue = rc(rng, [
             `${rc(rng, MULT_VERBS)} $${a} \\times ${b}$`,
             `Multiply $${a}$ by $${b}$`,
@@ -219,6 +311,16 @@ function genIntegers(rng, diff, allowedOps) {
     if (op === '÷') {
         const [lo, hi] = diff === 'Easy' ? [2, 12] : diff === 'Medium' ? [3, 20] : [6, 40];
         const b = ri(rng, lo, hi), ans = ri(rng, lo, hi);
+        // Medium/Hard: 40% chance of negative dividend
+        if (diff !== 'Easy' && rng() < 0.4) {
+            const dividend = -(b * ans);
+            const clue = rc(rng, [
+                `${rc(rng, DIV_VERBS)} $${dividend} \\div ${b}$`,
+                `Divide $${dividend}$ by $${b}$`,
+                `What is $${dividend}$ divided by $${b}$?`,
+            ]);
+            return { clue, answer: String(-ans) };
+        }
         const clue = rc(rng, [
             `${rc(rng, DIV_VERBS)} $${b * ans} \\div ${b}$`,
             `Divide $${b * ans}$ by $${b}$`,
@@ -228,7 +330,7 @@ function genIntegers(rng, diff, allowedOps) {
         return { clue, answer: String(ans) };
     }
     if (op === 'bodmas') {
-        const form = ri(rng, 0, 4);
+        const form = ri(rng, 0, 6);
         const verb = rc(rng, BODMAS_VERBS);
         if (form === 0) {
             const a = ri(rng, 3, 25), b = ri(rng, 3, 15), c = ri(rng, 3, 15);
@@ -247,8 +349,19 @@ function genIntegers(rng, diff, allowedOps) {
             const a = ri(rng, b + 1, b + 15);
             return { clue: `${verb}\n$(${a} - ${b}) \\times ${c}$`, answer: String((a - b) * c) };
         }
-        const a = ri(rng, 3, 20), b = ri(rng, 2, 10), c = ri(rng, 2, 8);
-        return { clue: `${verb}\n$${a} - ${b} \\times ${c}$`, answer: String(a - b * c) };
+        if (form === 4) {
+            const a = ri(rng, 3, 20), b = ri(rng, 2, 10), c = ri(rng, 2, 8);
+            return { clue: `${verb}\n$${a} - ${b} \\times ${c}$`, answer: String(a - b * c) };
+        }
+        if (form === 5) {
+            // exponent + addition: a² + b
+            const base = ri(rng, 2, 7), exp = ri(rng, 2, 3), add = ri(rng, 2, 20);
+            const pow = Math.pow(base, exp);
+            return { clue: `${verb}\n$${base}^{${exp}} + ${add}$`, answer: String(pow + add) };
+        }
+        // form === 6: squared bracket — (a + b)²
+        const a = ri(rng, 2, 8), b = ri(rng, 2, 8);
+        return { clue: `${verb}\n$(${a} + ${b})^2$`, answer: String((a + b) ** 2) };
     }
 }
 
@@ -365,6 +478,15 @@ function genRounding(rng, diff, allowedOps) {
         if (type === 0) {
             const n = ri(rng, 100, 9999);
             const ans = Math.round(n / 10) * 10;
+            // 30% chance real-world context
+            if (rng() < 0.3) {
+                const ctx = rc(rng, [
+                    `A car park has $${n}$ spaces. Round this to the nearest $10$.`,
+                    `A school has $${n}$ students. Round to the nearest $10$.`,
+                    `A town has a population of $${n}$. Round to the nearest $10$.`,
+                ]);
+                return { clue: ctx, answer: String(ans) };
+            }
             const ph = rc(rng, [
                 `Round $${n}$ to the nearest $10$`,
                 `Write $${n}$ rounded to the nearest $10$`,
@@ -468,6 +590,16 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             const num = ri(rng, 1, den - 1);
             const whole = den * ri(rng, 2, 12);
             const ans = (num * whole) / den;
+            // 35% chance real-world context
+            if (rng() < 0.35) {
+                const ctx = rc(rng, [
+                    `A class has $${whole}$ students. $\\frac{${num}}{${den}}$ of them play sport. How many students play sport?`,
+                    `There are $${whole}$ lollies in a bag. Tom eats $\\frac{${num}}{${den}}$ of them. How many did Tom eat?`,
+                    `A pizza was cut into $${den}$ equal slices. If $${num}$ slice${num > 1 ? 's were' : ' was'} eaten, how many pieces of a $${whole}$-slice order is that?`,
+                    `A farm has $${whole}$ animals. $\\frac{${num}}{${den}}$ are cows. How many cows are there?`,
+                ]);
+                return { clue: ctx, answer: String(ans) };
+            }
             const ph = rc(rng, [
                 `Find $\\frac{${num}}{${den}}$ of $${whole}$`,
                 `Calculate $\\frac{${num}}{${den}}$ of $${whole}$`,
@@ -709,11 +841,13 @@ function _genAlgebraCore(rng, diff, allowedOps) {
     if (diff === 'Medium') {
         if (type === 0) {
             const a = ri(rng, 2, 6), ans = ri(rng, 1, 10), b = ri(rng, 1, 20);
-            return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${a * ans + b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            const worked = `$${a}${v} = ${a * ans + b} - ${b} = ${a * ans}$, so $${v} = ${ans}$`;
+            return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${a * ans + b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked };
         }
         if (type === 1) {
             const a = ri(rng, 2, 6), ans = ri(rng, 2, 10), b = ri(rng, 1, 10);
-            return { clue: `${solveVerb}\n$${a}${v} - ${b} = ${a * ans - b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            const worked = `$${a}${v} = ${a * ans - b} + ${b} = ${a * ans}$, so $${v} = ${ans}$`;
+            return { clue: `${solveVerb}\n$${a}${v} - ${b} = ${a * ans - b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked };
         }
         const [fv, iv] = rc(rng, SUBST_PAIRS);
         const a = ri(rng, 2, 6), b = ri(rng, 1, 12), n = ri(rng, 1, 8);
@@ -887,7 +1021,8 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `Find the *simple interest* earned on $\\$${P}$ invested at $${r}\\%$ per year for ${yrs}.${pf}`,
                 `Determine the interest on $\\$${P}$ at $${r}\\%$ p.a. for ${yrs}.${pf}`,
             ]);
-            return { clue: ph, answer: String(I), answerDisplay: `$${I}` };
+            const worked = `$I = Prn = ${P} \\times \\frac{${r}}{100} \\times ${t} = \\$${I}$`;
+            return { clue: ph, answer: String(I), answerDisplay: `$${I}`, worked };
         }
         const price = ri(rng, 5, 50) * 10;
         const ph = rc(rng, [
@@ -920,7 +1055,8 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Find the *simple interest* earned on a $\\$${P}$ investment at $${r}\\%$ p.a. over $${t}$ years.${pf}`,
             `Determine the interest on $\\$${P}$ at $${r}\\%$ per annum for $${t}$ years.${pf}`,
         ]);
-        return { clue: ph, answer: String(I), answerDisplay: `$${I}` };
+        const workedSI = `$I = Prn = ${P} \\times \\frac{${r}}{100} \\times ${t} = \\$${I}$`;
+        return { clue: ph, answer: String(I), answerDisplay: `$${I}`, worked: workedSI };
     }
     // Hard
     if (type === 0) {
@@ -973,18 +1109,47 @@ function _geoUnit(maxVal) {
 function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
-        Easy: { 'area-perimeter': [0, 1] },
-        Medium: { 'area-perimeter': [0], 'pythagoras': [1], 'angles': [2] },
-        Hard: { 'circles': [0, 2], 'pythagoras': [1] },
+        Easy:   { 'area-perimeter': [0, 1], 'angles': [2] },
+        Medium: { 'area-perimeter': [0], 'pythagoras': [1], 'angles': [2, 3] },
+        Hard:   { 'circles': [0, 2], 'pythagoras': [1], 'angles': [3, 4] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : 2);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : diff === 'Medium' ? 3 : 4);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
         if (type === 0) {
+            const shapeForm = ri(rng, 0, 2); // 0=rectangle, 1=parallelogram, 2=trapezium
+            const u = diff === 'Easy' ? 'cm' : rc(rng, ['cm', 'm']);
+            if (shapeForm === 1) {
+                // Parallelogram: area = base × height
+                const base = ri(rng, 3, 12), height = ri(rng, 2, 8);
+                const ans = base * height;
+                const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
+                const pf = fOn ? ' Use $A = b \\times h$.' : '';
+                const ph = rc(rng, [
+                    `Find the *area* of a parallelogram with base $${base}$ ${u} and perpendicular height $${height}$ ${u}.${pf}`,
+                    `A parallelogram has base $${base}$ ${u} and height $${height}$ ${u}. Find its area.${pf}`,
+                    `Calculate the *area* of a parallelogram: base $${base}$ ${u}, height $${height}$ ${u}.${pf}`,
+                ]);
+                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'parallelogram', base, height, missing: 'area' } };
+            }
+            if (shapeForm === 2) {
+                // Trapezium: area = (a + b) × h / 2
+                const a = ri(rng, 2, 8) * 2, bTrap = ri(rng, a / 2 + 2, a + 6), height = ri(rng, 2, 8);
+                const ans = ((a + bTrap) * height) / 2;
+                if (!Number.isInteger(ans)) return _genGeometryCore(rng, diff, allowedOps, opts, _depth + 1);
+                const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
+                const pf = fOn ? ' Use $A = \\frac{1}{2}(a+b)h$.' : '';
+                const ph = rc(rng, [
+                    `Find the *area* of a trapezium with parallel sides $${a}$ ${u} and $${bTrap}$ ${u}, and height $${height}$ ${u}.${pf}`,
+                    `A trapezium has parallel sides of $${a}$ ${u} and $${bTrap}$ ${u} with a perpendicular height of $${height}$ ${u}. Find its area.${pf}`,
+                    `Calculate the *area* of a trapezium: parallel sides $${a}$ ${u} and $${bTrap}$ ${u}, height $${height}$ ${u}.${pf}`,
+                ]);
+                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'trapezium', a, b: bTrap, height, missing: 'area' } };
+            }
+            // shapeForm === 0: rectangle
             const l = ri(rng, 2, 15), w = ri(rng, 2, 12);
-            const u = _geoUnit(Math.max(l, w));
             const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
             const pf = fOn ? ' Use $A = l \\times w$.' : '';
             const ph = rc(rng, [
@@ -994,6 +1159,26 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `What is the *area* of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?${pf}`,
             ]);
             return { clue: ph, answer: String(l * w), answerDisplay: `${l * w} ${u}²`, diagram: { type: 'rectangle', l, w, missing: 'area' } };
+        }
+        if (type === 2) {
+            // angles on a straight line / vertically opposite
+            const a = ri(rng, 25, 155);
+            const form = ri(rng, 0, 1);
+            if (form === 0) {
+                const x = 180 - a;
+                const ph = rc(rng, [
+                    `Two angles on a straight line. One angle is $${a}$°. Find the other angle.`,
+                    `Angles on a straight line sum to 180°. If one angle is $${a}$°, find the other.`,
+                    `What angle is supplementary to $${a}$°?`,
+                ]);
+                return { clue: ph, answer: String(x), answerDisplay: `${x}°` };
+            }
+            const ph = rc(rng, [
+                `Two straight lines intersect. One angle is $${a}$°. State the *vertically opposite* angle.`,
+                `Find the angle *vertically opposite* to $${a}$°.`,
+                `Two lines cross. One angle measures $${a}$°. What is the *vertically opposite* angle?`,
+            ]);
+            return { clue: ph, answer: String(a), answerDisplay: `${a}°` };
         }
         const l = ri(rng, 3, 15), w = ri(rng, 2, l);
         const u = _geoUnit(Math.max(l, w));
@@ -1034,8 +1219,21 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `Calculate the *hypotenuse* of a right triangle with legs $${a * scale}$ ${u} and $${b * scale}$ ${u}.${pf}`,
                 `Determine the *hypotenuse* given legs of $${a * scale}$ ${u} and $${b * scale}$ ${u}.${pf}`,
             ]);
-            return { clue: ph, answer: String(c * scale), answerDisplay: `${c * scale} ${u}`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'c' } };
+            const worked = `$${a*scale}^2 + ${b*scale}^2 = ${(a*scale)**2} + ${(b*scale)**2} = ${(c*scale)**2}$, so $c = ${c*scale}$ ${u}`;
+            return { clue: ph, answer: String(c * scale), answerDisplay: `${c * scale} ${u}`, worked, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'c' } };
         }
+        if (type === 3) {
+            // Co-interior (same-side interior) angles on parallel lines — sum to 180°
+            const a = rc(rng, [40, 50, 55, 60, 65, 70, 80, 110, 120]);
+            const x = 180 - a;
+            const ph = rc(rng, [
+                `Two parallel lines are cut by a transversal. One *co-interior* angle is $${a}$°. Find the other co-interior angle.`,
+                `Co-interior angles between parallel lines sum to 180°. One angle is $${a}$°. Find the *other*.`,
+                `A transversal crosses two parallel lines. If one co-interior angle is $${a}$°, find the *missing* angle.`,
+            ]);
+            return { clue: ph, answer: String(x), answerDisplay: `${x}°` };
+        }
+        // type 2 — triangle angle sum
         const angles = [30, 40, 45, 50, 60, 70, 80, 90];
         const a1 = rc(rng, angles);
         const remaining = angles.filter(a => a < 180 - a1 && a !== a1);
@@ -1062,7 +1260,8 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Calculate the *area* of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
             `Determine the *area* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
         ]);
-        return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'circle', r, missing: 'area' } };
+        const workedCircA = `$A = \\pi r^2 \\approx 3.14 \\times ${r}^2 = 3.14 \\times ${r*r} = ${ans}$ ${u}²`;
+        return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, worked: workedCircA, diagram: { type: 'circle', r, missing: 'area' } };
     }
     if (type === 1) {
         const triples = [[3, 4, 5], [5, 12, 13], [8, 15, 17]];
@@ -1076,7 +1275,38 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Calculate the **missing** leg: hypotenuse $${c * scale}$ ${u}, known leg $${a * scale}$ ${u}.${pf}`,
             `Determine the **unknown** side of a right triangle with hypotenuse $${c * scale}$ ${u} and leg $${a * scale}$ ${u}.${pf}`,
         ]);
-        return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'b' } };
+        const worked2 = `$${c*scale}^2 - ${a*scale}^2 = ${(c*scale)**2} - ${(a*scale)**2} = ${(b*scale)**2}$, so $b = ${b*scale}$ ${u}`;
+        return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}`, worked: worked2, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'b' } };
+    }
+    if (type === 3) {
+        // Co-interior angles — parallel lines, harder context
+        const a = rc(rng, [35, 48, 52, 67, 73, 112, 127]);
+        const x = 180 - a;
+        const ph = rc(rng, [
+            `Two parallel lines are cut by a transversal. The co-interior angles are $${a}$° and $x$°. Find $x$.`,
+            `Find the *co-interior* angle to $${a}$° when two parallel lines are cut by a transversal.`,
+            `Co-interior angles sum to 180°. One angle measures $${a}$°. Find the *other*.`,
+        ]);
+        return { clue: ph, answer: String(x), answerDisplay: `${x}°` };
+    }
+    if (type === 4) {
+        // Corresponding and alternate angles — parallel lines
+        const a = rc(rng, [38, 47, 53, 61, 74, 82, 119, 134]);
+        const form = ri(rng, 0, 1);
+        if (form === 0) {
+            const ph = rc(rng, [
+                `Two parallel lines are cut by a transversal. A *corresponding* angle is $${a}$°. Find the equal angle.`,
+                `State the *corresponding* angle to $${a}$° on a pair of parallel lines.`,
+                `Corresponding angles are equal. One is $${a}$°. What is the *other* corresponding angle?`,
+            ]);
+            return { clue: ph, answer: String(a), answerDisplay: `${a}°` };
+        }
+        const ph = rc(rng, [
+            `Two parallel lines are cut by a transversal. An *alternate* angle is $${a}$°. Find the equal angle.`,
+            `State the *alternate* angle to $${a}$° on a pair of parallel lines.`,
+            `Alternate angles are equal. One measures $${a}$°. What is its *alternate* angle?`,
+        ]);
+        return { clue: ph, answer: String(a), answerDisplay: `${a}°` };
     }
     const r = ri(rng, 2, 15);
     const u = _geoUnit(r);
@@ -1088,7 +1318,8 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         `Calculate the *circumference* of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
         `Determine the *circumference* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
     ]);
-    return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, diagram: { type: 'circle', r, missing: 'circumference' } };
+    const workedCircC = `$C = 2\\pi r \\approx 2 \\times 3.14 \\times ${r} = ${ans}$ ${u}`;
+    return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, worked: workedCircC, diagram: { type: 'circle', r, missing: 'circumference' } };
 }
 
 // ============================================================
@@ -1523,6 +1754,208 @@ function genNonLinear(rng, diff, allowedOps) {
     return null;
 }
 
+// ============================================================
+// PROBABILITY
+// ============================================================
+function genProbability(rng, diff, allowedOps) {
+    const OPS = ['theoretical', 'complementary', 'multi-event'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+
+    if (op === 'theoretical') {
+        const CONTEXTS = [
+            { label: 'red', bag: 'bag of marbles', totalLabel: 'marbles' },
+            { label: 'hearts', bag: 'deck of cards', totalLabel: 'cards' },
+            { label: 'heads', bag: 'coin toss', totalLabel: 'sides' },
+            { label: 'sixes', bag: 'die roll', totalLabel: 'sides' },
+        ];
+        if (diff === 'Easy') {
+            // Simple spinner / bag: fav/total with small numbers
+            const fav = ri(rng, 1, 4), other = ri(rng, 2, 6);
+            const total = fav + other;
+            const colour = rc(rng, ['red', 'blue', 'green', 'yellow']);
+            const other_colour = rc(rng, ['blue', 'green', 'orange'].filter(c => c !== colour));
+            const s = simplify(fav, total);
+            const ph = rc(rng, [
+                `A bag contains $${fav}$ ${colour} and $${other}$ ${other_colour} marbles. Find P(${colour}).`,
+                `A bag has $${fav}$ ${colour} marbles and $${other}$ ${other_colour} marbles. What is the probability of picking a ${colour} marble?`,
+                `There are $${fav}$ ${colour} and $${other}$ ${other_colour} marbles in a bag. Find the probability of selecting a ${colour} marble.`,
+            ]);
+            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+        }
+        if (diff === 'Medium') {
+            // Die or spinner with larger total
+            const sides = rc(rng, [6, 8, 10, 12]);
+            const target = rc(rng, ['even', 'greater than 4', 'a prime', 'less than 3']);
+            let fav;
+            if (target === 'even') fav = Math.floor(sides / 2);
+            else if (target === 'greater than 4') fav = sides - 4;
+            else if (target === 'a prime') {
+                const primes = [2, 3, 5, 7, 11].filter(p => p <= sides);
+                fav = primes.length;
+            } else fav = 2; // less than 3: 1, 2
+            if (fav <= 0 || fav >= sides) return genProbability(rng, diff, allowedOps);
+            const s = simplify(fav, sides);
+            const ph = rc(rng, [
+                `A fair $${sides}$-sided die is rolled. Find P(${target}).`,
+                `Roll a fair $${sides}$-sided die numbered 1 to $${sides}$. What is P(${target})?`,
+                `A spinner has $${sides}$ equal sections numbered 1 to $${sides}$. Find P(${target}).`,
+            ]);
+            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+        }
+        // Hard: cards or frequency table
+        const suit = rc(rng, ['hearts', 'spades', 'diamonds', 'clubs']);
+        const fav = 13, total = 52;
+        const s = simplify(fav, total);
+        const ph = rc(rng, [
+            `A standard deck of 52 cards is shuffled. Find P(${suit}).`,
+            `One card is drawn from a standard 52-card deck. What is P(drawing a ${suit})?`,
+            `What is the probability of drawing a ${suit} from a shuffled 52-card deck?`,
+        ]);
+        return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+    }
+
+    if (op === 'complementary') {
+        // P(event) given, find P(not event)
+        const denoms = diff === 'Easy' ? [4, 5, 6, 8] : diff === 'Medium' ? [5, 6, 8, 10, 12] : [10, 12, 20, 100];
+        const d = rc(rng, denoms);
+        const n = ri(rng, 1, d - 1);
+        const s = simplify(n, d);
+        const compS = simplify(d - n, d);
+        const event = rc(rng, ['winning', 'rain tomorrow', 'selecting a red card', 'rolling a 6']);
+        const ph = rc(rng, [
+            `P(${event}) $= \\frac{${s.n}}{${s.d}}$. Find P(not ${event}).`,
+            `If the probability of ${event} is $\\frac{${s.n}}{${s.d}}$, what is the probability of NOT ${event}?`,
+            `The probability of ${event} is $\\frac{${s.n}}{${s.d}}$. Find the *complementary* probability.`,
+        ]);
+        return { clue: ph, answer: fracStr(compS.n, compS.d), answerDisplay: `$\\frac{${compS.n}}{${compS.d}}$` };
+    }
+
+    // op === 'multi-event'
+    if (diff === 'Easy') {
+        // Mutually exclusive: P(A) + P(B)
+        const d = rc(rng, [6, 8, 10]);
+        const a = ri(rng, 1, 3), b = ri(rng, 1, d - a - 1);
+        const s = simplify(a + b, d);
+        const ph = rc(rng, [
+            `A bag has $${a}$ red, $${b}$ blue and $${d - a - b}$ green marbles. Find P(red *or* blue).`,
+            `P(red) $= \\frac{${a}}{${d}}$ and P(blue) $= \\frac{${b}}{${d}}$. Find P(red or blue).`,
+        ]);
+        return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+    }
+    // Medium/Hard: two independent events (with replacement)
+    const d1 = rc(rng, [4, 6]), d2 = rc(rng, [4, 6]);
+    const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
+    const numProd = n1 * n2, denProd = d1 * d2;
+    const s = simplify(numProd, denProd);
+    const col1 = rc(rng, ['red', 'blue']), col2 = rc(rng, ['green', 'yellow']);
+    const ph = rc(rng, [
+        `A bag has $${n1}$ ${col1} out of $${d1}$ marbles and another bag has $${n2}$ ${col2} out of $${d2}$ marbles. Find P(${col1} *and* ${col2}) if one marble is drawn from each bag.`,
+        `P(${col1}) $= \\frac{${n1}}{${d1}}$ and P(${col2}) $= \\frac{${n2}}{${d2}}$. These are *independent* events. Find P(${col1} and ${col2}).`,
+    ]);
+    return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+}
+
+// ============================================================
+// RATIOS & RATES
+// ============================================================
+function genRatiosRates(rng, diff, allowedOps) {
+    const OPS = ['simplify', 'divide-ratio', 'equivalent', 'unit-rate', 'speed'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+
+    if (op === 'simplify') {
+        const factor = ri(rng, 2, diff === 'Easy' ? 5 : 10);
+        const a = ri(rng, 1, 8) * factor, b = ri(rng, 1, 8) * factor;
+        const s = simplify(a, b);
+        const ph = rc(rng, [
+            `Simplify the ratio $${a} : ${b}$.`,
+            `Write $${a} : ${b}$ in its simplest form.`,
+            `Reduce $${a} : ${b}$ to its lowest terms.`,
+        ]);
+        return { clue: ph, answer: `${s.n} : ${s.d}`, answerDisplay: `$${s.n} : ${s.d}$` };
+    }
+
+    if (op === 'divide-ratio') {
+        const total = diff === 'Easy' ? rc(rng, [24, 30, 36, 48]) : diff === 'Medium' ? rc(rng, [60, 90, 120, 150]) : rc(rng, [200, 300, 500, 1000]);
+        const partsA = ri(rng, 1, 5), partsB = ri(rng, 1, 5);
+        const denomParts = partsA + partsB;
+        if (total % denomParts !== 0) return genRatiosRates(rng, diff, allowedOps);
+        const shareA = (total / denomParts) * partsA;
+        const shareB = total - shareA;
+        const unit = diff === 'Hard' ? 'dollars' : rc(rng, ['lollies', 'points', 'tiles', 'cm']);
+        const ph = rc(rng, [
+            `Divide $${total}$ ${unit} in the ratio $${partsA} : ${partsB}$.`,
+            `Share $${total}$ ${unit} in the ratio $${partsA} : ${partsB}$.`,
+            `Split $${total}$ ${unit} between two people in the ratio $${partsA} : ${partsB}$.`,
+        ]);
+        return { clue: ph, answer: `${shareA} : ${shareB}`, answerDisplay: `$${shareA} : ${shareB}$` };
+    }
+
+    if (op === 'equivalent') {
+        const a = ri(rng, 1, 6), b = ri(rng, 1, 6);
+        const mult = ri(rng, 2, diff === 'Easy' ? 4 : 8);
+        const ph = rc(rng, [
+            `Find the missing value: $${a} : ${b} = ? : ${b * mult}$.`,
+            `Complete the equivalent ratio: $${a} : ${b} = \\square : ${b * mult}$.`,
+            `If $${a} : ${b}$ is equivalent to $\\square : ${b * mult}$, find the missing number.`,
+        ]);
+        return { clue: ph, answer: String(a * mult), answerDisplay: `$${a * mult}$` };
+    }
+
+    if (op === 'unit-rate') {
+        const UNIT_CONTEXTS = [
+            { item: 'apples', price: ri(rng, 2, 8), qty: ri(rng, 2, 6) * rc(rng, [2, 3, 4]) },
+            { item: 'litres of petrol', price: ri(rng, 150, 210), qty: rc(rng, [10, 20, 40, 50]) },
+            { item: 'bottles of water', price: ri(rng, 5, 20), qty: rc(rng, [6, 10, 12, 24]) },
+        ];
+        const ctx = rc(rng, UNIT_CONTEXTS);
+        const unitPrice = round(ctx.price / ctx.qty, 2);
+        const ph = rc(rng, [
+            `$${ctx.qty}$ ${ctx.item} cost $\\$${ctx.price}$. Find the cost per item (unit rate).`,
+            `If $${ctx.qty}$ ${ctx.item} costs $\\$${ctx.price}$, what is the *unit rate* (cost per ${ctx.item})?`,
+        ]);
+        return { clue: ph, answer: String(unitPrice), answerDisplay: `$\\$${unitPrice}$` };
+    }
+
+    // op === 'speed'
+    const SPEED_CONTEXTS = [
+        { vehicle: 'car', unit: 'km/h' },
+        { vehicle: 'train', unit: 'km/h' },
+        { vehicle: 'cyclist', unit: 'km/h' },
+    ];
+    const ctx = rc(rng, SPEED_CONTEXTS);
+    const findWhat = rc(rng, diff === 'Easy' ? ['speed', 'distance'] : ['speed', 'distance', 'time']);
+    if (findWhat === 'speed') {
+        const d = ri(rng, 2, 15) * 10, t = ri(rng, 1, 4);
+        const s = d / t;
+        const ph = rc(rng, [
+            `A ${ctx.vehicle} travels $${d}$ km in $${t}$ hour${t > 1 ? 's' : ''}. Find its speed.`,
+            `Find the speed of a ${ctx.vehicle} that covers $${d}$ km in $${t}$ h.`,
+        ]);
+        return { clue: ph, answer: String(s), answerDisplay: `${s} ${ctx.unit}` };
+    }
+    if (findWhat === 'distance') {
+        const speed = ri(rng, 3, 12) * 10, time = ri(rng, 1, 4);
+        const dist = speed * time;
+        const ph = rc(rng, [
+            `A ${ctx.vehicle} travels at $${speed}$ ${ctx.unit} for $${time}$ hour${time > 1 ? 's' : ''}. Find the distance.`,
+            `How far does a ${ctx.vehicle} travel at $${speed}$ ${ctx.unit} in $${time}$ h?`,
+        ]);
+        return { clue: ph, answer: String(dist), answerDisplay: `${dist} km` };
+    }
+    // findWhat === 'time'
+    const speed2 = ri(rng, 4, 12) * 10, dist2 = speed2 * ri(rng, 1, 5);
+    const time2 = dist2 / speed2;
+    const ph = rc(rng, [
+        `A ${ctx.vehicle} travels $${dist2}$ km at $${speed2}$ ${ctx.unit}. How long does the journey take?`,
+        `Find the *time* taken for a ${ctx.vehicle} to travel $${dist2}$ km at $${speed2}$ ${ctx.unit}.`,
+    ]);
+    return { clue: ph, answer: String(time2), answerDisplay: `${time2} h` };
+}
+
 // ---- Stage 5 wrappers for existing generators ---------------
 // Each public function delegates S5-only ops to the Stage 5 helper,
 // falling back to the original Stage 4 core for S4 ops.
@@ -1550,7 +1983,8 @@ function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
     const S5_KEYS = ['surface-area', 'composite-volume', 'similar-triangles'];
     const s5Active = S5_KEYS.filter(k => allowedOps && allowedOps.includes(k));
     const s4Active = ['area-perimeter', 'pythagoras', 'angles', 'circles'].filter(k => !allowedOps || allowedOps.includes(k));
-    if (s5Active.length > 0 && (!s4Active.length || rng() < 0.5)) {
+    // surface-area is also valid for Stage 4; force it if it's the only selection
+    if (s5Active.length > 0 && (!s4Active.length || rng() < (s4Active.length ? 0.4 : 1))) {
         return _genGeometryS5Op(rng, diff, rc(rng, s5Active));
     }
     return _genGeometryCore(rng, diff, allowedOps, opts, _depth);
@@ -1581,6 +2015,8 @@ const GENERATORS = {
     'Financial Maths':          genFinancial,
     'Trigonometry':             genTrigonometry,
     'Non-linear Relationships': genNonLinear,
+    'Probability':              genProbability,
+    'Ratios & Rates':           genRatiosRates,
 };
 
 // Map generator sub-topic → clue bank topic field
@@ -1596,6 +2032,8 @@ const TOPIC_MAP = {
     'Financial Maths':          'Financial Maths',
     'Trigonometry':             'Trigonometry',
     'Non-linear Relationships': 'Algebra',
+    'Probability':              'Probability',
+    'Ratios & Rates':           'Number',
 };
 
 const ALL_SUBTOPICS = Object.keys(GENERATORS);
@@ -1696,11 +2134,14 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
             clue: q.clue || '',
             answer: ans,
             answerDisplay: q.answerDisplay || ans,
-            notes: st,    // store sub-topic in notes for reference
+            notes: st,
             diagram: q.diagram || null,
+            worked: q.worked || null,
         });
     }
 
+    results._requested = count;
+    results._failCount = count - results.length;
     return results;
 }
 

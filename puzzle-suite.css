@@ -2510,6 +2510,39 @@ table.mode-cw td.cell.empty {
 .formula-bulk-sep { color: var(--text-muted); margin: 0 2px; }
 
 /* Score bar at the bottom-right of each difficulty section */
+.problem-student-header {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 6px;
+    font-size: calc(0.8rem * var(--global-font-scale, 1) * var(--page-scale, 1));
+}
+.problem-student-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+.problem-student-label {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.85em;
+    white-space: nowrap;
+    color: var(--text-muted, #64748b);
+}
+.problem-student-line {
+    flex: 1;
+    border-bottom: 1px solid var(--text-base, #1e293b);
+    min-width: 60px;
+}
+.problem-student-line--short {
+    min-width: 40px;
+    max-width: 90px;
+}
+
 .problem-score-bar {
     display: flex;
     align-items: center;
@@ -2773,6 +2806,24 @@ table.mode-cw td.cell.empty {
     transition: background 0.12s;
 }
 .outcome-row:hover { background: rgba(99,102,241,0.06); }
+
+/* Outcome focus button — shown on hover */
+.outcome-focus-btn {
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 2px 5px;
+    font-size: 10px;
+    border: 1px solid rgba(99,102,241,0.3);
+    border-radius: 4px;
+    background: transparent;
+    color: #6366f1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+}
+.outcome-row:hover .outcome-focus-btn { opacity: 1; }
+[data-theme="dark"] .outcome-focus-btn { color: #a5b4fc; border-color: rgba(165,180,252,0.3); }
 
 /* Outcome filter checkbox */
 .outcome-filter-chk {

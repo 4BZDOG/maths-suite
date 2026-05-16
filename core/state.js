@@ -23,6 +23,8 @@ export const state = {
         'Financial Maths': false,
         'Trigonometry': true,
         'Non-linear Relationships': true,
+        'Probability': true,
+        'Ratios & Rates': true,
     },
 
     // Granular sub-operation selection per topic (null entry or missing = all enabled)
@@ -66,6 +68,7 @@ export const state = {
         showTopic:             false,
         psShowOutcomesHeader:  false,
         psShowOutcomeChips:    false,
+        keyShowWorked:         false,
         cols:                  2,
         wmOpacity:       0.15,
         showFormulas: {
@@ -128,6 +131,7 @@ export function syncSettingsFromDOM() {
     s.showTopic             = getChk('psShowTopic',            s.showTopic);
     s.psShowOutcomesHeader  = getChk('psShowOutcomesHeader',   s.psShowOutcomesHeader);
     s.psShowOutcomeChips    = getChk('psShowOutcomeChips',     s.psShowOutcomeChips);
+    s.keyShowWorked         = getChk('keyShowWorked',          s.keyShowWorked);
     s.showDiagrams          = getChk('psShowDiagrams',         s.showDiagrams);
     s.cols                  = parseInt(getVal('psCols', s.cols), 10);
     s.wmOpacity      = parseFloat(
@@ -307,6 +311,7 @@ export function applyStateToDOM(s) {
     setChk('psShowTopic',           cfg.showTopic);
     setChk('psShowOutcomesHeader',  cfg.psShowOutcomesHeader);
     setChk('psShowOutcomeChips',    cfg.psShowOutcomeChips);
+    setChk('keyShowWorked',         cfg.keyShowWorked);
     setChk('psShowDiagrams',        cfg.showDiagrams);
     setVal('psCols',                cfg.cols);
 

@@ -89,7 +89,13 @@ function generateAll() {
 
     // Always generate enough questions to fill the selected number of pages
     const GENERATE_COUNT = 30;
-    const seed = Date.now() + (state.settings.exportCount || 0) * 1_000_000;
+    const seedInput = document.getElementById('seed-input');
+    const lockedSeed = seedInput && seedInput.value.trim() !== '' ? parseInt(seedInput.value, 10) : null;
+    const seed = lockedSeed != null && !isNaN(lockedSeed)
+        ? lockedSeed
+        : Date.now() + (state.settings.exportCount || 0) * 1_000_000;
+    // Always write the used seed back so teachers can note it
+    if (seedInput) seedInput.value = seed;
 
     // Build sub-ops filter: only include topics where user has narrowed selection
     const subOpsFilter = Object.keys(state.selectedSubOps).length > 0 ? state.selectedSubOps : null;
@@ -105,7 +111,12 @@ function generateAll() {
     saveState();
 
     const total = (sets.easy?.length || 0) + (sets.medium?.length || 0) + (sets.hard?.length || 0);
-    if (total === 0) showToast('No questions generated. Enable at least one operation per topic.', 'warning');
+    if (total === 0) {
+        showToast('No questions generated. Enable at least one operation per topic.', 'warning');
+    } else {
+        const totalFailed = (sets.easy?._failCount || 0) + (sets.medium?._failCount || 0) + (sets.hard?._failCount || 0);
+        if (totalFailed > 5) showToast(`${totalFailed} question slots couldn't be filled — try enabling more operations or topics.`, 'warning');
+    }
 
     _pendingTopicChange = false;
     _updateGenerateButtonState(getActiveTopics().length);
@@ -654,6 +665,10 @@ function renderOutcomes() {
                 title="Filter generation to this outcome"
                 ${isSelected ? 'checked' : ''}
                 onchange="toggleOutcomeFilter('${o.code}', this.checked)">`;
+            const focusBtn = o.appliesAll ? '' : `<button
+                class="outcome-focus-btn"
+                title="Focus: enable only topics for ${o.code}"
+                onclick="focusOutcome('${o.code}')"><i class="fas fa-crosshairs"></i></button>`;
             return `<div class="${cls}">
                 ${chkHtml}
                 <span class="outcome-code-pill">${o.code}</span>
@@ -661,6 +676,7 @@ function renderOutcomes() {
                     <div class="outcome-content-label">${o.contentLabel}</div>
                     <div class="outcome-statement">${o.statement}</div>
                 </div>
+                ${focusBtn}
             </div>`;
         }).join('');
         
@@ -672,6 +688,32 @@ function toggleOutcomeFilter(code, checked) {
     state.selectedOutcomes[code] = checked;
     renderOutcomes();
     updateTopicCount();
+    debouncedGenerate();
+    saveState();
+}
+
+/**
+ * "Focus" a single outcome code: enable only the topics that map to it,
+ * disable all others, and clear any existing outcome filter.
+ */
+function focusOutcome(code) {
+    const matchingTopics = getTopicsForOutcomeCodes([code], state.stage);
+    if (matchingTopics.length === 0) {
+        showToast(`No topics found for ${code} at ${state.stage}`, 'warning');
+        return;
+    }
+    // Enable matching topics, disable all others
+    ALL_SUBTOPICS.forEach(t => {
+        state.selectedTopics[t] = matchingTopics.includes(t);
+        const el = document.getElementById('topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, ''));
+        if (el) el.checked = state.selectedTopics[t];
+    });
+    // Clear outcome filter so the focus is purely topic-driven
+    Object.keys(state.selectedOutcomes).forEach(k => { state.selectedOutcomes[k] = false; });
+    _updateAllParentCheckboxes();
+    updateTopicCount();
+    renderOutcomes();
+    showToast(`Topics filtered to ${code} — ${matchingTopics.join(', ')}`, 'success');
     debouncedGenerate();
     saveState();
 }
@@ -1019,6 +1061,20 @@ function toggleFormulaHintColumn(diff) {
     setAllFormulaHints(diff, anyUnchecked);
 }
 
+// Seed input: clear it so next Generate picks a fresh auto-seed
+function syncSeedInput() {
+    // nothing to sync — value is read live in generateAll(); this exists for oninput
+}
+
+function copySeedToClipboard() {
+    const el = document.getElementById('seed-input');
+    const val = el && el.value.trim();
+    if (!val) { showToast('Generate questions first to get a seed.', 'info'); return; }
+    navigator.clipboard?.writeText(val)
+        .then(() => showToast(`Seed ${val} copied to clipboard.`, 'success'))
+        .catch(() => showToast(`Seed: ${val}`, 'info'));
+}
+
 // =============================================================
 // Expose public API on window
 // =============================================================
@@ -1053,6 +1109,7 @@ window._puzzleApp = {
     updateOpacity,
     clearWatermark,
     toggleOutcomeFilter,
+    focusOutcome,
     clearOutcomeFilter,
     hardReset: () => hardReset(),
     undo: () => undo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),
@@ -1077,6 +1134,8 @@ window._puzzleApp = {
     _handleUpgradeClick,
     setAllFormulaHints,
     toggleFormulaHintColumn,
+    syncSeedInput,
+    copySeedToClipboard,
 };
 
 Object.assign(window, window._puzzleApp);

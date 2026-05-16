@@ -404,5 +404,6 @@ export function drawExportIdFooter(ctx, exportId, pScale) {
     doc.setFont(pdfFont, 'normal');
     doc.setFontSize(6);
     doc.setTextColor(180, 180, 180);
-    doc.text(`ID: ${exportId}`, PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 5, { align: 'right' });
+    const today = new Date().toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+    doc.text(`ID: ${exportId}  |  ${today}`, PAGE_WIDTH - MARGIN, PAGE_HEIGHT - 5, { align: 'right' });
 }
