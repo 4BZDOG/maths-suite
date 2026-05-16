@@ -428,43 +428,80 @@ function genDecimals(rng, diff, allowedOps) {
     if (diff === 'Easy') {
         if (type === 0) {
             const a = ri(rng, 1, 9) / 10, b = ri(rng, 1, 9) / 10;
+            const ans = round(a + b, 2);
+            if (rng() < 0.25) {
+                const ctx = rc(rng, [
+                    `Sarah runs $${a}$ km on Monday and $${b}$ km on Tuesday. How far did she run in total?`,
+                    `A jug holds $${a}$ L of water. $${b}$ L more is added. How much water is in the jug?`,
+                    `Tom spends $\\$${a}$ on a snack and $\\$${b}$ on a drink. How much did he spend altogether?`,
+                ]);
+                return { clue: ctx, answer: String(ans) };
+            }
             const ph = rc(rng, [
                 `${rc(rng, CALC_VERBS)} $${a} + ${b}$`,
                 `Add $${a}$ to $${b}$`,
                 `Find the sum of $${a}$ and $${b}$`,
                 `What is $${a} + ${b}$?`,
             ]);
-            return { clue: ph, answer: String(round(a + b, 2)) };
+            return { clue: ph, answer: String(ans) };
         }
         const a = ri(rng, 1, 9) / 10, b = ri(rng, 2, 9);
+        const ans = round(a * b, 2);
+        if (rng() < 0.25) {
+            const ctx = rc(rng, [
+                `A bottle holds $${a}$ L. How much do $${b}$ bottles hold?`,
+                `One ribbon is $${a}$ m long. What is the total length of $${b}$ ribbons?`,
+                `A snack costs $\\$${a}$. Find the cost of $${b}$ snacks.`,
+            ]);
+            return { clue: ctx, answer: String(ans) };
+        }
         const ph = rc(rng, [
             `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
             `Multiply $${a}$ by $${b}$`,
             `Find the product of $${a}$ and $${b}$`,
             `What is $${a} \\times ${b}$?`,
         ]);
-        return { clue: ph, answer: String(round(a * b, 2)) };
+        return { clue: ph, answer: String(ans) };
     }
     if (diff === 'Medium') {
         if (type === 0) {
             const a = ri(rng, 10, 99) / 10, b = ri(rng, 10, 99) / 10;
+            const ans = round(a + b, 2);
+            if (rng() < 0.25) {
+                const ctx = rc(rng, [
+                    `A recipe needs $${a}$ kg of flour and $${b}$ kg of sugar. What is the total mass of ingredients?`,
+                    `On Monday a shop sold $${a}$ kg of cheese and on Tuesday $${b}$ kg. Find the total sales.`,
+                    `Two lengths of timber measure $${a}$ m and $${b}$ m. What is their combined length?`,
+                ]);
+                return { clue: ctx, answer: String(ans) };
+            }
             const ph = rc(rng, [
                 `${rc(rng, CALC_VERBS)} $${a} + ${b}$`,
                 `Add $${a}$ to $${b}$`,
                 `Find the sum of $${a}$ and $${b}$`,
                 `What is $${a} + ${b}$?`,
             ]);
-            return { clue: ph, answer: String(round(a + b, 2)) };
+            return { clue: ph, answer: String(ans) };
         }
         if (type === 1) {
             const a = ri(rng, 20, 99) / 10, b = ri(rng, 1, Math.floor(a * 10) - 1) / 10;
+            const bR = round(b, 1);
+            const ans = round(a - b, 2);
+            if (rng() < 0.25) {
+                const ctx = rc(rng, [
+                    `A water tank holds $${a}$ L. $${bR}$ L is used. How much remains?`,
+                    `A plank is $${a}$ m long. A piece of $${bR}$ m is cut off. What length is left?`,
+                    `A bag weighs $${a}$ kg. After removing $${bR}$ kg of contents, what is the new mass?`,
+                ]);
+                return { clue: ctx, answer: String(ans) };
+            }
             const ph = rc(rng, [
-                `${rc(rng, CALC_VERBS)} $${a} - ${round(b, 1)}$`,
-                `Subtract $${round(b, 1)}$ from $${a}$`,
-                `Find the difference of $${a}$ and $${round(b, 1)}$`,
-                `What is $${a} - ${round(b, 1)}$?`,
+                `${rc(rng, CALC_VERBS)} $${a} - ${bR}$`,
+                `Subtract $${bR}$ from $${a}$`,
+                `Find the difference of $${a}$ and $${bR}$`,
+                `What is $${a} - ${bR}$?`,
             ]);
-            return { clue: ph, answer: String(round(a - b, 2)) };
+            return { clue: ph, answer: String(ans) };
         }
         const a = ri(rng, 10, 99) / 10, b = ri(rng, 10, 99) / 10;
         const ph = rc(rng, [
@@ -1156,7 +1193,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
         Easy:   { 'area-perimeter': [0, 1], 'angles': [2] },
-        Medium: { 'area-perimeter': [0], 'pythagoras': [1], 'angles': [2, 3] },
+        Medium: { 'area-perimeter': [0], 'pythagoras': [1], 'angles': [2, 3, 4] },
         Hard:   { 'circles': [0, 2], 'pythagoras': [1], 'angles': [3, 4] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
@@ -1277,7 +1314,26 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `Co-interior angles between parallel lines sum to 180°. One angle is $${a}$°. Find the *other*.`,
                 `A transversal crosses two parallel lines. If one co-interior angle is $${a}$°, find the *missing* angle.`,
             ]);
-            return { clue: ph, answer: String(x), answerDisplay: `${x}°` };
+            return { clue: ph, answer: String(x), answerDisplay: `${x}°`, diagram: { type: 'parallel-transversal', a, angleType: 'co-interior' } };
+        }
+        if (type === 4) {
+            // Corresponding and alternate angles on parallel lines — equal
+            const a = rc(rng, [40, 50, 55, 60, 65, 70, 80, 110, 120]);
+            const form = ri(rng, 0, 1);
+            if (form === 0) {
+                const ph = rc(rng, [
+                    `Two parallel lines are cut by a transversal. A *corresponding* angle is $${a}$°. Find the equal angle.`,
+                    `Corresponding angles are equal. One is $${a}$°. Find the *other* corresponding angle.`,
+                    `State the *corresponding* angle to $${a}$° on a pair of parallel lines.`,
+                ]);
+                return { clue: ph, answer: String(a), answerDisplay: `${a}°`, diagram: { type: 'parallel-transversal', a, angleType: 'corresponding' } };
+            }
+            const ph = rc(rng, [
+                `Two parallel lines are cut by a transversal. An *alternate* angle is $${a}$°. Find the equal angle.`,
+                `Alternate angles are equal. One measures $${a}$°. Find its *alternate* angle.`,
+                `State the *alternate* angle to $${a}$° on a pair of parallel lines.`,
+            ]);
+            return { clue: ph, answer: String(a), answerDisplay: `${a}°`, diagram: { type: 'parallel-transversal', a, angleType: 'alternate' } };
         }
         // type 2 — triangle angle sum
         const angles = [30, 40, 45, 50, 60, 70, 80, 90];
@@ -1333,7 +1389,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Find the *co-interior* angle to $${a}$° when two parallel lines are cut by a transversal.`,
             `Co-interior angles sum to 180°. One angle measures $${a}$°. Find the *other*.`,
         ]);
-        return { clue: ph, answer: String(x), answerDisplay: `${x}°` };
+        return { clue: ph, answer: String(x), answerDisplay: `${x}°`, diagram: { type: 'parallel-transversal', a, angleType: 'co-interior' } };
     }
     if (type === 4) {
         // Corresponding and alternate angles — parallel lines
@@ -1345,14 +1401,14 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `State the *corresponding* angle to $${a}$° on a pair of parallel lines.`,
                 `Corresponding angles are equal. One is $${a}$°. What is the *other* corresponding angle?`,
             ]);
-            return { clue: ph, answer: String(a), answerDisplay: `${a}°` };
+            return { clue: ph, answer: String(a), answerDisplay: `${a}°`, diagram: { type: 'parallel-transversal', a, angleType: 'corresponding' } };
         }
         const ph = rc(rng, [
             `Two parallel lines are cut by a transversal. An *alternate* angle is $${a}$°. Find the equal angle.`,
             `State the *alternate* angle to $${a}$° on a pair of parallel lines.`,
             `Alternate angles are equal. One measures $${a}$°. What is its *alternate* angle?`,
         ]);
-        return { clue: ph, answer: String(a), answerDisplay: `${a}°` };
+        return { clue: ph, answer: String(a), answerDisplay: `${a}°`, diagram: { type: 'parallel-transversal', a, angleType: 'alternate' } };
     }
     const r = ri(rng, 2, 15);
     const u = _geoUnit(r);
@@ -2026,12 +2082,15 @@ function genStatistics(rng, diff, allowedOps, opts = {}, _depth = 0) {
 }
 
 function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
-    const S5_KEYS = ['surface-area', 'composite-volume', 'similar-triangles'];
-    const s5Active = S5_KEYS.filter(k => allowedOps && allowedOps.includes(k));
-    const s4Active = ['area-perimeter', 'pythagoras', 'angles', 'circles'].filter(k => !allowedOps || allowedOps.includes(k));
-    // surface-area is also valid for Stage 4; force it if it's the only selection
-    if (s5Active.length > 0 && (!s4Active.length || rng() < (s4Active.length ? 0.4 : 1))) {
-        return _genGeometryS5Op(rng, diff, rc(rng, s5Active));
+    // surface-area is Stage 4+5; composite-volume and similar-triangles are Stage 5 only
+    const S5_ONLY = ['composite-volume', 'similar-triangles'];
+    const EXTENDED = ['surface-area'];  // available to all stages via _genGeometryS5Op
+    const s5Active  = S5_ONLY.filter(k => allowedOps && allowedOps.includes(k));
+    const extActive = EXTENDED.filter(k => allowedOps && allowedOps.includes(k));
+    const s4Active  = ['area-perimeter', 'pythagoras', 'angles', 'circles'].filter(k => !allowedOps || allowedOps.includes(k));
+    const extPool   = [...s5Active, ...extActive];
+    if (extPool.length > 0 && (!s4Active.length || rng() < 0.4)) {
+        return _genGeometryS5Op(rng, diff, rc(rng, extPool));
     }
     return _genGeometryCore(rng, diff, allowedOps, opts, _depth);
 }

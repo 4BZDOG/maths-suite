@@ -476,6 +476,77 @@ function _trapezium({ a, b, height, missing }) {
     return _svg(VW, VH, inner);
 }
 
+// ─── Parallel Lines with Transversal ─────────────────────────────────────────
+// diagram: { type:'parallel-transversal', a, angleType:'co-interior'|'corresponding'|'alternate' }
+function _parallelTransversal({ a, angleType }) {
+    const VW = 220, VH = 140;
+
+    // Two horizontal parallel lines
+    const y1 = 40, y2 = 100;
+    const xL = 15, xR = 205;
+
+    // Transversal: from (55, 120) to (165, 20)
+    // Intersection with y1=40: t=0.8 → x=143; with y2=100: t=0.2 → x=77
+    const P1 = { x: 143, y: y1 };
+    const P2 = { x: 77,  y: y2 };
+    const txBot = { x: 55,  y: 120 };  // transversal extended below
+    const txTop = { x: 165, y: 20  };  // transversal extended above
+
+    // Parallel-line tick marks (two short chevrons) away from transversal
+    const parallelTick = (x, y) =>
+        `<line x1="${x-5}" y1="${y-6}" x2="${x+1}" y2="${y}" stroke="${GC}" stroke-width="1.2" opacity="0.6"/>` +
+        `<line x1="${x-5}" y1="${y+6}" x2="${x+1}" y2="${y}" stroke="${GC}" stroke-width="1.2" opacity="0.6"/>`;
+    const tickMarks =
+        parallelTick(48, y1) + parallelTick(54, y1) +
+        parallelTick(48, y2) + parallelTick(54, y2);
+
+    // Arc and label positions per angle type
+    // All arcs use _angleArc(vx, vy, p1x, p1y, p2x, p2y, r)
+    // p1/p2 are points on the two rays forming the labelled angle
+    let arc1, arc2, lx1, ly1, lx2, ly2;
+    const r = 17;
+
+    if (angleType === 'co-interior') {
+        // Between the parallel lines, same side (right of transversal)
+        // P1: horiz-right & transversal-going-down
+        arc1 = _angleArc(P1.x, P1.y, xR, y1, txBot.x, txBot.y, r);
+        lx1 = P1.x + r + 6; ly1 = P1.y + 14;
+        // P2: transversal-going-up & horiz-right
+        arc2 = _angleArc(P2.x, P2.y, txTop.x, txTop.y, xR, y2, r);
+        lx2 = P2.x + r + 6; ly2 = P2.y - 6;
+    } else if (angleType === 'corresponding') {
+        // Same position at each intersection: both above-right (NE quadrant)
+        arc1 = _angleArc(P1.x, P1.y, xR, y1, txTop.x, txTop.y, r);
+        lx1 = P1.x + r + 6; ly1 = P1.y - 6;
+        arc2 = _angleArc(P2.x, P2.y, xR, y2, txTop.x, txTop.y, r);
+        lx2 = P2.x + r + 6; ly2 = P2.y - 6;
+    } else {
+        // alternate — opposite sides between lines
+        // P1: below-left (horiz-left & transversal-going-down)
+        arc1 = _angleArc(P1.x, P1.y, xL, y1, txBot.x, txBot.y, r);
+        lx1 = P1.x - r - 12; ly1 = P1.y + 14;
+        // P2: above-right (horiz-right & transversal-going-up)
+        arc2 = _angleArc(P2.x, P2.y, xR, y2, txTop.x, txTop.y, r);
+        lx2 = P2.x + r + 6; ly2 = P2.y - 6;
+    }
+
+    const inner =
+        // Parallel lines
+        `<line x1="${xL}" y1="${y1}" x2="${xR}" y2="${y1}" stroke="${GC}" stroke-width="1.8"/>` +
+        `<line x1="${xL}" y1="${y2}" x2="${xR}" y2="${y2}" stroke="${GC}" stroke-width="1.8"/>` +
+        // Parallel tick marks
+        tickMarks +
+        // Transversal (extends beyond both lines)
+        `<line x1="${txBot.x}" y1="${txBot.y}" x2="${txTop.x}" y2="${txTop.y}" stroke="currentColor" stroke-width="1.6" opacity="0.75"/>` +
+        // Angle arcs
+        arc1 + arc2 +
+        // Labels: known angle at P1, missing at P2
+        _t(lx1, ly1, `${a}°`, { anchor: 'start', size: 11 }) +
+        _t(lx2, ly2, '?', { anchor: 'start', missing: true, size: 13 });
+
+    return _svg(VW, VH, inner);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 export function renderDiagramSVG(diagram) {
     if (!diagram) return '';
@@ -487,8 +558,9 @@ export function renderDiagramSVG(diagram) {
         case 'circle':              return _circle(diagram);
         case 'right-triangle-trig': return _rightTriangleTrig(diagram);
         case 'parabola':            return _parabola(diagram);
-        case 'parallelogram':       return _parallelogram(diagram);
-        case 'trapezium':           return _trapezium(diagram);
+        case 'parallelogram':            return _parallelogram(diagram);
+        case 'trapezium':               return _trapezium(diagram);
+        case 'parallel-transversal':    return _parallelTransversal(diagram);
         default: return '';
     }
 }
