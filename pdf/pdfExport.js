@@ -10,6 +10,7 @@ import { detectVerb, detectMidVerb } from '../renderers/htmlUtils.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
 import { getOutcomesForTopics, getTopicOutcomeCodes } from '../core/outcomes.js';
+import { drawFormulaSheet } from './pdfDrawFormulas.js';
 
 let isExporting = false;
 
@@ -1257,6 +1258,13 @@ export async function exportPDF() {
                 isFirstPage = false;
                 ctx.drawWatermark();
             };
+
+            // Optional formula reference sheet — one page per set, prepended before question pages
+            if (cfg.showFormulaSheet) {
+                addPage();
+                const ps = getPScale('easy');
+                drawFormulaSheet(ctx, activeTopics, ps);
+            }
 
             // Track visible question counts per difficulty.
             // Pages not in selectedPages default to 0 so their answers are excluded from the key.

@@ -320,6 +320,10 @@
                         <div class="toggle-row"><label title="Show worked solutions on Answer Key (where available — Pythagoras, Algebra)"><i class="fas fa-pencil-alt toggle-icon"></i>Worked Solutions on Key</label><label class="switch"><input
                                     type="checkbox" id="keyShowWorked" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
+                        <hr class="form-divider">
+                        <div class="toggle-row"><label title="Prepend a formula reference sheet page to the exported PDF — lists all relevant formulas for selected topics"><i class="fas fa-book-open toggle-icon"></i>Formula Sheet in PDF</label><label class="switch"><input
+                                    type="checkbox" id="showFormulaSheet" onchange="saveState();"><span
+                                    class="slider-switch"></span></label></div>
                     </div>
                 </details>
             </div>
@@ -509,7 +513,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=140"></script>
+    <script src="bundle.js?v=141"></script>
 </body>
 
 </html>
