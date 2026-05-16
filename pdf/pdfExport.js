@@ -1018,7 +1018,7 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             if (ky + 6 * pScale > PAGE_HEIGHT - MARGIN - 12 * pScale) return;
 
             const clueText = latexToText(q.clue || '');
-            const ansText  = String(q.answerDisplay || q.answer || '');
+            const ansText  = latexToText(String(q.answerDisplay || q.answer || ''));
 
             doc.setFont(pdfFont, 'normal');
             doc.setFontSize(7 * pScale);
@@ -1108,6 +1108,12 @@ export async function exportPDF() {
         isExporting = false;
         if (exportBtn) { exportBtn.disabled = false; exportBtn.innerHTML = exportBtnOrigHTML; }
         return;
+    }
+
+    const diffInPDF = ['easy', 'medium', 'hard'].filter(p => selectedPages.includes(p));
+    if (diffInPDF.length < 3) {
+        const skipped = ['Easy', 'Medium', 'Hard'].filter((_, i) => !diffInPDF.includes(['easy', 'medium', 'hard'][i]));
+        showToast(`PDF will only include ${diffInPDF.map(d => d[0].toUpperCase() + d.slice(1)).join(' + ')} difficulty. Uncheck fix: Page Order → tick ${skipped.join(', ')}.`, 'warning');
     }
 
     const L = document.getElementById('loading-overlay');

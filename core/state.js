@@ -324,6 +324,11 @@ export function applyStateToDOM(s) {
     }
 
     if (cfg.opts) {
+        // Ensure all difficulty-page opts exist (default true if key is absent from a saved state)
+        cfg.opts.easy   = cfg.opts.easy   ?? true;
+        cfg.opts.medium = cfg.opts.medium ?? true;
+        cfg.opts.hard   = cfg.opts.hard   ?? true;
+        cfg.opts.key    = cfg.opts.key    ?? true;
         setChk('sel-easy',   cfg.opts.easy);
         setChk('sel-medium', cfg.opts.medium);
         setChk('sel-hard',   cfg.opts.hard);
