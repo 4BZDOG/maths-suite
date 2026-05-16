@@ -2186,6 +2186,7 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
             notes: st,
             diagram: q.diagram || null,
             worked: q.worked || null,
+            unit: q.unit || null,
         });
     }
 

@@ -798,11 +798,10 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         doc.setFont(pdfFont, 'normal');
         doc.setFontSize(8 * pScale);
         doc.setTextColor(100, 116, 139);
-        // Easy difficulty: show the expected unit after the answer line so
-        // students know whether to write cm² / m / ° / etc. Hard/Medium
-        // omit the hint — students are expected to include the unit.
-        const showUnitHint = item.unit && item.difficulty === 'Easy';
-        const unitText  = showUnitHint ? ` ${latexToText(item.unit)}` : '';
+        // item.unit is only populated for Easy measurement questions in
+        // the generator; printing it as a hint after the answer line tells
+        // students whether to write cm² / m / ° / etc.
+        const unitText  = item.unit ? ` ${latexToText(item.unit)}` : '';
         const unitW     = unitText ? doc.getTextWidth(unitText) + 1 : 0;
         // Right edge of the line is the column edge; label sits to the
         // left of a fixed-length track so teachers can scan answers in a
@@ -816,7 +815,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         doc.setLineDashPattern([0.8, 1.2], 0);
         doc.line(trackStart, lineY, rightEdge, lineY);
         doc.setLineDashPattern([], 0);
-        if (showUnitHint) {
+        if (unitText) {
             doc.setFont(pdfFont, 'bold');
             doc.setFontSize(8 * pScale);
             doc.setTextColor(100, 116, 139);

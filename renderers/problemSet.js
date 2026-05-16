@@ -92,7 +92,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
             <div class="problem-answer-box">
                 <span class="problem-answer-label">Answer:</span>
                 <span class="problem-answer-line"></span>
-                ${item.unit && item.difficulty === 'Easy' ? `<span class="problem-answer-unit">${esc(item.unit)}</span>` : ''}
+                ${item.unit ? `<span class="problem-answer-unit">${esc(item.unit)}</span>` : ''}
             </div>
             ${metaRowHtml}
         </div>`;
