@@ -18,6 +18,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
 
     const cols               = settings.cols || 2;
     const showTopic          = settings.showTopic || false;
+    const showStudentHeader  = settings.psShowStudentHeader !== false;   // default true
     const showOutcomeChips   = settings.psShowOutcomeChips || false;
     const showOutcomesHeader = settings.psShowOutcomesHeader || false;
     const capPages           = settings.psCapPages || 0;
@@ -48,11 +49,11 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         }
     }
 
-    const studentHeaderHtml = `<div class="problem-student-header">
+    const studentHeaderHtml = showStudentHeader ? `<div class="problem-student-header">
         <span class="problem-student-field"><span class="problem-student-label">Name:</span><span class="problem-student-line"></span></span>
         <span class="problem-student-field"><span class="problem-student-label">Class:</span><span class="problem-student-line problem-student-line--short"></span></span>
         <span class="problem-student-field"><span class="problem-student-label">Date:</span><span class="problem-student-line problem-student-line--short"></span></span>
-    </div>`;
+    </div>` : '';
 
     let html = studentHeaderHtml + outcomesHeaderHtml + `<div class="problem-set-grid" data-cols="${cols}">`;
 

@@ -26,23 +26,27 @@ export const TOPIC_STRAND_MAP = {
     'Rounding':                 'Number & Algebra',
     'Fractions':                'Number & Algebra',
     'Percentages':              'Number & Algebra',
+    'Ratios & Rates':           'Number & Algebra',
     'Algebra':                  'Number & Algebra',
     'Financial Maths':          'Number & Algebra',
     'Non-linear Relationships': 'Number & Algebra',
     'Geometry':                 'Measurement & Space',
     'Trigonometry':             'Measurement & Space',
     'Statistics':               'Statistics & Probability',
+    'Probability':              'Statistics & Probability',
 };
 
 // ---- Topics available per stage ----
 export const STAGE_TOPICS = {
     'Stage 4': [
         'Integers', 'Decimals', 'Rounding', 'Fractions', 'Percentages',
-        'Algebra', 'Geometry', 'Statistics', 'Financial Maths',
+        'Ratios & Rates', 'Algebra', 'Geometry', 'Statistics',
+        'Probability', 'Financial Maths',
     ],
     'Stage 5': [
         'Integers', 'Decimals', 'Rounding', 'Fractions', 'Percentages',
-        'Algebra', 'Geometry', 'Statistics', 'Financial Maths',
+        'Ratios & Rates', 'Algebra', 'Geometry', 'Statistics',
+        'Probability', 'Financial Maths',
         'Trigonometry', 'Non-linear Relationships',
     ],
 };

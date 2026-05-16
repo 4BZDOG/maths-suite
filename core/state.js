@@ -66,6 +66,7 @@ export const state = {
         showAnswerKey:   true,
         showExportId:    true,
         showTopic:             false,
+        psShowStudentHeader:   true,
         psShowOutcomesHeader:  false,
         psShowOutcomeChips:    false,
         keyShowWorked:         false,
@@ -129,6 +130,7 @@ export function syncSettingsFromDOM() {
     s.showAnswerKey  = getChk('showAnswerKey', s.showAnswerKey);
     s.showExportId   = getChk('showExportId', s.showExportId);
     s.showTopic             = getChk('psShowTopic',            s.showTopic);
+    s.psShowStudentHeader   = getChk('psShowStudentHeader',    s.psShowStudentHeader);
     s.psShowOutcomesHeader  = getChk('psShowOutcomesHeader',   s.psShowOutcomesHeader);
     s.psShowOutcomeChips    = getChk('psShowOutcomeChips',     s.psShowOutcomeChips);
     s.keyShowWorked         = getChk('keyShowWorked',          s.keyShowWorked);
@@ -309,6 +311,7 @@ export function applyStateToDOM(s) {
         });
     }
     setChk('psShowTopic',           cfg.showTopic);
+    setChk('psShowStudentHeader',   cfg.psShowStudentHeader ?? true);
     setChk('psShowOutcomesHeader',  cfg.psShowOutcomesHeader);
     setChk('psShowOutcomeChips',    cfg.psShowOutcomeChips);
     setChk('keyShowWorked',         cfg.keyShowWorked);

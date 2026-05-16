@@ -368,6 +368,8 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
 const TOPIC_COLOURS_RGB = {
     'Number': [59, 130, 246], 'Algebra': [139, 92, 246], 'Geometry': [16, 185, 129],
     'Statistics': [245, 158, 11], 'Financial Maths': [239, 68, 68],
+    'Trigonometry': [6, 182, 212], 'Probability': [168, 85, 247],
+    'Ratios & Rates': [14, 165, 233],
     'Integers': [59, 130, 246], 'Decimals': [59, 130, 246], 'Rounding': [59, 130, 246],
     'Fractions': [59, 130, 246], 'Percentages': [59, 130, 246],
 };
@@ -567,6 +569,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
     const cfg = state.settings;
     const cols               = cfg.cols || 2;
     const showTopic          = cfg.showTopic || false;
+    const showStudentHeader  = cfg.psShowStudentHeader !== false;   // default true
     const showOutcomeChips   = cfg.psShowOutcomeChips || false;
     const showOutcomesHeader = cfg.psShowOutcomesHeader || false;
     const capPages           = cfg.psCapPages || 0;
@@ -590,6 +593,36 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
     // Items are dropped into whichever column is currently shorter, which
     // balances height when one column has a tall item (e.g. a diagram).
     let colY = [startY, startY];
+
+    // Optional student-identity header (Name / Class / Date)
+    if (showStudentHeader) {
+        const sh_h = 6 * pScale;
+        const sh_pad = 1.5 * pScale;
+        const sh_y = cy;
+        doc.setFont(pdfFont, 'bold');
+        doc.setFontSize(6 * pScale);
+        doc.setTextColor(100, 116, 139);
+        const labelBaseline = sh_y + sh_h / 2 + 1.8 * pScale;
+        // Three fields: Name (wider) + Class + Date, sharing the row width
+        const totalW = availW;
+        const nameW = totalW * 0.5;
+        const classW = totalW * 0.25;
+        const dateW = totalW * 0.25;
+        let fx = MARGIN;
+        const drawField = (label, fieldW) => {
+            doc.text(label, fx, labelBaseline);
+            const labelW = doc.getTextWidth(label) + sh_pad;
+            doc.setDrawColor(148, 163, 184);
+            doc.setLineWidth(0.3);
+            doc.line(fx + labelW, labelBaseline + 0.5, fx + fieldW - sh_pad, labelBaseline + 0.5);
+            fx += fieldW;
+        };
+        drawField('NAME:', nameW);
+        drawField('CLASS:', classW);
+        drawField('DATE:', dateW);
+        cy += sh_h + 1.5 * pScale;
+        colY = [cy, cy];
+    }
 
     // Optional outcomes header strip
     if (showOutcomesHeader) {
