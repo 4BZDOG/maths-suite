@@ -235,6 +235,105 @@ function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
     doc.text(missText, cx + rPx + _LBL_OFFSET + 2 * ps, cy + 1.5 * ps, { align: 'left' });
 }
 
+function _drawParallelogramDiagramPDF(doc, { base, height, missing }, x0, y0, w, h, ps, font) {
+    const maxW = w * 0.72, maxH = h * 0.58;
+    const dw = Math.max(14, Math.min(maxW, base * 2.2 * ps));
+    const dh = Math.max(8,  Math.min(maxH, height * 2.2 * ps));
+    const skew = dw * 0.22;  // horizontal offset at top
+
+    const bx = x0 + (w - dw) / 2;
+    const by = y0 + (h - dh) / 2 - 2 * ps;
+
+    // Parallelogram vertices: BL, BR, TR, TL
+    const BL = { x: bx,          y: by + dh };
+    const BR = { x: bx + dw,     y: by + dh };
+    const TR = { x: bx + dw - skew, y: by };
+    const TL = { x: bx - skew,   y: by };
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    doc.lines([[dw, 0], [-skew, -dh], [-dw, 0]], BL.x, BL.y, [1, 1], 'FD');
+
+    // Dashed height line from BL to TL (vertical)
+    const hFootX = BL.x + skew;
+    doc.setLineDashPattern([1.2, 1.2], 0);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_AUX_W);
+    doc.line(hFootX, BL.y, hFootX, TL.y + dh);  // vertical height line
+    doc.setLineDashPattern([], 0);
+
+    doc.setFontSize(8 * ps);
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    // Base label below
+    doc.text(`b = ${base}`, (BL.x + BR.x) / 2, BL.y + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
+    // Height label right of dashed line
+    doc.text(`h = ${height}`, hFootX + _LBL_OFFSET, (BL.y + TL.y + dh) / 2, { align: 'left' });
+
+    const centreLabel = missing === 'area' ? 'A = ?' : 'P = ?';
+    doc.setFont(font, 'bold');
+    doc.setFontSize(9 * ps);
+    doc.setTextColor(..._MC);
+    doc.text(centreLabel, x0 + w / 2, by + dh / 2 + 1.8 * ps, { align: 'center' });
+}
+
+function _drawTrapeziumDiagramPDF(doc, { a, b, height, missing }, x0, y0, w, h, ps, font) {
+    const maxW = w * 0.75, maxH = h * 0.58;
+    const scale = Math.min(maxW / Math.max(a, b), maxH / height, 2.5 * ps);
+    const dw = Math.max(a, b) * scale;
+    const dh = Math.max(10, Math.min(maxH, height * scale));
+
+    const bx = x0 + (w - dw) / 2;
+    const by = y0 + (h - dh) / 2 - 2 * ps;
+
+    const aW = a * scale, bW = b * scale;
+    const offsetLeft = (dw - aW) / 2;
+
+    // Trapezium vertices: BL, BR, TR, TL
+    const BL = { x: bx,              y: by + dh };
+    const BR = { x: bx + bW,         y: by + dh };
+    const TR = { x: bx + offsetLeft + aW, y: by };
+    const TL = { x: bx + offsetLeft,      y: by };
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    // Draw 4 sides
+    doc.line(BL.x, BL.y, BR.x, BR.y);
+    doc.line(BR.x, BR.y, TR.x, TR.y);
+    doc.line(TR.x, TR.y, TL.x, TL.y);
+    doc.line(TL.x, TL.y, BL.x, BL.y);
+    // Fill
+    doc.setFillColor(..._GCF);
+
+    // Dashed height line
+    const hx = BL.x + (bW - aW) / 2 + aW / 2;  // roughly midpoint
+    const hFootY = BL.y;
+    const hTopY  = TL.y;
+    doc.setLineDashPattern([1.2, 1.2], 0);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_AUX_W);
+    doc.line((TL.x + TR.x) / 2, hTopY, (TL.x + TR.x) / 2, hFootY);
+    doc.setLineDashPattern([], 0);
+
+    doc.setFontSize(8 * ps);
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    // Top label (a)
+    doc.text(`a = ${a}`, (TL.x + TR.x) / 2, TL.y - _LBL_OFFSET, { align: 'center' });
+    // Bottom label (b)
+    doc.text(`b = ${b}`, (BL.x + BR.x) / 2, BL.y + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
+    // Height label
+    doc.text(`h = ${height}`, (TL.x + TR.x) / 2 + _LBL_OFFSET, (hTopY + hFootY) / 2, { align: 'left' });
+
+    const centreLabel = missing === 'area' ? 'A = ?' : 'P = ?';
+    doc.setFont(font, 'bold');
+    doc.setFontSize(9 * ps);
+    doc.setTextColor(..._MC);
+    doc.text(centreLabel, x0 + w / 2, by + dh / 2 + 1.8 * ps, { align: 'center' });
+}
+
 /**
  * Draw a geometry diagram into a bounding box.
  * @param {jsPDF} doc
@@ -256,6 +355,8 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
         case 'triangle-angles': _drawTriAnglesDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'triangle-area':   _drawTriAreaDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'circle':          _drawCircleDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'parallelogram':   _drawParallelogramDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'trapezium':       _drawTrapeziumDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
     }
     // Restore defaults
     doc.setLineDashPattern([], 0);
@@ -552,7 +653,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
             ? 3 * 4.5 * pScale
             : clueLines.length * 4.5 * pScale;
 
-        const workingCount = item.difficulty === 'Hard' ? 2 : item.difficulty === 'Medium' ? 1 : 0;
+        const workingCount = item.difficulty === 'Hard' ? 3 : item.difficulty === 'Medium' ? 2 : 1;
         // Use item.notes (specific sub-topic key) for outcome lookup — item.topic is broad category
         const itemCodes = showOutcomeChips && item.notes ? getTopicOutcomeCodes(item.notes, stage) : [];
         // Estimate height for the combined meta row (topic pill + outcome chips on one centered line)
