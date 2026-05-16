@@ -652,10 +652,12 @@ function genRounding(rng, diff, allowedOps) {
     const factor = Math.pow(10, Math.floor(Math.log10(n)) - (sigFigs - 1));
     const ans = Math.round(n / factor) * factor;
     const sfLabel = `${sigFigs} significant figure${sigFigs > 1 ? 's' : ''}`;
+    const orderAbove = Math.pow(10, Math.floor(Math.log10(n)) + 1);
+    const edgeNote = ans >= orderAbove ? ' *Note: trailing zeros are not significant.*' : '';
     const ph = rc(rng, [
-        `Round $${n}$ to ${sfLabel}`,
-        `Write $${n}$ correct to ${sfLabel}`,
-        `Express $${n}$ to ${sfLabel}`,
+        `Round $${n}$ to ${sfLabel}${edgeNote}`,
+        `Write $${n}$ correct to ${sfLabel}${edgeNote}`,
+        `Express $${n}$ to ${sfLabel}${edgeNote}`,
     ]);
     return { clue: ph, answer: String(ans) };
 }
@@ -1269,14 +1271,14 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                     `Angles on a straight line sum to 180°. If one angle is $${a}$°, find the other.`,
                     `What angle is supplementary to $${a}$°?`,
                 ]);
-                return { clue: ph, answer: String(x), answerDisplay: `${x}°`, unit: '°' };
+                return { clue: ph, answer: String(x), answerDisplay: `${x}°`, unit: '°', diagram: { type: 'straight-line-angles', a } };
             }
             const ph = rc(rng, [
                 `Two straight lines intersect. One angle is $${a}$°. State the *vertically opposite* angle.`,
                 `Find the angle *vertically opposite* to $${a}$°.`,
                 `Two lines cross. One angle measures $${a}$°. What is the *vertically opposite* angle?`,
             ]);
-            return { clue: ph, answer: String(a), answerDisplay: `${a}°`, unit: '°' };
+            return { clue: ph, answer: String(a), answerDisplay: `${a}°`, unit: '°', diagram: { type: 'vertically-opposite', a } };
         }
         const l = ri(rng, 3, 15), w = ri(rng, 2, l);
         const u = _geoUnit(Math.max(l, w));
