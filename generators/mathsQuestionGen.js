@@ -703,7 +703,8 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             const den = rc(rng, [4, 5, 6, 8, 10]);
             const n1 = ri(rng, 1, den - 2), n2 = ri(rng, 1, den - n1 - 1);
             const ans = fracStr(n1 + n2, den);
-            return { clue: `${calcVerb} $\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}}$`, answer: ans };
+            const worked = `$\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}} = \\frac{${n1}+${n2}}{${den}} = ${ans}$`;
+            return { clue: `${calcVerb} $\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}}$`, answer: ans, worked };
         }
         const den = rc(rng, [4, 6, 8, 10, 12]);
         const factor = rc(rng, [2, 3]);
@@ -724,8 +725,10 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             const d1 = rc(rng, [2, 3, 4, 5]), d2 = rc(rng, [3, 4, 5, 6]);
             const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
             const l = lcm(d1, d2);
-            const ans = fracStr(n1 * (l / d1) + n2 * (l / d2), l);
-            return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} + \\frac{${n2}}{${d2}}$`, answer: ans };
+            const e1 = n1 * (l / d1), e2 = n2 * (l / d2);
+            const ans = fracStr(e1 + e2, l);
+            const worked = `LCD $= ${l}$: $\\frac{${e1}}{${l}} + \\frac{${e2}}{${l}} = \\frac{${e1+e2}}{${l}} = ${ans}$`;
+            return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} + \\frac{${n2}}{${d2}}$`, answer: ans, worked };
         }
         if (type === 1) {
             const d1 = ri(rng, 3, 7), n1 = ri(rng, 1, d1 - 1);
@@ -800,7 +803,8 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             `A discount of $${pct}\\%$ is applied to $\\$${whole}$. Find the discount amount.`,
             `$${pct}\\%$ of a class of $${whole}$ students passed. How many students passed?`,
         ]);
-        return { clue: ph, answer: String(ans), answerDisplay: String(ans) };
+        const worked = `$\\frac{${pct}}{100} \\times ${whole} = ${ans}$`;
+        return { clue: ph, answer: String(ans), answerDisplay: String(ans), worked };
     }
     if (diff === 'Medium') {
         const type = _pickType(rng, filtered, 2);
@@ -817,7 +821,8 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
                         `Calculate $${pct}\\%$ of $${whole}$`,
                         `Determine $${pct}\\%$ of $${whole}$`,
                     ]);
-                    return { clue: ph, answer: String(ans) };
+                    const worked = `$${pct}\\% \\times ${whole} = \\frac{${pct}}{100} \\times ${whole} = ${ans}$`;
+                    return { clue: ph, answer: String(ans), worked };
                 }
             }
         }
@@ -834,7 +839,9 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
                 `A price of $\\$${orig}$ increases by $${pct}\\%$. Find the **new** price.`,
                 `A score of $${orig}$ is raised by $${pct}\\%$. What is the **new** score?`,
             ]);
-            return { clue: ph, answer: String(ans) };
+            const multiplier = 1 + pct / 100;
+            const worked = `$${orig} \\times ${multiplier} = ${ans}$`;
+            return { clue: ph, answer: String(ans), worked };
         }
         const b = rc(rng, [10, 20, 25, 50, 100]);
         const a = ri(rng, 1, b - 1);

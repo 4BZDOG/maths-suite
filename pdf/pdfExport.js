@@ -1044,6 +1044,7 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
 
         let ky = cy + 8 * pScale;
 
+        const showWorkedPDF = cfg.keyShowWorked || false;
         // Reserve a fixed right-hand strip for the answer so all answers
         // align in a vertical "marking rail" and clue text wraps cleanly
         // to the left of it instead of being truncated with an ellipsis.
@@ -1074,7 +1075,19 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             doc.setTextColor(...sec.rgb);
             doc.text(ansText, cx + colW, ky, { align: 'right' });
 
-            const blockH = Math.max(shown.length * lineH, 5 * pScale);
+            let blockH = Math.max(shown.length * lineH, 5 * pScale);
+
+            // Worked solution — shown when "Show worked" is toggled on
+            if (showWorkedPDF && q.worked) {
+                const workedText = latexToText(q.worked);
+                doc.setFont(pdfFont, 'italic');
+                doc.setFontSize(5.8 * pScale);
+                doc.setTextColor(148, 163, 184);
+                const workedLines = doc.splitTextToSize(workedText, colW - 4).slice(0, 2);
+                workedLines.forEach((line, li) => doc.text(line, cx + 2, ky + blockH + li * 3 * pScale));
+                blockH += workedLines.length * 3 * pScale + 1;
+            }
+
             doc.setDrawColor(220, 220, 220);
             doc.setLineWidth(0.1);
             doc.line(cx, ky + blockH - 0.5, cx + colW, ky + blockH - 0.5);
