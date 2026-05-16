@@ -114,6 +114,16 @@ function generateAll() {
         hard:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Hard',   count: GENERATE_COUNT, seed: seed + 2, showFormulas: state.settings.showFormulas, stage: state.stage, includePath: state.includePath }),
     };
 
+    // Preserve locked questions — keep slot content from previous generation
+    const oldSets = state.generatedSets;
+    ['easy', 'medium', 'hard'].forEach(key => {
+        const oldArr = oldSets[key] || [];
+        const newArr = sets[key] || [];
+        oldArr.forEach((oldQ, i) => {
+            if (oldQ && oldQ._locked && newArr[i]) newArr[i] = oldQ;
+        });
+    });
+
     setGeneratedSets(sets);
     renderActivePage();
     saveState();
@@ -133,6 +143,46 @@ function generateAll() {
 
 const debouncedGenerate = debounceFn(generateAll, 300);
 const debouncedUpdateUI = debounceFn(() => { saveState(); updateUI(); }, 500);
+
+// ─── Per-question reroll and lock ────────────────────────────────────────────
+function rerollQuestion(diffLabel, index) {
+    const key = diffLabel.toLowerCase();
+    const arr = state.generatedSets[key];
+    if (!arr || index < 0 || index >= arr.length) return;
+    const original = arr[index];
+    if (original._locked) return;
+
+    const subTopic  = original.notes;  // e.g. 'Integers'
+    const subOps    = state.selectedSubOps[subTopic];
+    const subOpsFilter = subOps ? { [subTopic]: subOps } : null;
+    const existingClues = new Set(arr.map((q, i) => (i !== index ? q.clue : null)).filter(Boolean));
+
+    let newQ = null;
+    for (let attempt = 0; attempt < 25; attempt++) {
+        const candidates = generateMathsQuestions({
+            subTopics: [subTopic], subOpsFilter, difficulty: diffLabel, count: 1,
+            seed: Date.now() + attempt * 997,
+            showFormulas: state.settings.showFormulas, stage: state.stage, includePath: state.includePath,
+        });
+        if (candidates.length && !existingClues.has(candidates[0].clue)) {
+            newQ = candidates[0];
+            break;
+        }
+    }
+    if (!newQ) { showToast('Could not find a unique replacement — try enabling more operations.', 'warning'); return; }
+    arr[index] = newQ;
+    renderActivePage();
+    saveState();
+}
+
+function toggleLockQuestion(diffLabel, index) {
+    const key = diffLabel.toLowerCase();
+    const arr = state.generatedSets[key];
+    if (!arr || index < 0 || index >= arr.length) return;
+    arr[index]._locked = !arr[index]._locked;
+    renderActivePage();
+    saveState();
+}
 
 // Stores the last rendered visible question counts; read by renderExportPreview()
 let _lastRenderedCounts = { easy: 0, medium: 0, hard: 0 };
@@ -1146,6 +1196,8 @@ window._puzzleApp = {
     toggleFormulaHintColumn,
     syncSeedInput,
     copySeedToClipboard,
+    rerollQuestion,
+    toggleLockQuestion,
 };
 
 Object.assign(window, window._puzzleApp);

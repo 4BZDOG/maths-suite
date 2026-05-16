@@ -82,7 +82,15 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
                </div>`
             : '';
 
-        html += `<div class="problem-item">
+        const isLocked = item._locked === true;
+        const actionsHtml =
+            `<div class="problem-actions">` +
+            `<button class="prob-btn prob-reroll" onclick="window.rerollQuestion('${esc(item.difficulty)}',${i})" title="Re-roll this question"><i class="fas fa-sync-alt"></i></button>` +
+            `<button class="prob-btn prob-lock${isLocked ? ' is-locked' : ''}" onclick="window.toggleLockQuestion('${esc(item.difficulty)}',${i})" title="${isLocked ? 'Unlock' : 'Lock'} this question"><i class="fas fa-${isLocked ? 'lock' : 'lock-open'}"></i></button>` +
+            `</div>`;
+
+        html += `<div class="problem-item${isLocked ? ' is-locked' : ''}">
+            ${actionsHtml}
             <div class="problem-clue-row">
                 <span class="problem-num">${i + 1}.</span>
                 <div class="problem-clue katex-target">${formatClue(item.clue)}</div>

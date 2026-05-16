@@ -2606,6 +2606,49 @@ table.mode-cw td.cell.empty {
 [data-theme="dark"] .wm-select { background: var(--input-bg); color: #f8fafc; border-color: var(--border); }
 [data-theme="dark"] .problem-item { background: #1e293b; border-color: var(--border); }
 
+/* ─── Per-question action buttons (reroll / lock) ─────────────────────── */
+.problem-item { position: relative; }
+
+.problem-actions {
+    position: absolute;
+    top: 5px;
+    right: 7px;
+    display: flex;
+    gap: 3px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 2;
+}
+.problem-item:hover .problem-actions { opacity: 1; }
+
+.prob-btn {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    padding: 2px 5px;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--text-muted);
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.prob-btn:hover {
+    background: var(--bg-page);
+    border-color: var(--border);
+    color: var(--text);
+}
+.prob-btn.prob-lock.is-locked {
+    color: #f59e0b;
+    border-color: #f59e0b40;
+    background: #f59e0b10;
+}
+.problem-item.is-locked {
+    border-left: 3px solid #f59e0b;
+}
+@media print {
+    .problem-actions { display: none !important; }
+}
+
 /* Stage selector — segmented radio button group */
 .stage-selector-group {
     display: flex;

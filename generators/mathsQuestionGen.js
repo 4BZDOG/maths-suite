@@ -275,6 +275,14 @@ function genIntegers(rng, diff, allowedOps) {
         }
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, a);
+        if (diff === 'Easy' && rng() < 0.25) {
+            const ctx = rc(rng, [
+                { stem: `A baker has $${a}$ buns and sells $${b}$. How many buns remain?`, ans: a - b },
+                { stem: `A class has $${a}$ students. $${b}$ are absent. How many are present?`, ans: a - b },
+                { stem: `A farmer has $${a}$ eggs. $${b}$ are sold. How many are left?`, ans: a - b },
+            ]);
+            return { clue: ctx.stem, answer: String(ctx.ans) };
+        }
         const clue = rc(rng, [
             `${rc(rng, CALC_VERBS)} $${a} - ${b}$`,
             `Find the *difference* between $${a}$ and $${b}$`,
