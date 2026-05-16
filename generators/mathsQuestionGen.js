@@ -2134,6 +2134,7 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
     while (topicPlan.length < count) topicPlan.push(...shuffled(subtopics));
 
     const results = [];
+    const seenClues = new Set();
     let attempts = 0;
     let planIdx = 0;
     const maxAttempts = count * 20;
@@ -2169,20 +2170,19 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
         if (!q) continue;
 
         const ans = String(q.answer);
-        // Skip empty, NaN, or numerically invalid answers; use answerDisplay length for the cap
-        const displayLen = String(q.answerDisplay || ans).length;
-        if (!ans || displayLen > 60 || ans === 'NaN' || ans === 'Infinity' || ans === '-Infinity') continue;
+        const displayStr = String(q.answerDisplay || ans);
+        if (!ans || displayStr.length > 60 || ans === 'NaN' || ans === 'Infinity' || ans === '-Infinity') continue;
 
-        // Prevent duplicate questions
-        if (results.some(r => r.clue === q.clue)) continue;
+        if (seenClues.has(q.clue)) continue;
 
+        seenClues.add(q.clue);
         results.push({
             id: 'gen_' + results.length + '_' + (seed || Date.now()),
             topic: TOPIC_MAP[st] || 'Number',
             difficulty: diff,
             clue: q.clue || '',
             answer: ans,
-            answerDisplay: q.answerDisplay || ans,
+            answerDisplay: displayStr,
             notes: st,
             diagram: q.diagram || null,
             worked: q.worked || null,
