@@ -113,7 +113,10 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
 
     // Cap-to-N-pages: hide items that overflow the specific page container amount
     if (capPages > 0) {
-        return _capToPages(container, questions.length, capPages);
+        const visibleCount = _capToPages(container, questions.length, capPages);
+        const scoreSep = container.querySelector('.problem-score-sep');
+        if (scoreSep) scoreSep.innerHTML = `/ <strong>${visibleCount}</strong>`;
+        return visibleCount;
     }
     return questions.length;
 }
