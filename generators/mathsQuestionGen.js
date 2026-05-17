@@ -1252,7 +1252,8 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                     `A trapezium has parallel sides of $${a}$ ${u} and $${bTrap}$ ${u} with a perpendicular height of $${height}$ ${u}. Find its area.${pf}`,
                     `Calculate the *area* of a trapezium: parallel sides $${a}$ ${u} and $${bTrap}$ ${u}, height $${height}$ ${u}.${pf}`,
                 ]);
-                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, diagram: { type: 'trapezium', a, b: bTrap, height, missing: 'area' } };
+                const diagA = Math.min(a, bTrap), diagB = Math.max(a, bTrap);
+                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, diagram: { type: 'trapezium', a: diagA, b: diagB, height, missing: 'area' } };
             }
             // shapeForm === 0: rectangle
             const l = ri(rng, 2, 15), w = ri(rng, 2, 12);
