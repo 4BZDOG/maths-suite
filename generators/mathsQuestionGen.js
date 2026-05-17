@@ -1044,8 +1044,9 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
         }
         if (type === 1) {
             const mode = ri(rng, 1, 15);
+            const usedVals = new Set([mode]);
             const others = Array.from({ length: 4 }, () => {
-                let v; do { v = ri(rng, 1, 20); } while (v === mode); return v;
+                let v; do { v = ri(rng, 1, 20); } while (usedVals.has(v)); usedVals.add(v); return v;
             });
             const data = [...others, mode, mode].sort((a, b) => a - b);
             const ph = rc(rng, [
