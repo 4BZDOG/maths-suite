@@ -573,7 +573,7 @@ function _straightLineAngles({ a }) {
     const midAng1Rad = ((180 - a / 2) * Math.PI) / 180;
     const lbl1X = px + (r + 14) * Math.cos(midAng1Rad);
     const lbl1Y = py - (r + 14) * Math.sin(midAng1Rad);
-    const midAng2Rad = (a / 2) * Math.PI / 180;
+    const midAng2Rad = ((180 - a) / 2) * Math.PI / 180;
     const lbl2X = px + (r + 14) * Math.cos(midAng2Rad);
     const lbl2Y = py - (r + 14) * Math.sin(midAng2Rad);
 

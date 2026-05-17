@@ -401,7 +401,7 @@ function _drawStraightLineAnglesPDF(doc, { a }, x0, y0, w, h, ps, font) {
 
     doc.setFont(font, 'bold');
     doc.setTextColor(..._MC);
-    const midA2 = (a / 2) * Math.PI / 180;
+    const midA2 = ((180 - a) / 2) * Math.PI / 180;
     doc.text('?', px + (r + 4) * Math.cos(midA2), lineY - (r + 4) * Math.sin(midA2), { align: 'center' });
 }
 
@@ -499,6 +499,135 @@ function _drawParallelTransversalPDF(doc, { a, angleType }, x0, y0, w, h, ps, fo
     doc.text('?', P2.x + lbl2Off.dx, P2.y + lbl2Off.dy, { align: lbl2Off.dx < 0 ? 'right' : 'left' });
 }
 
+function _drawRightTriangleTrigPDF(doc, { opp, adj, hyp, angle, missing }, x0, y0, w, h, ps, font) {
+    // Fixed 4:3 proportions — same visual shape regardless of actual values
+    const adjMm = Math.min(w * 0.56, h * 0.70);
+    const oppMm = adjMm * (78 / 106);
+    const Ax = x0 + w * 0.12, Ay = y0 + h * 0.85;
+    const Bx = Ax + adjMm,    By = Ay;
+    const Cx = Ax,            Cy = Ay - oppMm;
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    _triLines(doc, [{ x: Ax, y: Ay }, { x: Bx, y: By }, { x: Cx, y: Cy }], 'FD');
+
+    const sq = 2.2 * ps;
+    doc.setLineWidth(_AUX_W);
+    _rightAnglePDF(doc, Ax, Ay, sq);
+
+    // Theta arc at B (between legs BA and BC)
+    const arcR = Math.min(adjMm, oppMm) * 0.22;
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_AUX_W);
+    _drawAngleArcPDF(doc, Bx, By, Ax, Ay, Cx, Cy, arcR);
+
+    doc.setFontSize(7.5 * ps);
+    const isMissing = (key) => missing === key;
+    const lbl = (key, val, suffix = '') => isMissing(key) ? '?' : `${val}${suffix}`;
+
+    // adj label below baseline
+    doc.setFont(font, isMissing('adj') ? 'bold' : 'normal');
+    doc.setTextColor(...(isMissing('adj') ? _MC : _LC));
+    doc.text(`adj = ${lbl('adj', adj)}`, (Ax + Bx) / 2, Ay + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
+
+    // opp label left of vertical leg
+    doc.setFont(font, isMissing('opp') ? 'bold' : 'normal');
+    doc.setTextColor(...(isMissing('opp') ? _MC : _LC));
+    doc.text(`opp = ${lbl('opp', opp)}`, Ax - _LBL_OFFSET, (Ay + Cy) / 2 + 1.2 * ps, { align: 'right' });
+
+    // hyp label along the hypotenuse (outward normal)
+    const hdx = Bx - Cx, hdy = By - Cy, hlen = Math.hypot(hdx, hdy);
+    const hnx = hdy / hlen, hny = -hdx / hlen;
+    const hmx = (Bx + Cx) / 2 + hnx * (_LBL_OFFSET + 2);
+    const hmy = (By + Cy) / 2 + hny * (_LBL_OFFSET + 2) + 1.2 * ps;
+    doc.setFont(font, isMissing('hyp') ? 'bold' : 'normal');
+    doc.setTextColor(...(isMissing('hyp') ? _MC : _LC));
+    doc.text(`hyp = ${lbl('hyp', hyp)}`, hmx, hmy, { align: 'center' });
+
+    // θ label inside the arc at B
+    doc.setFontSize(7 * ps);
+    doc.setFont(font, isMissing('angle') ? 'bold' : 'normal');
+    doc.setTextColor(...(isMissing('angle') ? _MC : _LC));
+    doc.text(`θ=${lbl('angle', angle, '°')}`, Bx - arcR - 7 * ps, By - arcR * 0.5, { align: 'right' });
+}
+
+function _drawParabolaPDF(doc, { h: ph, k, a }, x0, y0, w, h, ps, font) {
+    const ox = x0 + w * 0.38, oy = y0 + h * 0.58;
+    const scX = w * 0.115, scY = h * 0.135;
+    const axL = x0 + 3, axR = x0 + w - 3;
+    const axT = y0 + 3, axB = y0 + h - 3;
+
+    // Axes
+    doc.setDrawColor(140, 140, 140);
+    doc.setFillColor(140, 140, 140);
+    doc.setLineWidth(0.35);
+    doc.line(axL, oy, axR, oy);
+    doc.line(ox, axB, ox, axT);
+    // Arrowheads
+    doc.triangle(axR, oy, axR - 2.5, oy - 1.2, axR - 2.5, oy + 1.2, 'F');
+    doc.triangle(ox, axT, ox - 1.2, axT + 2.5, ox + 1.2, axT + 2.5, 'F');
+
+    // Axis labels
+    doc.setFontSize(7 * ps);
+    doc.setFont(font, 'italic');
+    doc.setTextColor(120, 120, 120);
+    doc.text('x', axR - 1, oy - 2, { align: 'right' });
+    doc.text('y', ox + 2, axT + 4, { align: 'left' });
+
+    // Tick marks
+    doc.setFont(font, 'normal');
+    doc.setFontSize(5.5 * ps);
+    for (let i = -2; i <= 2; i++) {
+        if (i === 0) continue;
+        const tx = ox + i * scX;
+        if (tx > axL + 2 && tx < axR - 2) {
+            doc.setDrawColor(160, 160, 160);
+            doc.setLineWidth(0.25);
+            doc.line(tx, oy - 1.2, tx, oy + 1.2);
+            doc.setTextColor(150, 150, 150);
+            doc.text(String(i), tx, oy + 3.5, { align: 'center' });
+        }
+        const ty = oy - i * scY;
+        if (ty > axT + 2 && ty < axB - 2) {
+            doc.setDrawColor(160, 160, 160);
+            doc.setLineWidth(0.25);
+            doc.line(ox - 1.2, ty, ox + 1.2, ty);
+            doc.setTextColor(150, 150, 150);
+            doc.text(String(i), ox - 1.8, ty + 1.8, { align: 'right' });
+        }
+    }
+
+    // Parabola curve (polyline, 40 segments)
+    const xMin = -2.6, xMax = 2.6, nPts = 40;
+    const pts = [];
+    for (let i = 0; i <= nPts; i++) {
+        const xc = xMin + (xMax - xMin) * (i / nPts);
+        const yc = a * (xc - ph) * (xc - ph) + k;
+        const px = ox + xc * scX;
+        const py = oy - yc * scY;
+        if (px > axL && px < axR && py > axT && py < axB)
+            pts.push({ x: px, y: py });
+    }
+    if (pts.length > 1) {
+        doc.setDrawColor(..._GC);
+        doc.setLineWidth(0.7);
+        for (let i = 0; i < pts.length - 1; i++)
+            doc.line(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y);
+    }
+
+    // Vertex dot + label
+    const vx = ox + ph * scX, vy = oy - k * scY;
+    if (vx > axL + 2 && vx < axR - 2 && vy > axT + 2 && vy < axB - 2) {
+        doc.setFillColor(..._MC);
+        doc.circle(vx, vy, 1.1, 'F');
+        doc.setFontSize(6.5 * ps);
+        doc.setFont(font, 'bold');
+        doc.setTextColor(..._MC);
+        doc.text(`(${ph}, ${k})`, vx + 2.5, vy - 1.5, { align: 'left' });
+    }
+}
+
 /**
  * Draw a geometry diagram into a bounding box.
  * @param {jsPDF} doc
@@ -522,9 +651,11 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
         case 'circle':               _drawCircleDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'parallelogram':        _drawParallelogramDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'trapezium':            _drawTrapeziumDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
-        case 'straight-line-angles': _drawStraightLineAnglesPDF(doc, diagram, x0, y0, w, h, ps, font); break;
-        case 'vertically-opposite':  _drawVerticallyOppositePDF(doc, diagram, x0, y0, w, h, ps, font); break;
-        case 'parallel-transversal': _drawParallelTransversalPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'straight-line-angles':  _drawStraightLineAnglesPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'vertically-opposite':   _drawVerticallyOppositePDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'parallel-transversal':  _drawParallelTransversalPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'right-triangle-trig':   _drawRightTriangleTrigPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'parabola':              _drawParabolaPDF(doc, diagram, x0, y0, w, h, ps, font); break;
     }
     // Restore defaults
     doc.setLineDashPattern([], 0);
