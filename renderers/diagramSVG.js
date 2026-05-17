@@ -595,12 +595,13 @@ function _verticallyOpposite({ a }) {
     const r = 20;
     const len = 70;
 
-    // Two lines through (cx,cy): line 1 at 0°/180° (horizontal), line 2 at (180−a)°/angle
-    const angRad = (180 - a) * Math.PI / 180;
+    // Two lines through (cx,cy): line 1 horizontal (0°/180°), line 2 at angle a° from horizontal
+    // so the arc between line 1 (right) and line 2 (top) measures exactly a°.
+    const angRad = a * Math.PI / 180;
     const p1x = cx + len, p1y = cy;                                      // right end of line 1
     const p2x = cx - len, p2y = cy;                                      // left end of line 1
-    const p3x = cx + len * Math.cos(angRad), p3y = cy - len * Math.sin(angRad);  // top-right end of line 2
-    const p4x = cx - len * Math.cos(angRad), p4y = cy + len * Math.sin(angRad);  // bottom-left end of line 2
+    const p3x = cx + len * Math.cos(angRad), p3y = cy - len * Math.sin(angRad);  // upper end of line 2
+    const p4x = cx - len * Math.cos(angRad), p4y = cy + len * Math.sin(angRad);  // lower end of line 2
 
     // Arc at (cx,cy) between line 1 right and line 2 top-right — this is angle a
     const arc1 = _angleArc(cx, cy, p1x, p1y, p3x, p3y, r);

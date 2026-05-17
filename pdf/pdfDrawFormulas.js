@@ -113,6 +113,17 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
     const availW = PAGE_WIDTH - MARGIN * 2;
     const availH = PAGE_HEIGHT - MARGIN * 2;
 
+    // Collect all formula cards for active topics first — bail out before
+    // drawing anything if there's nothing to show.
+    const cards = [];
+    activeTopics.forEach(topic => {
+        const key = TOPIC_KEY_MAP[topic];
+        if (!key || !FORMULA_CONTENT[key]) return;
+        FORMULA_CONTENT[key].forEach(card => cards.push(card));
+    });
+
+    if (cards.length === 0) return;
+
     // Page header
     const headerH = 14 * pScale;
     doc.setFillColor(..._ACCENT);
@@ -127,16 +138,6 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
     doc.setFontSize(7 * pScale);
     doc.setTextColor(255, 255, 255);
     doc.text('Keep this sheet for reference during the assessment.', PAGE_WIDTH - MARGIN - 4, MARGIN + 9 * pScale, { align: 'right' });
-
-    // Collect all formula cards for active topics
-    const cards = [];
-    activeTopics.forEach(topic => {
-        const key = TOPIC_KEY_MAP[topic];
-        if (!key || !FORMULA_CONTENT[key]) return;
-        FORMULA_CONTENT[key].forEach(card => cards.push(card));
-    });
-
-    if (cards.length === 0) return;
 
     // Two-column grid layout
     const cols       = 2;
@@ -171,11 +172,8 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
         return cardPad + titleH + totalLines * lineH + hintH + cardPad;
     }
 
-    // Draw a single formula card
-    function drawCard(card, cx, cy, cw) {
-        const cardH = measureCard(card);
-        if (cy + cardH > maxY) return false; // doesn't fit
-
+    // Draw a single formula card. Caller must verify the card fits before calling.
+    function drawCard(card, cx, cy, cw, cardH) {
         // Card background
         doc.setFillColor(..._CARD_BG);
         doc.setDrawColor(..._CARD_BD);
@@ -215,19 +213,50 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
             doc.setTextColor(..._HNT_CLR);
             doc.text(card.hint, cx + cardPad + 1.5, iy);
         }
-
-        return cardH;
     }
 
-    // Flow cards into the shorter column first
-    cards.forEach(card => {
-        // Pick the column with more remaining space
-        const col = colY[0] <= colY[1] ? 0 : 1;
-        const cardH = drawCard(card, colX[col], colY[col], colW);
-        if (cardH !== false) {
-            colY[col] += cardH + cardGap;
+    // Place cards into columns. If a card doesn't fit in the shorter column,
+    // try the other one; if neither fits, return remaining cards for next page.
+    function placeCards(remaining) {
+        const overflow = [];
+        for (const card of remaining) {
+            const cardH = measureCard(card);
+            // Prefer the shorter column for balance
+            const tryOrder = colY[0] <= colY[1] ? [0, 1] : [1, 0];
+            let placed = false;
+            for (const col of tryOrder) {
+                if (colY[col] + cardH <= maxY) {
+                    drawCard(card, colX[col], colY[col], colW, cardH);
+                    colY[col] += cardH + cardGap;
+                    placed = true;
+                    break;
+                }
+            }
+            if (!placed) overflow.push(card);
         }
-    });
+        return overflow;
+    }
+
+    // First page: header is already drawn above
+    let remaining = placeCards(cards);
+
+    // Continuation pages — header repeats so the sheet is self-explanatory
+    while (remaining.length > 0) {
+        doc.addPage();
+        if (ctx.drawWatermark) ctx.drawWatermark();
+
+        // Repeat compact header
+        doc.setFillColor(..._ACCENT);
+        doc.rect(MARGIN, MARGIN, availW, headerH, 'F');
+        doc.setFont(pdfFont, 'bold');
+        doc.setFontSize(11 * pScale);
+        doc.setTextColor(255, 255, 255);
+        doc.text('Formula Reference Sheet (continued)', MARGIN + 4, MARGIN + 9 * pScale);
+
+        colY[0] = startY;
+        colY[1] = startY;
+        remaining = placeCards(remaining);
+    }
 
     // Footer note
     doc.setFont(pdfFont, 'italic');
