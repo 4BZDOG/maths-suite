@@ -1464,9 +1464,11 @@ function _genAlgebraOp(rng, diff, op) {
         if (diff === 'Medium') {
             const a = ri(rng, 1, 7), b = ri(rng, 1, 7);
             const mid = a - b, last = -a * b;
-            const mStr = mid >= 0 ? `+${mid}` : `${mid}`;
+            const midPart  = mid === 0 ? '' : (mid > 0 ? `+${mid}x` : `${mid}x`);
+            const midDisp  = mid === 0 ? '' : (mid > 0 ? ` + ${mid}x` : ` ${mid}x`);
             const lStr = last >= 0 ? `+${last}` : `${last}`;
-            return { clue: `${verb}\n$(x + ${a})(x - ${b})$`, answer: `x²${mStr}x${lStr}`, answerDisplay: `$x^2 ${mid >= 0 ? '+' : ''}${mid}x ${last >= 0 ? '+' : ''}${last}$` };
+            const lDisp = last >= 0 ? ` + ${last}` : ` ${last}`;
+            return { clue: `${verb}\n$(x + ${a})(x - ${b})$`, answer: `x²${midPart}${lStr}`, answerDisplay: `$x^2${midDisp}${lDisp}$` };
         }
         // Hard: (ax + b)(cx + d)
         const a = ri(rng, 2, 3), b = ri(rng, 1, 5), c = ri(rng, 2, 3), d = ri(rng, 1, 5);
