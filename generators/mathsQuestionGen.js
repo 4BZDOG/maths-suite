@@ -704,8 +704,10 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         if (type === 1) {
             const den = rc(rng, [4, 5, 6, 8, 10]);
             const n1 = ri(rng, 1, den - 2), n2 = ri(rng, 1, den - n1 - 1);
-            const ans = fracStr(n1 + n2, den);
-            const worked = `$\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}} = \\frac{${n1}+${n2}}{${den}} = ${ans}$`;
+            const { n: sn1, d: sd1 } = simplify(n1 + n2, den);
+            const ans = sd1 === 1 ? String(sn1) : `$\\frac{${sn1}}{${sd1}}$`;
+            const inlineAns1 = sd1 === 1 ? String(sn1) : `\\frac{${sn1}}{${sd1}}`;
+            const worked = `$\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}} = \\frac{${n1+n2}}{${den}} = ${inlineAns1}$`;
             return { clue: `${calcVerb} $\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}}$`, answer: ans, worked };
         }
         const den = rc(rng, [4, 6, 8, 10, 12]);
@@ -728,8 +730,10 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
             const l = lcm(d1, d2);
             const e1 = n1 * (l / d1), e2 = n2 * (l / d2);
-            const ans = fracStr(e1 + e2, l);
-            const worked = `LCD $= ${l}$: $\\frac{${e1}}{${l}} + \\frac{${e2}}{${l}} = \\frac{${e1+e2}}{${l}} = ${ans}$`;
+            const { n: sn2, d: sd2 } = simplify(e1 + e2, l);
+            const ans = sd2 === 1 ? String(sn2) : `$\\frac{${sn2}}{${sd2}}$`;
+            const inlineAns2 = sd2 === 1 ? String(sn2) : `\\frac{${sn2}}{${sd2}}`;
+            const worked = `LCD $= ${l}$: $\\frac{${e1}}{${l}} + \\frac{${e2}}{${l}} = \\frac{${e1+e2}}{${l}} = ${inlineAns2}$`;
             return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} + \\frac{${n2}}{${d2}}$`, answer: ans, worked };
         }
         if (type === 1) {
@@ -1819,8 +1823,8 @@ function genNonLinear(rng, diff, allowedOps) {
 
     if (op === 'parabola-features') {
         // y = (x - h)² + k → vertex (h, k); avoid h = 0 to keep formatting tidy
-        const h = rc(rng, [-4, -3, -2, -1, 1, 2, 3, 4, 5, 6]);
-        const k = ri(rng, -4, 6);
+        const h = rc(rng, [-2, -1, 1, 2, 3, 4]);
+        const k = ri(rng, -2, 3);
         const xPart = `(x ${h > 0 ? `- ${h}` : `+ ${Math.abs(h)}`})`;
         const kPart = k === 0 ? '' : (k > 0 ? ` + ${k}` : ` - ${Math.abs(k)}`);
         const eq = `${xPart}^2${kPart}`;
@@ -1846,8 +1850,9 @@ function genNonLinear(rng, diff, allowedOps) {
 
     if (op === 'parabola-sketch') {
         const a = rc(rng, [1, -1, 2, -2]);
-        const h2 = rc(rng, [-3, -2, -1, 1, 2, 3]);
-        const k2 = ri(rng, -3, 3);
+        const h2 = rc(rng, [-2, -1, 0, 1, 2]);
+        // Downward parabolae must have +k so the vertex and arms stay in-frame
+        const k2 = a > 0 ? ri(rng, -1, 2) : ri(rng, 0, 3);
         const opens = a > 0 ? 'upward' : 'downward';
         const aStr = a === 1 ? '' : a === -1 ? '-' : `${a}`;
         const xPart = `(x ${h2 > 0 ? `- ${h2}` : `+ ${Math.abs(h2)}`})`;

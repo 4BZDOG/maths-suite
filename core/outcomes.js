@@ -316,7 +316,7 @@ export const TOPIC_OUTCOME_MAP = {
         displayName: 'Ratios & Rates',
         outcomes: {
             'Stage 4': ['MA4-RAT-C-01'],
-            'Stage 5': ['MA5-RAT-C-01'],
+            'Stage 5': ['MA5-FRC-C-01'],
         },
     },
     // Stage 5 only topics
