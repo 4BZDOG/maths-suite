@@ -964,16 +964,17 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         const item = questions[i];
 
         // Pre-calculate item height to decide whether it fits.
-        // Fraction clues need 3 line-heights (numerator + bar + denominator).
-        // Reset clue font before splitTextToSize — prior iterations change doc font state,
-        // which would cause the width calculation to use wrong glyph metrics.
+        // Fraction clues need 3 line-heights (numerator + bar + denominator),
+        // but ONLY when the clue is short enough to sit on one line.
+        // Long narrative clues that happen to contain \frac (e.g. probability
+        // questions) must be word-wrapped normally to avoid column overflow.
+        // Reset clue font before splitTextToSize — prior iterations change doc
+        // font state, which would cause width calculation to use wrong metrics.
         doc.setFont(pdfFont, 'normal');
         doc.setFontSize(9 * pScale);
         const clueText   = latexToText(item.clue || '');
-        const isFraction = hasFraction(item.clue);
-        const clueLines  = isFraction
-            ? [clueText]
-            : doc.splitTextToSize(clueText, colW - 14);
+        const clueLines  = doc.splitTextToSize(clueText, colW - 14);
+        const isFraction = hasFraction(item.clue) && clueLines.length === 1;
         const clueBlockH = isFraction
             ? 3 * 4.5 * pScale
             : clueLines.length * 4.5 * pScale;
@@ -1052,9 +1053,13 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         doc.text(`${i + 1}.`, itemX, drawY);
 
         // ── Clue text ────────────────────────────────────────────────
+        // isFraction is true only when the clue fits on a single line AND
+        // contains \frac — so long narrative fraction clues (e.g. probability
+        // complementary questions) use the inline renderer which wraps text
+        // and handles *emphasis* markers correctly.
         let clueEndY;
         const clueX = itemX + 9;
-        if (hasFraction(item.clue)) {
+        if (isFraction) {
             const r = drawFractionClue(doc, item.clue || '', clueX, drawY, {
                 fontSizePt: 9 * pScale, pdfFont, color: [15, 23, 42],
             });
