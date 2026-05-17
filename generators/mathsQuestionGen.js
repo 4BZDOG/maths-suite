@@ -652,10 +652,12 @@ function genRounding(rng, diff, allowedOps) {
     const factor = Math.pow(10, Math.floor(Math.log10(n)) - (sigFigs - 1));
     const ans = Math.round(n / factor) * factor;
     const sfLabel = `${sigFigs} significant figure${sigFigs > 1 ? 's' : ''}`;
+    const orderAbove = Math.pow(10, Math.floor(Math.log10(n)) + 1);
+    const edgeNote = ans >= orderAbove ? ' *Note: trailing zeros are not significant.*' : '';
     const ph = rc(rng, [
-        `Round $${n}$ to ${sfLabel}`,
-        `Write $${n}$ correct to ${sfLabel}`,
-        `Express $${n}$ to ${sfLabel}`,
+        `Round $${n}$ to ${sfLabel}${edgeNote}`,
+        `Write $${n}$ correct to ${sfLabel}${edgeNote}`,
+        `Express $${n}$ to ${sfLabel}${edgeNote}`,
     ]);
     return { clue: ph, answer: String(ans) };
 }
@@ -702,8 +704,10 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         if (type === 1) {
             const den = rc(rng, [4, 5, 6, 8, 10]);
             const n1 = ri(rng, 1, den - 2), n2 = ri(rng, 1, den - n1 - 1);
-            const ans = fracStr(n1 + n2, den);
-            const worked = `$\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}} = \\frac{${n1}+${n2}}{${den}} = ${ans}$`;
+            const { n: sn1, d: sd1 } = simplify(n1 + n2, den);
+            const ans = sd1 === 1 ? String(sn1) : `$\\frac{${sn1}}{${sd1}}$`;
+            const inlineAns1 = sd1 === 1 ? String(sn1) : `\\frac{${sn1}}{${sd1}}`;
+            const worked = `$\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}} = \\frac{${n1+n2}}{${den}} = ${inlineAns1}$`;
             return { clue: `${calcVerb} $\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}}$`, answer: ans, worked };
         }
         const den = rc(rng, [4, 6, 8, 10, 12]);
@@ -726,8 +730,10 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
             const l = lcm(d1, d2);
             const e1 = n1 * (l / d1), e2 = n2 * (l / d2);
-            const ans = fracStr(e1 + e2, l);
-            const worked = `LCD $= ${l}$: $\\frac{${e1}}{${l}} + \\frac{${e2}}{${l}} = \\frac{${e1+e2}}{${l}} = ${ans}$`;
+            const { n: sn2, d: sd2 } = simplify(e1 + e2, l);
+            const ans = sd2 === 1 ? String(sn2) : `$\\frac{${sn2}}{${sd2}}$`;
+            const inlineAns2 = sd2 === 1 ? String(sn2) : `\\frac{${sn2}}{${sd2}}`;
+            const worked = `LCD $= ${l}$: $\\frac{${e1}}{${l}} + \\frac{${e2}}{${l}} = \\frac{${e1+e2}}{${l}} = ${inlineAns2}$`;
             return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} + \\frac{${n2}}{${d2}}$`, answer: ans, worked };
         }
         if (type === 1) {
@@ -1038,8 +1044,9 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
         }
         if (type === 1) {
             const mode = ri(rng, 1, 15);
+            const usedVals = new Set([mode]);
             const others = Array.from({ length: 4 }, () => {
-                let v; do { v = ri(rng, 1, 20); } while (v === mode); return v;
+                let v; do { v = ri(rng, 1, 20); } while (usedVals.has(v)); usedVals.add(v); return v;
             });
             const data = [...others, mode, mode].sort((a, b) => a - b);
             const ph = rc(rng, [
@@ -1212,7 +1219,9 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         Hard:   { 'circles': [0, 2], 'pythagoras': [1], 'angles': [3, 4] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : diff === 'Medium' ? 3 : 4);
+    // Medium covers types 0–4 (area, pythag, triangle-angle, co-interior, corresponding/alternate);
+    // without max=4 the corresponding/alternate path was unreachable for users without a sub-op filter.
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : 4);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -1244,7 +1253,8 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                     `A trapezium has parallel sides of $${a}$ ${u} and $${bTrap}$ ${u} with a perpendicular height of $${height}$ ${u}. Find its area.${pf}`,
                     `Calculate the *area* of a trapezium: parallel sides $${a}$ ${u} and $${bTrap}$ ${u}, height $${height}$ ${u}.${pf}`,
                 ]);
-                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, diagram: { type: 'trapezium', a, b: bTrap, height, missing: 'area' } };
+                const diagA = Math.min(a, bTrap), diagB = Math.max(a, bTrap);
+                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, diagram: { type: 'trapezium', a: diagA, b: diagB, height, missing: 'area' } };
             }
             // shapeForm === 0: rectangle
             const l = ri(rng, 2, 15), w = ri(rng, 2, 12);
@@ -1269,14 +1279,14 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                     `Angles on a straight line sum to 180°. If one angle is $${a}$°, find the other.`,
                     `What angle is supplementary to $${a}$°?`,
                 ]);
-                return { clue: ph, answer: String(x), answerDisplay: `${x}°`, unit: '°' };
+                return { clue: ph, answer: String(x), answerDisplay: `${x}°`, unit: '°', diagram: { type: 'straight-line-angles', a } };
             }
             const ph = rc(rng, [
                 `Two straight lines intersect. One angle is $${a}$°. State the *vertically opposite* angle.`,
                 `Find the angle *vertically opposite* to $${a}$°.`,
                 `Two lines cross. One angle measures $${a}$°. What is the *vertically opposite* angle?`,
             ]);
-            return { clue: ph, answer: String(a), answerDisplay: `${a}°`, unit: '°' };
+            return { clue: ph, answer: String(a), answerDisplay: `${a}°`, unit: '°', diagram: { type: 'vertically-opposite', a } };
         }
         const l = ri(rng, 3, 15), w = ri(rng, 2, l);
         const u = _geoUnit(Math.max(l, w));
@@ -1456,9 +1466,11 @@ function _genAlgebraOp(rng, diff, op) {
         if (diff === 'Medium') {
             const a = ri(rng, 1, 7), b = ri(rng, 1, 7);
             const mid = a - b, last = -a * b;
-            const mStr = mid >= 0 ? `+${mid}` : `${mid}`;
+            const midPart  = mid === 0 ? '' : (mid > 0 ? `+${mid}x` : `${mid}x`);
+            const midDisp  = mid === 0 ? '' : (mid > 0 ? ` + ${mid}x` : ` ${mid}x`);
             const lStr = last >= 0 ? `+${last}` : `${last}`;
-            return { clue: `${verb}\n$(x + ${a})(x - ${b})$`, answer: `x²${mStr}x${lStr}`, answerDisplay: `$x^2 ${mid >= 0 ? '+' : ''}${mid}x ${last >= 0 ? '+' : ''}${last}$` };
+            const lDisp = last >= 0 ? ` + ${last}` : ` ${last}`;
+            return { clue: `${verb}\n$(x + ${a})(x - ${b})$`, answer: `x²${midPart}${lStr}`, answerDisplay: `$x^2${midDisp}${lDisp}$` };
         }
         // Hard: (ax + b)(cx + d)
         const a = ri(rng, 2, 3), b = ri(rng, 1, 5), c = ri(rng, 2, 3), d = ri(rng, 1, 5);
@@ -1504,9 +1516,10 @@ function _genAlgebraOp(rng, diff, op) {
             const mStr = mid >= 0 ? `+ ${mid}` : `- ${Math.abs(mid)}`;
             return { clue: `${sv}\n$x^2 ${mStr}x + ${last} = 0$`, answer: `x=${a},${b}`, answerDisplay: `$x = ${a}$ or $x = ${b}$` };
         }
-        // Hard: (x-a)(x+b) = 0, one negative root
+        // Hard: (x-a)(x+b) = 0, one negative root; mid = b-a (coeff of x in expansion)
         const a = ri(rng, 2, 6), b = ri(rng, 1, 5);
-        const mid = a - b, last = -a * b;
+        if (a === b) return _genAlgebraOp(rng, diff, op);
+        const mid = b - a, last = -a * b;
         const mStr = mid >= 0 ? `+ ${mid}` : `- ${Math.abs(mid)}`;
         const lStr = last >= 0 ? `+ ${last}` : `- ${Math.abs(last)}`;
         return { clue: `${sv}\n$x^2 ${mStr}x ${lStr} = 0$`, answer: `x=${a},-${b}`, answerDisplay: `$x = ${a}$ or $x = -${b}$` };
@@ -1780,6 +1793,8 @@ function genTrigonometry(rng, diff, allowedOps) {
         // Sine rule: a/sin A = b/sin B
         const A = rc(rng, [30, 45, 60]), a = ri(rng, 4, 10);
         const B = rc(rng, [20, 35, 50, 120, 135]);
+        // A + B must be < 180 for a valid triangle (third angle C = 180 - A - B > 0)
+        if (A + B >= 180) return null;
         const b = round(a * Math.sin(B * Math.PI / 180) / Math.sin(A * Math.PI / 180), 1);
         if (b < 1 || b > 30) return null;
         const ph = rc(rng, [
@@ -1813,8 +1828,8 @@ function genNonLinear(rng, diff, allowedOps) {
 
     if (op === 'parabola-features') {
         // y = (x - h)² + k → vertex (h, k); avoid h = 0 to keep formatting tidy
-        const h = rc(rng, [-4, -3, -2, -1, 1, 2, 3, 4, 5, 6]);
-        const k = ri(rng, -4, 6);
+        const h = rc(rng, [-2, -1, 1, 2, 3, 4]);
+        const k = ri(rng, -2, 3);
         const xPart = `(x ${h > 0 ? `- ${h}` : `+ ${Math.abs(h)}`})`;
         const kPart = k === 0 ? '' : (k > 0 ? ` + ${k}` : ` - ${Math.abs(k)}`);
         const eq = `${xPart}^2${kPart}`;
@@ -1840,11 +1855,12 @@ function genNonLinear(rng, diff, allowedOps) {
 
     if (op === 'parabola-sketch') {
         const a = rc(rng, [1, -1, 2, -2]);
-        const h2 = rc(rng, [-3, -2, -1, 1, 2, 3]);
-        const k2 = ri(rng, -3, 3);
+        const h2 = rc(rng, [-2, -1, 0, 1, 2]);
+        // Downward parabolae must have +k so the vertex and arms stay in-frame
+        const k2 = a > 0 ? ri(rng, -1, 2) : ri(rng, 0, 3);
         const opens = a > 0 ? 'upward' : 'downward';
         const aStr = a === 1 ? '' : a === -1 ? '-' : `${a}`;
-        const xPart = `(x ${h2 > 0 ? `- ${h2}` : `+ ${Math.abs(h2)}`})`;
+        const xPart = h2 === 0 ? 'x' : `(x ${h2 > 0 ? `- ${h2}` : `+ ${Math.abs(h2)}`})`;
         const kPart = k2 === 0 ? '' : (k2 > 0 ? ` + ${k2}` : ` - ${Math.abs(k2)}`);
         const eq = `${aStr}${xPart}^2${kPart}`;
         const ph = `For $y = ${eq}$, state the vertex and direction it opens.`;
@@ -2047,6 +2063,7 @@ function genRatiosRates(rng, diff, allowedOps) {
     const findWhat = rc(rng, diff === 'Easy' ? ['speed', 'distance'] : ['speed', 'distance', 'time']);
     if (findWhat === 'speed') {
         const d = ri(rng, 2, 15) * 10, t = ri(rng, 1, 4);
+        if (d % t !== 0) return genRatiosRates(rng, diff, allowedOps);
         const s = d / t;
         const ph = rc(rng, [
             `A ${ctx.vehicle} travels $${d}$ km in $${t}$ hour${t > 1 ? 's' : ''}. Find its speed.`,

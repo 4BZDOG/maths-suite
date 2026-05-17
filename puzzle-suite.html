@@ -64,7 +64,7 @@
             <!-- EDITOR TAB -->
             <div id="panel-content" role="tabpanel" aria-labelledby="panel-content-tab">
                 <!-- STAGE SELECTOR -->
-                <div class="section-label" style="margin-top:8px;"><i class="fas fa-graduation-cap" style="margin-right:5px; opacity:.65;"></i>NESA STAGE</div>
+                <div class="section-label" style="margin-top:4px;"><i class="fas fa-graduation-cap"></i>NESA STAGE</div>
                 <div class="stage-selector-group" role="group" aria-label="NESA Stage">
                     <label class="stage-btn">
                         <input type="radio" name="stage-selector" value="Stage 4" checked onchange="setStage('Stage 4')">
@@ -83,47 +83,46 @@
                 </div>
 
                 <!-- MATHS TOPICS — rendered dynamically by renderTopicTogglesByStrand() -->
-                <div class="section-label" style="margin-top:12px;"><i class="fas fa-calculator" style="margin-right:5px; opacity:.65;"></i>MATHS TOPICS</div>
+                <div class="section-label"><i class="fas fa-calculator"></i>MATHS TOPICS</div>
                 <div id="topic-toggles"></div>
-                <div style="display:flex; gap:8px; margin-top:4px;">
+                <div class="topic-action-row">
                     <button class="btn-sec" style="flex:1; font-size:11px;" onclick="setTopicsAll(true)"><i class="fas fa-check-double" style="margin-right:4px;"></i>All</button>
                     <button class="btn-sec" style="flex:1; font-size:11px;" onclick="setTopicsAll(false)"><i class="fas fa-xmark" style="margin-right:4px;"></i>None</button>
-                    <span id="topic-count" style="font-size:11px; color:var(--text-muted); align-self:center; flex:2; text-align:right;"></span>
+                    <span id="topic-count" class="topic-count-label"></span>
                 </div>
 
                 <!-- NESA Outcomes injected dynamically into topic accordions via JS -->
 
-                <div class="section-label" style="margin-top:16px;"><i class="fas fa-layer-group" style="margin-right:5px; opacity:.65;"></i>PAGES PER DIFFICULTY</div>
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                <div class="section-label"><i class="fas fa-layer-group"></i>PAGES PER DIFFICULTY</div>
+                <div class="pgs-per-diff-row">
                     <select id="questionsPerSet" class="wm-select" style="flex:1;" onchange="setPagesPerDifficulty(this.value)">
                         <option value="1" selected>1 page per difficulty</option>
                         <option value="2">2 pages per difficulty</option>
                     </select>
                     <span class="pro-badge" id="two-page-pro-badge" style="display:none;" title="Upgrade to Pro to unlock 2-page mode">PRO</span>
                 </div>
-                <div id="questions-per-page-summary" style="font-size:11px; color:var(--text-muted); margin-bottom:8px; line-height:1.7;"></div>
+                <div id="questions-per-page-summary" class="qpp-summary"></div>
 
-                <button id="btn-generate" style="width:100%; margin-top:4px;" onclick="generateAll()" title="Regenerate questions (Ctrl+Enter)">
+                <button id="btn-generate" onclick="generateAll()" title="Regenerate questions (Ctrl+Enter)">
                     <i class="fas fa-bolt"></i> Regenerate
                 </button>
 
-                <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
-                    <label for="seed-input" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);white-space:nowrap;">Seed:</label>
+                <div class="seed-row">
+                    <label for="seed-input">Seed:</label>
                     <input id="seed-input" type="number" placeholder="auto" title="Enter a seed to reproduce this question set exactly, or leave blank for a fresh seed each time"
-                        style="flex:1;font-size:11px;padding:3px 6px;border:1px solid var(--border,#e2e8f0);border-radius:5px;background:var(--bg-page);color:var(--text-base);min-width:0;"
                         data-auto="true"
                         oninput="syncSeedInput()" />
-                    <button class="btn-icon" onclick="copySeedToClipboard()" title="Copy seed" style="padding:3px 6px;font-size:11px;flex-shrink:0;">
+                    <button class="btn-icon" onclick="copySeedToClipboard()" title="Copy seed">
                         <i class="fas fa-copy"></i>
                     </button>
                 </div>
 
-                <div class="status-row" style="margin-top:12px;">
+                <div class="status-row">
                     <div id="status-icon" class="status-icon icon-warning"><i class="fas fa-exclamation"></i></div>
                     <span id="placed-count" style="font-size:12px; color:var(--text-muted);">0 questions</span>
                 </div>
 
-                <div class="button-row" style="margin-top:12px;">
+                <div class="button-row">
                     <button id="btn-undo" onclick="undo()" class="btn-sec flex-1" disabled
                         aria-label="Undo last change" title="Undo (Ctrl+Z)"><i class="fas fa-undo"></i>
                         Undo</button>
@@ -320,6 +319,10 @@
                         <div class="toggle-row"><label title="Show worked solutions on Answer Key (where available — Pythagoras, Algebra)"><i class="fas fa-pencil-alt toggle-icon"></i>Worked Solutions on Key</label><label class="switch"><input
                                     type="checkbox" id="keyShowWorked" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
+                        <hr class="form-divider">
+                        <div class="toggle-row"><label title="Prepend a formula reference sheet page to the exported PDF — lists all relevant formulas for selected topics"><i class="fas fa-book-open toggle-icon"></i>Formula Sheet in PDF</label><label class="switch"><input
+                                    type="checkbox" id="showFormulaSheet" onchange="saveState(); renderExportPreview();"><span
+                                    class="slider-switch"></span></label></div>
                     </div>
                 </details>
             </div>
@@ -509,7 +512,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=139"></script>
+    <script src="bundle.js?v=156"></script>
 </body>
 
 </html>

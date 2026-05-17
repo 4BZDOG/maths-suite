@@ -69,6 +69,7 @@ export const state = {
         psShowOutcomesHeader:  false,
         psShowOutcomeChips:    false,
         keyShowWorked:         false,
+        showFormulaSheet:      false,
         cols:                  2,
         wmOpacity:       0.15,
         showFormulas: {
@@ -132,6 +133,7 @@ export function syncSettingsFromDOM() {
     s.psShowOutcomesHeader  = getChk('psShowOutcomesHeader',   s.psShowOutcomesHeader);
     s.psShowOutcomeChips    = getChk('psShowOutcomeChips',     s.psShowOutcomeChips);
     s.keyShowWorked         = getChk('keyShowWorked',          s.keyShowWorked);
+    s.showFormulaSheet      = getChk('showFormulaSheet',       s.showFormulaSheet);
     s.showDiagrams          = getChk('psShowDiagrams',         s.showDiagrams);
     s.cols                  = parseInt(getVal('psCols', s.cols), 10);
     s.wmOpacity      = parseFloat(
@@ -312,6 +314,7 @@ export function applyStateToDOM(s) {
     setChk('psShowOutcomesHeader',  cfg.psShowOutcomesHeader);
     setChk('psShowOutcomeChips',    cfg.psShowOutcomeChips);
     setChk('keyShowWorked',         cfg.keyShowWorked);
+    setChk('showFormulaSheet',      cfg.showFormulaSheet);
     setChk('psShowDiagrams',        cfg.showDiagrams);
     setVal('psCols',                cfg.cols);
 

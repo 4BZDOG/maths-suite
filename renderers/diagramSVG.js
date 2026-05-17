@@ -547,6 +547,84 @@ function _parallelTransversal({ a, angleType }) {
     return _svg(VW, VH, inner);
 }
 
+// ─── Straight-line angles (supplementary) ────────────────────────────────────
+// diagram: { type:'straight-line-angles', a }  — known angle a°, other is (180−a)°
+function _straightLineAngles({ a }) {
+    const VW = 184, VH = 100;
+    const lx = 16, rx = 168, py = 68;   // baseline endpoints and pivot x
+    const px = 84;
+    const r = 22;
+
+    // Ray from pivot going up at angle (180−a)° from positive-x (SVG y-down)
+    // The ray divides the straight line into two angles: a° on the left, (180−a)° on the right
+    const rayAngleDeg = 180 - a;   // angle from +x axis (measured CCW in maths = CW in SVG)
+    const rayRad = rayAngleDeg * Math.PI / 180;
+    const rayLen = 52;
+    const rayX = px + rayLen * Math.cos(rayRad);
+    const rayY = py - rayLen * Math.sin(rayRad);   // y-down: subtract
+
+    // Angle arcs
+    // Arc 1 — left of ray: from ray back to horizontal-left (px direction toward lx)
+    const arc1 = _angleArc(px, py, lx, py, rayX, rayY, r);
+    // Arc 2 — right of ray: from ray to horizontal-right
+    const arc2 = _angleArc(px, py, rayX, rayY, rx, py, r);
+
+    // Label positions
+    const midAng1Rad = ((180 - a / 2) * Math.PI) / 180;
+    const lbl1X = px + (r + 14) * Math.cos(midAng1Rad);
+    const lbl1Y = py - (r + 14) * Math.sin(midAng1Rad);
+    const midAng2Rad = ((180 - a) / 2) * Math.PI / 180;
+    const lbl2X = px + (r + 14) * Math.cos(midAng2Rad);
+    const lbl2Y = py - (r + 14) * Math.sin(midAng2Rad);
+
+    const inner =
+        `<line x1="${lx}" y1="${py}" x2="${rx}" y2="${py}" stroke="${GC}" stroke-width="1.8"/>` +
+        `<line x1="${px}" y1="${py}" x2="${rayX.toFixed(1)}" y2="${rayY.toFixed(1)}" stroke="currentColor" stroke-width="1.6" opacity="0.8"/>` +
+        arc1 + arc2 +
+        _t(lbl1X, lbl1Y, `${a}°`, { anchor: 'middle', size: 11 }) +
+        _t(lbl2X, lbl2Y, '?', { anchor: 'middle', missing: true, size: 13 });
+
+    return _svg(VW, VH, inner);
+}
+
+// ─── Vertically opposite angles ──────────────────────────────────────────────
+// diagram: { type:'vertically-opposite', a }
+function _verticallyOpposite({ a }) {
+    const VW = 184, VH = 120;
+    const cx = 92, cy = 60;
+    const r = 20;
+    const len = 70;
+
+    // Two lines through (cx,cy): line 1 horizontal (0°/180°), line 2 at angle a° from horizontal
+    // so the arc between line 1 (right) and line 2 (top) measures exactly a°.
+    const angRad = a * Math.PI / 180;
+    const p1x = cx + len, p1y = cy;                                      // right end of line 1
+    const p2x = cx - len, p2y = cy;                                      // left end of line 1
+    const p3x = cx + len * Math.cos(angRad), p3y = cy - len * Math.sin(angRad);  // upper end of line 2
+    const p4x = cx - len * Math.cos(angRad), p4y = cy + len * Math.sin(angRad);  // lower end of line 2
+
+    // Arc at (cx,cy) between line 1 right and line 2 top-right — this is angle a
+    const arc1 = _angleArc(cx, cy, p1x, p1y, p3x, p3y, r);
+    // Vertically opposite arc (same angle) at the other pair — from left to bottom-left
+    const arc2 = _angleArc(cx, cy, p2x, p2y, p4x, p4y, r);
+
+    // Label midpoints
+    const midA = (a / 2) * Math.PI / 180;
+    const lbl1X = cx + (r + 12) * Math.cos(midA);
+    const lbl1Y = cy - (r + 12) * Math.sin(midA);
+    const lbl2X = cx - (r + 12) * Math.cos(midA);
+    const lbl2Y = cy + (r + 12) * Math.sin(midA);
+
+    const inner =
+        `<line x1="${p2x}" y1="${p2y}" x2="${p1x}" y2="${p1y}" stroke="${GC}" stroke-width="1.8"/>` +
+        `<line x1="${p4x.toFixed(1)}" y1="${p4y.toFixed(1)}" x2="${p3x.toFixed(1)}" y2="${p3y.toFixed(1)}" stroke="${GC}" stroke-width="1.8"/>` +
+        arc1 + arc2 +
+        _t(lbl1X, lbl1Y, `${a}°`, { anchor: 'middle', size: 11 }) +
+        _t(lbl2X, lbl2Y, '?', { anchor: 'middle', missing: true, size: 13 });
+
+    return _svg(VW, VH, inner);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 export function renderDiagramSVG(diagram) {
     if (!diagram) return '';
@@ -561,6 +639,8 @@ export function renderDiagramSVG(diagram) {
         case 'parallelogram':            return _parallelogram(diagram);
         case 'trapezium':               return _trapezium(diagram);
         case 'parallel-transversal':    return _parallelTransversal(diagram);
+        case 'straight-line-angles':    return _straightLineAngles(diagram);
+        case 'vertically-opposite':     return _verticallyOpposite(diagram);
         default: return '';
     }
 }

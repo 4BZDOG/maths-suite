@@ -65,6 +65,8 @@ function _toSuperscript(s) {
 
 function _parseLatex(s) {
     return s
+        // Normalise display-fraction to inline-fraction before other rules
+        .replace(/\\dfrac/g, '\\frac')
         // Escaped special chars (must come first)
         .replace(/\\\$/g,     '$')   // \$ → literal dollar sign
         .replace(/\\%/g,      '%')   // \% → literal percent sign
