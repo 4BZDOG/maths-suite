@@ -1514,9 +1514,10 @@ function _genAlgebraOp(rng, diff, op) {
             const mStr = mid >= 0 ? `+ ${mid}` : `- ${Math.abs(mid)}`;
             return { clue: `${sv}\n$x^2 ${mStr}x + ${last} = 0$`, answer: `x=${a},${b}`, answerDisplay: `$x = ${a}$ or $x = ${b}$` };
         }
-        // Hard: (x-a)(x+b) = 0, one negative root
+        // Hard: (x-a)(x+b) = 0, one negative root; mid = b-a (coeff of x in expansion)
         const a = ri(rng, 2, 6), b = ri(rng, 1, 5);
-        const mid = a - b, last = -a * b;
+        if (a === b) return _genAlgebraOp(rng, diff, op);
+        const mid = b - a, last = -a * b;
         const mStr = mid >= 0 ? `+ ${mid}` : `- ${Math.abs(mid)}`;
         const lStr = last >= 0 ? `+ ${last}` : `- ${Math.abs(last)}`;
         return { clue: `${sv}\n$x^2 ${mStr}x ${lStr} = 0$`, answer: `x=${a},-${b}`, answerDisplay: `$x = ${a}$ or $x = -${b}$` };
@@ -1857,7 +1858,7 @@ function genNonLinear(rng, diff, allowedOps) {
         const k2 = a > 0 ? ri(rng, -1, 2) : ri(rng, 0, 3);
         const opens = a > 0 ? 'upward' : 'downward';
         const aStr = a === 1 ? '' : a === -1 ? '-' : `${a}`;
-        const xPart = `(x ${h2 > 0 ? `- ${h2}` : `+ ${Math.abs(h2)}`})`;
+        const xPart = h2 === 0 ? 'x' : `(x ${h2 > 0 ? `- ${h2}` : `+ ${Math.abs(h2)}`})`;
         const kPart = k2 === 0 ? '' : (k2 > 0 ? ` + ${k2}` : ` - ${Math.abs(k2)}`);
         const eq = `${aStr}${xPart}^2${kPart}`;
         const ph = `For $y = ${eq}$, state the vertex and direction it opens.`;
