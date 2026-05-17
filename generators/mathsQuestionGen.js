@@ -1784,6 +1784,8 @@ function genTrigonometry(rng, diff, allowedOps) {
         // Sine rule: a/sin A = b/sin B
         const A = rc(rng, [30, 45, 60]), a = ri(rng, 4, 10);
         const B = rc(rng, [20, 35, 50, 120, 135]);
+        // A + B must be < 180 for a valid triangle (third angle C = 180 - A - B > 0)
+        if (A + B >= 180) return null;
         const b = round(a * Math.sin(B * Math.PI / 180) / Math.sin(A * Math.PI / 180), 1);
         if (b < 1 || b > 30) return null;
         const ph = rc(rng, [
