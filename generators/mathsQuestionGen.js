@@ -2060,6 +2060,7 @@ function genRatiosRates(rng, diff, allowedOps) {
     const findWhat = rc(rng, diff === 'Easy' ? ['speed', 'distance'] : ['speed', 'distance', 'time']);
     if (findWhat === 'speed') {
         const d = ri(rng, 2, 15) * 10, t = ri(rng, 1, 4);
+        if (d % t !== 0) return genRatiosRates(rng, diff, allowedOps);
         const s = d / t;
         const ph = rc(rng, [
             `A ${ctx.vehicle} travels $${d}$ km in $${t}$ hour${t > 1 ? 's' : ''}. Find its speed.`,
