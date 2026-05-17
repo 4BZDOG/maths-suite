@@ -52,8 +52,9 @@ const FORMULA_CONTENT = {
         { name: 'IQR', formulas: ['IQR = Q3 − Q1'] },
     ],
     'Financial Maths': [
-        { name: 'Simple Interest', formulas: ['I = P × r × n', 'r = annual rate (decimal), n = years'] },
-        { name: 'Compound Interest', formulas: ['A = P(1 + r)ⁿ'] },
+        { name: 'Simple Interest', formulas: ['I = P × r × n', 'r = annual rate as a decimal, n = years'] },
+        { name: 'Compound Interest', formulas: ['A = P(1 + r)ⁿ', 'r = annual rate as a decimal, n = periods'] },
+        { name: 'Depreciation', formulas: ['V = P(1 − r)ⁿ', 'r = rate as a decimal'] },
     ],
     'Trigonometry': [
         { name: 'SOHCAHTOA', formulas: ['sin θ = opp/hyp', 'cos θ = adj/hyp', 'tan θ = opp/adj'] },
