@@ -433,6 +433,15 @@ function renderExportPreview() {
     let questionCount = 0;
     let html = '';
 
+    const showFormulaSheet = document.getElementById('showFormulaSheet')?.checked ?? false;
+    if (showFormulaSheet) {
+        pageCount += 1;
+        html += `<div class="ep-row">
+            <span style="font-weight:600;"><i class="fas fa-book-open" style="color:#10b981; margin-right:5px; font-size:10px;"></i>Formula Sheet</span>
+            <span style="opacity:.7;">1 page</span>
+        </div>`;
+    }
+
     for (const r of diffRows) {
         pageCount += pages;
         questionCount += r.n;

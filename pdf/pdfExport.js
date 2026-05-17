@@ -335,6 +335,170 @@ function _drawTrapeziumDiagramPDF(doc, { a, b, height, missing }, x0, y0, w, h, 
     doc.text(centreLabel, x0 + w / 2, by + dh / 2 + 1.8 * ps, { align: 'center' });
 }
 
+// Approximate an arc as a chain of short line segments — PDF coords are
+// y-down so we negate sin for the "upward" direction the SVG version uses.
+function _arcSegments(doc, vx, vy, r, startDeg, endDeg, steps = 24) {
+    const a0 = startDeg * Math.PI / 180;
+    const a1 = endDeg * Math.PI / 180;
+    let prevX = vx + r * Math.cos(a0);
+    let prevY = vy - r * Math.sin(a0);
+    for (let i = 1; i <= steps; i++) {
+        const t = a0 + (a1 - a0) * (i / steps);
+        const nx = vx + r * Math.cos(t);
+        const ny = vy - r * Math.sin(t);
+        doc.line(prevX, prevY, nx, ny);
+        prevX = nx; prevY = ny;
+    }
+}
+
+// Angle of vector (vx,vy) → (px,py) measured CCW from +x (math convention,
+// SVG/PDF y-down).
+function _angleOf(vx, vy, px, py) {
+    const ang = Math.atan2(-(py - vy), px - vx) * 180 / Math.PI;
+    return (ang + 360) % 360;
+}
+
+// Draw the smaller arc from ray (vx,vy)→(p1) to ray (vx,vy)→(p2)
+function _drawAngleArcPDF(doc, vx, vy, p1x, p1y, p2x, p2y, r) {
+    const ang1 = _angleOf(vx, vy, p1x, p1y);
+    const ang2 = _angleOf(vx, vy, p2x, p2y);
+    let delta = ang2 - ang1;
+    if (delta > 180)  delta -= 360;
+    if (delta < -180) delta += 360;
+    _arcSegments(doc, vx, vy, r, ang1, ang1 + delta);
+}
+
+function _drawStraightLineAnglesPDF(doc, { a }, x0, y0, w, h, ps, font) {
+    // Layout: horizontal line + ray from pivot at angle (180−a)°
+    const lineY = y0 + h * 0.58;
+    const lx    = x0 + w * 0.08;
+    const rx    = x0 + w * 0.92;
+    const px    = x0 + w * 0.48;
+    const r     = Math.min(w, h) * 0.18;
+    const rayLen = Math.min(w * 0.30, h * 0.42);
+    const rayAngleDeg = 180 - a;
+    const rayRad = rayAngleDeg * Math.PI / 180;
+    const rayX = px + rayLen * Math.cos(rayRad);
+    const rayY = lineY - rayLen * Math.sin(rayRad);
+
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    doc.line(lx, lineY, rx, lineY);
+    doc.setLineWidth(_AUX_W);
+    doc.setDrawColor(..._LC);
+    doc.line(px, lineY, rayX, rayY);
+
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_AUX_W);
+    _drawAngleArcPDF(doc, px, lineY, lx, lineY, rayX, rayY, r);
+    _drawAngleArcPDF(doc, px, lineY, rayX, rayY, rx, lineY, r);
+
+    doc.setFontSize(8 * ps);
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    const midA1 = (180 - a / 2) * Math.PI / 180;
+    doc.text(`${a}°`, px + (r + 4) * Math.cos(midA1), lineY - (r + 4) * Math.sin(midA1), { align: 'center' });
+
+    doc.setFont(font, 'bold');
+    doc.setTextColor(..._MC);
+    const midA2 = (a / 2) * Math.PI / 180;
+    doc.text('?', px + (r + 4) * Math.cos(midA2), lineY - (r + 4) * Math.sin(midA2), { align: 'center' });
+}
+
+function _drawVerticallyOppositePDF(doc, { a }, x0, y0, w, h, ps, font) {
+    const cx = x0 + w / 2;
+    const cy = y0 + h * 0.52;
+    const r  = Math.min(w, h) * 0.16;
+    const len = Math.min(w * 0.42, h * 0.42);
+
+    const angRad = a * Math.PI / 180;
+    const p1x = cx + len, p1y = cy;
+    const p2x = cx - len, p2y = cy;
+    const p3x = cx + len * Math.cos(angRad), p3y = cy - len * Math.sin(angRad);
+    const p4x = cx - len * Math.cos(angRad), p4y = cy + len * Math.sin(angRad);
+
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    doc.line(p2x, p2y, p1x, p1y);
+    doc.line(p4x, p4y, p3x, p3y);
+
+    doc.setLineWidth(_AUX_W);
+    _drawAngleArcPDF(doc, cx, cy, p1x, p1y, p3x, p3y, r);
+    _drawAngleArcPDF(doc, cx, cy, p2x, p2y, p4x, p4y, r);
+
+    doc.setFontSize(8 * ps);
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    const midA = (a / 2) * Math.PI / 180;
+    doc.text(`${a}°`, cx + (r + 4) * Math.cos(midA), cy - (r + 4) * Math.sin(midA), { align: 'center' });
+
+    doc.setFont(font, 'bold');
+    doc.setTextColor(..._MC);
+    doc.text('?', cx - (r + 4) * Math.cos(midA), cy + (r + 4) * Math.sin(midA), { align: 'center' });
+}
+
+function _drawParallelTransversalPDF(doc, { a, angleType }, x0, y0, w, h, ps, font) {
+    // Two horizontal parallel lines + transversal sloping up-right
+    const xL = x0 + w * 0.08;
+    const xR = x0 + w * 0.92;
+    const y1 = y0 + h * 0.25;
+    const y2 = y0 + h * 0.78;
+
+    // Transversal endpoints chosen so it visibly extends beyond both lines
+    const txBot = { x: x0 + w * 0.30, y: y0 + h * 0.96 };
+    const txTop = { x: x0 + w * 0.78, y: y0 + h * 0.06 };
+
+    // Intersections: parametric t where y = y1 / y2
+    const t1 = (y1 - txBot.y) / (txTop.y - txBot.y);
+    const t2 = (y2 - txBot.y) / (txTop.y - txBot.y);
+    const P1 = { x: txBot.x + t1 * (txTop.x - txBot.x), y: y1 };
+    const P2 = { x: txBot.x + t2 * (txTop.x - txBot.x), y: y2 };
+
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    doc.line(xL, y1, xR, y1);
+    doc.line(xL, y2, xR, y2);
+    doc.setLineWidth(_AUX_W);
+    doc.setDrawColor(..._LC);
+    doc.line(txBot.x, txBot.y, txTop.x, txTop.y);
+
+    const r = Math.min(w, h) * 0.12;
+    doc.setLineWidth(_AUX_W);
+    doc.setDrawColor(..._GC);
+
+    // Per-type arc placement matches the SVG version
+    let v1A, v1B, v2A, v2B;
+    let lbl1Off, lbl2Off; // {dx, dy} for label placement relative to vertex
+    if (angleType === 'co-interior') {
+        v1A = { x: xR, y: y1 };    v1B = txBot;
+        v2A = txTop;               v2B = { x: xR, y: y2 };
+        lbl1Off = { dx: r + 3, dy: r * 0.6 };
+        lbl2Off = { dx: r + 3, dy: -r * 0.6 };
+    } else if (angleType === 'corresponding') {
+        v1A = { x: xR, y: y1 };    v1B = txTop;
+        v2A = { x: xR, y: y2 };    v2B = txTop;
+        lbl1Off = { dx: r + 3, dy: -r * 0.6 };
+        lbl2Off = { dx: r + 3, dy: -r * 0.6 };
+    } else {
+        // alternate
+        v1A = { x: xL, y: y1 };    v1B = txBot;
+        v2A = { x: xR, y: y2 };    v2B = txTop;
+        lbl1Off = { dx: -r - 3, dy: r * 0.6 };
+        lbl2Off = { dx: r + 3, dy: -r * 0.6 };
+    }
+    _drawAngleArcPDF(doc, P1.x, P1.y, v1A.x, v1A.y, v1B.x, v1B.y, r);
+    _drawAngleArcPDF(doc, P2.x, P2.y, v2A.x, v2A.y, v2B.x, v2B.y, r);
+
+    doc.setFontSize(7.5 * ps);
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    doc.text(`${a}°`, P1.x + lbl1Off.dx, P1.y + lbl1Off.dy, { align: lbl1Off.dx < 0 ? 'right' : 'left' });
+
+    doc.setFont(font, 'bold');
+    doc.setTextColor(..._MC);
+    doc.text('?', P2.x + lbl2Off.dx, P2.y + lbl2Off.dy, { align: lbl2Off.dx < 0 ? 'right' : 'left' });
+}
+
 /**
  * Draw a geometry diagram into a bounding box.
  * @param {jsPDF} doc
@@ -351,13 +515,16 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
     // Reset dash + line state before drawing
     doc.setLineDashPattern([], 0);
     switch (diagram.type) {
-        case 'rectangle':       _drawRectDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
-        case 'right-triangle':  _drawRightTriDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
-        case 'triangle-angles': _drawTriAnglesDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
-        case 'triangle-area':   _drawTriAreaDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
-        case 'circle':          _drawCircleDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
-        case 'parallelogram':   _drawParallelogramDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
-        case 'trapezium':       _drawTrapeziumDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'rectangle':            _drawRectDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'right-triangle':       _drawRightTriDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'triangle-angles':      _drawTriAnglesDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'triangle-area':        _drawTriAreaDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'circle':               _drawCircleDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'parallelogram':        _drawParallelogramDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'trapezium':            _drawTrapeziumDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'straight-line-angles': _drawStraightLineAnglesPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'vertically-opposite':  _drawVerticallyOppositePDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'parallel-transversal': _drawParallelTransversalPDF(doc, diagram, x0, y0, w, h, ps, font); break;
     }
     // Restore defaults
     doc.setLineDashPattern([], 0);
