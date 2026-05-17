@@ -1214,7 +1214,9 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         Hard:   { 'circles': [0, 2], 'pythagoras': [1], 'angles': [3, 4] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : diff === 'Medium' ? 3 : 4);
+    // Medium covers types 0–4 (area, pythag, triangle-angle, co-interior, corresponding/alternate);
+    // without max=4 the corresponding/alternate path was unreachable for users without a sub-op filter.
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : 4);
     if (type === -1) return null;
 
     if (diff === 'Easy') {

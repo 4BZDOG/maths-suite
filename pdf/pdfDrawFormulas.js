@@ -237,8 +237,16 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
         return overflow;
     }
 
+    function drawFooter() {
+        doc.setFont(pdfFont, 'italic');
+        doc.setFontSize(6 * pScale);
+        doc.setTextColor(..._HNT_CLR);
+        doc.text('Formulas shown are for topics selected in this assessment only.', PAGE_WIDTH / 2, PAGE_HEIGHT - MARGIN - 2 * pScale, { align: 'center' });
+    }
+
     // First page: header is already drawn above
     let remaining = placeCards(cards);
+    drawFooter();
 
     // Continuation pages — header repeats so the sheet is self-explanatory
     while (remaining.length > 0) {
@@ -256,11 +264,6 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
         colY[0] = startY;
         colY[1] = startY;
         remaining = placeCards(remaining);
+        drawFooter();
     }
-
-    // Footer note
-    doc.setFont(pdfFont, 'italic');
-    doc.setFontSize(6 * pScale);
-    doc.setTextColor(..._HNT_CLR);
-    doc.text('Formulas shown are for topics selected in this assessment only.', PAGE_WIDTH / 2, PAGE_HEIGHT - MARGIN - 2 * pScale, { align: 'center' });
 }
