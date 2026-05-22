@@ -177,7 +177,7 @@ export function syncSettingsFromDOM() {
         if (!ops) return;
         const enabled = [];
         ops.forEach(op => {
-            const id = 'subop-' + t.replace(/\s+/g, '-') + '-' + op.key;
+            const id = 'subop-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '') + '-' + op.key;
             const el = document.getElementById(id);
             if (el && el.checked) enabled.push(op.key);
         });
@@ -231,7 +231,7 @@ export function applyStateToDOM(s) {
             if (!ops) return;
             const enabledOps = state.selectedSubOps[t];
             ops.forEach(op => {
-                const id = 'subop-' + t.replace(/\s+/g, '-') + '-' + op.key;
+                const id = 'subop-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '') + '-' + op.key;
                 const el = document.getElementById(id);
                 if (el) el.checked = enabledOps ? enabledOps.includes(op.key) : true;
             });
