@@ -802,7 +802,7 @@ function toggleSubOp(topic, opKey) {
 }
 
 function toggleTopicExpand(topicName) {
-    const panel = document.getElementById('subs-' + topicName.replace(/\s+/g, '-'));
+    const panel = document.getElementById('subs-' + topicName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, ''));
     if (!panel) return;
     const isOpen = panel.style.display !== 'none';
     // Accordion: close all others
@@ -827,7 +827,7 @@ function _updateParentCheckbox(topicName) {
     if (!parentEl) return;
     let checked = 0;
     ops.forEach(op => {
-        const el = document.getElementById('subop-' + topicName.replace(/\s+/g, '-') + '-' + op.key);
+        const el = document.getElementById('subop-' + topicName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '') + '-' + op.key);
         if (el && el.checked) checked++;
     });
     parentEl.checked = checked > 0;
