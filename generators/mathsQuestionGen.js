@@ -950,12 +950,12 @@ function _genAlgebraCore(rng, diff, allowedOps) {
 function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
     if (_depth > 30) return null;
     const maps = {
-        Easy:   { 'mean-median': [0, 1] },
+        Easy:   { 'mean-median': [0, 1], 'mode-range': [2, 3] },
         Medium: { 'mode-range': [0, 1], 'mean-median': [2, 3] },
         Hard:   { 'iqr': [0], 'mean-median': [1, 2] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : diff === 'Medium' ? 3 : 2);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : diff === 'Medium' ? 3 : 2);
     if (type === -1) return null;
 
     const ctx = rc(rng, DATA_CONTEXTS);
@@ -974,16 +974,47 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
             ]);
             return { clue: ph, answer: String(sum / n) };
         }
-        const n = (ri(rng, 2, 4) * 2) - 1;
-        const data = Array.from({ length: n }, () => ri(rng, 1, 30)).sort((a, b) => a - b);
-        const ph = rc(rng, [
-            `Find the *median* of: $${data.join(', ')}$`,
-            `State the *median* of these ${ctx}: $${data.join(', ')}$`,
-            `Determine the *median* of: $${data.join(', ')}$`,
-            `What is the *median* of $${data.join(', ')}$?`,
-            `The ${ctx} are $${data.join(', ')}$. Find the *median*.`,
+        if (type === 1) {
+            const n = (ri(rng, 2, 4) * 2) - 1;
+            const data = Array.from({ length: n }, () => ri(rng, 1, 30)).sort((a, b) => a - b);
+            const ph = rc(rng, [
+                `Find the *median* of: $${data.join(', ')}$`,
+                `State the *median* of these ${ctx}: $${data.join(', ')}$`,
+                `Determine the *median* of: $${data.join(', ')}$`,
+                `What is the *median* of $${data.join(', ')}$?`,
+                `The ${ctx} are $${data.join(', ')}$. Find the *median*.`,
+            ]);
+            return { clue: ph, answer: String(data[Math.floor(n / 2)]) };
+        }
+        if (type === 2) {
+            // mode: 5 values with one value appearing twice, rest distinct
+            const mode = ri(rng, 1, 10);
+            const others = [];
+            while (others.length < 3) {
+                const v = ri(rng, 1, 15);
+                if (v !== mode && !others.includes(v)) others.push(v);
+            }
+            const data = [...others, mode, mode].sort((a, b) => a - b);
+            const ph = rc(rng, [
+                `Find the *mode* of: $${data.join(', ')}$`,
+                `State the *mode* of these ${ctx}: $${data.join(', ')}$`,
+                `Identify the *mode* of: $${data.join(', ')}$`,
+                `What is the *mode* of $${data.join(', ')}$?`,
+                `The ${ctx} are $${data.join(', ')}$. Find the *mode*.`,
+            ]);
+            return { clue: ph, answer: String(mode) };
+        }
+        // type 3: range — small integer dataset
+        const n3 = ri(rng, 4, 6);
+        const data3 = Array.from({ length: n3 }, () => ri(rng, 1, 20));
+        const range3 = Math.max(...data3) - Math.min(...data3);
+        const ph3 = rc(rng, [
+            `Find the *range* of: $${data3.join(', ')}$`,
+            `Calculate the *range* of these ${ctx}: $${data3.join(', ')}$`,
+            `What is the *range* of $${data3.join(', ')}$?`,
+            `The ${ctx} are $${data3.join(', ')}$. Find the *range*.`,
         ]);
-        return { clue: ph, answer: String(data[Math.floor(n / 2)]) };
+        return { clue: ph3, answer: String(range3) };
     }
     if (diff === 'Medium') {
         if (type === 0) {
