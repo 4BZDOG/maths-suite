@@ -41,7 +41,7 @@ function _solveVerbsFor(v) {
 }
 // Pairs [dependent, independent] for substitution questions
 const SUBST_PAIRS = [['y', 'x'], ['A', 't'], ['P', 'n'], ['C', 'm'], ['V', 'r'], ['h', 't'], ['d', 'n']];
-const DATA_CONTEXTS = ['scores', 'values', 'ages', 'heights (cm)', 'temperatures (°C)', 'distances (m)', 'results', 'times (s)'];
+const DATA_CONTEXTS = ['scores', 'values', 'ages', 'heights (cm)', 'temperatures (°C)', 'distances (m)', 'results', 'times (s)', 'weights (kg)', 'prices ($)', 'marks', 'lengths (cm)', 'speeds (km/h)', 'rainfall (mm)', 'test results'];
 
 function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 function lcm(a, b) { return (a * b) / gcd(a, b); }
@@ -464,7 +464,7 @@ function genRounding(rng, diff, allowedOps) {
                 `Write $${display}$ correct to *1 decimal place*`,
                 `Express $${display}$ to *1 decimal place*`,
             ]);
-            return { clue: ph, answer: String(round(n, 1)) };
+            return { clue: ph, answer: round(n, 1).toFixed(1) };
         }
         if (type === 2) {
             const n = ri(rng, 1000, 99999) / 1000;
@@ -474,7 +474,7 @@ function genRounding(rng, diff, allowedOps) {
                 `Write $${display}$ correct to *2 decimal places*`,
                 `Express $${display}$ to 2 d.p.`,
             ]);
-            return { clue: ph, answer: String(round(n, 2)) };
+            return { clue: ph, answer: round(n, 2).toFixed(2) };
         }
         // type 3: nearest 5
         const n3 = ri(rng, 12, 295);
@@ -505,7 +505,7 @@ function genRounding(rng, diff, allowedOps) {
             `Express $${display}$ correct to 3 decimal places`,
             `Write $${display}$ to 3 d.p.`,
         ]);
-        return { clue: ph, answer: String(round(n, 3)) };
+        return { clue: ph, answer: round(n, 3).toFixed(3) };
     }
     if (type === 2) {
         const sigFigs = rc(rng, [1, 2]);
@@ -797,6 +797,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
         const orig = ri(rng, 4, 20) * 25;
         const pct = rc(rng, [10, 20, 25, 50]);
         const newVal = round(orig * (1 + pct / 100), 2);
+        if (!Number.isInteger(newVal)) return genPercentages(rng, diff, allowedOps, _depth + 1);
         const ph = rc(rng, [
             `A price rises from $\\$${orig}$ to $\\$${newVal}$. What is the *percentage increase*?`,
             `Calculate the *percentage increase* from $\\$${orig}$ to $\\$${newVal}$.`,
@@ -824,11 +825,11 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
 function _genAlgebraCore(rng, diff, allowedOps) {
     const maps = {
         Easy:   { 'solve': [0, 1] },
-        Medium: { 'solve': [0, 1, 3], 'substitution': [2] },
+        Medium: { 'solve': [0, 1, 3, 4], 'substitution': [2] },
         Hard:   { 'solve': [0, 2], 'substitution': [1] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : diff === 'Medium' ? 3 : 2);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : diff === 'Medium' ? 4 : 2);
     if (type === -1) return null;
 
     const v = rc(rng, ALGEBRA_VARS);
@@ -881,15 +882,20 @@ function _genAlgebraCore(rng, diff, allowedOps) {
             ]);
             return { clue: subVerb, answer: String(a * n + b) };
         }
-        // type 3: word-problem solve (linear)
-        const a3 = ri(rng, 2, 6), ans3 = ri(rng, 2, 12), b3 = ri(rng, 1, 20);
-        const R3 = a3 * ans3 + b3;
-        const wp3 = rc(rng, [
-            `A number is multiplied by $${a3}$ then $${b3}$ is added, giving $${R3}$. Find the number.`,
-            `I think of a number, multiply it by $${a3}$, then add $${b3}$. The result is $${R3}$. What is the number?`,
-            `When a number is multiplied by $${a3}$ and $${b3}$ is added, the answer is $${R3}$. Find the number.`,
-        ]);
-        return { clue: wp3, answer: String(ans3), answerDisplay: `$${v} = ${ans3}$` };
+        if (type === 3) {
+            // word-problem solve (linear)
+            const a3 = ri(rng, 2, 6), ans3 = ri(rng, 2, 12), b3 = ri(rng, 1, 20);
+            const R3 = a3 * ans3 + b3;
+            const wp3 = rc(rng, [
+                `A number is multiplied by $${a3}$ then $${b3}$ is added, giving $${R3}$. Find the number.`,
+                `I think of a number, multiply it by $${a3}$, then add $${b3}$. The result is $${R3}$. What is the number?`,
+                `When a number is multiplied by $${a3}$ and $${b3}$ is added, the answer is $${R3}$. Find the number.`,
+            ]);
+            return { clue: wp3, answer: String(ans3), answerDisplay: `$${v} = ${ans3}$` };
+        }
+        // type 4: division equation x/a = c
+        const a4 = ri(rng, 2, 9), ans4 = ri(rng, 2, 12);
+        return { clue: `${solveVerb}\n$\\frac{${v}}{${a4}} = ${ans4}$`, answer: String(a4 * ans4), answerDisplay: `$${v} = ${a4 * ans4}$` };
     }
     // Hard
     if (type === 0) {
@@ -1007,7 +1013,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
         const display3 = [...known3, '?'].join(', ');
         const ph3 = rc(rng, [
             `The *mean* of $${display3}$ is $${mean3}$. Find the missing value.`,
-            `Five ${ctx} have a *mean* of $${mean3}$. Four are $${known3.join(', ')}$. Find the missing value.`,
+            `${n3} ${ctx} have a *mean* of $${mean3}$. ${n3 - 1} are $${known3.join(', ')}$. Find the missing value.`,
             `Find the missing number if the *mean* of $${display3}$ is $${mean3}$.`,
             `The *mean* of these values is $${mean3}$: $${display3}$. What is the missing value?`,
         ]);
@@ -1125,12 +1131,13 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         if (type === 1) {
             const P = ri(rng, 2, 10) * 1000, r = rc(rng, [5, 10]), t = ri(rng, 1, 3);
             const I = P * r / 100 * t;
+            const yrs = `$${t}$ year${t > 1 ? 's' : ''}`;
             const fOn = opts.showFormulas?.['simple-interest']?.[diff.toLowerCase()];
             const pf = fOn ? ' Use $I = Prn$.' : '';
             const ph = rc(rng, [
-                `Calculate the *simple interest* on $\\$${P}$ at $${r}\\%$ p.a. for $${t}$ years.${pf}`,
-                `Find the *simple interest* earned on a $\\$${P}$ investment at $${r}\\%$ p.a. over $${t}$ years.${pf}`,
-                `Determine the interest on $\\$${P}$ at $${r}\\%$ per annum for $${t}$ years.${pf}`,
+                `Calculate the *simple interest* on $\\$${P}$ at $${r}\\%$ p.a. for ${yrs}.${pf}`,
+                `Find the *simple interest* earned on a $\\$${P}$ investment at $${r}\\%$ p.a. over ${yrs}.${pf}`,
+                `Determine the interest on $\\$${P}$ at $${r}\\%$ per annum for ${yrs}.${pf}`,
             ]);
             return { clue: ph, answer: String(I), answerDisplay: `$${I}` };
         }
@@ -1168,17 +1175,17 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             const fOn = opts.showFormulas?.['compound-interest']?.[diff.toLowerCase()];
             const pf = fOn ? ' Use $A = P(1+r)^n$.' : '';
             const ph = rc(rng, [
-                `Calculate the total amount after compound interest: $\\$${P2}$ at $${r2}\\%$ p.a. for $${t2}$ years.${pf}`,
-                `$\\$${P2}$ is invested at $${r2}\\%$ p.a. compound interest for $${t2}$ years. Find the total amount.${pf}`,
+                `Calculate the total amount after compound interest: $\\$${P2}$ at $${r2}\\%$ p.a. for $${t2}$ year${t2 > 1 ? 's' : ''}.${pf}`,
+                `$\\$${P2}$ is invested at $${r2}\\%$ p.a. compound interest for $${t2}$ year${t2 > 1 ? 's' : ''}. Find the total amount.${pf}`,
             ]);
             return { clue: ph, answer: String(A2), answerDisplay: `$${A2}` };
         }
         const fOn = opts.showFormulas?.['compound-interest']?.[diff.toLowerCase()];
         const pf = fOn ? ' Use $A = P(1+r)^n$.' : '';
         const ph = rc(rng, [
-            `Calculate the total amount after compound interest: $\\$${P}$ at $${r}\\%$ p.a. for $${t}$ years.${pf}`,
-            `$\\$${P}$ is invested at $${r}\\%$ p.a. compound interest for $${t}$ years. Determine the total amount.${pf}`,
-            `Find the final value of $\\$${P}$ compounded at $${r}\\%$ p.a. for $${t}$ years.${pf}`,
+            `Calculate the total amount after compound interest: $\\$${P}$ at $${r}\\%$ p.a. for $${t}$ year${t > 1 ? 's' : ''}.${pf}`,
+            `$\\$${P}$ is invested at $${r}\\%$ p.a. compound interest for $${t}$ year${t > 1 ? 's' : ''}. Determine the total amount.${pf}`,
+            `Find the final value of $\\$${P}$ compounded at $${r}\\%$ p.a. for $${t}$ year${t > 1 ? 's' : ''}.${pf}`,
         ]);
         return { clue: ph, answer: String(A), answerDisplay: `$${A}` };
     }
