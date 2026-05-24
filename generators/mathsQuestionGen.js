@@ -1539,13 +1539,17 @@ function _genStatisticsS5Op(rng, diff, op) {
     }
 
     if (op === 'bivariate') {
-        // Given a line of best fit, predict a value
-        const m = ri(rng, 1, 5), c = ri(rng, 0, 10), x = ri(rng, 2, 10);
+        // Given a line of best fit, predict a value — operand ranges scale with difficulty
+        const [mHi, cLo, cHi, xHi] = diff === 'Easy'   ? [3, 0,   8,  6]
+                                    : diff === 'Medium'  ? [5, -5, 12, 12]
+                                    :                      [8, -10, 20, 20];
+        const m = ri(rng, 1, mHi), c = ri(rng, cLo, cHi), x = ri(rng, 2, xHi);
         const y = m * x + c;
+        const cStr = c === 0 ? '' : (c > 0 ? ` + ${c}` : ` - ${Math.abs(c)}`);
         const ph = rc(rng, [
-            `A line of best fit is $y = ${m}x + ${c}$. Predict $y$ when $x = ${x}$.`,
-            `The equation of the line of best fit is $y = ${m}x + ${c}$. Find $y$ when $x = ${x}$.`,
-            `Using $y = ${m}x + ${c}$, calculate the predicted value of $y$ for $x = ${x}$.`,
+            `A line of best fit is $y = ${m}x${cStr}$. Predict $y$ when $x = ${x}$.`,
+            `The equation of the line of best fit is $y = ${m}x${cStr}$. Find $y$ when $x = ${x}$.`,
+            `Using $y = ${m}x${cStr}$, calculate the predicted value of $y$ for $x = ${x}$.`,
         ]);
         return { clue: ph, answer: String(y), answerDisplay: `$y = ${y}$` };
     }
@@ -1555,7 +1559,8 @@ function _genStatisticsS5Op(rng, diff, op) {
 // ---- Geometry Stage 5 operations ----------------------------
 function _genGeometryS5Op(rng, diff, op) {
     if (op === 'surface-area') {
-        const l = ri(rng, 2, 10), w = ri(rng, 2, 8), h = ri(rng, 2, 8);
+        const [lHi, wHi, hHi] = diff === 'Easy' ? [6, 5, 5] : diff === 'Medium' ? [10, 8, 8] : [15, 12, 10];
+        const l = ri(rng, 2, lHi), w = ri(rng, 2, wHi), h = ri(rng, 2, hHi);
         const u = _geoUnit(Math.max(l, w, h));
         const sa = 2 * (l * w + l * h + w * h);
         const ph = rc(rng, [
@@ -1567,9 +1572,10 @@ function _genGeometryS5Op(rng, diff, op) {
     }
 
     if (op === 'composite-volume') {
-        // Two rectangular prisms joined
-        const l1 = ri(rng, 3, 10), w1 = ri(rng, 2, 8), h1 = ri(rng, 2, 6);
-        const l2 = ri(rng, 2, l1), w2 = ri(rng, 2, w1), h2 = ri(rng, 2, 5);
+        // Two rectangular prisms joined — larger dimensions at higher difficulty
+        const [l1Hi, w1Hi, h1Hi] = diff === 'Easy' ? [6, 5, 4] : diff === 'Medium' ? [10, 8, 6] : [15, 12, 8];
+        const l1 = ri(rng, 3, l1Hi), w1 = ri(rng, 2, w1Hi), h1 = ri(rng, 2, h1Hi);
+        const l2 = ri(rng, 2, l1), w2 = ri(rng, 2, w1), h2 = ri(rng, 2, Math.max(2, h1 - 1));
         const u = 'm';
         const v = l1 * w1 * h1 + l2 * w2 * h2;
         const ph = rc(rng, [
@@ -1580,9 +1586,10 @@ function _genGeometryS5Op(rng, diff, op) {
     }
 
     if (op === 'similar-triangles') {
-        // Two similar triangles; find a missing side
-        const scale = ri(rng, 2, 4);
-        const a = ri(rng, 3, 8), b = ri(rng, 3, 8), c = ri(rng, 3, 8);
+        // Two similar triangles; find a missing side — scale and side range increase with difficulty
+        const [scaleHi, sidesHi] = diff === 'Easy' ? [3, 6] : diff === 'Medium' ? [4, 9] : [6, 14];
+        const scale = ri(rng, 2, scaleHi);
+        const a = ri(rng, 3, sidesHi), b = ri(rng, 3, sidesHi), c = ri(rng, 3, sidesHi);
         const u = 'cm';
         const ph = rc(rng, [
             `Two similar triangles have corresponding sides. If one triangle has a side of $${a}$ ${u} and the *corresponding* side of the larger triangle is $${a * scale}$ ${u}, find the side corresponding to $${b}$ ${u}.`,
@@ -1618,11 +1625,15 @@ function _genFinancialS5Op(rng, diff, op) {
     }
 
     // compound-period: compounding more than once per year
-    const P2 = ri(rng, 2, 10) * 1000;
+    const [P2Lo, P2Hi, nPerPool, t2Hi] =
+        diff === 'Easy'   ? [1, 5,  [2, 4],     1] :
+        diff === 'Medium' ? [2, 10, [2, 4, 12], 2] :
+                            [5, 20, [4, 12],    3];
+    const P2 = ri(rng, P2Lo, P2Hi) * 1000;
     const rAnnual = rc(rng, [6, 8, 12]);
-    const nPer = rc(rng, [2, 4, 12]); // half-yearly, quarterly, monthly
+    const nPer = rc(rng, nPerPool);
     const periodLabel = nPer === 2 ? 'half-yearly' : nPer === 4 ? 'quarterly' : 'monthly';
-    const t2 = ri(rng, 1, 2);
+    const t2 = ri(rng, 1, t2Hi);
     const A = round(P2 * Math.pow(1 + rAnnual / 100 / nPer, nPer * t2), 2);
     const ph = rc(rng, [
         `$\\$${P2}$ is invested at $${rAnnual}\\%$ p.a. compounded ${periodLabel} for $${t2}$ year${t2 > 1 ? 's' : ''}. Find the total amount.`,
@@ -1645,7 +1656,7 @@ function genTrigonometry(rng, diff, allowedOps) {
 
     if (op === 'find-side') {
         const triple = rc(rng, TRIG_TRIPLES);
-        const scale = ri(rng, 1, 3);
+        const scale = diff === 'Easy' ? ri(rng, 1, 2) : diff === 'Medium' ? ri(rng, 2, 5) : ri(rng, 3, 8);
         const opp = triple.a * scale, adj = triple.b * scale, hyp = triple.c * scale;
         const u = _geoUnit(hyp);
         const angleA = round(Math.atan2(opp, adj) * 180 / Math.PI, 1);
@@ -1692,7 +1703,7 @@ function genTrigonometry(rng, diff, allowedOps) {
 
     if (op === 'find-angle') {
         const triple = rc(rng, TRIG_TRIPLES);
-        const scale = ri(rng, 1, 3);
+        const scale = diff === 'Easy' ? ri(rng, 1, 2) : diff === 'Medium' ? ri(rng, 2, 4) : ri(rng, 3, 7);
         const opp = triple.a * scale, adj = triple.b * scale, hyp = triple.c * scale;
         const u = _geoUnit(hyp);
         const ratio = rc(rng, ['tan', 'sin', 'cos']);
@@ -1711,7 +1722,7 @@ function genTrigonometry(rng, diff, allowedOps) {
     if (op === 'applications') {
         // Real-world: angle of elevation
         const triple = rc(rng, TRIG_TRIPLES);
-        const scale = ri(rng, 2, 5);
+        const scale = diff === 'Easy' ? ri(rng, 1, 3) : diff === 'Medium' ? ri(rng, 2, 6) : ri(rng, 4, 10);
         const height = triple.a * scale, dist = triple.b * scale;
         const angle = round(Math.atan2(height, dist) * 180 / Math.PI, 1);
         const ph = rc(rng, [
@@ -1784,16 +1795,31 @@ function genNonLinear(rng, diff, allowedOps) {
     }
 
     if (op === 'parabola-sketch') {
-        const a = rc(rng, [1, -1, 2, -2]);
-        const h2 = rc(rng, [-3, -2, -1, 1, 2, 3]);
-        const k2 = ri(rng, -3, 3);
+        const aPool = diff === 'Easy' ? [1, -1] : diff === 'Medium' ? [1, -1, 2, -2] : [2, -2, 3, -3];
+        const hPool = diff === 'Easy' ? [-2, -1, 1, 2] : [-4, -3, -2, -1, 1, 2, 3, 4];
+        const [kLo, kHi] = diff === 'Easy' ? [-2, 4] : [-5, 5];
+        const a = rc(rng, aPool);
+        const h2 = rc(rng, hPool);
+        const k2 = ri(rng, kLo, kHi);
         const opens = a > 0 ? 'upward' : 'downward';
         const aStr = a === 1 ? '' : a === -1 ? '-' : `${a}`;
         const xPart = `(x ${h2 > 0 ? `- ${h2}` : `+ ${Math.abs(h2)}`})`;
         const kPart = k2 === 0 ? '' : (k2 > 0 ? ` + ${k2}` : ` - ${Math.abs(k2)}`);
         const eq = `${aStr}${xPart}^2${kPart}`;
-        const ph = `For $y = ${eq}$, state the vertex and direction it opens.`;
-        return { clue: ph, answer: `(${h2},${k2})${opens[0].toUpperCase()}`, answerDisplay: `Vertex $(${h2}, ${k2})$, opens ${opens}`, diagram: { type: 'parabola', h: h2, k: k2, a } };
+        const ph = diff === 'Hard'
+            ? rc(rng, [
+                `For $y = ${eq}$, state the vertex, direction it opens, and $y$-intercept.`,
+                `Describe the key features of $y = ${eq}$: vertex, direction, and $y$-intercept.`,
+              ])
+            : `For $y = ${eq}$, state the vertex and direction it opens.`;
+        const yIntercept = a * h2 * h2 + k2;
+        const answerDisplay = diff === 'Hard'
+            ? `Vertex $(${h2}, ${k2})$, opens ${opens}, $y$-int $= ${yIntercept}$`
+            : `Vertex $(${h2}, ${k2})$, opens ${opens}`;
+        const answer = diff === 'Hard'
+            ? `(${h2},${k2})${opens[0].toUpperCase()}y=${yIntercept}`
+            : `(${h2},${k2})${opens[0].toUpperCase()}`;
+        return { clue: ph, answer, answerDisplay, diagram: { type: 'parabola', h: h2, k: k2, a } };
     }
 
     if (op === 'identify-graph') {
