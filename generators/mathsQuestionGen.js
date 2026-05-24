@@ -176,7 +176,7 @@ function _pickType(rng, filtered, max) {
 // ============================================================
 function genIntegers(rng, diff, allowedOps) {
     const OP_MAP = { '+': 'add', '-': 'subtract', '×': 'multiply', '÷': 'divide', 'bodmas': 'bodmas' };
-    let pool = diff === 'Easy' ? ['+', '-', '×'] : diff === 'Hard' ? ['+', '-', '×', '÷', 'bodmas'] : ['+', '-', '×', '÷'];
+    let pool = diff === 'Easy' ? ['+', '-', '×'] : diff === 'Hard' ? ['+', '-', '×', '÷', 'bodmas'] : ['+', '-', '×', '÷', 'bodmas'];
     if (allowedOps) pool = pool.filter(op => allowedOps.includes(OP_MAP[op]));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
@@ -207,6 +207,12 @@ function genIntegers(rng, diff, allowedOps) {
     }
     if (op === '×') {
         const [lo, hi] = diff === 'Easy' ? [2, 12] : diff === 'Medium' ? [3, 25] : [12, 50];
+        // ~20% chance: square a single number instead of a × b (Medium/Hard only)
+        if (diff !== 'Easy' && rng() < 0.20) {
+            const base = diff === 'Medium' ? ri(rng, 4, 15) : ri(rng, 12, 30);
+            const verb = rc(rng, CALC_VERBS);
+            return { clue: `${verb}\n$${base}^2$`, answer: String(base * base) };
+        }
         const a = ri(rng, lo, hi), b = ri(rng, lo, hi);
         const clue = rc(rng, [
             `${rc(rng, MULT_VERBS)} $${a} \\times ${b}$`,
@@ -228,14 +234,18 @@ function genIntegers(rng, diff, allowedOps) {
         return { clue, answer: String(ans) };
     }
     if (op === 'bodmas') {
-        const form = ri(rng, 0, 4);
+        // Medium uses simpler 2-op forms (0–2); Hard uses all 5 forms (0–4)
+        const formMax = diff === 'Medium' ? 2 : 4;
+        const form = ri(rng, 0, formMax);
         const verb = rc(rng, BODMAS_VERBS);
+        // Medium: smaller operands so answers stay manageable
+        const [aHi, bHi, cHi] = diff === 'Medium' ? [15, 9, 8] : [25, 15, 15];
         if (form === 0) {
-            const a = ri(rng, 3, 25), b = ri(rng, 3, 15), c = ri(rng, 3, 15);
+            const a = ri(rng, 2, aHi), b = ri(rng, 2, bHi), c = ri(rng, 2, cHi);
             return { clue: `${verb}\n$${a} + ${b} \\times ${c}$`, answer: String(a + b * c) };
         }
         if (form === 1) {
-            const a = ri(rng, 2, 15), b = ri(rng, 2, 15), c = ri(rng, 3, 12);
+            const a = ri(rng, 2, bHi), b = ri(rng, 2, bHi), c = ri(rng, 2, cHi);
             return { clue: `${verb}\n$(${a} + ${b}) \\times ${c}$`, answer: String((a + b) * c) };
         }
         if (form === 2) {
@@ -258,12 +268,12 @@ function genIntegers(rng, diff, allowedOps) {
 function genDecimals(rng, diff, allowedOps) {
     // type → sub-op mapping per difficulty
     const maps = {
-        Easy: { 'add-subtract': [0], 'multiply-divide': [1] },
-        Medium: { 'add-subtract': [0, 1], 'multiply-divide': [2] },
-        Hard: { 'multiply-divide': [0, 1], 'add-subtract': [2] },
+        Easy:   { 'add-subtract': [0], 'multiply-divide': [1, 2] },
+        Medium: { 'add-subtract': [0, 1, 3], 'multiply-divide': [2] },
+        Hard:   { 'multiply-divide': [0, 1, 3], 'add-subtract': [2] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : 2);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : 3);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -277,14 +287,27 @@ function genDecimals(rng, diff, allowedOps) {
             ]);
             return { clue: ph, answer: String(round(a + b, 2)) };
         }
-        const a = ri(rng, 1, 9) / 10, b = ri(rng, 2, 9);
-        const ph = rc(rng, [
-            `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
-            `Multiply $${a}$ by $${b}$`,
-            `Find the product of $${a}$ and $${b}$`,
-            `What is $${a} \\times ${b}$?`,
+        if (type === 1) {
+            const a = ri(rng, 1, 9) / 10, b = ri(rng, 2, 9);
+            const ph = rc(rng, [
+                `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
+                `Multiply $${a}$ by $${b}$`,
+                `Find the product of $${a}$ and $${b}$`,
+                `What is $${a} \\times ${b}$?`,
+            ]);
+            return { clue: ph, answer: String(round(a * b, 2)) };
+        }
+        // type 2: simple division (whole ÷ integer → 1-dp result)
+        const b2 = ri(rng, 2, 9);
+        const ans2 = ri(rng, 1, 9) / 10;
+        const dividend = round(b2 * ans2, 2);
+        const ph2 = rc(rng, [
+            `${rc(rng, DIV_VERBS)} $${dividend} \\div ${b2}$`,
+            `Divide $${dividend}$ by $${b2}$`,
+            `What is $${dividend}$ divided by $${b2}$?`,
+            `Find the *quotient* of $${dividend}$ and $${b2}$`,
         ]);
-        return { clue: ph, answer: String(round(a * b, 2)) };
+        return { clue: ph2, answer: String(ans2) };
     }
     if (diff === 'Medium') {
         if (type === 0) {
@@ -307,14 +330,30 @@ function genDecimals(rng, diff, allowedOps) {
             ]);
             return { clue: ph, answer: String(round(a - b, 2)) };
         }
-        const a = ri(rng, 10, 99) / 10, b = ri(rng, 10, 99) / 10;
-        const ph = rc(rng, [
-            `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
-            `Multiply $${a}$ by $${b}$`,
-            `Find the product of $${a}$ and $${b}$`,
-            `What is $${a} \\times ${b}$?`,
+        if (type === 2) {
+            const a = ri(rng, 10, 99) / 10, b = ri(rng, 10, 99) / 10;
+            const ph = rc(rng, [
+                `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
+                `Multiply $${a}$ by $${b}$`,
+                `Find the product of $${a}$ and $${b}$`,
+                `What is $${a} \\times ${b}$?`,
+            ]);
+            return { clue: ph, answer: String(round(a * b, 2)) };
+        }
+        // type 3: money-context addition
+        const dollars1 = ri(rng, 1, 49);
+        const cents1   = rc(rng, [25, 50, 75, 0]);
+        const dollars2 = ri(rng, 1, 49);
+        const cents2   = rc(rng, [25, 50, 75, 0]);
+        const p1 = dollars1 + cents1 / 100;
+        const p2 = dollars2 + cents2 / 100;
+        const total = round(p1 + p2, 2);
+        const ph3 = rc(rng, [
+            `A shopper buys items costing $\\$${p1.toFixed(2)}$ and $\\$${p2.toFixed(2)}$. Find the *total*.`,
+            `Add $\\$${p1.toFixed(2)}$ and $\\$${p2.toFixed(2)}$`,
+            `What is the total cost of items priced $\\$${p1.toFixed(2)}$ and $\\$${p2.toFixed(2)}$?`,
         ]);
-        return { clue: ph, answer: String(round(a * b, 2)) };
+        return { clue: ph3, answer: String(total), answerDisplay: `$${total.toFixed(2)}` };
     }
     // Hard
     if (type === 0) {
@@ -338,14 +377,27 @@ function genDecimals(rng, diff, allowedOps) {
         ]);
         return { clue: ph, answer: String(ans) };
     }
-    const a = ri(rng, 101, 999) / 100, b = ri(rng, 100, Math.floor(a * 100) - 1) / 100;
-    const ph = rc(rng, [
-        `${rc(rng, CALC_VERBS)} $${a} - ${b}$`,
-        `Subtract $${b}$ from $${a}$`,
-        `Find the difference of $${a}$ and $${b}$`,
-        `What is $${a} - ${b}$?`,
+    if (type === 2) {
+        const a = ri(rng, 101, 999) / 100, b = ri(rng, 100, Math.floor(a * 100) - 1) / 100;
+        const ph = rc(rng, [
+            `${rc(rng, CALC_VERBS)} $${a} - ${b}$`,
+            `Subtract $${b}$ from $${a}$`,
+            `Find the difference of $${a}$ and $${b}$`,
+            `What is $${a} - ${b}$?`,
+        ]);
+        return { clue: ph, answer: String(round(a - b, 2)) };
+    }
+    // type 3: measurement-cost multiply
+    const len = ri(rng, 11, 99) / 10;
+    const rate = ri(rng, 2, 15);
+    const cost3 = round(len * rate, 2);
+    const unit3 = rc(rng, ['metre', 'kilogram', 'litre']);
+    const ph3h = rc(rng, [
+        `A length of $${len}$ m is sold at $\\$${rate}$ per ${unit3}. Find the *total cost*.`,
+        `Calculate the cost of $${len}$ ${unit3}s at $\\$${rate}$ each.`,
+        `Multiply $${len}$ by $${rate}$ to find the *total price*.`,
     ]);
-    return { clue: ph, answer: String(round(a - b, 2)) };
+    return { clue: ph3h, answer: String(cost3), answerDisplay: `$${cost3}` };
 }
 
 // ============================================================
@@ -353,12 +405,12 @@ function genDecimals(rng, diff, allowedOps) {
 // ============================================================
 function genRounding(rng, diff, allowedOps) {
     const maps = {
-        Easy: { 'nearest': [0, 1] },
-        Medium: { 'nearest': [0], 'decimal-places': [1, 2] },
-        Hard: { 'nearest': [0], 'decimal-places': [1], 'sig-figs': [2] },
+        Easy:   { 'nearest': [0, 1, 2] },
+        Medium: { 'nearest': [0, 3], 'decimal-places': [1, 2] },
+        Hard:   { 'nearest': [0], 'decimal-places': [1], 'sig-figs': [2, 3] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : 2);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : 3);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -372,16 +424,26 @@ function genRounding(rng, diff, allowedOps) {
             ]);
             return { clue: ph, answer: String(ans) };
         }
-        // Guarantee a non-zero decimal part so the question isn't nonsensical
-        // (e.g. "Write 91 as a whole number" makes no sense).
-        const whole = ri(rng, 1, 99);
-        const frac = ri(rng, 1, 9);
-        const n = whole + frac / 10;   // e.g. 7.3, 42.8 — always has .1–.9
-        const ph = rc(rng, [
-            `Round $${n}$ to the nearest *whole number*`,
-            `Write $${n}$ as a whole number (rounded)`,
+        if (type === 1) {
+            // Guarantee a non-zero decimal part so the question isn't nonsensical
+            const whole = ri(rng, 1, 99);
+            const frac = ri(rng, 1, 9);
+            const n = whole + frac / 10;   // e.g. 7.3, 42.8 — always has .1–.9
+            const ph = rc(rng, [
+                `Round $${n}$ to the nearest *whole number*`,
+                `Write $${n}$ as a whole number (rounded)`,
+            ]);
+            return { clue: ph, answer: String(Math.round(n)) };
+        }
+        // type 2: nearest 100
+        const n2 = ri(rng, 150, 9850);
+        const ans2 = Math.round(n2 / 100) * 100;
+        const ph2 = rc(rng, [
+            `Round $${n2}$ to the nearest $100$`,
+            `Write $${n2}$ rounded to the nearest $100$`,
+            `Approximate $${n2}$ to the nearest $100$`,
         ]);
-        return { clue: ph, answer: String(Math.round(n)) };
+        return { clue: ph2, answer: String(ans2) };
     }
     if (diff === 'Medium') {
         if (type === 0) {
@@ -404,14 +466,25 @@ function genRounding(rng, diff, allowedOps) {
             ]);
             return { clue: ph, answer: String(round(n, 1)) };
         }
-        const n = ri(rng, 1000, 99999) / 1000;
-        const display = n.toFixed(3);
-        const ph = rc(rng, [
-            `Round $${display}$ to *2 decimal places*`,
-            `Write $${display}$ correct to *2 decimal places*`,
-            `Express $${display}$ to 2 d.p.`,
+        if (type === 2) {
+            const n = ri(rng, 1000, 99999) / 1000;
+            const display = n.toFixed(3);
+            const ph = rc(rng, [
+                `Round $${display}$ to *2 decimal places*`,
+                `Write $${display}$ correct to *2 decimal places*`,
+                `Express $${display}$ to 2 d.p.`,
+            ]);
+            return { clue: ph, answer: String(round(n, 2)) };
+        }
+        // type 3: nearest 5
+        const n3 = ri(rng, 12, 295);
+        const ans3 = Math.round(n3 / 5) * 5;
+        const ph3 = rc(rng, [
+            `Round $${n3}$ to the nearest $5$`,
+            `Write $${n3}$ rounded to the nearest $5$`,
+            `A crowd of $${n3}$ is reported to the nearest $5$. State the figure.`,
         ]);
-        return { clue: ph, answer: String(round(n, 2)) };
+        return { clue: ph3, answer: String(ans3) };
     }
     // Hard
     if (type === 0) {
@@ -434,17 +507,29 @@ function genRounding(rng, diff, allowedOps) {
         ]);
         return { clue: ph, answer: String(round(n, 3)) };
     }
-    const sigFigs = rc(rng, [1, 2]);
-    const n = sigFigs === 1 ? ri(rng, 100, 9999) : ri(rng, 1000, 99999);
-    const factor = Math.pow(10, Math.floor(Math.log10(n)) - (sigFigs - 1));
-    const ans = Math.round(n / factor) * factor;
-    const sfLabel = `${sigFigs} significant figure${sigFigs > 1 ? 's' : ''}`;
-    const ph = rc(rng, [
-        `Round $${n}$ to ${sfLabel}`,
-        `Write $${n}$ correct to ${sfLabel}`,
-        `Express $${n}$ to ${sfLabel}`,
+    if (type === 2) {
+        const sigFigs = rc(rng, [1, 2]);
+        const n = sigFigs === 1 ? ri(rng, 100, 9999) : ri(rng, 1000, 99999);
+        const factor = Math.pow(10, Math.floor(Math.log10(n)) - (sigFigs - 1));
+        const ans = Math.round(n / factor) * factor;
+        const sfLabel = `${sigFigs} significant figure${sigFigs > 1 ? 's' : ''}`;
+        const ph = rc(rng, [
+            `Round $${n}$ to ${sfLabel}`,
+            `Write $${n}$ correct to ${sfLabel}`,
+            `Express $${n}$ to ${sfLabel}`,
+        ]);
+        return { clue: ph, answer: String(ans) };
+    }
+    // type 3: 3 significant figures
+    const n3sf = ri(rng, 10000, 999999);
+    const f3   = Math.pow(10, Math.floor(Math.log10(n3sf)) - 2);
+    const ans3sf = Math.round(n3sf / f3) * f3;
+    const ph3sf = rc(rng, [
+        `Round $${n3sf}$ to *3 significant figures*`,
+        `Write $${n3sf}$ correct to *3 significant figures*`,
+        `Express $${n3sf}$ to 3 s.f.`,
     ]);
-    return { clue: ph, answer: String(ans) };
+    return { clue: ph3sf, answer: String(ans3sf) };
 }
 
 // ============================================================
@@ -453,12 +538,12 @@ function genRounding(rng, diff, allowedOps) {
 function genFractions(rng, diff, allowedOps, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
-        Easy: { 'fraction-of': [0], 'add-subtract': [1], 'simplify-convert': [2] },
-        Medium: { 'add-subtract': [0], 'multiply-divide': [1], 'simplify-convert': [2] },
-        Hard: { 'multiply-divide': [0], 'add-subtract': [1] },
+        Easy:   { 'fraction-of': [0, 3], 'add-subtract': [1], 'simplify-convert': [2] },
+        Medium: { 'add-subtract': [0], 'multiply-divide': [1], 'simplify-convert': [2, 3] },
+        Hard:   { 'multiply-divide': [0], 'add-subtract': [1], 'simplify-convert': [2] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Hard' ? 1 : 2);
+    const type = _pickType(rng, filtered, diff === 'Hard' ? 2 : 3);
     if (type === -1) return null;
 
     const calcVerb = rc(rng, CALC_VERBS);
@@ -482,18 +567,31 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             const ans = fracStr(n1 + n2, den);
             return { clue: `${calcVerb} $\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}}$`, answer: ans };
         }
-        const den = rc(rng, [4, 6, 8, 10, 12]);
-        const factor = rc(rng, [2, 3]);
-        if (factor >= den) return genFractions(rng, diff, allowedOps, _depth + 1);
-        const num = factor * ri(rng, 1, Math.floor(den / factor));
-        const ans = fracStr(num, den);
-        const ph = rc(rng, [
-            `Simplify $\\frac{${num}}{${den}}$`,
-            `Write $\\frac{${num}}{${den}}$ in its *simplest form*`,
-            `Express $\\frac{${num}}{${den}}$ in *lowest terms*`,
-            `Reduce $\\frac{${num}}{${den}}$ to its *simplest form*`,
+        if (type === 2) {
+            const den = rc(rng, [4, 6, 8, 10, 12]);
+            const factor = rc(rng, [2, 3]);
+            if (factor >= den) return genFractions(rng, diff, allowedOps, _depth + 1);
+            const num = factor * ri(rng, 1, Math.floor(den / factor));
+            const ans = fracStr(num, den);
+            const ph = rc(rng, [
+                `Simplify $\\frac{${num}}{${den}}$`,
+                `Write $\\frac{${num}}{${den}}$ in its *simplest form*`,
+                `Express $\\frac{${num}}{${den}}$ in *lowest terms*`,
+                `Reduce $\\frac{${num}}{${den}}$ to its *simplest form*`,
+            ]);
+            return { clue: ph, answer: ans };
+        }
+        // type 3: fraction-of with real-world context
+        const den3 = rc(rng, [2, 4, 5, 10]);
+        const num3 = ri(rng, 1, den3 - 1);
+        const whole3 = den3 * ri(rng, 2, 12);
+        const ans3 = (num3 * whole3) / den3;
+        const ctx3 = rc(rng, [
+            `$${whole3}$ students walk to school. $\\frac{${num3}}{${den3}}$ of them walk every day. How many is that?`,
+            `A pizza has $${whole3}$ slices. $\\frac{${num3}}{${den3}}$ of the pizza is eaten. How many slices is that?`,
+            `There are $${whole3}$ marbles in a bag. $\\frac{${num3}}{${den3}}$ are red. How many red marbles are there?`,
         ]);
-        return { clue: ph, answer: ans };
+        return { clue: ctx3, answer: String(ans3) };
     }
 
     if (diff === 'Medium') {
@@ -516,15 +614,30 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             ]);
             return { clue: ph, answer: ans };
         }
-        const den = rc(rng, [2, 4, 5, 8, 10, 20, 25]);
-        const num = ri(rng, 1, den - 1);
-        const ans = round(num / den, 4);
-        const ph = rc(rng, [
-            `Convert $\\frac{${num}}{${den}}$ to a *decimal*`,
-            `Express $\\frac{${num}}{${den}}$ as a *decimal*`,
-            `Write $\\frac{${num}}{${den}}$ as a *decimal number*`,
+        if (type === 2) {
+            const den = rc(rng, [2, 4, 5, 8, 10, 20, 25]);
+            const num = ri(rng, 1, den - 1);
+            const ans = round(num / den, 4);
+            const ph = rc(rng, [
+                `Convert $\\frac{${num}}{${den}}$ to a *decimal*`,
+                `Express $\\frac{${num}}{${den}}$ as a *decimal*`,
+                `Write $\\frac{${num}}{${den}}$ as a *decimal number*`,
+            ]);
+            return { clue: ph, answer: String(ans) };
+        }
+        // type 3: improper fraction → mixed number
+        const denM = rc(rng, [2, 3, 4, 5, 6, 8]);
+        const wholeM = ri(rng, 1, 5);
+        const numRem = ri(rng, 1, denM - 1);
+        const improper = wholeM * denM + numRem;
+        const { n: sn, d: sd } = simplify(numRem, denM);
+        const mixedAns = sd === 1 ? `${wholeM + sn}` : `${wholeM} ${sn}/${sd}`;
+        const ph3 = rc(rng, [
+            `Write $\\frac{${improper}}{${denM}}$ as a *mixed number*`,
+            `Convert $\\frac{${improper}}{${denM}}$ to a *mixed number*`,
+            `Express $\\frac{${improper}}{${denM}}$ as a *mixed number*`,
         ]);
-        return { clue: ph, answer: String(ans) };
+        return { clue: ph3, answer: mixedAns };
     }
 
     // Hard
@@ -540,14 +653,26 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         ]);
         return { clue: ph, answer: ans };
     }
-    const d1 = rc(rng, [3, 4, 5, 6]), d2 = rc(rng, [3, 4, 5, 6]);
-    if (d1 === d2) return genFractions(rng, diff, allowedOps, _depth + 1);
-    const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
-    const l = lcm(d1, d2);
-    const numResult = n1 * (l / d1) - n2 * (l / d2);
-    if (numResult <= 0) return genFractions(rng, diff, allowedOps, _depth + 1);
-    const ans = fracStr(numResult, l);
-    return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} - \\frac{${n2}}{${d2}}$`, answer: ans };
+    if (type === 1) {
+        const d1 = rc(rng, [3, 4, 5, 6]), d2 = rc(rng, [3, 4, 5, 6]);
+        if (d1 === d2) return genFractions(rng, diff, allowedOps, _depth + 1);
+        const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
+        const l = lcm(d1, d2);
+        const numResult = n1 * (l / d1) - n2 * (l / d2);
+        if (numResult <= 0) return genFractions(rng, diff, allowedOps, _depth + 1);
+        const ans = fracStr(numResult, l);
+        return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} - \\frac{${n2}}{${d2}}$`, answer: ans };
+    }
+    // type 2: simplify-convert — fraction→decimal (fixes wiring gap)
+    const denH = rc(rng, [2, 4, 5, 8, 10, 20, 25]);
+    const numH = ri(rng, 1, denH - 1);
+    const ansH = round(numH / denH, 4);
+    const phH = rc(rng, [
+        `Convert $\\frac{${numH}}{${denH}}$ to a *decimal*`,
+        `Express $\\frac{${numH}}{${denH}}$ as a *decimal*`,
+        `Write $\\frac{${numH}}{${denH}}$ as a *decimal number*`,
+    ]);
+    return { clue: phH, answer: String(ansH) };
 }
 
 // ============================================================
@@ -556,34 +681,48 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
 function genPercentages(rng, diff, allowedOps, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
-        Easy: { 'find-pct': [0] },
-        Medium: { 'find-pct': [0, 2], 'increase-decrease': [1] },
-        Hard: { 'reverse-change': [0, 1, 2] },
+        Easy:   { 'find-pct': [0], 'increase-decrease': [1] },
+        Medium: { 'find-pct': [0, 2], 'increase-decrease': [1, 3] },
+        Hard:   { 'reverse-change': [0, 1, 2] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
 
     if (diff === 'Easy') {
-        if (filtered && filtered.length === 0) return null;
-        const pct = rc(rng, [10, 20, 25, 50, 75]);
-        const denominators = { 10: 10, 20: 5, 25: 4, 50: 2, 75: 4 };
-        const mult = denominators[pct] || 10;
-        const whole = ri(rng, 1, 20) * mult;
-        const ans = Math.round((pct / 100) * whole);
-        const ph = rc(rng, [
-            `Find $${pct}\\%$ of $${whole}$`,
-            `Calculate $${pct}\\%$ of $${whole}$`,
-            `Determine $${pct}\\%$ of $${whole}$`,
-            `What is $${pct}\\%$ of $${whole}$?`,
-            `A discount of $${pct}\\%$ is applied to $\\$${whole}$. Find the discount amount.`,
-            `$${pct}\\%$ of a class of $${whole}$ students passed. How many students passed?`,
+        const typeE = _pickType(rng, filtered, 1);
+        if (typeE === -1) return null;
+        if (typeE === 0) {
+            const pct = rc(rng, [10, 20, 25, 50, 75]);
+            const denominators = { 10: 10, 20: 5, 25: 4, 50: 2, 75: 4 };
+            const mult = denominators[pct] || 10;
+            const whole = ri(rng, 1, 20) * mult;
+            const ans = Math.round((pct / 100) * whole);
+            const ph = rc(rng, [
+                `Find $${pct}\\%$ of $${whole}$`,
+                `Calculate $${pct}\\%$ of $${whole}$`,
+                `Determine $${pct}\\%$ of $${whole}$`,
+                `What is $${pct}\\%$ of $${whole}$?`,
+                `A discount of $${pct}\\%$ is applied to $\\$${whole}$. Find the discount amount.`,
+                `$${pct}\\%$ of a class of $${whole}$ students passed. How many students passed?`,
+            ]);
+            return { clue: ph, answer: String(ans), answerDisplay: String(ans) };
+        }
+        // typeE 1: sale-price after discount
+        const pctD = rc(rng, [10, 20, 25, 50]);
+        const denomD = { 10: 10, 20: 5, 25: 4, 50: 2 };
+        const wholeD = ri(rng, 1, 20) * (denomD[pctD] || 10);
+        const saleAns = Math.round(wholeD * (1 - pctD / 100));
+        const phD = rc(rng, [
+            `A $\\$${wholeD}$ item is reduced by $${pctD}\\%$. Find the *sale price*.`,
+            `Calculate the price after a $${pctD}\\%$ discount on $\\$${wholeD}$.`,
+            `A discount of $${pctD}\\%$ is applied to $\\$${wholeD}$. What is the *final price*?`,
         ]);
-        return { clue: ph, answer: String(ans), answerDisplay: String(ans) };
+        return { clue: phD, answer: String(saleAns), answerDisplay: `$${saleAns}` };
     }
     if (diff === 'Medium') {
-        const type = _pickType(rng, filtered, 2);
+        const type = _pickType(rng, filtered, 3);
         if (type === -1) return null;
         if (type === 0) {
-            const pct = rc(rng, [5, 15, 30, 40, 60, 70, 80]);
+            const pct = rc(rng, [5, 10, 15, 20, 30, 40, 60, 70, 80]);
             const candidates = [20, 40, 60, 80, 100, 120, 200, 250, 400, 500];
             for (let i = 0; i < 20; i++) {
                 const whole = rc(rng, candidates);
@@ -600,7 +739,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
         }
         if (type === 1) {
             const orig = ri(rng, 2, 20) * 10;
-            const pct = rc(rng, [10, 20, 25, 50]);
+            const pct = rc(rng, [5, 10, 20, 25, 50]);
             const ans = Math.round(orig * (1 + pct / 100));
             if (!Number.isInteger(ans)) return genPercentages(rng, diff, allowedOps, _depth + 1);
             const ctx = rc(rng, ['a price', 'a value', 'an amount', 'a score']);
@@ -613,17 +752,32 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             ]);
             return { clue: ph, answer: String(ans) };
         }
-        const b = rc(rng, [10, 20, 25, 50, 100]);
-        const a = ri(rng, 1, b - 1);
-        const ans = (a / b) * 100;
-        if (!Number.isInteger(ans)) return genPercentages(rng, diff, allowedOps, _depth + 1);
-        const ph = rc(rng, [
-            `Express $${a}$ out of $${b}$ as a percentage`,
-            `Write $${a}$ out of $${b}$ as a percentage`,
-            `$${a}$ out of $${b}$ — calculate the percentage`,
-            `What percentage is $${a}$ of $${b}$?`,
+        if (type === 2) {
+            const b = rc(rng, [10, 20, 25, 50, 100]);
+            const a = ri(rng, 1, b - 1);
+            const ans = (a / b) * 100;
+            if (!Number.isInteger(ans)) return genPercentages(rng, diff, allowedOps, _depth + 1);
+            const ph = rc(rng, [
+                `Express $${a}$ out of $${b}$ as a percentage`,
+                `Write $${a}$ out of $${b}$ as a percentage`,
+                `$${a}$ out of $${b}$ — calculate the percentage`,
+                `What percentage is $${a}$ of $${b}$?`,
+            ]);
+            return { clue: ph, answer: String(ans), answerDisplay: `${ans}%` };
+        }
+        // type 3: decrease/discount
+        const origDec = ri(rng, 2, 20) * 10;
+        const pctDec = rc(rng, [5, 10, 20, 25, 50]);
+        const ansDec = Math.round(origDec * (1 - pctDec / 100));
+        if (!Number.isInteger(ansDec)) return genPercentages(rng, diff, allowedOps, _depth + 1);
+        const ctxDec = rc(rng, ['a price', 'a salary', 'a value', 'a cost']);
+        const phDec = rc(rng, [
+            `Decrease $${origDec}$ by $${pctDec}\\%$`,
+            `A ${ctxDec} of $${origDec}$ is reduced by $${pctDec}\\%$. Find the **new** ${ctxDec}.`,
+            `A $\\$${origDec}$ item is discounted by $${pctDec}\\%$. Find the *sale price*.`,
+            `Calculate the result of decreasing $${origDec}$ by $${pctDec}\\%$`,
         ]);
-        return { clue: ph, answer: String(ans), answerDisplay: `${ans}%` };
+        return { clue: phDec, answer: String(ansDec) };
     }
     // Hard
     const type = _pickType(rng, filtered, 2);
@@ -669,12 +823,12 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
 // ============================================================
 function _genAlgebraCore(rng, diff, allowedOps) {
     const maps = {
-        Easy: { 'solve': [0, 1] },
-        Medium: { 'solve': [0, 1], 'substitution': [2] },
-        Hard: { 'solve': [0, 2], 'substitution': [1] },
+        Easy:   { 'solve': [0, 1] },
+        Medium: { 'solve': [0, 1, 3], 'substitution': [2] },
+        Hard:   { 'solve': [0, 2], 'substitution': [1] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : 2);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : diff === 'Medium' ? 3 : 2);
     if (type === -1) return null;
 
     const v = rc(rng, ALGEBRA_VARS);
@@ -715,16 +869,27 @@ function _genAlgebraCore(rng, diff, allowedOps) {
             const a = ri(rng, 2, 6), ans = ri(rng, 2, 10), b = ri(rng, 1, 10);
             return { clue: `${solveVerb}\n$${a}${v} - ${b} = ${a * ans - b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
         }
-        const [fv, iv] = rc(rng, SUBST_PAIRS);
-        const a = ri(rng, 2, 6), b = ri(rng, 1, 12), n = ri(rng, 1, 8);
-        const subVerb = rc(rng, [
-            `If $${fv} = ${a}${iv} + ${b}$, find $${fv}$ when $${iv} = ${n}$`,
-            `Evaluate $${fv} = ${a}${iv} + ${b}$ when $${iv} = ${n}$`,
-            `Calculate $${fv}$ given $${fv} = ${a}${iv} + ${b}$ and $${iv} = ${n}$`,
-            `Substitute $${iv} = ${n}$ into $${fv} = ${a}${iv} + ${b}$`,
-            `Find the value of $${fv}$ if $${fv} = ${a}${iv} + ${b}$ and $${iv} = ${n}$`,
+        if (type === 2) {
+            const [fv, iv] = rc(rng, SUBST_PAIRS);
+            const a = ri(rng, 2, 6), b = ri(rng, 1, 12), n = ri(rng, 1, 8);
+            const subVerb = rc(rng, [
+                `If $${fv} = ${a}${iv} + ${b}$, find $${fv}$ when $${iv} = ${n}$`,
+                `Evaluate $${fv} = ${a}${iv} + ${b}$ when $${iv} = ${n}$`,
+                `Calculate $${fv}$ given $${fv} = ${a}${iv} + ${b}$ and $${iv} = ${n}$`,
+                `Substitute $${iv} = ${n}$ into $${fv} = ${a}${iv} + ${b}$`,
+                `Find the value of $${fv}$ if $${fv} = ${a}${iv} + ${b}$ and $${iv} = ${n}$`,
+            ]);
+            return { clue: subVerb, answer: String(a * n + b) };
+        }
+        // type 3: word-problem solve (linear)
+        const a3 = ri(rng, 2, 6), ans3 = ri(rng, 2, 12), b3 = ri(rng, 1, 20);
+        const R3 = a3 * ans3 + b3;
+        const wp3 = rc(rng, [
+            `A number is multiplied by $${a3}$ then $${b3}$ is added, giving $${R3}$. Find the number.`,
+            `I think of a number, multiply it by $${a3}$, then add $${b3}$. The result is $${R3}$. What is the number?`,
+            `When a number is multiplied by $${a3}$ and $${b3}$ is added, the answer is $${R3}$. Find the number.`,
         ]);
-        return { clue: subVerb, answer: String(a * n + b) };
+        return { clue: wp3, answer: String(ans3), answerDisplay: `$${v} = ${ans3}$` };
     }
     // Hard
     if (type === 0) {
@@ -756,12 +921,12 @@ function _genAlgebraCore(rng, diff, allowedOps) {
 function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
     if (_depth > 30) return null;
     const maps = {
-        Easy: { 'mean-median': [0, 1] },
-        Medium: { 'mode-range': [0, 1], 'mean-median': [2] },
-        Hard: { 'iqr': [0], 'mean-median': [1] },
+        Easy:   { 'mean-median': [0, 1] },
+        Medium: { 'mode-range': [0, 1], 'mean-median': [2, 3] },
+        Hard:   { 'iqr': [0], 'mean-median': [1, 2] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : diff === 'Medium' ? 2 : 1);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : diff === 'Medium' ? 3 : 2);
     if (type === -1) return null;
 
     const ctx = rc(rng, DATA_CONTEXTS);
@@ -819,17 +984,34 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
             ]);
             return { clue: ph, answer: String(mode) };
         }
-        const n = ri(rng, 4, 6);
-        const data = Array.from({ length: n }, () => ri(rng, 5, 30));
-        const sum = data.reduce((a, b) => a + b, 0);
-        if (sum % n !== 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
-        const ph = rc(rng, [
-            `Calculate the *mean* of: $${data.join(', ')}$`,
-            `Find the *mean* of these ${ctx}: $${data.join(', ')}$`,
-            `Determine the *mean* of: $${data.join(', ')}$`,
-            `The ${ctx} are $${data.join(', ')}$. Calculate the *mean*.`,
+        if (type === 2) {
+            const n = ri(rng, 4, 6);
+            const data = Array.from({ length: n }, () => ri(rng, 5, 30));
+            const sum = data.reduce((a, b) => a + b, 0);
+            if (sum % n !== 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+            const ph = rc(rng, [
+                `Calculate the *mean* of: $${data.join(', ')}$`,
+                `Find the *mean* of these ${ctx}: $${data.join(', ')}$`,
+                `Determine the *mean* of: $${data.join(', ')}$`,
+                `The ${ctx} are $${data.join(', ')}$. Calculate the *mean*.`,
+            ]);
+            return { clue: ph, answer: String(sum / n) };
+        }
+        // type 3: find missing value given mean
+        const n3 = ri(rng, 4, 5);
+        const mean3 = ri(rng, 5, 20);
+        const target3 = mean3 * n3;
+        const known3 = Array.from({ length: n3 - 1 }, () => ri(rng, 3, 30));
+        const missing3 = target3 - known3.reduce((a, b) => a + b, 0);
+        if (missing3 < 1 || missing3 > 40) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+        const display3 = [...known3, '?'].join(', ');
+        const ph3 = rc(rng, [
+            `The *mean* of $${display3}$ is $${mean3}$. Find the missing value.`,
+            `Five ${ctx} have a *mean* of $${mean3}$. Four are $${known3.join(', ')}$. Find the missing value.`,
+            `Find the missing number if the *mean* of $${display3}$ is $${mean3}$.`,
+            `The *mean* of these values is $${mean3}$: $${display3}$. What is the missing value?`,
         ]);
-        return { clue: ph, answer: String(sum / n) };
+        return { clue: ph3, answer: String(missing3) };
     }
     // Hard
     if (type === 0) {
@@ -846,17 +1028,34 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
         ]);
         return { clue: ph, answer: String(iqr) };
     }
-    const n = rc(rng, [4, 6]);
-    const data = Array.from({ length: n }, () => ri(rng, 1, 30)).sort((a, b) => a - b);
-    const med = (data[n / 2 - 1] + data[n / 2]) / 2;
-    if (!Number.isInteger(med)) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
-    const ph = rc(rng, [
-        `Find the *median* of: $${data.join(', ')}$`,
-        `Calculate the *median* of these ${ctx}: $${data.join(', ')}$`,
-        `Determine the *median* of: $${data.join(', ')}$`,
-        `The ${ctx} are $${data.join(', ')}$. Find the *median*.`,
+    if (type === 1) {
+        const n = rc(rng, [4, 6]);
+        const data = Array.from({ length: n }, () => ri(rng, 1, 30)).sort((a, b) => a - b);
+        const med = (data[n / 2 - 1] + data[n / 2]) / 2;
+        if (!Number.isInteger(med)) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+        const ph = rc(rng, [
+            `Find the *median* of: $${data.join(', ')}$`,
+            `Calculate the *median* of these ${ctx}: $${data.join(', ')}$`,
+            `Determine the *median* of: $${data.join(', ')}$`,
+            `The ${ctx} are $${data.join(', ')}$. Find the *median*.`,
+        ]);
+        return { clue: ph, answer: String(med) };
+    }
+    // type 2: find missing value given mean (harder dataset)
+    const n2 = ri(rng, 5, 7);
+    const mean2 = ri(rng, 10, 30);
+    const target2 = mean2 * n2;
+    const known2 = Array.from({ length: n2 - 1 }, () => ri(rng, 5, 50));
+    const missing2 = target2 - known2.reduce((a, b) => a + b, 0);
+    if (missing2 < 1 || missing2 > 60) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+    const display2 = [...known2, '?'].join(', ');
+    const ph2 = rc(rng, [
+        `The *mean* of $${display2}$ is $${mean2}$. Find the missing value.`,
+        `Find the missing value if the *mean* of $${display2}$ is $${mean2}$.`,
+        `The *mean* of these ${ctx} is $${mean2}$: $${display2}$. What is the missing value?`,
+        `Determine the missing value given that the *mean* of $${display2}$ is $${mean2}$.`,
     ]);
-    return { clue: ph, answer: String(med) };
+    return { clue: ph2, answer: String(missing2) };
 }
 
 // ============================================================
@@ -865,12 +1064,12 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
 function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
-        Easy: { 'simple-interest': [0], 'gst': [1] },
-        Medium: { 'markup-profit': [0], 'simple-interest': [1] },
-        Hard: { 'compound-interest': [0], 'markup-profit': [1] },
+        Easy:   { 'simple-interest': [0], 'gst': [1], 'markup-profit': [2] },
+        Medium: { 'markup-profit': [0, 2], 'simple-interest': [1], 'gst': [3] },
+        Hard:   { 'compound-interest': [0], 'markup-profit': [1] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, 1);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : diff === 'Medium' ? 3 : 1);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -889,14 +1088,26 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             ]);
             return { clue: ph, answer: String(I), answerDisplay: `$${I}` };
         }
-        const price = ri(rng, 5, 50) * 10;
-        const ph = rc(rng, [
-            `Find the price after $10\\%$ GST is added to $\\$${price}$`,
-            `Calculate the GST-inclusive price for an item costing $\\$${price}$`,
-            `A product costs $\\$${price}$ before GST. Find the total price including $10\\%$ GST.`,
+        if (type === 1) {
+            const price = ri(rng, 5, 50) * 10;
+            const ph = rc(rng, [
+                `Find the price after $10\\%$ GST is added to $\\$${price}$`,
+                `Calculate the GST-inclusive price for an item costing $\\$${price}$`,
+                `A product costs $\\$${price}$ before GST. Find the total price including $10\\%$ GST.`,
+            ]);
+            const gstTotal = round(price * 1.1, 2);
+            return { clue: ph, answer: String(gstTotal), answerDisplay: `$${gstTotal}` };
+        }
+        // type 2: markup → selling price (easy numbers)
+        const cost2 = ri(rng, 2, 10) * 10;
+        const pct2 = rc(rng, [10, 20, 25, 50]);
+        const sell2 = cost2 + cost2 * pct2 / 100;
+        const ph2 = rc(rng, [
+            `An item costs $\\$${cost2}$. It is marked up by $${pct2}\\%$. Find the selling price.`,
+            `Find the selling price of a $\\$${cost2}$ item after a $${pct2}\\%$ mark-up.`,
+            `A shopkeeper buys an item for $\\$${cost2}$ and adds $${pct2}\\%$ profit. What is the selling price?`,
         ]);
-        const gstTotal = round(price * 1.1, 2);
-        return { clue: ph, answer: String(gstTotal), answerDisplay: `$${gstTotal}` };
+        return { clue: ph2, answer: String(sell2), answerDisplay: `$${sell2}` };
     }
     if (diff === 'Medium') {
         if (type === 0) {
@@ -911,16 +1122,41 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             ]);
             return { clue: ph, answer: String(sell), answerDisplay: `$${sell}` };
         }
-        const P = ri(rng, 2, 10) * 1000, r = rc(rng, [5, 10]), t = ri(rng, 1, 3);
-        const I = P * r / 100 * t;
-        const fOn = opts.showFormulas?.['simple-interest']?.[diff.toLowerCase()];
-        const pf = fOn ? ' Use $I = Prn$.' : '';
-        const ph = rc(rng, [
-            `Calculate the *simple interest* on $\\$${P}$ at $${r}\\%$ p.a. for $${t}$ years.${pf}`,
-            `Find the *simple interest* earned on a $\\$${P}$ investment at $${r}\\%$ p.a. over $${t}$ years.${pf}`,
-            `Determine the interest on $\\$${P}$ at $${r}\\%$ per annum for $${t}$ years.${pf}`,
+        if (type === 1) {
+            const P = ri(rng, 2, 10) * 1000, r = rc(rng, [5, 10]), t = ri(rng, 1, 3);
+            const I = P * r / 100 * t;
+            const fOn = opts.showFormulas?.['simple-interest']?.[diff.toLowerCase()];
+            const pf = fOn ? ' Use $I = Prn$.' : '';
+            const ph = rc(rng, [
+                `Calculate the *simple interest* on $\\$${P}$ at $${r}\\%$ p.a. for $${t}$ years.${pf}`,
+                `Find the *simple interest* earned on a $\\$${P}$ investment at $${r}\\%$ p.a. over $${t}$ years.${pf}`,
+                `Determine the interest on $\\$${P}$ at $${r}\\%$ per annum for $${t}$ years.${pf}`,
+            ]);
+            return { clue: ph, answer: String(I), answerDisplay: `$${I}` };
+        }
+        if (type === 2) {
+            // discount → sale price
+            const orig = ri(rng, 4, 20) * 25;
+            const pctOff = rc(rng, [10, 15, 20, 25, 30, 50]);
+            const sale = round(orig * (1 - pctOff / 100), 2);
+            if (!Number.isInteger(sale)) return _genFinancialCore(rng, diff, allowedOps, opts, _depth + 1);
+            const ph = rc(rng, [
+                `A $\\$${orig}$ item is discounted by $${pctOff}\\%$. Find the *sale price*.`,
+                `An item originally priced at $\\$${orig}$ is on sale at $${pctOff}\\%$ off. What is the sale price?`,
+                `Calculate the sale price of a $\\$${orig}$ item after a $${pctOff}\\%$ discount.`,
+            ]);
+            return { clue: ph, answer: String(sale), answerDisplay: `$${sale}` };
+        }
+        // type 3: GST-exclusive — find pre-GST price
+        const gstInclusive = ri(rng, 5, 30) * 11;
+        const preGst = round(gstInclusive / 1.1, 2);
+        if (!Number.isInteger(preGst)) return _genFinancialCore(rng, diff, allowedOps, opts, _depth + 1);
+        const ph3 = rc(rng, [
+            `A price including $10\\%$ GST is $\\$${gstInclusive}$. Find the *pre-GST* price.`,
+            `An item costs $\\$${gstInclusive}$ including GST. What was the price *before* GST?`,
+            `The GST-inclusive price is $\\$${gstInclusive}$. Calculate the pre-GST price.`,
         ]);
-        return { clue: ph, answer: String(I), answerDisplay: `$${I}` };
+        return { clue: ph3, answer: String(preGst), answerDisplay: `$${preGst}` };
     }
     // Hard
     if (type === 0) {
@@ -973,12 +1209,12 @@ function _geoUnit(maxVal) {
 function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
-        Easy: { 'area-perimeter': [0, 1] },
-        Medium: { 'area-perimeter': [0], 'pythagoras': [1], 'angles': [2] },
-        Hard: { 'circles': [0, 2], 'pythagoras': [1] },
+        Easy:   { 'area-perimeter': [0, 1, 2] },
+        Medium: { 'area-perimeter': [0, 3], 'pythagoras': [1], 'angles': [2] },
+        Hard:   { 'circles': [0, 2, 3], 'pythagoras': [1] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : 2);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : 3);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -995,17 +1231,30 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             ]);
             return { clue: ph, answer: String(l * w), answerDisplay: `${l * w} ${u}²`, diagram: { type: 'rectangle', l, w, missing: 'area' } };
         }
-        const l = ri(rng, 3, 15), w = ri(rng, 2, l);
-        const u = _geoUnit(Math.max(l, w));
-        const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
-        const pf = fOn ? ' Use $P = 2l + 2w$.' : '';
-        const ph = rc(rng, [
-            `Find the *perimeter* of a rectangle with length $${l}$ ${u} and width $${w}$ ${u}.${pf}`,
-            `Calculate the *perimeter* of a rectangle: length $${l}$ ${u}, width $${w}$ ${u}.${pf}`,
-            `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its perimeter.${pf}`,
-            `What is the *perimeter* of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?${pf}`,
+        if (type === 1) {
+            const l = ri(rng, 3, 15), w = ri(rng, 2, l);
+            const u = _geoUnit(Math.max(l, w));
+            const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
+            const pf = fOn ? ' Use $P = 2l + 2w$.' : '';
+            const ph = rc(rng, [
+                `Find the *perimeter* of a rectangle with length $${l}$ ${u} and width $${w}$ ${u}.${pf}`,
+                `Calculate the *perimeter* of a rectangle: length $${l}$ ${u}, width $${w}$ ${u}.${pf}`,
+                `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its perimeter.${pf}`,
+                `What is the *perimeter* of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?${pf}`,
+            ]);
+            return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} ${u}`, diagram: { type: 'rectangle', l, w, missing: 'perimeter' } };
+        }
+        // type 2: find length given area and width (no diagram)
+        const w2 = ri(rng, 2, 10), l2 = ri(rng, w2 + 1, 15);
+        const area2 = l2 * w2;
+        const u2 = _geoUnit(Math.max(l2, w2));
+        const ph2 = rc(rng, [
+            `A rectangle has area $${area2}$ ${u2}² and width $${w2}$ ${u2}. Find its length.`,
+            `The area of a rectangle is $${area2}$ ${u2}² and its width is $${w2}$ ${u2}. What is the length?`,
+            `Find the length of a rectangle with area $${area2}$ ${u2}² and width $${w2}$ ${u2}.`,
+            `A rectangle with area $${area2}$ ${u2}² has a width of $${w2}$ ${u2}. Determine its length.`,
         ]);
-        return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} ${u}`, diagram: { type: 'rectangle', l, w, missing: 'perimeter' } };
+        return { clue: ph2, answer: String(l2), answerDisplay: `${l2} ${u2}` };
     }
     if (diff === 'Medium') {
         if (type === 0) {
@@ -1036,19 +1285,32 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             ]);
             return { clue: ph, answer: String(c * scale), answerDisplay: `${c * scale} ${u}`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'c' } };
         }
-        const angles = [30, 40, 45, 50, 60, 70, 80, 90];
-        const a1 = rc(rng, angles);
-        const remaining = angles.filter(a => a < 180 - a1 && a !== a1);
-        if (remaining.length === 0) return _genGeometryCore(rng, diff, allowedOps, opts, _depth + 1);
-        const a2 = rc(rng, remaining);
-        const a3 = 180 - a1 - a2;
-        const ph = rc(rng, [
-            `A triangle has angles $${a1}$° and $${a2}$°. Find the **third** angle.`,
-            `Determine the **missing** angle in a triangle with angles $${a1}$° and $${a2}$°.`,
-            `Calculate the **third** angle of a triangle given angles of $${a1}$° and $${a2}$°.`,
-            `Two angles of a triangle are $${a1}$° and $${a2}$°. What is the **third** angle?`,
+        if (type === 2) {
+            const angles = [30, 40, 45, 50, 60, 70, 80, 90];
+            const a1 = rc(rng, angles);
+            const remaining = angles.filter(a => a < 180 - a1 && a !== a1);
+            if (remaining.length === 0) return _genGeometryCore(rng, diff, allowedOps, opts, _depth + 1);
+            const a2 = rc(rng, remaining);
+            const a3 = 180 - a1 - a2;
+            const ph = rc(rng, [
+                `A triangle has angles $${a1}$° and $${a2}$°. Find the **third** angle.`,
+                `Determine the **missing** angle in a triangle with angles $${a1}$° and $${a2}$°.`,
+                `Calculate the **third** angle of a triangle given angles of $${a1}$° and $${a2}$°.`,
+                `Two angles of a triangle are $${a1}$° and $${a2}$°. What is the **third** angle?`,
+            ]);
+            return { clue: ph, answer: String(a3), answerDisplay: `${a3}°`, diagram: { type: 'triangle-angles', a1, a2, a3, missing: 'a3' } };
+        }
+        // type 3: find area of rectangle given perimeter and width (no diagram)
+        const w3 = ri(rng, 3, 10), l3 = ri(rng, w3 + 2, 18);
+        const P3 = 2 * (l3 + w3);
+        const u3 = _geoUnit(Math.max(l3, w3));
+        const ph3 = rc(rng, [
+            `A rectangle has perimeter $${P3}$ ${u3} and width $${w3}$ ${u3}. Find its area.`,
+            `The perimeter of a rectangle is $${P3}$ ${u3} and its width is $${w3}$ ${u3}. Calculate the area.`,
+            `Find the area of a rectangle with perimeter $${P3}$ ${u3} and width $${w3}$ ${u3}.`,
+            `A rectangle with perimeter $${P3}$ ${u3} has a width of $${w3}$ ${u3}. What is its area?`,
         ]);
-        return { clue: ph, answer: String(a3), answerDisplay: `${a3}°`, diagram: { type: 'triangle-angles', a1, a2, a3, missing: 'a3' } };
+        return { clue: ph3, answer: String(l3 * w3), answerDisplay: `${l3 * w3} ${u3}²` };
     }
     // Hard
     if (type === 0) {
@@ -1078,17 +1340,30 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         ]);
         return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}`, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'b' } };
     }
-    const r = ri(rng, 2, 15);
-    const u = _geoUnit(r);
-    const ans = round(2 * 3.14 * r, 2);
-    const fOn = opts.showFormulas?.['circles']?.[diff.toLowerCase()];
-    const pf = fOn ? ' Use $C = 2\\pi r$.' : '';
-    const ph = rc(rng, [
-        `Find the *circumference* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
-        `Calculate the *circumference* of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
-        `Determine the *circumference* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+    if (type === 2) {
+        const r = ri(rng, 2, 15);
+        const u = _geoUnit(r);
+        const ans = round(2 * 3.14 * r, 2);
+        const fOn = opts.showFormulas?.['circles']?.[diff.toLowerCase()];
+        const pf = fOn ? ' Use $C = 2\\pi r$.' : '';
+        const ph = rc(rng, [
+            `Find the *circumference* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+            `Calculate the *circumference* of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+            `Determine the *circumference* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+        ]);
+        return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, diagram: { type: 'circle', r, missing: 'circumference' } };
+    }
+    // type 3: find radius given area (no diagram — avoids mislabelling diagram center)
+    const r3 = ri(rng, 2, 9);
+    const u3 = _geoUnit(r3);
+    const area3 = round(3.14 * r3 * r3, 2);
+    const ph3 = rc(rng, [
+        `The *area* of a circle is $${area3}$ ${u3}². Find its radius. Use $\\pi \\approx 3.14$.`,
+        `A circle has area $${area3}$ ${u3}². Calculate its radius. Use $\\pi \\approx 3.14$.`,
+        `Determine the radius of a circle with area $${area3}$ ${u3}². Use $\\pi \\approx 3.14$.`,
+        `Find the radius of a circle whose area is $${area3}$ ${u3}². Use $\\pi \\approx 3.14$.`,
     ]);
-    return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, diagram: { type: 'circle', r, missing: 'circumference' } };
+    return { clue: ph3, answer: String(r3), answerDisplay: `${r3} ${u3}` };
 }
 
 // ============================================================
