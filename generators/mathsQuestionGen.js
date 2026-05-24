@@ -1565,7 +1565,13 @@ function _genAlgebraOp(rng, diff, op) {
 
     if (op === 'surds-simplify') {
         const sv = rc(rng, ['Simplify:', 'Simplify the surd:']);
-        const k = ri(rng, 2, 5), n = rc(rng, [2, 3, 5, 6, 7]);
+        // Difficulty scaling: Easy k=2-3, Medium k=2-5, Hard k=3-7
+        const [kLo, kHi, nPool] = diff === 'Easy'
+            ? [2, 3, [2, 3, 5]]
+            : diff === 'Medium'
+            ? [2, 5, [2, 3, 5, 6, 7]]
+            : [3, 7, [2, 3, 5, 6, 7, 10, 11]];
+        const k = ri(rng, kLo, kHi), n = rc(rng, nPool);
         const radicand = k * k * n;
         return { clue: `${sv}\n$\\sqrt{${radicand}}$`, answer: `${k}√${n}`, answerDisplay: `$${k}\\sqrt{${n}}$` };
     }
@@ -1587,23 +1593,20 @@ function _genAlgebraOp(rng, diff, op) {
 // ---- Statistics Stage 5 operations -------------------------
 function _genStatisticsS5Op(rng, diff, op) {
     if (op === 'five-number-summary') {
-        // Ask for one element of the five-number summary
+        // Use even numbers so all adjacent-pair averages are integers
         const n = 8;
-        const data = Array.from({ length: n }, () => ri(rng, 1, 30)).sort((a, b) => a - b);
+        const data = Array.from({ length: n }, () => ri(rng, 1, 15) * 2).sort((a, b) => a - b);
         const q1 = (data[1] + data[2]) / 2;
         const q3 = (data[5] + data[6]) / 2;
-        if (!Number.isInteger(q1) || !Number.isInteger(q3)) return null;
+        const med = (data[3] + data[4]) / 2;
+        const iqr = q3 - q1;
+        if (iqr <= 0) return null;
         const choice = rc(rng, ['Q1', 'Q3', 'median', 'IQR']);
         let ans, clueQ;
         if (choice === 'Q1') { ans = q1; clueQ = 'Find **Q1** (lower quartile)'; }
         else if (choice === 'Q3') { ans = q3; clueQ = 'Find **Q3** (upper quartile)'; }
-        else if (choice === 'median') {
-            const med = (data[3] + data[4]) / 2;
-            if (!Number.isInteger(med)) return null;
-            ans = med; clueQ = 'Find the **median**';
-        } else {
-            ans = q3 - q1; clueQ = 'Find the **interquartile range (IQR)**';
-        }
+        else if (choice === 'median') { ans = med; clueQ = 'Find the **median**'; }
+        else { ans = iqr; clueQ = 'Find the **interquartile range (IQR)**'; }
         return { clue: `${clueQ} of: $${data.join(', ')}$`, answer: String(ans) };
     }
 
@@ -1893,17 +1896,25 @@ function genNonLinear(rng, diff, allowedOps) {
 
     if (op === 'identify-graph') {
         const graphs = [
-            { eq: 'y = x²', type: 'parabola' },
+            { eq: 'y = x^2', type: 'parabola' },
             { eq: 'y = 2^x', type: 'exponential' },
             { eq: 'xy = 4', type: 'hyperbola' },
-            { eq: 'y = -x²', type: 'parabola' },
+            { eq: 'y = -x^2', type: 'parabola' },
             { eq: 'y = 3^x', type: 'exponential' },
+            { eq: 'y = x^2 - 4', type: 'parabola' },
+            { eq: 'y = 5^x', type: 'exponential' },
+            { eq: 'xy = -3', type: 'hyperbola' },
+            { eq: 'y = 2^{-x}', type: 'exponential' },
+            { eq: 'y = (x+1)^2', type: 'parabola' },
+            { eq: 'xy = 6', type: 'hyperbola' },
+            { eq: 'y = -2^x', type: 'exponential' },
         ];
         const g = rc(rng, graphs);
         const ph = rc(rng, [
             `Identify the type of graph represented by $${g.eq}$.`,
             `What type of curve does $${g.eq}$ represent?`,
             `Name the graph: $${g.eq}$.`,
+            `Classify the relationship: $${g.eq}$.`,
         ]);
         return { clue: ph, answer: g.type, answerDisplay: g.type };
     }
