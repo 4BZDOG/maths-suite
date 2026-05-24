@@ -2852,6 +2852,42 @@ table.mode-cw td.cell.empty {
 /* Topic group — collapsible sub-operations */
 .topic-group { position: relative; }
 
+/* Sub-op filter badge — amber pill showing "n/total" when some ops are disabled */
+.sub-op-badge {
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 10px;
+    background: rgba(217,119,6,0.12);
+    color: #d97706;
+    border: 1px solid rgba(217,119,6,0.25);
+    flex-shrink: 0;
+    white-space: nowrap;
+    cursor: default;
+}
+[data-theme="dark"] .sub-op-badge {
+    background: rgba(251,191,36,0.12);
+    color: #fbbf24;
+    border-color: rgba(251,191,36,0.25);
+}
+
+/* Zero-question warning — red left border + warning icon on topic name */
+.topic-group.topic-warn > label > .topic-toggle-name::after {
+    content: ' ⚠';
+    color: #ef4444;
+    font-style: normal;
+    font-size: 11px;
+}
+.topic-group.topic-warn > label {
+    border-color: rgba(239,68,68,0.3);
+    background: rgba(239,68,68,0.04);
+}
+[data-theme="dark"] .topic-group.topic-warn > label {
+    border-color: rgba(239,68,68,0.4);
+    background: rgba(239,68,68,0.06);
+}
+
 .topic-expand-btn {
     background: none;
     border: none;

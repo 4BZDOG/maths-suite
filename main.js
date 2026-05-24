@@ -103,6 +103,7 @@ function generateAll() {
     setGeneratedSets(sets);
     renderActivePage();
     saveState();
+    _updateTopicWarnings(sets);
 
     const total = (sets.easy?.length || 0) + (sets.medium?.length || 0) + (sets.hard?.length || 0);
     if (total === 0) showToast('No questions generated. Enable at least one operation per topic.', 'warning');
@@ -533,6 +534,7 @@ function toggleTopic(topicName) {
         const parentEl = document.getElementById('topic-' + topicId);
         if (parentEl) parentEl.indeterminate = false;
     }
+    _updateSubOpBadge(topicName);
     saveState();
     _pendingTopicChange = true;
     updateTopicCount();
@@ -560,6 +562,7 @@ function setTopicsAll(enabled) {
             }
         }
     });
+    _updateAllSubOpBadges();
     _pendingTopicChange = true;
     updateTopicCount();
     renderOutcomes();
@@ -687,6 +690,7 @@ function clearOutcomeFilter() {
 function toggleSubOp(topic, opKey) {
     syncSettingsFromDOM();
     _updateParentCheckbox(topic);
+    _updateSubOpBadge(topic);
     _pendingTopicChange = true;
     updateTopicCount();
     saveState();
@@ -730,6 +734,51 @@ function _updateAllParentCheckboxes() {
     ALL_SUBTOPICS.forEach(t => _updateParentCheckbox(t));
 }
 
+function _updateSubOpBadge(topicName) {
+    const allOps = SUB_OPS[topicName];
+    if (!allOps) return;
+    const topicId = topicName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+    const badgeEl = document.getElementById('sub-badge-' + topicId);
+    if (!badgeEl) return;
+    const ops = allOps.filter(op =>
+        (!op.stages || op.stages.includes(state.stage)) &&
+        (op.pathway !== 'path' || state.includePath)
+    );
+    if (ops.length === 0) { badgeEl.hidden = true; return; }
+    const enabledOps = state.selectedSubOps[topicName];
+    const enabled = enabledOps ? enabledOps.length : ops.length;
+    if (enabled >= ops.length) {
+        badgeEl.hidden = true;
+    } else {
+        badgeEl.textContent = `${enabled}/${ops.length}`;
+        badgeEl.hidden = false;
+        badgeEl.title = `${enabled} of ${ops.length} sub-operations enabled`;
+    }
+}
+
+function _updateAllSubOpBadges() {
+    ALL_SUBTOPICS.forEach(t => _updateSubOpBadge(t));
+}
+
+function _updateTopicWarnings(sets) {
+    const allQuestions = [...(sets.easy || []), ...(sets.medium || []), ...(sets.hard || [])];
+    const topicCounts = {};
+    allQuestions.forEach(q => {
+        const st = q.notes;
+        if (st) topicCounts[st] = (topicCounts[st] || 0) + 1;
+    });
+    const stageTopics = getTopicsForStage(state.stage);
+    stageTopics.forEach(t => {
+        const topicId = t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const subsEl = document.getElementById('subs-' + topicId);
+        const groupEl = subsEl?.closest('.topic-group');
+        if (!groupEl) return;
+        const isSelected = state.selectedTopics[t];
+        const hasQuestions = (topicCounts[t] || 0) > 0;
+        groupEl.classList.toggle('topic-warn', isSelected && !hasQuestions);
+    });
+}
+
 function _buildSubOpsPanels() {
     const stageTopics = getTopicsForStage(state.stage);
     stageTopics.forEach(t => {
@@ -761,6 +810,7 @@ function _buildSubOpsPanels() {
         html += `<div id="outcomes-for-${topicId}" class="topic-outcomes-wrapper" style="padding: 0 4px 6px;"></div>`;
         container.innerHTML = html;
     });
+    _updateAllSubOpBadges();
 }
 
 function renderTopicTogglesByStrand() {
@@ -796,6 +846,7 @@ function renderTopicTogglesByStrand() {
                            onchange="toggleTopic('${t}')">
                     <span class="topic-toggle-name"><i class="${meta.icon} topic-icon"></i>${meta.label}</span>
                     ${chipHtml}
+                    <span class="sub-op-badge" id="sub-badge-${topicId}" hidden></span>
                     <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('${t}')">
                         <i class="fas fa-chevron-down"></i>
                     </button>
@@ -1055,8 +1106,8 @@ window._puzzleApp = {
     toggleOutcomeFilter,
     clearOutcomeFilter,
     hardReset: () => hardReset(),
-    undo: () => undo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),
-    redo: () => redo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }),
+    undo: () => undo(() => { _updateAllParentCheckboxes(); _updateAllSubOpBadges(); updateTopicCount(); saveState(); generateAll(); }),
+    redo: () => redo(() => { _updateAllParentCheckboxes(); _updateAllSubOpBadges(); updateTopicCount(); saveState(); generateAll(); }),
     debouncedGenerate,
     renderActivePage,
     debouncedUpdateUI,
