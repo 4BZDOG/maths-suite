@@ -653,9 +653,13 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
 
     // Hard
     if (type === 0) {
-        const d1 = ri(rng, 3, 8), n1 = ri(rng, 1, d1 - 1);
-        const d2 = ri(rng, 3, 8), n2 = ri(rng, 1, d2 - 1);
-        if (gcd(n1, d1) > 1 || gcd(n2, d2) > 1) return genFractions(rng, diff, allowedOps, _depth + 1);
+        // Build coprime fractions directly: pick d, then pick n from coprime candidates
+        const d1 = ri(rng, 3, 8);
+        const cops1 = Array.from({ length: d1 - 1 }, (_, i) => i + 1).filter(n => gcd(n, d1) === 1);
+        const n1 = rc(rng, cops1);
+        const d2 = ri(rng, 3, 8);
+        const cops2 = Array.from({ length: d2 - 1 }, (_, i) => i + 1).filter(n => gcd(n, d2) === 1);
+        const n2 = rc(rng, cops2);
         const ans = fracStr(n1 * d2, d1 * n2);
         const ph = rc(rng, [
             `${calcVerb} $\\frac{${n1}}{${d1}} \\div \\frac{${n2}}{${d2}}$`,
@@ -666,14 +670,19 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         return { clue: ph, answer: ans };
     }
     if (type === 1) {
-        const d1 = rc(rng, [3, 4, 5, 6]), d2 = rc(rng, [3, 4, 5, 6]);
-        if (d1 === d2) return genFractions(rng, diff, allowedOps, _depth + 1);
+        // Avoid d1===d2 directly; ensure result is positive by ordering fractions
+        const dPool = [3, 4, 5, 6];
+        const d1 = rc(rng, dPool);
+        const d2 = rc(rng, dPool.filter(d => d !== d1));
         const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
         const l = lcm(d1, d2);
-        const numResult = n1 * (l / d1) - n2 * (l / d2);
-        if (numResult <= 0) return genFractions(rng, diff, allowedOps, _depth + 1);
+        const a = n1 * (l / d1), b = n2 * (l / d2);
+        // Use larger minus smaller so result is always positive
+        const [bigN, bigD, smN, smD] = a > b ? [n1, d1, n2, d2] : [n2, d2, n1, d1];
+        const numResult = Math.abs(a - b);
+        if (numResult === 0) return genFractions(rng, diff, allowedOps, _depth + 1);
         const ans = fracStr(numResult, l);
-        return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} - \\frac{${n2}}{${d2}}$`, answer: ans };
+        return { clue: `${calcVerb} $\\frac{${bigN}}{${bigD}} - \\frac{${smN}}{${smD}}$`, answer: ans };
     }
     // type 2: simplify-convert — fraction→decimal (fixes wiring gap)
     const denH = rc(rng, [2, 4, 5, 8, 10, 20, 25]);
@@ -750,10 +759,10 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             }
         }
         if (type === 1) {
-            const orig = ri(rng, 2, 20) * 10;
+            // multiples of 20 guarantee integer results for all pct in [5,10,20,25,50]
+            const orig = ri(rng, 1, 10) * 20;
             const pct = rc(rng, [5, 10, 20, 25, 50]);
             const ans = orig * (1 + pct / 100);
-            if (!Number.isInteger(ans)) return genPercentages(rng, diff, allowedOps, _depth + 1);
             const ctx = rc(rng, ['price', 'value', 'amount', 'score']);
             const ph = rc(rng, [
                 `Increase $${orig}$ by $${pct}\\%$`,
@@ -777,11 +786,10 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             ]);
             return { clue: ph, answer: String(ans), answerDisplay: `${ans}%` };
         }
-        // type 3: decrease/discount
-        const origDec = ri(rng, 2, 20) * 10;
+        // type 3: decrease/discount — multiples of 20 guarantee integer results
+        const origDec = ri(rng, 1, 10) * 20;
         const pctDec = rc(rng, [5, 10, 20, 25, 50]);
         const ansDec = origDec * (1 - pctDec / 100);
-        if (!Number.isInteger(ansDec)) return genPercentages(rng, diff, allowedOps, _depth + 1);
         const ctxDec = rc(rng, ['price', 'salary', 'value', 'cost']);
         const phDec = rc(rng, [
             `Decrease $${origDec}$ by $${pctDec}\\%$`,
