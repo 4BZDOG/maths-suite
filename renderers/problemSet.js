@@ -7,8 +7,10 @@ import { renderDiagramSVG } from './diagramSVG.js';
 const TOPIC_COLOURS = {
     'Number': '#3b82f6', 'Algebra': '#8b5cf6', 'Geometry': '#10b981',
     'Statistics': '#f59e0b', 'Financial Maths': '#ef4444',
+    'Trigonometry': '#06b6d4', 'Probability': '#a855f7',
     'Integers': '#3b82f6', 'Decimals': '#3b82f6', 'Rounding': '#3b82f6',
     'Fractions': '#3b82f6', 'Percentages': '#3b82f6',
+    'Ratios & Rates': '#0ea5e9',
 };
 
 export function renderProblemSet(container, questions, settings, difficultyLabel) {
@@ -30,15 +32,6 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         return 0;
     }
 
-    // Difficulty section header — icons match the page nav buttons (seedling/bolt/fire)
-    const iconCls  = difficultyLabel === 'Easy' ? 'fa-seedling' : difficultyLabel === 'Medium' ? 'fa-bolt' : 'fa-fire';
-    const iconClr  = difficultyLabel === 'Easy' ? '#10b981'     : difficultyLabel === 'Medium' ? '#f59e0b'  : '#ef4444';
-    const diffHeaderHtml = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;margin-top:16px;padding-top:12px;border-top:2px solid var(--border,#e2e8f0);">
-        <i class="fas ${iconCls}" style="color:${iconClr};font-size:13px;"></i>
-        <span style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:${iconClr};">${difficultyLabel}</span>
-        <span style="flex:1;height:1px;background:var(--border,#e2e8f0);"></span>
-    </div>`;
-
     // Optional outcomes header — compact strip of NESA outcome pills
     let outcomesHeaderHtml = '';
     if (showOutcomesHeader && activeTopics.length > 0) {
@@ -55,7 +48,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         }
     }
 
-    let html = diffHeaderHtml + outcomesHeaderHtml + `<div class="problem-set-grid" data-cols="${cols}">`;
+    let html = outcomesHeaderHtml + `<div class="problem-set-grid" data-cols="${cols}">`;
 
     questions.forEach((item, i) => {
         const topicColor = TOPIC_COLOURS[item.topic] || '#64748b';
@@ -80,8 +73,8 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
             ? `<div class="problem-diagram">${renderDiagramSVG(item.diagram)}</div>`
             : '';
 
-        // Working lines: Hard = 2, Medium = 1, Easy = 0
-        const workingCount = item.difficulty === 'Hard' ? 2 : item.difficulty === 'Medium' ? 1 : 0;
+        // Working lines: Hard = 3, Medium = 2, Easy = 1
+        const workingCount = item.difficulty === 'Hard' ? 3 : item.difficulty === 'Medium' ? 2 : 1;
         const workingHtml = workingCount > 0
             ? `<div class="problem-working-area">
                 <span class="problem-working-label">Working:</span>
@@ -89,7 +82,15 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
                </div>`
             : '';
 
-        html += `<div class="problem-item">
+        const isLocked = item._locked === true;
+        const actionsHtml =
+            `<div class="problem-actions">` +
+            `<button class="prob-btn prob-reroll" onclick="window.rerollQuestion('${esc(item.difficulty)}',${i})" title="Re-roll this question"><i class="fas fa-sync-alt"></i></button>` +
+            `<button class="prob-btn prob-lock${isLocked ? ' is-locked' : ''}" onclick="window.toggleLockQuestion('${esc(item.difficulty)}',${i})" title="${isLocked ? 'Unlock' : 'Lock'} this question"><i class="fas fa-${isLocked ? 'lock' : 'lock-open'}"></i></button>` +
+            `</div>`;
+
+        html += `<div class="problem-item${isLocked ? ' is-locked' : ''}">
+            ${actionsHtml}
             <div class="problem-clue-row">
                 <span class="problem-num">${i + 1}.</span>
                 <div class="problem-clue katex-target">${formatClue(item.clue)}</div>
@@ -99,6 +100,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
             <div class="problem-answer-box">
                 <span class="problem-answer-label">Answer:</span>
                 <span class="problem-answer-line"></span>
+                ${item.unit ? `<span class="problem-answer-unit">${esc(item.unit)}</span>` : ''}
             </div>
             ${metaRowHtml}
         </div>`;
@@ -120,7 +122,10 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
 
     // Cap-to-N-pages: hide items that overflow the specific page container amount
     if (capPages > 0) {
-        return _capToPages(container, questions.length, capPages);
+        const visibleCount = _capToPages(container, questions.length, capPages);
+        const scoreSep = container.querySelector('.problem-score-sep');
+        if (scoreSep) scoreSep.innerHTML = `/ <strong>${visibleCount}</strong>`;
+        return visibleCount;
     }
     return questions.length;
 }

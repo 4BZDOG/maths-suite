@@ -248,9 +248,18 @@ function generateCW(clueItems, seedIndex, rand) {
 // Scrambles the characters of the answer token. For tokens
 // starting with '-' or '.', preserves that leading character
 // to avoid creating ambiguous negative or decimal strings.
+// Answers containing LaTeX, ratio notation, or algebraic symbols
+// (e.g. "$\frac{1}{2}$", "3 : 4", "2x + 3") are skipped — shuffling
+// their characters produces incoherent strings that students can't
+// reconstruct meaningfully.
+function _isUnscrambable(ans) {
+    if (/[\\\${}^:/]/.test(ans)) return true;  // LaTeX / ratio / fraction
+    if (/[a-zA-Z]/.test(ans) && /[0-9+\-*=]/.test(ans)) return true;  // algebraic
+    return false;
+}
 
 function generateScramble(clueItems, rand) {
-    return clueItems.map(item => {
+    return clueItems.filter(item => !_isUnscrambable(item.answer || '')).map(item => {
         const answer = item.answer || '';
         if (answer.length <= 1) return { ...item, original: answer, scrambled: answer };
 
