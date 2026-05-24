@@ -961,10 +961,14 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
     const ctx = rc(rng, DATA_CONTEXTS);
     if (diff === 'Easy') {
         if (type === 0) {
+            // Construct dataset so mean is always a whole number
             const n = ri(rng, 3, 5);
-            const data = Array.from({ length: n }, () => ri(rng, 1, 20));
-            const sum = data.reduce((a, b) => a + b, 0);
-            if (sum % n !== 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+            const meanV = ri(rng, 2, 12);
+            const spread = Math.max(1, meanV - 1);
+            const others = Array.from({ length: n - 1 }, () => meanV + ri(rng, -spread, spread));
+            const last = meanV * n - others.reduce((a, b) => a + b, 0);
+            if (last < 1 || last > 25) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+            const data = [...others, last].sort((a, b) => a - b);
             const ph = rc(rng, [
                 `Find the *mean* of: $${data.join(', ')}$`,
                 `Calculate the *mean* of these ${ctx}: $${data.join(', ')}$`,
@@ -972,7 +976,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
                 `What is the *mean* of $${data.join(', ')}$?`,
                 `The ${ctx} recorded are $${data.join(', ')}$. Find the *mean*.`,
             ]);
-            return { clue: ph, answer: String(sum / n) };
+            return { clue: ph, answer: String(meanV) };
         }
         if (type === 1) {
             const n = (ri(rng, 2, 4) * 2) - 1;
