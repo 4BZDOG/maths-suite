@@ -2409,6 +2409,13 @@ table.mode-cw td.cell.empty {
     border-bottom: 2px solid #cbd5e1;
     min-width: 60px;
 }
+.problem-answer-unit {
+    font-size: calc(0.75rem * var(--global-font-scale) * var(--page-scale));
+    font-weight: 600;
+    color: #64748b;
+    flex-shrink: 0;
+    font-family: 'Inter', sans-serif;
+}
 /* Geometry diagram — shown between question clue and working lines */
 .problem-diagram {
     margin: 5px 0 4px;
@@ -2510,6 +2517,39 @@ table.mode-cw td.cell.empty {
 .formula-bulk-sep { color: var(--text-muted); margin: 0 2px; }
 
 /* Score bar at the bottom-right of each difficulty section */
+.problem-student-header {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 6px;
+    font-size: calc(0.8rem * var(--global-font-scale, 1) * var(--page-scale, 1));
+}
+.problem-student-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+}
+.problem-student-label {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.85em;
+    white-space: nowrap;
+    color: var(--text-muted, #64748b);
+}
+.problem-student-line {
+    flex: 1;
+    border-bottom: 1px solid var(--text-base, #1e293b);
+    min-width: 60px;
+}
+.problem-student-line--short {
+    min-width: 40px;
+    max-width: 90px;
+}
+
 .problem-score-bar {
     display: flex;
     align-items: center;
@@ -2565,6 +2605,49 @@ table.mode-cw td.cell.empty {
 [data-theme="dark"] .filter-select,
 [data-theme="dark"] .wm-select { background: var(--input-bg); color: #f8fafc; border-color: var(--border); }
 [data-theme="dark"] .problem-item { background: #1e293b; border-color: var(--border); }
+
+/* ─── Per-question action buttons (reroll / lock) ─────────────────────── */
+.problem-item { position: relative; }
+
+.problem-actions {
+    position: absolute;
+    top: 5px;
+    right: 7px;
+    display: flex;
+    gap: 3px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 2;
+}
+.problem-item:hover .problem-actions { opacity: 1; }
+
+.prob-btn {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    padding: 2px 5px;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--text-muted);
+    transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.prob-btn:hover {
+    background: var(--bg-page);
+    border-color: var(--border);
+    color: var(--text);
+}
+.prob-btn.prob-lock.is-locked {
+    color: #f59e0b;
+    border-color: #f59e0b40;
+    background: #f59e0b10;
+}
+.problem-item.is-locked {
+    border-left: 3px solid #f59e0b;
+}
+@media print {
+    .problem-actions { display: none !important; }
+}
 
 /* Stage selector — segmented radio button group */
 .stage-selector-group {
@@ -2773,6 +2856,24 @@ table.mode-cw td.cell.empty {
     transition: background 0.12s;
 }
 .outcome-row:hover { background: rgba(99,102,241,0.06); }
+
+/* Outcome focus button — shown on hover */
+.outcome-focus-btn {
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 2px 5px;
+    font-size: 10px;
+    border: 1px solid rgba(99,102,241,0.3);
+    border-radius: 4px;
+    background: transparent;
+    color: #6366f1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+}
+.outcome-row:hover .outcome-focus-btn { opacity: 1; }
+[data-theme="dark"] .outcome-focus-btn { color: #a5b4fc; border-color: rgba(165,180,252,0.3); }
 
 /* Outcome filter checkbox */
 .outcome-filter-chk {
@@ -3066,7 +3167,32 @@ table.mode-cw td.cell.empty {
 
 .page-header-right {
     text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+    min-width: 180px;
+    flex-shrink: 0;
 }
+.page-header-right > div {
+    font-size: 11px;
+    color: var(--text-muted, #94a3b8);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    white-space: nowrap;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+}
+.hdr-line {
+    display: inline-block;
+    border-bottom: 1px solid currentColor;
+    width: 70px;
+    height: 0;
+    opacity: .55;
+}
+.hdr-line--wide { width: 140px; }
 
 .p-area {
     flex: 1;
@@ -3616,3 +3742,212 @@ details.outcomes-ws-header:not([open]) .outcomes-ws-summary::after { transform: 
     border-top: 1px solid var(--border);
     flex-shrink: 0;
 }
+
+/* ================================================================
+   SIDEBAR UI REFRESH — Brand gradient, pill nav tabs, section
+   labels with trailing rules, card-wrapped utility rows.
+   All overrides live in @layer components so they beat layout/base
+   but stay in the correct architectural home.
+   ================================================================ */
+@layer components {
+
+/* ─── Brand header — indigo gradient ────────────────────────── */
+.brand {
+    background: linear-gradient(150deg, #4338ca 0%, #5b5cf6 55%, #7c7ef7 100%);
+    padding: 14px 16px 14px 20px;
+    border-bottom: none;
+}
+.brand h1            { color: #fff; font-size: 1.1rem; }
+.brand .brand-icon   { background: rgba(255,255,255,0.2); box-shadow: 0 2px 8px rgba(0,0,0,0.15); border-radius: 9px; }
+.brand .version-tag  { background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.95); }
+.brand-actions button {
+    color: rgba(255,255,255,0.7);
+    background: transparent;
+    border-color: transparent;
+}
+.brand-actions button:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.2);
+}
+[data-theme="dark"] .brand {
+    background: linear-gradient(150deg, #312e81 0%, #3730a3 55%, #4338ca 100%);
+}
+
+/* ─── Nav tabs — pill / capsule style ───────────────────────── */
+.nav-tabs {
+    padding: 7px 10px;
+    background: var(--bg-app);
+    border-bottom: 1px solid var(--border);
+    gap: 3px;
+}
+.nav-tab {
+    padding: 7px 10px;
+    border-radius: 7px;
+    border-bottom: none;
+    font-size: 0.79rem;
+    gap: 6px;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.nav-tab:hover {
+    background: rgba(79,70,229,0.08);
+    color: var(--text-main);
+}
+.nav-tab.active {
+    background: var(--bg-panel);
+    color: var(--primary);
+    border-bottom: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 0 0 1px var(--border);
+}
+[data-theme="dark"] .nav-tabs   { background: #080d18; }
+[data-theme="dark"] .nav-tab:hover { background: rgba(165,180,252,0.08); color: var(--text-main); }
+[data-theme="dark"] .nav-tab.active {
+    background: #1e293b;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35), 0 0 0 1px var(--border);
+}
+
+/* ─── Scroll area — slightly tighter padding ─────────────────── */
+.scroll-area { padding: 14px 16px; }
+
+/* ─── Section labels — text + trailing hairline rule ─────────── */
+.section-label {
+    display: flex;
+    align-items: center;
+    margin: 16px 0 8px;
+    gap: 6px;
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--text-muted);
+    font-family: inherit;
+}
+.section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    opacity: 0.65;
+}
+.section-label i { font-size: 9px; opacity: 0.6; }
+
+/* ─── Seed row — subtle inset card ───────────────────────────── */
+.seed-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+.seed-row label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    white-space: nowrap;
+    margin: 0;
+}
+.seed-row input[type="number"] {
+    flex: 1;
+    font-size: 11px;
+    padding: 2px 4px;
+    min-width: 0;
+    width: auto;
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    font-family: monospace;
+    box-shadow: none;
+}
+.seed-row input[type="number"]:focus {
+    border: none;
+    box-shadow: none;
+    outline: none;
+    background: transparent;
+}
+
+/* ─── btn-icon — used for seed copy etc ──────────────────────── */
+.btn-icon {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    font-family: inherit;
+    line-height: 1;
+}
+.btn-icon:hover {
+    color: var(--primary);
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+/* ─── Status row — inset card matching seed row ──────────────── */
+.status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+/* ─── Topic action row (All / None + count) ─────────────────── */
+.topic-action-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+    align-items: center;
+}
+.topic-count-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    align-self: center;
+    flex: 2;
+    text-align: right;
+}
+
+/* ─── Pages-per-difficulty row ───────────────────────────────── */
+.pgs-per-diff-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+/* ─── Questions-per-page summary text ───────────────────────── */
+.qpp-summary {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    line-height: 1.7;
+}
+
+/* ─── Footer actions — subtle top shadow ────────────────────── */
+.footer-actions {
+    padding: 12px 16px;
+    gap: 8px;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.07);
+}
+
+/* ─── Setting card summary — slightly tighter type ───────────── */
+.card-header-inner { font-size: 0.83rem; font-weight: 700; }
+
+/* ─── Setting card — thicker left accent when open ───────────── */
+details.setting-card[open] { border-left-width: 3px; }
+
+} /* end @layer components (sidebar refresh) */

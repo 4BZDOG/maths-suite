@@ -42,9 +42,11 @@ const TOPIC_META = {
     'Rounding':                 { label: 'Rounding',                    icon: 'fas fa-compress-arrows-alt' },
     'Fractions':                { label: 'Fractions',                   icon: 'fas fa-divide' },
     'Percentages':              { label: 'Percentages',                  icon: 'fas fa-percent' },
+    'Ratios & Rates':           { label: 'Ratios & Rates',               icon: 'fas fa-balance-scale' },
     'Algebra':                  { label: 'Algebraic Techniques',         icon: 'fas fa-x' },
     'Geometry':                 { label: 'Measurement & Geometry',       icon: 'fas fa-draw-polygon' },
     'Statistics':               { label: 'Data Analysis',               icon: 'fas fa-chart-bar' },
+    'Probability':              { label: 'Probability',                  icon: 'fas fa-dice' },
     'Financial Maths':          { label: 'Financial Mathematics',        icon: 'fas fa-dollar-sign' },
     'Trigonometry':             { label: 'Trigonometry',                 icon: 'fas fa-drafting-compass' },
     'Non-linear Relationships': { label: 'Non-linear Relationships',     icon: 'fas fa-chart-line' },
@@ -89,7 +91,19 @@ function generateAll() {
 
     // Always generate enough questions to fill the selected number of pages
     const GENERATE_COUNT = 30;
-    const seed = Date.now() + (state.settings.exportCount || 0) * 1_000_000;
+    const seedInput = document.getElementById('seed-input');
+    // Only treat the seed as locked when the user typed it themselves —
+    // not when we auto-filled it after the previous Generate. Otherwise
+    // Regenerate would reuse the same seed and produce identical questions.
+    const userTyped = seedInput && seedInput.dataset.auto !== 'true' && seedInput.value.trim() !== '';
+    const lockedSeed = userTyped ? parseInt(seedInput.value, 10) : null;
+    const seed = lockedSeed != null && !isNaN(lockedSeed)
+        ? lockedSeed
+        : Date.now() + (state.settings.exportCount || 0) * 1_000_000;
+    if (seedInput) {
+        seedInput.value = seed;
+        seedInput.dataset.auto = 'true';
+    }
 
     // Build sub-ops filter: only include topics where user has narrowed selection
     const subOpsFilter = Object.keys(state.selectedSubOps).length > 0 ? state.selectedSubOps : null;
@@ -100,13 +114,28 @@ function generateAll() {
         hard:   generateMathsQuestions({ subTopics: topics, subOpsFilter, difficulty: 'Hard',   count: GENERATE_COUNT, seed: seed + 2, showFormulas: state.settings.showFormulas, stage: state.stage, includePath: state.includePath }),
     };
 
+    // Preserve locked questions — keep slot content from previous generation
+    const oldSets = state.generatedSets;
+    ['easy', 'medium', 'hard'].forEach(key => {
+        const oldArr = oldSets[key] || [];
+        const newArr = sets[key] || [];
+        oldArr.forEach((oldQ, i) => {
+            if (oldQ && oldQ._locked && newArr[i]) newArr[i] = oldQ;
+        });
+    });
+
     setGeneratedSets(sets);
     renderActivePage();
     saveState();
     _updateTopicWarnings(sets);
 
     const total = (sets.easy?.length || 0) + (sets.medium?.length || 0) + (sets.hard?.length || 0);
-    if (total === 0) showToast('No questions generated. Enable at least one operation per topic.', 'warning');
+    if (total === 0) {
+        showToast('No questions generated. Enable at least one operation per topic.', 'warning');
+    } else {
+        const totalFailed = (sets.easy?._failCount || 0) + (sets.medium?._failCount || 0) + (sets.hard?._failCount || 0);
+        if (totalFailed > 5) showToast(`${totalFailed} question slots couldn't be filled — try enabling more operations or topics.`, 'warning');
+    }
 
     _pendingTopicChange = false;
     _updateGenerateButtonState(getActiveTopics().length);
@@ -115,6 +144,46 @@ function generateAll() {
 
 const debouncedGenerate = debounceFn(generateAll, 300);
 const debouncedUpdateUI = debounceFn(() => { saveState(); updateUI(); }, 500);
+
+// ─── Per-question reroll and lock ────────────────────────────────────────────
+function rerollQuestion(diffLabel, index) {
+    const key = diffLabel.toLowerCase();
+    const arr = state.generatedSets[key];
+    if (!arr || index < 0 || index >= arr.length) return;
+    const original = arr[index];
+    if (original._locked) return;
+
+    const subTopic  = original.notes;  // e.g. 'Integers'
+    const subOps    = state.selectedSubOps[subTopic];
+    const subOpsFilter = subOps ? { [subTopic]: subOps } : null;
+    const existingClues = new Set(arr.map((q, i) => (i !== index ? q.clue : null)).filter(Boolean));
+
+    let newQ = null;
+    for (let attempt = 0; attempt < 25; attempt++) {
+        const candidates = generateMathsQuestions({
+            subTopics: [subTopic], subOpsFilter, difficulty: diffLabel, count: 1,
+            seed: Date.now() + attempt * 997,
+            showFormulas: state.settings.showFormulas, stage: state.stage, includePath: state.includePath,
+        });
+        if (candidates.length && !existingClues.has(candidates[0].clue)) {
+            newQ = candidates[0];
+            break;
+        }
+    }
+    if (!newQ) { showToast('Could not find a unique replacement — try enabling more operations.', 'warning'); return; }
+    arr[index] = newQ;
+    renderActivePage();
+    saveState();
+}
+
+function toggleLockQuestion(diffLabel, index) {
+    const key = diffLabel.toLowerCase();
+    const arr = state.generatedSets[key];
+    if (!arr || index < 0 || index >= arr.length) return;
+    arr[index]._locked = !arr[index]._locked;
+    renderActivePage();
+    saveState();
+}
 
 // Stores the last rendered visible question counts; read by renderExportPreview()
 let _lastRenderedCounts = { easy: 0, medium: 0, hard: 0 };
@@ -364,6 +433,15 @@ function renderExportPreview() {
     let pageCount = 0;
     let questionCount = 0;
     let html = '';
+
+    const showFormulaSheet = document.getElementById('showFormulaSheet')?.checked ?? false;
+    if (showFormulaSheet) {
+        pageCount += 1;
+        html += `<div class="ep-row">
+            <span style="font-weight:600;"><i class="fas fa-book-open" style="color:#10b981; margin-right:5px; font-size:10px;"></i>Formula Sheet</span>
+            <span style="opacity:.7;">1 page</span>
+        </div>`;
+    }
 
     for (const r of diffRows) {
         pageCount += pages;
@@ -657,6 +735,10 @@ function renderOutcomes() {
                 title="Filter generation to this outcome"
                 ${isSelected ? 'checked' : ''}
                 onchange="toggleOutcomeFilter('${o.code}', this.checked)">`;
+            const focusBtn = o.appliesAll ? '' : `<button
+                class="outcome-focus-btn"
+                title="Focus: enable only topics for ${o.code}"
+                onclick="focusOutcome('${o.code}')"><i class="fas fa-crosshairs"></i></button>`;
             return `<div class="${cls}">
                 ${chkHtml}
                 <span class="outcome-code-pill">${o.code}</span>
@@ -664,6 +746,7 @@ function renderOutcomes() {
                     <div class="outcome-content-label">${o.contentLabel}</div>
                     <div class="outcome-statement">${o.statement}</div>
                 </div>
+                ${focusBtn}
             </div>`;
         }).join('');
         
@@ -675,6 +758,32 @@ function toggleOutcomeFilter(code, checked) {
     state.selectedOutcomes[code] = checked;
     renderOutcomes();
     updateTopicCount();
+    debouncedGenerate();
+    saveState();
+}
+
+/**
+ * "Focus" a single outcome code: enable only the topics that map to it,
+ * disable all others, and clear any existing outcome filter.
+ */
+function focusOutcome(code) {
+    const matchingTopics = getTopicsForOutcomeCodes([code], state.stage);
+    if (matchingTopics.length === 0) {
+        showToast(`No topics found for ${code} at ${state.stage}`, 'warning');
+        return;
+    }
+    // Enable matching topics, disable all others
+    ALL_SUBTOPICS.forEach(t => {
+        state.selectedTopics[t] = matchingTopics.includes(t);
+        const el = document.getElementById('topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, ''));
+        if (el) el.checked = state.selectedTopics[t];
+    });
+    // Clear outcome filter so the focus is purely topic-driven
+    Object.keys(state.selectedOutcomes).forEach(k => { state.selectedOutcomes[k] = false; });
+    _updateAllParentCheckboxes();
+    updateTopicCount();
+    renderOutcomes();
+    showToast(`Topics filtered to ${code} — ${matchingTopics.join(', ')}`, 'success');
     debouncedGenerate();
     saveState();
 }
@@ -697,7 +806,7 @@ function toggleSubOp(topic, opKey) {
 }
 
 function toggleTopicExpand(topicName) {
-    const panel = document.getElementById('subs-' + topicName.replace(/\s+/g, '-'));
+    const panel = document.getElementById('subs-' + topicName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, ''));
     if (!panel) return;
     const isOpen = panel.style.display !== 'none';
     // Accordion: close all others
@@ -722,7 +831,7 @@ function _updateParentCheckbox(topicName) {
     if (!parentEl) return;
     let checked = 0;
     ops.forEach(op => {
-        const el = document.getElementById('subop-' + topicName.replace(/\s+/g, '-') + '-' + op.key);
+        const el = document.getElementById('subop-' + topicName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '') + '-' + op.key);
         if (el && el.checked) checked++;
     });
     parentEl.checked = checked > 0;
@@ -1082,6 +1191,22 @@ function toggleFormulaHintColumn(diff) {
     setAllFormulaHints(diff, anyUnchecked);
 }
 
+// Seed input: clear the auto-fill marker so the next Generate respects the
+// user-typed value (locked seed) instead of treating it as a stale auto-fill.
+function syncSeedInput() {
+    const el = document.getElementById('seed-input');
+    if (el) el.dataset.auto = 'false';
+}
+
+function copySeedToClipboard() {
+    const el = document.getElementById('seed-input');
+    const val = el && el.value.trim();
+    if (!val) { showToast('Generate questions first to get a seed.', 'info'); return; }
+    navigator.clipboard?.writeText(val)
+        .then(() => showToast(`Seed ${val} copied to clipboard.`, 'success'))
+        .catch(() => showToast(`Seed: ${val}`, 'info'));
+}
+
 // =============================================================
 // Expose public API on window
 // =============================================================
@@ -1116,6 +1241,7 @@ window._puzzleApp = {
     updateOpacity,
     clearWatermark,
     toggleOutcomeFilter,
+    focusOutcome,
     clearOutcomeFilter,
     hardReset: () => hardReset(),
     undo: () => undo(() => { _updateAllParentCheckboxes(); _updateAllSubOpBadges(); updateTopicCount(); saveState(); generateAll(); }),
@@ -1140,6 +1266,10 @@ window._puzzleApp = {
     _handleUpgradeClick,
     setAllFormulaHints,
     toggleFormulaHintColumn,
+    syncSeedInput,
+    copySeedToClipboard,
+    rerollQuestion,
+    toggleLockQuestion,
 };
 
 Object.assign(window, window._puzzleApp);

@@ -182,16 +182,23 @@ function _triangleAngles({ a1, a2, a3, missing }) {
 // ─── Triangle Area (base × height / 2) ───────────────────────────────────────
 // diagram: { type:'triangle-area', base, height }
 function _triangleArea({ base, height }) {
-    const VW = 184, VH = 124;
+    const VW = 220, VH = 124;
     const bPx = 128;
     const ratio = height / base;
     const hPx = Math.max(38, Math.min(76, bPx * ratio * 0.68));
 
-    const cx = VW / 2;
+    // Shift triangle slightly left so the external "h = X" label has room
+    // to sit clear of the right-hand triangle side.
+    const cx = VW / 2 - 16;
     const y0 = VH - 18;
     const bl = { x: cx - bPx / 2, y: y0 };
     const br = { x: cx + bPx / 2, y: y0 };
     const ap = { x: cx,           y: y0 - hPx };
+
+    // External vertical guide for the height label, parallel to the dashed
+    // height line but placed past the triangle's right edge so the label
+    // can't overlap the side.
+    const labelX = br.x + 18;
 
     const inner =
         `<polygon points="${bl.x},${bl.y} ${br.x},${br.y} ${ap.x},${ap.y}" ` +
@@ -202,12 +209,16 @@ function _triangleArea({ base, height }) {
         // Right-angle mark at foot of height (height meets base perpendicularly)
         `<polyline points="${ap.x+7},${y0} ${ap.x+7},${y0-7} ${ap.x},${y0-7}" ` +
         `fill="none" stroke="${GC}" stroke-width="1.3"/>` +
+        // External tick markers showing the height span to the right of the triangle
+        `<line x1="${labelX - 4}" y1="${ap.y}" x2="${labelX + 4}" y2="${ap.y}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        `<line x1="${labelX - 4}" y1="${y0}" x2="${labelX + 4}" y2="${y0}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        `<line x1="${labelX}" y1="${ap.y}" x2="${labelX}" y2="${y0}" stroke="${GC}" stroke-width="1" stroke-dasharray="3,2" opacity="0.5"/>` +
         // Base label below (b = X)
         _t(cx, y0 + 17, `b = ${base}`, { size: 11 }) +
-        // Height label right of dashed line (h = X)
-        _t(ap.x + 24, (ap.y + y0) / 2 + 4, `h = ${height}`, { anchor: 'start', size: 11 }) +
+        // Height label to the right of the external guide
+        _t(labelX + 6, (ap.y + y0) / 2 + 4, `h = ${height}`, { anchor: 'start', size: 11 }) +
         // Missing area label inside triangle (left of height line)
-        _t(cx - 26, (ap.y + y0) / 2 + 5, 'A = ?', { missing: true, size: 13 });
+        _t(cx - 22, (ap.y + y0) / 2 + 5, 'A = ?', { missing: true, size: 13 });
 
     return _svg(VW, VH, inner);
 }
@@ -373,6 +384,247 @@ function _parabola({ h, k, a }) {
     return _svg(VW, VH, inner);
 }
 
+// ─── Parallelogram ───────────────────────────────────────────────────────────
+// diagram: { type:'parallelogram', base, height, missing:'area'|'perimeter' }
+function _parallelogram({ base, height, missing }) {
+    const VW = 220, VH = 120;
+    const bPx = Math.max(70, Math.min(130, base * 7));
+    const hPx = Math.max(30, Math.min(65, height * 6));
+    const skew = 20; // horizontal offset for the slant
+
+    // Leave 28px on the right for the external height label
+    const x0 = (VW - bPx - skew - 28) / 2;
+    const y0 = (VH - hPx) / 2 - 4;
+
+    // 4 vertices: bottom-left, bottom-right, top-right, top-left
+    const pts = [
+        [x0, y0 + hPx],
+        [x0 + bPx, y0 + hPx],
+        [x0 + bPx + skew, y0],
+        [x0 + skew, y0],
+    ].map(([x, y]) => `${x},${y}`).join(' ');
+
+    const label = missing === 'area' ? 'A = ?' : 'P = ?';
+    const cx = x0 + bPx / 2 + skew / 2;
+    const cy = y0 + hPx / 2 + 5;
+
+    // Dashed height indicator line, positioned just OUTSIDE the right edge of
+    // the parallelogram so the label doesn't collide with the slant.
+    const hx = x0 + bPx + skew + 12;
+    const heightLine =
+        `<line x1="${hx}" y1="${y0}" x2="${hx}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>` +
+        // Small horizontal connector ticks at top and bottom of the height line
+        `<line x1="${hx - 3}" y1="${y0}" x2="${hx + 3}" y2="${y0}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        `<line x1="${hx - 3}" y1="${y0 + hPx}" x2="${hx + 3}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        _t(hx + 6, y0 + hPx / 2 + 4, `h = ${height}`, { anchor: 'start', size: 10 });
+
+    const inner =
+        `<polygon points="${pts}" fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
+        // base label
+        `<line x1="${x0+4}" y1="${y0+hPx+10}" x2="${x0+bPx-4}" y2="${y0+hPx+10}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        _t(x0 + bPx / 2, y0 + hPx + 22, `b = ${base}`) +
+        heightLine +
+        _t(cx, cy, label, { missing: true, size: 13 });
+
+    return _svg(VW, VH, inner);
+}
+
+// ─── Trapezium ────────────────────────────────────────────────────────────────
+// diagram: { type:'trapezium', a, b, height, missing:'area' }
+// a = top (shorter) parallel side, b = bottom (longer) parallel side
+function _trapezium({ a, b, height, missing }) {
+    const VW = 220, VH = 120;
+    const bPx = Math.max(80, Math.min(130, b * 7));
+    const hPx = Math.max(32, Math.min(62, height * 6));
+    const aPx = Math.max(30, Math.min(bPx - 10, a * 7));
+
+    // Leave 28px on the right for the external height label
+    const x0 = (VW - bPx - 28) / 2;
+    const y0 = (VH - hPx) / 2 - 2;
+    const offset = (bPx - aPx) / 2; // indent for top edge
+
+    // 4 vertices: bottom-left, bottom-right, top-right, top-left
+    const pts = [
+        [x0, y0 + hPx],
+        [x0 + bPx, y0 + hPx],
+        [x0 + bPx - offset, y0],
+        [x0 + offset, y0],
+    ].map(([x, y]) => `${x},${y}`).join(' ');
+
+    const cx = x0 + bPx / 2;
+    const cy = y0 + hPx / 2 + 5;
+
+    // Dashed height indicator outside the right edge of the trapezium, so the
+    // label does not collide with the shape's diagonal side.
+    const hx = x0 + bPx + 12;
+    const heightLine =
+        `<line x1="${hx}" y1="${y0}" x2="${hx}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>` +
+        `<line x1="${hx - 3}" y1="${y0}" x2="${hx + 3}" y2="${y0}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        `<line x1="${hx - 3}" y1="${y0 + hPx}" x2="${hx + 3}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        _t(hx + 6, y0 + hPx / 2 + 4, `h = ${height}`, { anchor: 'start', size: 10 });
+
+    const inner =
+        `<polygon points="${pts}" fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
+        // bottom label
+        `<line x1="${x0+4}" y1="${y0+hPx+10}" x2="${x0+bPx-4}" y2="${y0+hPx+10}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        _t(cx, y0 + hPx + 22, `b = ${b}`) +
+        // top label
+        _t(cx, y0 - 6, `a = ${a}`) +
+        heightLine +
+        _t(cx, cy, missing === 'area' ? 'A = ?' : '?', { missing: true, size: 13 });
+
+    return _svg(VW, VH, inner);
+}
+
+// ─── Parallel Lines with Transversal ─────────────────────────────────────────
+// diagram: { type:'parallel-transversal', a, angleType:'co-interior'|'corresponding'|'alternate' }
+function _parallelTransversal({ a, angleType }) {
+    const VW = 220, VH = 140;
+
+    // Two horizontal parallel lines
+    const y1 = 40, y2 = 100;
+    const xL = 15, xR = 205;
+
+    // Transversal: from (55, 120) to (165, 20)
+    // Intersection with y1=40: t=0.8 → x=143; with y2=100: t=0.2 → x=77
+    const P1 = { x: 143, y: y1 };
+    const P2 = { x: 77,  y: y2 };
+    const txBot = { x: 55,  y: 120 };  // transversal extended below
+    const txTop = { x: 165, y: 20  };  // transversal extended above
+
+    // Parallel-line tick marks (two short chevrons) away from transversal
+    const parallelTick = (x, y) =>
+        `<line x1="${x-5}" y1="${y-6}" x2="${x+1}" y2="${y}" stroke="${GC}" stroke-width="1.2" opacity="0.6"/>` +
+        `<line x1="${x-5}" y1="${y+6}" x2="${x+1}" y2="${y}" stroke="${GC}" stroke-width="1.2" opacity="0.6"/>`;
+    const tickMarks =
+        parallelTick(48, y1) + parallelTick(54, y1) +
+        parallelTick(48, y2) + parallelTick(54, y2);
+
+    // Arc and label positions per angle type
+    // All arcs use _angleArc(vx, vy, p1x, p1y, p2x, p2y, r)
+    // p1/p2 are points on the two rays forming the labelled angle
+    let arc1, arc2, lx1, ly1, lx2, ly2;
+    const r = 17;
+
+    if (angleType === 'co-interior') {
+        // Between the parallel lines, same side (right of transversal)
+        // P1: horiz-right & transversal-going-down
+        arc1 = _angleArc(P1.x, P1.y, xR, y1, txBot.x, txBot.y, r);
+        lx1 = P1.x + r + 6; ly1 = P1.y + 14;
+        // P2: transversal-going-up & horiz-right
+        arc2 = _angleArc(P2.x, P2.y, txTop.x, txTop.y, xR, y2, r);
+        lx2 = P2.x + r + 6; ly2 = P2.y - 6;
+    } else if (angleType === 'corresponding') {
+        // Same position at each intersection: both above-right (NE quadrant)
+        arc1 = _angleArc(P1.x, P1.y, xR, y1, txTop.x, txTop.y, r);
+        lx1 = P1.x + r + 6; ly1 = P1.y - 6;
+        arc2 = _angleArc(P2.x, P2.y, xR, y2, txTop.x, txTop.y, r);
+        lx2 = P2.x + r + 6; ly2 = P2.y - 6;
+    } else {
+        // alternate — opposite sides between lines
+        // P1: below-left (horiz-left & transversal-going-down)
+        arc1 = _angleArc(P1.x, P1.y, xL, y1, txBot.x, txBot.y, r);
+        lx1 = P1.x - r - 12; ly1 = P1.y + 14;
+        // P2: above-right (horiz-right & transversal-going-up)
+        arc2 = _angleArc(P2.x, P2.y, xR, y2, txTop.x, txTop.y, r);
+        lx2 = P2.x + r + 6; ly2 = P2.y - 6;
+    }
+
+    const inner =
+        // Parallel lines
+        `<line x1="${xL}" y1="${y1}" x2="${xR}" y2="${y1}" stroke="${GC}" stroke-width="1.8"/>` +
+        `<line x1="${xL}" y1="${y2}" x2="${xR}" y2="${y2}" stroke="${GC}" stroke-width="1.8"/>` +
+        // Parallel tick marks
+        tickMarks +
+        // Transversal (extends beyond both lines)
+        `<line x1="${txBot.x}" y1="${txBot.y}" x2="${txTop.x}" y2="${txTop.y}" stroke="currentColor" stroke-width="1.6" opacity="0.75"/>` +
+        // Angle arcs
+        arc1 + arc2 +
+        // Labels: known angle at P1, missing at P2
+        _t(lx1, ly1, `${a}°`, { anchor: 'start', size: 11 }) +
+        _t(lx2, ly2, '?', { anchor: 'start', missing: true, size: 13 });
+
+    return _svg(VW, VH, inner);
+}
+
+// ─── Straight-line angles (supplementary) ────────────────────────────────────
+// diagram: { type:'straight-line-angles', a }  — known angle a°, other is (180−a)°
+function _straightLineAngles({ a }) {
+    const VW = 184, VH = 100;
+    const lx = 16, rx = 168, py = 68;   // baseline endpoints and pivot x
+    const px = 84;
+    const r = 22;
+
+    // Ray from pivot going up at angle (180−a)° from positive-x (SVG y-down)
+    // The ray divides the straight line into two angles: a° on the left, (180−a)° on the right
+    const rayAngleDeg = 180 - a;   // angle from +x axis (measured CCW in maths = CW in SVG)
+    const rayRad = rayAngleDeg * Math.PI / 180;
+    const rayLen = 52;
+    const rayX = px + rayLen * Math.cos(rayRad);
+    const rayY = py - rayLen * Math.sin(rayRad);   // y-down: subtract
+
+    // Angle arcs
+    // Arc 1 — left of ray: from ray back to horizontal-left (px direction toward lx)
+    const arc1 = _angleArc(px, py, lx, py, rayX, rayY, r);
+    // Arc 2 — right of ray: from ray to horizontal-right
+    const arc2 = _angleArc(px, py, rayX, rayY, rx, py, r);
+
+    // Label positions
+    const midAng1Rad = ((180 - a / 2) * Math.PI) / 180;
+    const lbl1X = px + (r + 14) * Math.cos(midAng1Rad);
+    const lbl1Y = py - (r + 14) * Math.sin(midAng1Rad);
+    const midAng2Rad = ((180 - a) / 2) * Math.PI / 180;
+    const lbl2X = px + (r + 14) * Math.cos(midAng2Rad);
+    const lbl2Y = py - (r + 14) * Math.sin(midAng2Rad);
+
+    const inner =
+        `<line x1="${lx}" y1="${py}" x2="${rx}" y2="${py}" stroke="${GC}" stroke-width="1.8"/>` +
+        `<line x1="${px}" y1="${py}" x2="${rayX.toFixed(1)}" y2="${rayY.toFixed(1)}" stroke="currentColor" stroke-width="1.6" opacity="0.8"/>` +
+        arc1 + arc2 +
+        _t(lbl1X, lbl1Y, `${a}°`, { anchor: 'middle', size: 11 }) +
+        _t(lbl2X, lbl2Y, '?', { anchor: 'middle', missing: true, size: 13 });
+
+    return _svg(VW, VH, inner);
+}
+
+// ─── Vertically opposite angles ──────────────────────────────────────────────
+// diagram: { type:'vertically-opposite', a }
+function _verticallyOpposite({ a }) {
+    const VW = 184, VH = 120;
+    const cx = 92, cy = 60;
+    const r = 20;
+    const len = 70;
+
+    // Two lines through (cx,cy): line 1 horizontal (0°/180°), line 2 at angle a° from horizontal
+    // so the arc between line 1 (right) and line 2 (top) measures exactly a°.
+    const angRad = a * Math.PI / 180;
+    const p1x = cx + len, p1y = cy;                                      // right end of line 1
+    const p2x = cx - len, p2y = cy;                                      // left end of line 1
+    const p3x = cx + len * Math.cos(angRad), p3y = cy - len * Math.sin(angRad);  // upper end of line 2
+    const p4x = cx - len * Math.cos(angRad), p4y = cy + len * Math.sin(angRad);  // lower end of line 2
+
+    // Arc at (cx,cy) between line 1 right and line 2 top-right — this is angle a
+    const arc1 = _angleArc(cx, cy, p1x, p1y, p3x, p3y, r);
+    // Vertically opposite arc (same angle) at the other pair — from left to bottom-left
+    const arc2 = _angleArc(cx, cy, p2x, p2y, p4x, p4y, r);
+
+    // Label midpoints
+    const midA = (a / 2) * Math.PI / 180;
+    const lbl1X = cx + (r + 12) * Math.cos(midA);
+    const lbl1Y = cy - (r + 12) * Math.sin(midA);
+    const lbl2X = cx - (r + 12) * Math.cos(midA);
+    const lbl2Y = cy + (r + 12) * Math.sin(midA);
+
+    const inner =
+        `<line x1="${p2x}" y1="${p2y}" x2="${p1x}" y2="${p1y}" stroke="${GC}" stroke-width="1.8"/>` +
+        `<line x1="${p4x.toFixed(1)}" y1="${p4y.toFixed(1)}" x2="${p3x.toFixed(1)}" y2="${p3y.toFixed(1)}" stroke="${GC}" stroke-width="1.8"/>` +
+        arc1 + arc2 +
+        _t(lbl1X, lbl1Y, `${a}°`, { anchor: 'middle', size: 11 }) +
+        _t(lbl2X, lbl2Y, '?', { anchor: 'middle', missing: true, size: 13 });
+
+    return _svg(VW, VH, inner);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 export function renderDiagramSVG(diagram) {
     if (!diagram) return '';
@@ -384,6 +636,11 @@ export function renderDiagramSVG(diagram) {
         case 'circle':              return _circle(diagram);
         case 'right-triangle-trig': return _rightTriangleTrig(diagram);
         case 'parabola':            return _parabola(diagram);
+        case 'parallelogram':            return _parallelogram(diagram);
+        case 'trapezium':               return _trapezium(diagram);
+        case 'parallel-transversal':    return _parallelTransversal(diagram);
+        case 'straight-line-angles':    return _straightLineAngles(diagram);
+        case 'vertically-opposite':     return _verticallyOpposite(diagram);
         default: return '';
     }
 }

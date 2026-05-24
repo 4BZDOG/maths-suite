@@ -23,6 +23,8 @@ export const state = {
         'Financial Maths': false,
         'Trigonometry': true,
         'Non-linear Relationships': true,
+        'Probability': true,
+        'Ratios & Rates': true,
     },
 
     // Granular sub-operation selection per topic (null entry or missing = all enabled)
@@ -66,6 +68,8 @@ export const state = {
         showTopic:             false,
         psShowOutcomesHeader:  false,
         psShowOutcomeChips:    false,
+        keyShowWorked:         false,
+        showFormulaSheet:      false,
         cols:                  2,
         wmOpacity:       0.15,
         showFormulas: {
@@ -128,6 +132,8 @@ export function syncSettingsFromDOM() {
     s.showTopic             = getChk('psShowTopic',            s.showTopic);
     s.psShowOutcomesHeader  = getChk('psShowOutcomesHeader',   s.psShowOutcomesHeader);
     s.psShowOutcomeChips    = getChk('psShowOutcomeChips',     s.psShowOutcomeChips);
+    s.keyShowWorked         = getChk('keyShowWorked',          s.keyShowWorked);
+    s.showFormulaSheet      = getChk('showFormulaSheet',       s.showFormulaSheet);
     s.showDiagrams          = getChk('psShowDiagrams',         s.showDiagrams);
     s.cols                  = parseInt(getVal('psCols', s.cols), 10);
     s.wmOpacity      = parseFloat(
@@ -171,7 +177,7 @@ export function syncSettingsFromDOM() {
         if (!ops) return;
         const enabled = [];
         ops.forEach(op => {
-            const id = 'subop-' + t.replace(/\s+/g, '-') + '-' + op.key;
+            const id = 'subop-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '') + '-' + op.key;
             const el = document.getElementById(id);
             if (el && el.checked) enabled.push(op.key);
         });
@@ -225,7 +231,7 @@ export function applyStateToDOM(s) {
             if (!ops) return;
             const enabledOps = state.selectedSubOps[t];
             ops.forEach(op => {
-                const id = 'subop-' + t.replace(/\s+/g, '-') + '-' + op.key;
+                const id = 'subop-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '') + '-' + op.key;
                 const el = document.getElementById(id);
                 if (el) el.checked = enabledOps ? enabledOps.includes(op.key) : true;
             });
@@ -307,6 +313,8 @@ export function applyStateToDOM(s) {
     setChk('psShowTopic',           cfg.showTopic);
     setChk('psShowOutcomesHeader',  cfg.psShowOutcomesHeader);
     setChk('psShowOutcomeChips',    cfg.psShowOutcomeChips);
+    setChk('keyShowWorked',         cfg.keyShowWorked);
+    setChk('showFormulaSheet',      cfg.showFormulaSheet);
     setChk('psShowDiagrams',        cfg.showDiagrams);
     setVal('psCols',                cfg.cols);
 
@@ -319,6 +327,11 @@ export function applyStateToDOM(s) {
     }
 
     if (cfg.opts) {
+        // Ensure all difficulty-page opts exist (default true if key is absent from a saved state)
+        cfg.opts.easy   = cfg.opts.easy   ?? true;
+        cfg.opts.medium = cfg.opts.medium ?? true;
+        cfg.opts.hard   = cfg.opts.hard   ?? true;
+        cfg.opts.key    = cfg.opts.key    ?? true;
         setChk('sel-easy',   cfg.opts.easy);
         setChk('sel-medium', cfg.opts.medium);
         setChk('sel-hard',   cfg.opts.hard);

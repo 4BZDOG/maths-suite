@@ -10,6 +10,7 @@ import { detectVerb, detectMidVerb } from '../renderers/htmlUtils.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
 import { getOutcomesForTopics, getTopicOutcomeCodes } from '../core/outcomes.js';
+import { drawFormulaSheet } from './pdfDrawFormulas.js';
 
 let isExporting = false;
 
@@ -235,6 +236,398 @@ function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
     doc.text(missText, cx + rPx + _LBL_OFFSET + 2 * ps, cy + 1.5 * ps, { align: 'left' });
 }
 
+function _drawParallelogramDiagramPDF(doc, { base, height, missing }, x0, y0, w, h, ps, font) {
+    const maxW = w * 0.72, maxH = h * 0.58;
+    const dw = Math.max(14, Math.min(maxW, base * 2.2 * ps));
+    const dh = Math.max(8,  Math.min(maxH, height * 2.2 * ps));
+    const skew = dw * 0.22;  // horizontal offset at top
+
+    const bx = x0 + (w - dw) / 2;
+    const by = y0 + (h - dh) / 2 - 2 * ps;
+
+    // Parallelogram vertices: BL, BR, TR, TL
+    const BL = { x: bx,          y: by + dh };
+    const BR = { x: bx + dw,     y: by + dh };
+    const TR = { x: bx + dw - skew, y: by };
+    const TL = { x: bx - skew,   y: by };
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    doc.lines([[dw, 0], [-skew, -dh], [-dw, 0]], BL.x, BL.y, [1, 1], 'FD');
+
+    // Dashed height line from BL to TL (vertical)
+    const hFootX = BL.x + skew;
+    doc.setLineDashPattern([1.2, 1.2], 0);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_AUX_W);
+    doc.line(hFootX, BL.y, hFootX, TL.y + dh);  // vertical height line
+    doc.setLineDashPattern([], 0);
+
+    doc.setFontSize(8 * ps);
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    // Base label below
+    doc.text(`b = ${base}`, (BL.x + BR.x) / 2, BL.y + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
+    // Height label right of dashed line
+    doc.text(`h = ${height}`, hFootX + _LBL_OFFSET, (BL.y + TL.y + dh) / 2, { align: 'left' });
+
+    const centreLabel = missing === 'area' ? 'A = ?' : 'P = ?';
+    doc.setFont(font, 'bold');
+    doc.setFontSize(9 * ps);
+    doc.setTextColor(..._MC);
+    doc.text(centreLabel, x0 + w / 2, by + dh / 2 + 1.8 * ps, { align: 'center' });
+}
+
+function _drawTrapeziumDiagramPDF(doc, { a, b, height, missing }, x0, y0, w, h, ps, font) {
+    const maxW = w * 0.75, maxH = h * 0.58;
+    const scale = Math.min(maxW / Math.max(a, b), maxH / height, 2.5 * ps);
+    const dw = Math.max(a, b) * scale;
+    const dh = Math.max(10, Math.min(maxH, height * scale));
+
+    const bx = x0 + (w - dw) / 2;
+    const by = y0 + (h - dh) / 2 - 2 * ps;
+
+    const aW = a * scale, bW = b * scale;
+    const offsetLeft = (dw - aW) / 2;
+
+    // Trapezium vertices: BL, BR, TR, TL
+    const BL = { x: bx,              y: by + dh };
+    const BR = { x: bx + bW,         y: by + dh };
+    const TR = { x: bx + offsetLeft + aW, y: by };
+    const TL = { x: bx + offsetLeft,      y: by };
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    // Draw 4 sides
+    doc.line(BL.x, BL.y, BR.x, BR.y);
+    doc.line(BR.x, BR.y, TR.x, TR.y);
+    doc.line(TR.x, TR.y, TL.x, TL.y);
+    doc.line(TL.x, TL.y, BL.x, BL.y);
+    // Fill
+    doc.setFillColor(..._GCF);
+
+    // Dashed height line
+    const hx = BL.x + (bW - aW) / 2 + aW / 2;  // roughly midpoint
+    const hFootY = BL.y;
+    const hTopY  = TL.y;
+    doc.setLineDashPattern([1.2, 1.2], 0);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_AUX_W);
+    doc.line((TL.x + TR.x) / 2, hTopY, (TL.x + TR.x) / 2, hFootY);
+    doc.setLineDashPattern([], 0);
+
+    doc.setFontSize(8 * ps);
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    // Top label (a)
+    doc.text(`a = ${a}`, (TL.x + TR.x) / 2, TL.y - _LBL_OFFSET, { align: 'center' });
+    // Bottom label (b)
+    doc.text(`b = ${b}`, (BL.x + BR.x) / 2, BL.y + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
+    // Height label
+    doc.text(`h = ${height}`, (TL.x + TR.x) / 2 + _LBL_OFFSET, (hTopY + hFootY) / 2, { align: 'left' });
+
+    const centreLabel = missing === 'area' ? 'A = ?' : 'P = ?';
+    doc.setFont(font, 'bold');
+    doc.setFontSize(9 * ps);
+    doc.setTextColor(..._MC);
+    doc.text(centreLabel, x0 + w / 2, by + dh / 2 + 1.8 * ps, { align: 'center' });
+}
+
+// Approximate an arc as a chain of short line segments — PDF coords are
+// y-down so we negate sin for the "upward" direction the SVG version uses.
+function _arcSegments(doc, vx, vy, r, startDeg, endDeg, steps = 24) {
+    const a0 = startDeg * Math.PI / 180;
+    const a1 = endDeg * Math.PI / 180;
+    let prevX = vx + r * Math.cos(a0);
+    let prevY = vy - r * Math.sin(a0);
+    for (let i = 1; i <= steps; i++) {
+        const t = a0 + (a1 - a0) * (i / steps);
+        const nx = vx + r * Math.cos(t);
+        const ny = vy - r * Math.sin(t);
+        doc.line(prevX, prevY, nx, ny);
+        prevX = nx; prevY = ny;
+    }
+}
+
+// Angle of vector (vx,vy) → (px,py) measured CCW from +x (math convention,
+// SVG/PDF y-down).
+function _angleOf(vx, vy, px, py) {
+    const ang = Math.atan2(-(py - vy), px - vx) * 180 / Math.PI;
+    return (ang + 360) % 360;
+}
+
+// Draw the smaller arc from ray (vx,vy)→(p1) to ray (vx,vy)→(p2)
+function _drawAngleArcPDF(doc, vx, vy, p1x, p1y, p2x, p2y, r) {
+    const ang1 = _angleOf(vx, vy, p1x, p1y);
+    const ang2 = _angleOf(vx, vy, p2x, p2y);
+    let delta = ang2 - ang1;
+    if (delta > 180)  delta -= 360;
+    if (delta < -180) delta += 360;
+    _arcSegments(doc, vx, vy, r, ang1, ang1 + delta);
+}
+
+function _drawStraightLineAnglesPDF(doc, { a }, x0, y0, w, h, ps, font) {
+    // Layout: horizontal line + ray from pivot at angle (180−a)°
+    const lineY = y0 + h * 0.58;
+    const lx    = x0 + w * 0.08;
+    const rx    = x0 + w * 0.92;
+    const px    = x0 + w * 0.48;
+    const r     = Math.min(w, h) * 0.18;
+    const rayLen = Math.min(w * 0.30, h * 0.42);
+    const rayAngleDeg = 180 - a;
+    const rayRad = rayAngleDeg * Math.PI / 180;
+    const rayX = px + rayLen * Math.cos(rayRad);
+    const rayY = lineY - rayLen * Math.sin(rayRad);
+
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    doc.line(lx, lineY, rx, lineY);
+    doc.setLineWidth(_AUX_W);
+    doc.setDrawColor(..._LC);
+    doc.line(px, lineY, rayX, rayY);
+
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_AUX_W);
+    _drawAngleArcPDF(doc, px, lineY, lx, lineY, rayX, rayY, r);
+    _drawAngleArcPDF(doc, px, lineY, rayX, rayY, rx, lineY, r);
+
+    doc.setFontSize(8 * ps);
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    const midA1 = (180 - a / 2) * Math.PI / 180;
+    doc.text(`${a}°`, px + (r + 4) * Math.cos(midA1), lineY - (r + 4) * Math.sin(midA1), { align: 'center' });
+
+    doc.setFont(font, 'bold');
+    doc.setTextColor(..._MC);
+    const midA2 = ((180 - a) / 2) * Math.PI / 180;
+    doc.text('?', px + (r + 4) * Math.cos(midA2), lineY - (r + 4) * Math.sin(midA2), { align: 'center' });
+}
+
+function _drawVerticallyOppositePDF(doc, { a }, x0, y0, w, h, ps, font) {
+    const cx = x0 + w / 2;
+    const cy = y0 + h * 0.52;
+    const r  = Math.min(w, h) * 0.16;
+    const len = Math.min(w * 0.42, h * 0.42);
+
+    const angRad = a * Math.PI / 180;
+    const p1x = cx + len, p1y = cy;
+    const p2x = cx - len, p2y = cy;
+    const p3x = cx + len * Math.cos(angRad), p3y = cy - len * Math.sin(angRad);
+    const p4x = cx - len * Math.cos(angRad), p4y = cy + len * Math.sin(angRad);
+
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    doc.line(p2x, p2y, p1x, p1y);
+    doc.line(p4x, p4y, p3x, p3y);
+
+    doc.setLineWidth(_AUX_W);
+    _drawAngleArcPDF(doc, cx, cy, p1x, p1y, p3x, p3y, r);
+    _drawAngleArcPDF(doc, cx, cy, p2x, p2y, p4x, p4y, r);
+
+    doc.setFontSize(8 * ps);
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    const midA = (a / 2) * Math.PI / 180;
+    doc.text(`${a}°`, cx + (r + 4) * Math.cos(midA), cy - (r + 4) * Math.sin(midA), { align: 'center' });
+
+    doc.setFont(font, 'bold');
+    doc.setTextColor(..._MC);
+    doc.text('?', cx - (r + 4) * Math.cos(midA), cy + (r + 4) * Math.sin(midA), { align: 'center' });
+}
+
+function _drawParallelTransversalPDF(doc, { a, angleType }, x0, y0, w, h, ps, font) {
+    // Two horizontal parallel lines + transversal sloping up-right
+    const xL = x0 + w * 0.08;
+    const xR = x0 + w * 0.92;
+    const y1 = y0 + h * 0.25;
+    const y2 = y0 + h * 0.78;
+
+    // Transversal endpoints chosen so it visibly extends beyond both lines
+    const txBot = { x: x0 + w * 0.30, y: y0 + h * 0.96 };
+    const txTop = { x: x0 + w * 0.78, y: y0 + h * 0.06 };
+
+    // Intersections: parametric t where y = y1 / y2
+    const t1 = (y1 - txBot.y) / (txTop.y - txBot.y);
+    const t2 = (y2 - txBot.y) / (txTop.y - txBot.y);
+    const P1 = { x: txBot.x + t1 * (txTop.x - txBot.x), y: y1 };
+    const P2 = { x: txBot.x + t2 * (txTop.x - txBot.x), y: y2 };
+
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    doc.line(xL, y1, xR, y1);
+    doc.line(xL, y2, xR, y2);
+    doc.setLineWidth(_AUX_W);
+    doc.setDrawColor(..._LC);
+    doc.line(txBot.x, txBot.y, txTop.x, txTop.y);
+
+    const r = Math.min(w, h) * 0.12;
+    doc.setLineWidth(_AUX_W);
+    doc.setDrawColor(..._GC);
+
+    // Per-type arc placement matches the SVG version
+    let v1A, v1B, v2A, v2B;
+    let lbl1Off, lbl2Off; // {dx, dy} for label placement relative to vertex
+    if (angleType === 'co-interior') {
+        v1A = { x: xR, y: y1 };    v1B = txBot;
+        v2A = txTop;               v2B = { x: xR, y: y2 };
+        lbl1Off = { dx: r + 3, dy: r * 0.6 };
+        lbl2Off = { dx: r + 3, dy: -r * 0.6 };
+    } else if (angleType === 'corresponding') {
+        v1A = { x: xR, y: y1 };    v1B = txTop;
+        v2A = { x: xR, y: y2 };    v2B = txTop;
+        lbl1Off = { dx: r + 3, dy: -r * 0.6 };
+        lbl2Off = { dx: r + 3, dy: -r * 0.6 };
+    } else {
+        // alternate
+        v1A = { x: xL, y: y1 };    v1B = txBot;
+        v2A = { x: xR, y: y2 };    v2B = txTop;
+        lbl1Off = { dx: -r - 3, dy: r * 0.6 };
+        lbl2Off = { dx: r + 3, dy: -r * 0.6 };
+    }
+    _drawAngleArcPDF(doc, P1.x, P1.y, v1A.x, v1A.y, v1B.x, v1B.y, r);
+    _drawAngleArcPDF(doc, P2.x, P2.y, v2A.x, v2A.y, v2B.x, v2B.y, r);
+
+    doc.setFontSize(7.5 * ps);
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    doc.text(`${a}°`, P1.x + lbl1Off.dx, P1.y + lbl1Off.dy, { align: lbl1Off.dx < 0 ? 'right' : 'left' });
+
+    doc.setFont(font, 'bold');
+    doc.setTextColor(..._MC);
+    doc.text('?', P2.x + lbl2Off.dx, P2.y + lbl2Off.dy, { align: lbl2Off.dx < 0 ? 'right' : 'left' });
+}
+
+function _drawRightTriangleTrigPDF(doc, { opp, adj, hyp, angle, missing }, x0, y0, w, h, ps, font) {
+    // Fixed 4:3 proportions — same visual shape regardless of actual values
+    const adjMm = Math.min(w * 0.56, h * 0.70);
+    const oppMm = adjMm * (78 / 106);
+    const Ax = x0 + w * 0.12, Ay = y0 + h * 0.85;
+    const Bx = Ax + adjMm,    By = Ay;
+    const Cx = Ax,            Cy = Ay - oppMm;
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    _triLines(doc, [{ x: Ax, y: Ay }, { x: Bx, y: By }, { x: Cx, y: Cy }], 'FD');
+
+    const sq = 2.2 * ps;
+    doc.setLineWidth(_AUX_W);
+    _rightAnglePDF(doc, Ax, Ay, sq);
+
+    // Theta arc at B (between legs BA and BC)
+    const arcR = Math.min(adjMm, oppMm) * 0.22;
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_AUX_W);
+    _drawAngleArcPDF(doc, Bx, By, Ax, Ay, Cx, Cy, arcR);
+
+    doc.setFontSize(7.5 * ps);
+    const isMissing = (key) => missing === key;
+    const lbl = (key, val, suffix = '') => isMissing(key) ? '?' : `${val}${suffix}`;
+
+    // adj label below baseline
+    doc.setFont(font, isMissing('adj') ? 'bold' : 'normal');
+    doc.setTextColor(...(isMissing('adj') ? _MC : _LC));
+    doc.text(`adj = ${lbl('adj', adj)}`, (Ax + Bx) / 2, Ay + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
+
+    // opp label left of vertical leg
+    doc.setFont(font, isMissing('opp') ? 'bold' : 'normal');
+    doc.setTextColor(...(isMissing('opp') ? _MC : _LC));
+    doc.text(`opp = ${lbl('opp', opp)}`, Ax - _LBL_OFFSET, (Ay + Cy) / 2 + 1.2 * ps, { align: 'right' });
+
+    // hyp label along the hypotenuse (outward normal)
+    const hdx = Bx - Cx, hdy = By - Cy, hlen = Math.hypot(hdx, hdy);
+    const hnx = hdy / hlen, hny = -hdx / hlen;
+    const hmx = (Bx + Cx) / 2 + hnx * (_LBL_OFFSET + 2);
+    const hmy = (By + Cy) / 2 + hny * (_LBL_OFFSET + 2) + 1.2 * ps;
+    doc.setFont(font, isMissing('hyp') ? 'bold' : 'normal');
+    doc.setTextColor(...(isMissing('hyp') ? _MC : _LC));
+    doc.text(`hyp = ${lbl('hyp', hyp)}`, hmx, hmy, { align: 'center' });
+
+    // θ label inside the arc at B
+    doc.setFontSize(7 * ps);
+    doc.setFont(font, isMissing('angle') ? 'bold' : 'normal');
+    doc.setTextColor(...(isMissing('angle') ? _MC : _LC));
+    doc.text(`θ=${lbl('angle', angle, '°')}`, Bx - arcR - 7 * ps, By - arcR * 0.5, { align: 'right' });
+}
+
+function _drawParabolaPDF(doc, { h: ph, k, a }, x0, y0, w, h, ps, font) {
+    const ox = x0 + w * 0.38, oy = y0 + h * 0.58;
+    const scX = w * 0.115, scY = h * 0.135;
+    const axL = x0 + 3, axR = x0 + w - 3;
+    const axT = y0 + 3, axB = y0 + h - 3;
+
+    // Axes
+    doc.setDrawColor(140, 140, 140);
+    doc.setFillColor(140, 140, 140);
+    doc.setLineWidth(0.35);
+    doc.line(axL, oy, axR, oy);
+    doc.line(ox, axB, ox, axT);
+    // Arrowheads
+    doc.triangle(axR, oy, axR - 2.5, oy - 1.2, axR - 2.5, oy + 1.2, 'F');
+    doc.triangle(ox, axT, ox - 1.2, axT + 2.5, ox + 1.2, axT + 2.5, 'F');
+
+    // Axis labels
+    doc.setFontSize(7 * ps);
+    doc.setFont(font, 'italic');
+    doc.setTextColor(120, 120, 120);
+    doc.text('x', axR - 1, oy - 2, { align: 'right' });
+    doc.text('y', ox + 2, axT + 4, { align: 'left' });
+
+    // Tick marks
+    doc.setFont(font, 'normal');
+    doc.setFontSize(5.5 * ps);
+    for (let i = -2; i <= 2; i++) {
+        if (i === 0) continue;
+        const tx = ox + i * scX;
+        if (tx > axL + 2 && tx < axR - 2) {
+            doc.setDrawColor(160, 160, 160);
+            doc.setLineWidth(0.25);
+            doc.line(tx, oy - 1.2, tx, oy + 1.2);
+            doc.setTextColor(150, 150, 150);
+            doc.text(String(i), tx, oy + 3.5, { align: 'center' });
+        }
+        const ty = oy - i * scY;
+        if (ty > axT + 2 && ty < axB - 2) {
+            doc.setDrawColor(160, 160, 160);
+            doc.setLineWidth(0.25);
+            doc.line(ox - 1.2, ty, ox + 1.2, ty);
+            doc.setTextColor(150, 150, 150);
+            doc.text(String(i), ox - 1.8, ty + 1.8, { align: 'right' });
+        }
+    }
+
+    // Parabola curve (polyline, 40 segments)
+    const xMin = -2.6, xMax = 2.6, nPts = 40;
+    const pts = [];
+    for (let i = 0; i <= nPts; i++) {
+        const xc = xMin + (xMax - xMin) * (i / nPts);
+        const yc = a * (xc - ph) * (xc - ph) + k;
+        const px = ox + xc * scX;
+        const py = oy - yc * scY;
+        if (px > axL && px < axR && py > axT && py < axB)
+            pts.push({ x: px, y: py });
+    }
+    if (pts.length > 1) {
+        doc.setDrawColor(..._GC);
+        doc.setLineWidth(0.7);
+        for (let i = 0; i < pts.length - 1; i++)
+            doc.line(pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y);
+    }
+
+    // Vertex dot + label
+    const vx = ox + ph * scX, vy = oy - k * scY;
+    if (vx > axL + 2 && vx < axR - 2 && vy > axT + 2 && vy < axB - 2) {
+        doc.setFillColor(..._MC);
+        doc.circle(vx, vy, 1.1, 'F');
+        doc.setFontSize(6.5 * ps);
+        doc.setFont(font, 'bold');
+        doc.setTextColor(..._MC);
+        doc.text(`(${ph}, ${k})`, vx + 2.5, vy - 1.5, { align: 'left' });
+    }
+}
+
 /**
  * Draw a geometry diagram into a bounding box.
  * @param {jsPDF} doc
@@ -251,11 +644,18 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
     // Reset dash + line state before drawing
     doc.setLineDashPattern([], 0);
     switch (diagram.type) {
-        case 'rectangle':       _drawRectDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
-        case 'right-triangle':  _drawRightTriDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
-        case 'triangle-angles': _drawTriAnglesDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
-        case 'triangle-area':   _drawTriAreaDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
-        case 'circle':          _drawCircleDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'rectangle':            _drawRectDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'right-triangle':       _drawRightTriDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'triangle-angles':      _drawTriAnglesDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'triangle-area':        _drawTriAreaDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'circle':               _drawCircleDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'parallelogram':        _drawParallelogramDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'trapezium':            _drawTrapeziumDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'straight-line-angles':  _drawStraightLineAnglesPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'vertically-opposite':   _drawVerticallyOppositePDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'parallel-transversal':  _drawParallelTransversalPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'right-triangle-trig':   _drawRightTriangleTrigPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'parabola':              _drawParabolaPDF(doc, diagram, x0, y0, w, h, ps, font); break;
     }
     // Restore defaults
     doc.setLineDashPattern([], 0);
@@ -267,6 +667,8 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
 const TOPIC_COLOURS_RGB = {
     'Number': [59, 130, 246], 'Algebra': [139, 92, 246], 'Geometry': [16, 185, 129],
     'Statistics': [245, 158, 11], 'Financial Maths': [239, 68, 68],
+    'Trigonometry': [6, 182, 212], 'Probability': [168, 85, 247],
+    'Ratios & Rates': [14, 165, 233],
     'Integers': [59, 130, 246], 'Decimals': [59, 130, 246], 'Rounding': [59, 130, 246],
     'Fractions': [59, 130, 246], 'Percentages': [59, 130, 246],
 };
@@ -427,6 +829,30 @@ function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, line
                 doc.setFont(pdfFont, style);  // re-apply after Y advance
                 doc.setTextColor(...drawColor);
             }
+            // Long token (e.g. "1/2(a+b)h." after LaTeX conversion) wider than
+            // the column — break it character-by-character so it wraps instead
+            // of overflowing into the adjacent column.
+            if (tw > maxW + 0.5) {
+                let buf = '';
+                for (const ch of token) {
+                    const next = buf + ch;
+                    if (curX + doc.getTextWidth(next) > x + maxW + 0.5 && buf) {
+                        doc.text(buf, curX, curY);
+                        curY += lineH;
+                        curX  = x;
+                        doc.setFont(pdfFont, style);
+                        doc.setTextColor(...drawColor);
+                        buf = ch;
+                    } else {
+                        buf = next;
+                    }
+                }
+                if (buf) {
+                    doc.text(buf, curX, curY);
+                    curX += doc.getTextWidth(buf);
+                }
+                continue;
+            }
             doc.text(token, curX, curY);
             curX += tw;
         }
@@ -538,21 +964,22 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         const item = questions[i];
 
         // Pre-calculate item height to decide whether it fits.
-        // Fraction clues need 3 line-heights (numerator + bar + denominator).
-        // Reset clue font before splitTextToSize — prior iterations change doc font state,
-        // which would cause the width calculation to use wrong glyph metrics.
+        // Fraction clues need 3 line-heights (numerator + bar + denominator),
+        // but ONLY when the clue is short enough to sit on one line.
+        // Long narrative clues that happen to contain \frac (e.g. probability
+        // questions) must be word-wrapped normally to avoid column overflow.
+        // Reset clue font before splitTextToSize — prior iterations change doc
+        // font state, which would cause width calculation to use wrong metrics.
         doc.setFont(pdfFont, 'normal');
         doc.setFontSize(9 * pScale);
         const clueText   = latexToText(item.clue || '');
-        const isFraction = hasFraction(item.clue);
-        const clueLines  = isFraction
-            ? [clueText]
-            : doc.splitTextToSize(clueText, colW - 14);
+        const clueLines  = doc.splitTextToSize(clueText, colW - 14);
+        const isFraction = hasFraction(item.clue) && clueLines.length === 1;
         const clueBlockH = isFraction
             ? 3 * 4.5 * pScale
             : clueLines.length * 4.5 * pScale;
 
-        const workingCount = item.difficulty === 'Hard' ? 2 : item.difficulty === 'Medium' ? 1 : 0;
+        const workingCount = item.difficulty === 'Hard' ? 3 : item.difficulty === 'Medium' ? 2 : 1;
         // Use item.notes (specific sub-topic key) for outcome lookup — item.topic is broad category
         const itemCodes = showOutcomeChips && item.notes ? getTopicOutcomeCodes(item.notes, stage) : [];
         // Estimate height for the combined meta row (topic pill + outcome chips on one centered line)
@@ -626,9 +1053,13 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         doc.text(`${i + 1}.`, itemX, drawY);
 
         // ── Clue text ────────────────────────────────────────────────
+        // isFraction is true only when the clue fits on a single line AND
+        // contains \frac — so long narrative fraction clues (e.g. probability
+        // complementary questions) use the inline renderer which wraps text
+        // and handles *emphasis* markers correctly.
         let clueEndY;
         const clueX = itemX + 9;
-        if (hasFraction(item.clue)) {
+        if (isFraction) {
             const r = drawFractionClue(doc, item.clue || '', clueX, drawY, {
                 fontSizePt: 9 * pScale, pdfFont, color: [15, 23, 42],
             });
@@ -671,11 +1102,16 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         doc.setFont(pdfFont, 'normal');
         doc.setFontSize(8 * pScale);
         doc.setTextColor(100, 116, 139);
+        // item.unit is only populated for Easy measurement questions in
+        // the generator; printing it as a hint after the answer line tells
+        // students whether to write cm² / m / ° / etc.
+        const unitText  = item.unit ? ` ${latexToText(item.unit)}` : '';
+        const unitW     = unitText ? doc.getTextWidth(unitText) + 1 : 0;
         // Right edge of the line is the column edge; label sits to the
         // left of a fixed-length track so teachers can scan answers in a
         // consistent vertical "rail" down the page.
-        const rightEdge   = itemX + colW - 4;
-        const trackLength = Math.min(46 * pScale, colW - 26);
+        const rightEdge   = itemX + colW - 4 - unitW;
+        const trackLength = Math.min(46 * pScale, colW - 26 - unitW);
         const trackStart  = rightEdge - trackLength;
         doc.text('Answer:', trackStart - 2, lineY, { align: 'right' });
         doc.setDrawColor(150, 160, 180);
@@ -683,6 +1119,12 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         doc.setLineDashPattern([0.8, 1.2], 0);
         doc.line(trackStart, lineY, rightEdge, lineY);
         doc.setLineDashPattern([], 0);
+        if (unitText) {
+            doc.setFont(pdfFont, 'bold');
+            doc.setFontSize(8 * pScale);
+            doc.setTextColor(100, 116, 139);
+            doc.text(unitText.trim(), rightEdge + 1.5, lineY);
+        }
         nextY = lineY + SECTION_PAD;
 
         // ── Meta row: topic pill + outcome chips, centered in column ──
@@ -906,6 +1348,7 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
 
         let ky = cy + 8 * pScale;
 
+        const showWorkedPDF = cfg.keyShowWorked || false;
         // Reserve a fixed right-hand strip for the answer so all answers
         // align in a vertical "marking rail" and clue text wraps cleanly
         // to the left of it instead of being truncated with an ellipsis.
@@ -917,7 +1360,7 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             if (ky + 6 * pScale > PAGE_HEIGHT - MARGIN - 12 * pScale) return;
 
             const clueText = latexToText(q.clue || '');
-            const ansText  = String(q.answerDisplay || q.answer || '');
+            const ansText  = latexToText(String(q.answerDisplay || q.answer || ''));
 
             doc.setFont(pdfFont, 'normal');
             doc.setFontSize(7 * pScale);
@@ -936,7 +1379,19 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             doc.setTextColor(...sec.rgb);
             doc.text(ansText, cx + colW, ky, { align: 'right' });
 
-            const blockH = Math.max(shown.length * lineH, 5 * pScale);
+            let blockH = Math.max(shown.length * lineH, 5 * pScale);
+
+            // Worked solution — shown when "Show worked" is toggled on
+            if (showWorkedPDF && q.worked) {
+                const workedText = latexToText(q.worked);
+                doc.setFont(pdfFont, 'italic');
+                doc.setFontSize(5.8 * pScale);
+                doc.setTextColor(148, 163, 184);
+                const workedLines = doc.splitTextToSize(workedText, colW - 4).slice(0, 2);
+                workedLines.forEach((line, li) => doc.text(line, cx + 2, ky + blockH + li * 3 * pScale));
+                blockH += workedLines.length * 3 * pScale + 1;
+            }
+
             doc.setDrawColor(220, 220, 220);
             doc.setLineWidth(0.1);
             doc.line(cx, ky + blockH - 0.5, cx + colW, ky + blockH - 0.5);
@@ -944,24 +1399,21 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             ky += blockH + 1.4 * pScale;
         });
 
-        // Per-section score: small "___ / N" anchored to top of the footer band.
-        // Section row sits ABOVE the centered TOTAL row to avoid overlap when a
-        // middle column would collide with the page-centered total.
+        // Per-section score sits directly under the last question in this
+        // column so each "/ N" reads as the marker for the column above it.
+        // Clamp so it can't collide with the centered TOTAL row at the very
+        // bottom of the page.
         const secTotal     = sec.questions.length;
-        const sectionRowY  = PAGE_HEIGHT - MARGIN - 11 * pScale;
         const scoreFontPt  = 7   * pScale;
         const scoreBlankW  = 14  * pScale;
+        const maxScoreY    = PAGE_HEIGHT - MARGIN - 9 * pScale;
+        const sectionRowY  = Math.min(ky + 3 * pScale, maxScoreY);
         doc.setDrawColor(...sec.rgb); doc.setLineWidth(0.3); doc.setLineDashPattern([0.5, 1], 0);
         doc.line(cx, sectionRowY, cx + scoreBlankW, sectionRowY);
         doc.setLineDashPattern([], 0);
         doc.setFont(pdfFont, 'bold'); doc.setFontSize(scoreFontPt); doc.setTextColor(...sec.rgb);
         doc.text(`/ ${secTotal}`, cx + scoreBlankW + 2, sectionRowY);
     });
-
-    // Thin divider between section rail and total row
-    const dividerY = PAGE_HEIGHT - MARGIN - 8 * pScale;
-    doc.setDrawColor(220, 225, 235); doc.setLineWidth(0.3);
-    doc.line(MARGIN, dividerY, PAGE_WIDTH - MARGIN, dividerY);
 
     // Overall total: "TOTAL: ___ / N = ___ %", right-aligned to the page edge
     const totalQ = sections.reduce((s, sec) => s + sec.questions.length, 0);
@@ -1007,6 +1459,12 @@ export async function exportPDF() {
         isExporting = false;
         if (exportBtn) { exportBtn.disabled = false; exportBtn.innerHTML = exportBtnOrigHTML; }
         return;
+    }
+
+    const diffInPDF = ['easy', 'medium', 'hard'].filter(p => selectedPages.includes(p));
+    if (diffInPDF.length < 3) {
+        const skipped = ['Easy', 'Medium', 'Hard'].filter((_, i) => !diffInPDF.includes(['easy', 'medium', 'hard'][i]));
+        showToast(`PDF will only include ${diffInPDF.map(d => d[0].toUpperCase() + d.slice(1)).join(' + ')} difficulty. Uncheck fix: Page Order → tick ${skipped.join(', ')}.`, 'warning');
     }
 
     const L = document.getElementById('loading-overlay');
@@ -1103,6 +1561,13 @@ export async function exportPDF() {
                 isFirstPage = false;
                 ctx.drawWatermark();
             };
+
+            // Optional formula reference sheet — one page per set, prepended before question pages
+            if (cfg.showFormulaSheet) {
+                addPage();
+                const ps = getPScale('easy');
+                drawFormulaSheet(ctx, activeTopics, ps);
+            }
 
             // Track visible question counts per difficulty.
             // Pages not in selectedPages default to 0 so their answers are excluded from the key.
