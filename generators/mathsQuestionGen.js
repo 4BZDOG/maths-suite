@@ -1004,24 +1004,28 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
         }
         if (type === 2) {
             const n = ri(rng, 4, 6);
-            const data = Array.from({ length: n }, () => ri(rng, 5, 30));
-            const sum = data.reduce((a, b) => a + b, 0);
-            if (sum % n !== 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+            const meanV = ri(rng, 5, 25);
+            const offset = Math.max(1, Math.floor(meanV / n));
+            const others = Array.from({ length: n - 1 }, () => meanV + ri(rng, -offset, offset));
+            const last = meanV * n - others.reduce((a, b) => a + b, 0);
+            if (last < 1 || last > 40) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+            const data = [...others, last].sort((a, b) => a - b);
             const ph = rc(rng, [
                 `Calculate the *mean* of: $${data.join(', ')}$`,
                 `Find the *mean* of these ${ctx}: $${data.join(', ')}$`,
                 `Determine the *mean* of: $${data.join(', ')}$`,
                 `The ${ctx} are $${data.join(', ')}$. Calculate the *mean*.`,
             ]);
-            return { clue: ph, answer: String(sum / n) };
+            return { clue: ph, answer: String(meanV) };
         }
         // type 3: find missing value given mean
         const n3 = ri(rng, 4, 5);
         const mean3 = ri(rng, 5, 20);
+        const spread3 = Math.max(2, Math.floor(mean3 * 0.5));
         const target3 = mean3 * n3;
-        const known3 = Array.from({ length: n3 - 1 }, () => ri(rng, 3, 30));
+        const known3 = Array.from({ length: n3 - 1 }, () => mean3 + ri(rng, -spread3, spread3));
         const missing3 = target3 - known3.reduce((a, b) => a + b, 0);
-        if (missing3 < 1 || missing3 > 40) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+        if (missing3 < 1 || missing3 > 50) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
         const display3 = [...known3, '?'].join(', ');
         const ph3 = rc(rng, [
             `The *mean* of $${display3}$ is $${mean3}$. Find the missing value.`,
@@ -1033,11 +1037,12 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
     }
     // Hard
     if (type === 0) {
-        const data = Array.from({ length: 8 }, () => ri(rng, 1, 20)).sort((a, b) => a - b);
+        // Use even numbers so adjacent pairs always sum to even → integer quartiles
+        const data = Array.from({ length: 8 }, () => ri(rng, 1, 10) * 2).sort((a, b) => a - b);
         const q1 = (data[1] + data[2]) / 2;
         const q3 = (data[5] + data[6]) / 2;
         const iqr = q3 - q1;
-        if (!Number.isInteger(iqr)) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+        if (iqr <= 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
         const ph = rc(rng, [
             `Find the *interquartile range* of: $${data.join(', ')}$`,
             `Calculate the *IQR* of these ${ctx}: $${data.join(', ')}$`,
@@ -1048,9 +1053,9 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
     }
     if (type === 1) {
         const n = rc(rng, [4, 6]);
-        const data = Array.from({ length: n }, () => ri(rng, 1, 30)).sort((a, b) => a - b);
+        // Even-count dataset: ensure middle two values sum to even → integer median
+        const data = Array.from({ length: n }, () => ri(rng, 1, 15) * 2).sort((a, b) => a - b);
         const med = (data[n / 2 - 1] + data[n / 2]) / 2;
-        if (!Number.isInteger(med)) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
         const ph = rc(rng, [
             `Find the *median* of: $${data.join(', ')}$`,
             `Calculate the *median* of these ${ctx}: $${data.join(', ')}$`,
@@ -1062,10 +1067,11 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
     // type 2: find missing value given mean (harder dataset)
     const n2 = ri(rng, 5, 7);
     const mean2 = ri(rng, 10, 30);
+    const spread2 = Math.floor(mean2 * 0.5);
     const target2 = mean2 * n2;
-    const known2 = Array.from({ length: n2 - 1 }, () => ri(rng, 5, 50));
+    const known2 = Array.from({ length: n2 - 1 }, () => mean2 + ri(rng, -spread2, spread2));
     const missing2 = target2 - known2.reduce((a, b) => a + b, 0);
-    if (missing2 < 1 || missing2 > 60) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+    if (missing2 < 1 || missing2 > 70) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
     const display2 = [...known2, '?'].join(', ');
     const ph2 = rc(rng, [
         `The *mean* of $${display2}$ is $${mean2}$. Find the missing value.`,
