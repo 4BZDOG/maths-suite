@@ -655,6 +655,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
     if (type === 0) {
         const d1 = ri(rng, 3, 8), n1 = ri(rng, 1, d1 - 1);
         const d2 = ri(rng, 3, 8), n2 = ri(rng, 1, d2 - 1);
+        if (gcd(n1, d1) > 1 || gcd(n2, d2) > 1) return genFractions(rng, diff, allowedOps, _depth + 1);
         const ans = fracStr(n1 * d2, d1 * n2);
         const ph = rc(rng, [
             `${calcVerb} $\\frac{${n1}}{${d1}} \\div \\frac{${n2}}{${d2}}$`,
@@ -751,9 +752,9 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
         if (type === 1) {
             const orig = ri(rng, 2, 20) * 10;
             const pct = rc(rng, [5, 10, 20, 25, 50]);
-            const ans = Math.round(orig * (1 + pct / 100));
+            const ans = orig * (1 + pct / 100);
             if (!Number.isInteger(ans)) return genPercentages(rng, diff, allowedOps, _depth + 1);
-            const ctx = rc(rng, ['a price', 'a value', 'an amount', 'a score']);
+            const ctx = rc(rng, ['price', 'value', 'amount', 'score']);
             const ph = rc(rng, [
                 `Increase $${orig}$ by $${pct}\\%$`,
                 `A ${ctx} of $${orig}$ is increased by $${pct}\\%$. Find the **new** ${ctx}.`,
@@ -779,9 +780,9 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
         // type 3: decrease/discount
         const origDec = ri(rng, 2, 20) * 10;
         const pctDec = rc(rng, [5, 10, 20, 25, 50]);
-        const ansDec = Math.round(origDec * (1 - pctDec / 100));
+        const ansDec = origDec * (1 - pctDec / 100);
         if (!Number.isInteger(ansDec)) return genPercentages(rng, diff, allowedOps, _depth + 1);
-        const ctxDec = rc(rng, ['a price', 'a salary', 'a value', 'a cost']);
+        const ctxDec = rc(rng, ['price', 'salary', 'value', 'cost']);
         const phDec = rc(rng, [
             `Decrease $${origDec}$ by $${pctDec}\\%$`,
             `A ${ctxDec} of $${origDec}$ is reduced by $${pctDec}\\%$. Find the **new** ${ctxDec}.`,
@@ -1229,10 +1230,10 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     const maps = {
         Easy:   { 'area-perimeter': [0, 1, 2] },
         Medium: { 'area-perimeter': [0, 3], 'pythagoras': [1], 'angles': [2] },
-        Hard:   { 'circles': [0, 2, 3], 'pythagoras': [1] },
+        Hard:   { 'circles': [0, 2, 3], 'pythagoras': [1], 'area-perimeter': [4] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : 3);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : diff === 'Hard' ? 4 : 3);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -1372,16 +1373,32 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, diagram: { type: 'circle', r, missing: 'circumference' } };
     }
     // type 3: find radius given area (no diagram — avoids mislabelling diagram center)
-    const r3 = ri(rng, 2, 9);
-    const u3 = _geoUnit(r3);
-    const area3 = round(3.14 * r3 * r3, 2);
-    const ph3 = rc(rng, [
-        `The *area* of a circle is $${area3}$ ${u3}². Find its radius. Use $\\pi \\approx 3.14$.`,
-        `A circle has area $${area3}$ ${u3}². Calculate its radius. Use $\\pi \\approx 3.14$.`,
-        `Determine the radius of a circle with area $${area3}$ ${u3}². Use $\\pi \\approx 3.14$.`,
-        `Find the radius of a circle whose area is $${area3}$ ${u3}². Use $\\pi \\approx 3.14$.`,
+    if (type === 3) {
+        const r3 = ri(rng, 2, 9);
+        const u3 = _geoUnit(r3);
+        const area3 = round(3.14 * r3 * r3, 2);
+        const ph3 = rc(rng, [
+            `The *area* of a circle is $${area3}$ ${u3}². Find its radius. Use $\\pi \\approx 3.14$.`,
+            `A circle has area $${area3}$ ${u3}². Calculate its radius. Use $\\pi \\approx 3.14$.`,
+            `Determine the radius of a circle with area $${area3}$ ${u3}². Use $\\pi \\approx 3.14$.`,
+            `Find the radius of a circle whose area is $${area3}$ ${u3}². Use $\\pi \\approx 3.14$.`,
+        ]);
+        return { clue: ph3, answer: String(r3), answerDisplay: `${r3} ${u3}` };
+    }
+    // type 4: find triangle height given area and base (no diagram)
+    const b4 = ri(rng, 2, 14) * 2;
+    const h4 = ri(rng, 3, 18);
+    const area4 = (b4 * h4) / 2;
+    const u4 = _geoUnit(Math.max(b4, h4));
+    const fOn4 = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
+    const pf4 = fOn4 ? ' Use $A = \\frac{1}{2}bh$.' : '';
+    const ph4 = rc(rng, [
+        `A triangle has area $${area4}$ ${u4}² and base $${b4}$ ${u4}. Find its *perpendicular height*.${pf4}`,
+        `The area of a triangle is $${area4}$ ${u4}² and its base is $${b4}$ ${u4}. Calculate the *height*.${pf4}`,
+        `Find the *height* of a triangle with area $${area4}$ ${u4}² and base $${b4}$ ${u4}.${pf4}`,
+        `A triangle with base $${b4}$ ${u4} has area $${area4}$ ${u4}². Determine the *perpendicular height*.${pf4}`,
     ]);
-    return { clue: ph3, answer: String(r3), answerDisplay: `${r3} ${u3}` };
+    return { clue: ph4, answer: String(h4), answerDisplay: `${h4} ${u4}` };
 }
 
 // ============================================================
