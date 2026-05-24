@@ -573,10 +573,16 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             return { clue: `${calcVerb} $\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}}$`, answer: ans };
         }
         if (type === 2) {
-            const den = rc(rng, [4, 6, 8, 10, 12]);
-            const factor = rc(rng, [2, 3]);
-            if (factor >= den) return genFractions(rng, diff, allowedOps, _depth + 1);
-            const num = factor * ri(rng, 1, Math.floor(den / factor));
+            const den = rc(rng, [4, 6, 8, 9, 10, 12, 15]);
+            // Pick a factor that truly divides den (guarantees GCD > 1 after reduction)
+            const divisors = [];
+            for (let f = 2; f <= den / 2; f++) { if (den % f === 0) divisors.push(f); }
+            if (divisors.length === 0) return genFractions(rng, diff, allowedOps, _depth + 1);
+            const factor = rc(rng, divisors);
+            const maxMult = den / factor;
+            if (maxMult < 2) return genFractions(rng, diff, allowedOps, _depth + 1);
+            // k in [1, maxMult-1] ensures num < den (no n/n trivial case)
+            const num = factor * ri(rng, 1, maxMult - 1);
             const ans = fracStr(num, den);
             const ph = rc(rng, [
                 `Simplify $\\frac{${num}}{${den}}$`,
