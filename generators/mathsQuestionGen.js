@@ -195,7 +195,8 @@ function genIntegers(rng, diff, allowedOps) {
     }
     if (op === '-') {
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
-        const a = ri(rng, 1, max), b = ri(rng, 1, a);
+        const min = diff === 'Easy' ? 8 : 1;
+        const a = ri(rng, min, max), b = ri(rng, 1, Math.max(1, a - 2));
         const clue = rc(rng, [
             `${rc(rng, CALC_VERBS)} $${a} - ${b}$`,
             `Find the *difference* between $${a}$ and $${b}$`,
@@ -391,10 +392,14 @@ function genDecimals(rng, diff, allowedOps) {
     const len = ri(rng, 11, 99) / 10;
     const rate = ri(rng, 2, 15);
     const cost3 = round(len * rate, 2);
-    const unit3 = rc(rng, ['metre', 'kilogram', 'litre']);
+    const { unit: unit3, item: item3 } = rc(rng, [
+        { unit: 'metre', item: 'fabric' },
+        { unit: 'kilogram', item: 'fruit' },
+        { unit: 'litre', item: 'paint' },
+    ]);
     const ph3h = rc(rng, [
-        `A length of $${len}$ m is sold at $\\$${rate}$ per ${unit3}. Find the *total cost*.`,
-        `Calculate the cost of $${len}$ ${unit3}s at $\\$${rate}$ each.`,
+        `${len}$ ${unit3}s of ${item3} cost $\\$${rate}$ per ${unit3}. Find the *total cost*.`,
+        `Calculate the cost of $${len}$ ${unit3}s of ${item3} at $\\$${rate}$ per ${unit3}.`,
         `Multiply $${len}$ by $${rate}$ to find the *total price*.`,
     ]);
     return { clue: ph3h, answer: String(cost3), answerDisplay: `$${cost3}` };
