@@ -2852,6 +2852,26 @@ table.mode-cw td.cell.empty {
 /* Topic group — collapsible sub-operations */
 .topic-group { position: relative; }
 
+/* Per-topic question count — muted teal pill shown after generation */
+.topic-qcount {
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 10px;
+    background: rgba(16,185,129,0.10);
+    color: #059669;
+    border: 1px solid rgba(16,185,129,0.20);
+    flex-shrink: 0;
+    white-space: nowrap;
+    cursor: default;
+}
+[data-theme="dark"] .topic-qcount {
+    background: rgba(52,211,153,0.10);
+    color: #34d399;
+    border-color: rgba(52,211,153,0.20);
+}
+
 /* Sub-op filter badge — amber pill showing "n/total" when some ops are disabled */
 .sub-op-badge {
     font-size: 10px;

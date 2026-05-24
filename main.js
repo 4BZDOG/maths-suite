@@ -774,8 +774,19 @@ function _updateTopicWarnings(sets) {
         const groupEl = subsEl?.closest('.topic-group');
         if (!groupEl) return;
         const isSelected = state.selectedTopics[t];
-        const hasQuestions = (topicCounts[t] || 0) > 0;
-        groupEl.classList.toggle('topic-warn', isSelected && !hasQuestions);
+        const count = topicCounts[t] || 0;
+        groupEl.classList.toggle('topic-warn', isSelected && count === 0);
+        // Update per-topic question count badge
+        const countEl = document.getElementById('topic-qcount-' + topicId);
+        if (countEl) {
+            if (isSelected && count > 0) {
+                countEl.textContent = count;
+                countEl.title = `${count} question${count !== 1 ? 's' : ''} generated for this topic`;
+                countEl.hidden = false;
+            } else {
+                countEl.hidden = true;
+            }
+        }
     });
 }
 
@@ -846,6 +857,7 @@ function renderTopicTogglesByStrand() {
                            onchange="toggleTopic('${t}')">
                     <span class="topic-toggle-name"><i class="${meta.icon} topic-icon"></i>${meta.label}</span>
                     ${chipHtml}
+                    <span class="topic-qcount" id="topic-qcount-${topicId}" hidden></span>
                     <span class="sub-op-badge" id="sub-badge-${topicId}" hidden></span>
                     <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('${t}')">
                         <i class="fas fa-chevron-down"></i>
