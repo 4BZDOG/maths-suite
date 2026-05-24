@@ -266,7 +266,8 @@ function genIntegers(rng, diff, allowedOps) {
 // ============================================================
 // DECIMALS
 // ============================================================
-function genDecimals(rng, diff, allowedOps) {
+function genDecimals(rng, diff, allowedOps, _depth = 0) {
+    if (_depth > 20) return null;
     // type → sub-op mapping per difficulty
     const maps = {
         Easy:   { 'add-subtract': [0], 'multiply-divide': [1, 2] },
@@ -388,8 +389,10 @@ function genDecimals(rng, diff, allowedOps) {
         ]);
         return { clue: ph, answer: String(round(a - b, 2)) };
     }
-    // type 3: measurement-cost multiply
-    const len = ri(rng, 11, 99) / 10;
+    // type 3: measurement-cost multiply — ensure len has a decimal part
+    const lenTenths = ri(rng, 11, 99);
+    if (lenTenths % 10 === 0) return genDecimals(rng, diff, allowedOps, _depth + 1);
+    const len = lenTenths / 10;
     const rate = ri(rng, 2, 15);
     const cost3 = round(len * rate, 2);
     const { unit: unit3, item: item3 } = rc(rng, [
@@ -398,9 +401,9 @@ function genDecimals(rng, diff, allowedOps) {
         { unit: 'litre', item: 'paint' },
     ]);
     const ph3h = rc(rng, [
-        `${len}$ ${unit3}s of ${item3} cost $\\$${rate}$ per ${unit3}. Find the *total cost*.`,
+        `$${len}$ ${unit3}s of ${item3} cost $\\$${rate}$ per ${unit3}. Find the *total cost*.`,
         `Calculate the cost of $${len}$ ${unit3}s of ${item3} at $\\$${rate}$ per ${unit3}.`,
-        `Multiply $${len}$ by $${rate}$ to find the *total price*.`,
+        `A length of $${len}$ ${unit3}s at $\\$${rate}$ per ${unit3}. Find the *total cost*.`,
     ]);
     return { clue: ph3h, answer: String(cost3), answerDisplay: `$${cost3}` };
 }
