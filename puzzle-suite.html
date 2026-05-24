@@ -268,12 +268,22 @@
                         </div>
                         
                         <!-- Compound Interest -->
-                        <div style="margin-bottom:4px;">
+                        <div style="margin-bottom:8px;">
                             <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);"><i class="fas fa-chart-bar" style="margin-right:5px; opacity:.55; font-size:10px;"></i>Compound Interest</div>
                             <div style="display:flex; justify-content:space-between; max-width: 180px;">
                                 <label><input type="checkbox" id="form-compound-interest-easy" onchange="renderActivePage(); saveState();"> Easy</label>
                                 <label><input type="checkbox" id="form-compound-interest-medium" onchange="renderActivePage(); saveState();"> Med</label>
                                 <label><input type="checkbox" id="form-compound-interest-hard" onchange="renderActivePage(); saveState();"> Hard</label>
+                            </div>
+                        </div>
+
+                        <!-- Mean / Median -->
+                        <div style="margin-bottom:4px;">
+                            <div style="font-weight:600; margin-bottom:4px; color:var(--text-main);"><i class="fas fa-calculator" style="margin-right:5px; opacity:.55; font-size:10px;"></i>Mean / Median</div>
+                            <div style="display:flex; justify-content:space-between; max-width: 180px;">
+                                <label><input type="checkbox" id="form-mean-median-easy" onchange="renderActivePage(); saveState();"> Easy</label>
+                                <label><input type="checkbox" id="form-mean-median-medium" onchange="renderActivePage(); saveState();"> Med</label>
+                                <label><input type="checkbox" id="form-mean-median-hard" onchange="renderActivePage(); saveState();"> Hard</label>
                             </div>
                         </div>
                     </div>
@@ -495,7 +505,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=137"></script>
+    <script src="bundle.js?v=138"></script>
 </body>
 
 </html>

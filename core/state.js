@@ -141,7 +141,7 @@ export function syncSettingsFromDOM() {
     };
 
     // Sync formulas
-    const formulaGroups = ['area-perimeter', 'pythagoras', 'circles', 'simple-interest', 'compound-interest'];
+    const formulaGroups = ['area-perimeter', 'pythagoras', 'circles', 'simple-interest', 'compound-interest', 'mean-median'];
     formulaGroups.forEach(g => {
         if (!s.showFormulas[g]) s.showFormulas[g] = {};
         s.showFormulas[g].easy   = getChk(`form-${g}-easy`,   s.showFormulas[g].easy);
@@ -295,7 +295,7 @@ export function applyStateToDOM(s) {
     setChk('showExportId',  cfg.showExportId);
 
     if (cfg.showFormulas) {
-        const formulaGroups = ['area-perimeter', 'pythagoras', 'circles', 'simple-interest', 'compound-interest'];
+        const formulaGroups = ['area-perimeter', 'pythagoras', 'circles', 'simple-interest', 'compound-interest', 'mean-median'];
         formulaGroups.forEach(g => {
             if (cfg.showFormulas[g]) {
                 setChk(`form-${g}-easy`,   cfg.showFormulas[g].easy);

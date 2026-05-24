@@ -1054,7 +1054,7 @@ function processImport() {
 // =============================================================
 // Formula hints bulk toggles
 // =============================================================
-const FORMULA_GROUPS = ['area-perimeter', 'pythagoras', 'circles', 'simple-interest', 'compound-interest'];
+const FORMULA_GROUPS = ['area-perimeter', 'pythagoras', 'circles', 'simple-interest', 'compound-interest', 'mean-median'];
 const FORMULA_DIFFS  = ['easy', 'medium', 'hard'];
 
 function _setFormulaCheckbox(group, diff, val) {

@@ -41,7 +41,7 @@ function _solveVerbsFor(v) {
 }
 // Pairs [dependent, independent] for substitution questions
 const SUBST_PAIRS = [['y', 'x'], ['A', 't'], ['P', 'n'], ['C', 'm'], ['V', 'r'], ['h', 't'], ['d', 'n']];
-const DATA_CONTEXTS = ['scores', 'values', 'ages', 'heights (cm)', 'temperatures (°C)', 'distances (m)', 'results', 'times (s)', 'weights (kg)', 'prices ($)', 'marks', 'lengths (cm)', 'speeds (km/h)', 'rainfall (mm)', 'test results'];
+const DATA_CONTEXTS = ['scores', 'values', 'ages', 'heights (cm)', 'temperatures (°C)', 'distances (m)', 'results', 'times (s)', 'weights (kg)', 'prices ($)', 'marks', 'lengths (cm)', 'speeds (km/h)', 'rainfall (mm)', 'test results', 'heart rates (bpm)', 'goals scored', 'reaction times (ms)', 'quiz results', 'shoe sizes', 'sales figures', 'water usage (L)', 'step counts', 'hours slept', 'points earned'];
 
 function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 function lcm(a, b) { return (a * b) / gcd(a, b); }
@@ -947,7 +947,7 @@ function _genAlgebraCore(rng, diff, allowedOps) {
 // ============================================================
 // STATISTICS (Stage 4 core)
 // ============================================================
-function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
+function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
     if (_depth > 30) return null;
     const maps = {
         Easy:   { 'mean-median': [0, 1], 'mode-range': [2, 3] },
@@ -967,14 +967,16 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
             const spread = Math.max(1, meanV - 1);
             const others = Array.from({ length: n - 1 }, () => meanV + ri(rng, -spread, spread));
             const last = meanV * n - others.reduce((a, b) => a + b, 0);
-            if (last < 1 || last > 25) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+            if (last < 1 || last > 25) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
             const data = [...others, last].sort((a, b) => a - b);
+            const fOn = opts.showFormulas?.['mean-median']?.[diff.toLowerCase()];
+            const pf = fOn ? ' Use $\\overline{x} = \\text{sum} \\div n$.' : '';
             const ph = rc(rng, [
-                `Find the *mean* of: $${data.join(', ')}$`,
-                `Calculate the *mean* of these ${ctx}: $${data.join(', ')}$`,
-                `Determine the *mean* of: $${data.join(', ')}$`,
-                `What is the *mean* of $${data.join(', ')}$?`,
-                `The ${ctx} recorded are $${data.join(', ')}$. Find the *mean*.`,
+                `Find the *mean* of: $${data.join(', ')}$${pf}`,
+                `Calculate the *mean* of these ${ctx}: $${data.join(', ')}$${pf}`,
+                `Determine the *mean* of: $${data.join(', ')}$${pf}`,
+                `What is the *mean* of $${data.join(', ')}$?${pf}`,
+                `The ${ctx} recorded are $${data.join(', ')}$. Find the *mean*.${pf}`,
             ]);
             return { clue: ph, answer: String(meanV) };
         }
@@ -1054,13 +1056,15 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
             const offset = Math.max(1, Math.floor(meanV / n));
             const others = Array.from({ length: n - 1 }, () => meanV + ri(rng, -offset, offset));
             const last = meanV * n - others.reduce((a, b) => a + b, 0);
-            if (last < 1 || last > 40) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+            if (last < 1 || last > 40) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
             const data = [...others, last].sort((a, b) => a - b);
+            const fOn2 = opts.showFormulas?.['mean-median']?.[diff.toLowerCase()];
+            const pf2 = fOn2 ? ' Use $\\overline{x} = \\text{sum} \\div n$.' : '';
             const ph = rc(rng, [
-                `Calculate the *mean* of: $${data.join(', ')}$`,
-                `Find the *mean* of these ${ctx}: $${data.join(', ')}$`,
-                `Determine the *mean* of: $${data.join(', ')}$`,
-                `The ${ctx} are $${data.join(', ')}$. Calculate the *mean*.`,
+                `Calculate the *mean* of: $${data.join(', ')}$${pf2}`,
+                `Find the *mean* of these ${ctx}: $${data.join(', ')}$${pf2}`,
+                `Determine the *mean* of: $${data.join(', ')}$${pf2}`,
+                `The ${ctx} are $${data.join(', ')}$. Calculate the *mean*.${pf2}`,
             ]);
             return { clue: ph, answer: String(meanV) };
         }
@@ -1071,13 +1075,15 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
         const target3 = mean3 * n3;
         const known3 = Array.from({ length: n3 - 1 }, () => mean3 + ri(rng, -spread3, spread3));
         const missing3 = target3 - known3.reduce((a, b) => a + b, 0);
-        if (missing3 < 1 || missing3 > 50) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+        if (missing3 < 1 || missing3 > 50) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
         const display3 = [...known3, '?'].join(', ');
+        const fOn3 = opts.showFormulas?.['mean-median']?.[diff.toLowerCase()];
+        const pf3 = fOn3 ? ' Use $\\overline{x} = \\text{sum} \\div n$.' : '';
         const ph3 = rc(rng, [
-            `The *mean* of $${display3}$ is $${mean3}$. Find the missing value.`,
-            `${n3} ${ctx} have a *mean* of $${mean3}$. ${n3 - 1} are $${known3.join(', ')}$. Find the missing value.`,
-            `Find the missing number if the *mean* of $${display3}$ is $${mean3}$.`,
-            `The *mean* of these values is $${mean3}$: $${display3}$. What is the missing value?`,
+            `The *mean* of $${display3}$ is $${mean3}$. Find the missing value.${pf3}`,
+            `${n3} ${ctx} have a *mean* of $${mean3}$. ${n3 - 1} are $${known3.join(', ')}$. Find the missing value.${pf3}`,
+            `Find the missing number if the *mean* of $${display3}$ is $${mean3}$.${pf3}`,
+            `The *mean* of these values is $${mean3}$: $${display3}$. What is the missing value?${pf3}`,
         ]);
         return { clue: ph3, answer: String(missing3) };
     }
@@ -1088,7 +1094,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
         const q1 = (data[1] + data[2]) / 2;
         const q3 = (data[5] + data[6]) / 2;
         const iqr = q3 - q1;
-        if (iqr <= 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+        if (iqr <= 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
         const ph = rc(rng, [
             `Find the *interquartile range* of: $${data.join(', ')}$`,
             `Calculate the *IQR* of these ${ctx}: $${data.join(', ')}$`,
@@ -1117,7 +1123,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0) {
     const target2 = mean2 * n2;
     const known2 = Array.from({ length: n2 - 1 }, () => mean2 + ri(rng, -spread2, spread2));
     const missing2 = target2 - known2.reduce((a, b) => a + b, 0);
-    if (missing2 < 1 || missing2 > 70) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1);
+    if (missing2 < 1 || missing2 > 70) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
     const display2 = [...known2, '?'].join(', ');
     const ph2 = rc(rng, [
         `The *mean* of $${display2}$ is $${mean2}$. Find the missing value.`,
@@ -1942,7 +1948,7 @@ function genStatistics(rng, diff, allowedOps, opts = {}, _depth = 0) {
     if (s5Active.length > 0 && (!s4Active.length || rng() < 0.5)) {
         return _genStatisticsS5Op(rng, diff, rc(rng, s5Active));
     }
-    return _genStatisticsCore(rng, diff, allowedOps, _depth);
+    return _genStatisticsCore(rng, diff, allowedOps, _depth, opts);
 }
 
 function genGeometry(rng, diff, allowedOps, opts = {}, _depth = 0) {
