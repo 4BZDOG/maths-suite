@@ -1798,6 +1798,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         return { clue: ph3, answer: String(r3), answerDisplay: `${r3} ${u3}` };
     }
     // type 6: find triangle height given area and base (no diagram)
+    if (type !== 6) return _genGeometryCore(rng, diff, allowedOps, opts, _depth + 1);
     const b4 = ri(rng, 2, 14) * 2;
     const h4 = ri(rng, 3, 18);
     const area4 = (b4 * h4) / 2;
