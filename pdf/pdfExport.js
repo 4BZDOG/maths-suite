@@ -261,7 +261,7 @@ function _drawParallelogramDiagramPDF(doc, { base, height, missing }, x0, y0, w,
     doc.setLineDashPattern([1.2, 1.2], 0);
     doc.setDrawColor(..._GC);
     doc.setLineWidth(_AUX_W);
-    doc.line(hFootX, BL.y, hFootX, TL.y + dh);  // vertical height line
+    doc.line(hFootX, BL.y, hFootX, TL.y);  // BL.y (bottom) → TL.y (top)
     doc.setLineDashPattern([], 0);
 
     doc.setFontSize(8 * ps);
@@ -269,8 +269,8 @@ function _drawParallelogramDiagramPDF(doc, { base, height, missing }, x0, y0, w,
     doc.setTextColor(..._LC);
     // Base label below
     doc.text(`b = ${base}`, (BL.x + BR.x) / 2, BL.y + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
-    // Height label right of dashed line
-    doc.text(`h = ${height}`, hFootX + _LBL_OFFSET, (BL.y + TL.y + dh) / 2, { align: 'left' });
+    // Height label right of dashed line, vertically centred
+    doc.text(`h = ${height}`, hFootX + _LBL_OFFSET, (BL.y + TL.y) / 2, { align: 'left' });
 
     const centreLabel = missing === 'area' ? 'A = ?' : 'P = ?';
     doc.setFont(font, 'bold');
@@ -300,13 +300,12 @@ function _drawTrapeziumDiagramPDF(doc, { a, b, height, missing }, x0, y0, w, h, 
     doc.setFillColor(..._GCF);
     doc.setDrawColor(..._GC);
     doc.setLineWidth(_STROKE_W);
-    // Draw 4 sides
-    doc.line(BL.x, BL.y, BR.x, BR.y);
-    doc.line(BR.x, BR.y, TR.x, TR.y);
-    doc.line(TR.x, TR.y, TL.x, TL.y);
-    doc.line(TL.x, TL.y, BL.x, BL.y);
-    // Fill
-    doc.setFillColor(..._GCF);
+    // Draw trapezium as a filled, closed path
+    doc.lines([
+        [bW, 0],                      // BL → BR
+        [(aW - bW) / 2, -dh],         // BR → TR
+        [-aW, 0],                     // TR → TL (auto-closes to BL)
+    ], BL.x, BL.y, [1, 1], 'FD');
 
     // Dashed height line
     const hx = BL.x + (bW - aW) / 2 + aW / 2;  // roughly midpoint
