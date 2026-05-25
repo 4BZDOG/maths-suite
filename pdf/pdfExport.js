@@ -1542,6 +1542,11 @@ export async function exportPDF() {
         cfg.psCapPages = state.questionsPerSet || 1;
 
         let isFirstPage = true;
+        // Capture the base seed once so all alternate sets are consistent
+        // offsets of it, even if the loop yields to the event loop between iterations.
+        const exportBase = cfg.previewSeed ?? Date.now();
+        const pv = state.generatedSets;
+        const havePreview = pv && (pv.easy?.length || pv.medium?.length || pv.hard?.length);
 
         for (let i = 0; i < count; i++) {
             if (T) T.innerText = `Generating Set ${i + 1}/${count}`;
@@ -1549,9 +1554,17 @@ export async function exportPDF() {
             await new Promise(r => setTimeout(r, 10));
 
             cfg.exportCount = (cfg.exportCount || 0) + 1;
-            const seed = Date.now() + cfg.exportCount * 1_000_000;
+            // Set #1 reuses the on-screen preview questions exactly (incl. rerolls
+            // and locked slots); alternates are reproducible offsets of its seed.
+            let sets, seed;
+            if (i === 0 && havePreview) {
+                sets = pv;
+                seed = exportBase;
+            } else {
+                seed = exportBase + i * 1_000_000;
+                sets = createQuestionSets(cfg, seed);
+            }
             const exportId = makeExportId(seed);
-            const sets = createQuestionSets(cfg, seed);
             if (!sets) continue;
 
             const setIndicator = count > 1 ? `SET ${i + 1}` : '';

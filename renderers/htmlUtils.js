@@ -14,7 +14,7 @@ export function esc(str) {
 //   2. IMPERATIVE_RE  — fallback: the leading imperative word alone
 //      (e.g. "Find the area of a rectangle..." → bold just "Find").
 const VERB_PHRASE_RE = /^([A-Za-z][^:.*]{0,50}:\s)/;
-const IMPERATIVE_LIST = 'Approximate|Calculate|Compare|Compute|Convert|Decrease|Describe|Determine|Estimate|Evaluate|Expand|Express|Factorise|Find|How many|How much|Identify|Increase|Label|List|Order|Reduce|Round|Show|Simplify|Solve|State|Substitute|Use|What is|Work out|Write';
+const IMPERATIVE_LIST = 'Approximate|Calculate|Compare|Compute|Convert|Decrease|Describe|Determine|Divide|Estimate|Evaluate|Expand|Express|Factorise|Find|How many|How much|Identify|Increase|Label|List|Order|Reduce|Round|Share|Show|Simplify|Solve|Split|State|Substitute|Use|What is|Work out|Write';
 const IMPERATIVE_RE  = new RegExp(`^(${IMPERATIVE_LIST})\\b`);
 // Mid-sentence imperative: catches clues like "A rectangle has...Determine its
 // area." (verb after ". ") and "If y = 2x + 5, find y when x = 3" (lowercase
@@ -25,7 +25,9 @@ const MID_IMPERATIVE_RE = new RegExp(
 
 export function detectVerb(s) {
     const m1 = s.match(VERB_PHRASE_RE);
-    if (m1) return m1[1];
+    // Reject a match that splits a $...$ math region (odd count of $ in prefix),
+    // e.g. "Write $20 : 10$ ..." — bolding that prefix would break KaTeX.
+    if (m1 && (m1[1].match(/\$/g) || []).length % 2 === 0) return m1[1];
     const m2 = s.match(IMPERATIVE_RE);
     if (m2) return m2[1];
     return null;
