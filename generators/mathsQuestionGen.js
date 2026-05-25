@@ -1523,14 +1523,15 @@ function _geoUnit(maxVal) {
 function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
-        Easy:   { 'area-perimeter': [0, 1, 2], 'angles': [2] },
+        Easy:   { 'area-perimeter': [0, 1, 3], 'angles': [2] },
         Medium: { 'area-perimeter': [0, 5], 'pythagoras': [1], 'angles': [2, 3, 4] },
-        Hard:   { 'circles': [0, 2, 3], 'pythagoras': [1], 'area-perimeter': [4], 'angles': [3, 4] },
+        Hard:   { 'circles': [0, 2, 5], 'pythagoras': [1], 'area-perimeter': [6], 'angles': [3, 4] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    // Medium covers types 0–5 (area, pythag, triangle-angle, co-interior, corresponding/alternate, perimeter→area);
-    // without max=5 the perimeter→area and corresponding/alternate paths were unreachable without a sub-op filter.
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : diff === 'Hard' ? 4 : 5);
+    // Easy: 0=area(rect/para/trap), 1=perimeter, 2=angles, 3=find-length-from-area
+    // Medium: 0=triangle-area, 1=pythag, 2=triangle-angles, 3=co-interior, 4=corresponding/alt, 5=rect-area-from-perimeter
+    // Hard: 0=circle-area, 1=pythag-leg, 2=circle-circumference, 3=co-interior, 4=corresponding/alt, 5=radius-from-area, 6=triangle-height
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : diff === 'Hard' ? 6 : 5);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -1610,7 +1611,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             ]);
             return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} ${u}`, diagram: { type: 'rectangle', l, w, missing: 'perimeter' } };
         }
-        // type 2: find length given area and width (no diagram)
+        // type 3: find length given area and width (no diagram)
         const w2 = ri(rng, 2, 10), l2 = ri(rng, w2 + 1, 15);
         const area2 = l2 * w2;
         const u2 = _geoUnit(Math.max(l2, w2));
@@ -1783,8 +1784,8 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         const workedCircC = `$C = 2\\pi r \\approx 2 \\times 3.14 \\times ${r} = ${ans}$ ${u}`;
         return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, worked: workedCircC, diagram: { type: 'circle', r, missing: 'circumference' } };
     }
-    // type 3: find radius given area (no diagram — avoids mislabelling diagram center)
-    if (type === 3) {
+    // type 5: find radius given area (no diagram — avoids mislabelling diagram center)
+    if (type === 5) {
         const r3 = ri(rng, 2, 9);
         const u3 = _geoUnit(r3);
         const area3 = round(3.14 * r3 * r3, 2);
@@ -1796,7 +1797,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         ]);
         return { clue: ph3, answer: String(r3), answerDisplay: `${r3} ${u3}` };
     }
-    // type 4: find triangle height given area and base (no diagram)
+    // type 6: find triangle height given area and base (no diagram)
     const b4 = ri(rng, 2, 14) * 2;
     const h4 = ri(rng, 3, 18);
     const area4 = (b4 * h4) / 2;
