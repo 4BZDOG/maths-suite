@@ -83,6 +83,7 @@ export const state = {
         pageOrder:       ['easy', 'medium', 'hard', 'key'],
         sidebarWidth:    '420px',
         exportCount:     0,
+        previewSeed:     null,
     },
 };
 

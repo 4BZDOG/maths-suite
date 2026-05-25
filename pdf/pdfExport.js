@@ -1549,9 +1549,20 @@ export async function exportPDF() {
             await new Promise(r => setTimeout(r, 10));
 
             cfg.exportCount = (cfg.exportCount || 0) + 1;
-            const seed = Date.now() + cfg.exportCount * 1_000_000;
+            // Set #1 reuses the on-screen preview questions exactly (incl. rerolls
+            // and locked slots); alternates are reproducible offsets of its seed.
+            let sets, seed;
+            const pv = state.generatedSets;
+            const havePreview = pv && (pv.easy?.length || pv.medium?.length || pv.hard?.length);
+            if (i === 0 && havePreview) {
+                sets = pv;
+                seed = cfg.previewSeed ?? Date.now();
+            } else {
+                const base = cfg.previewSeed ?? Date.now();
+                seed = base + i * 1_000_000;
+                sets = createQuestionSets(cfg, seed);
+            }
             const exportId = makeExportId(seed);
-            const sets = createQuestionSets(cfg, seed);
             if (!sets) continue;
 
             const setIndicator = count > 1 ? `SET ${i + 1}` : '';

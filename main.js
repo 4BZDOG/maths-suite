@@ -104,6 +104,7 @@ function generateAll() {
         seedInput.value = seed;
         seedInput.dataset.auto = 'true';
     }
+    state.settings.previewSeed = seed;
 
     // Build sub-ops filter: only include topics where user has narrowed selection
     const subOpsFilter = Object.keys(state.selectedSubOps).length > 0 ? state.selectedSubOps : null;
