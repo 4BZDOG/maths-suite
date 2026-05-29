@@ -193,6 +193,20 @@ function genIntegers(rng, diff, allowedOps) {
     const op = rc(rng, pool);
 
     if (op === '+') {
+        // ~22% chance: missing-number (inverse) variant — □ + b = total
+        if (rng() < 0.22) {
+            const hi = diff === 'Easy' ? 20 : diff === 'Medium' ? 100 : 500;
+            const missing = ri(rng, 1, hi), b = ri(rng, 1, hi);
+            const total = missing + b;
+            const left = rng() < 0.5;
+            const expr = left ? `\\square + ${b} = ${total}` : `${b} + \\square = ${total}`;
+            const clue = rc(rng, [
+                `Find the missing number: $${expr}$`,
+                `What number goes in the box? $${expr}$`,
+                `Solve for the missing value: $${expr}$`,
+            ]);
+            return { clue, answer: String(missing) };
+        }
         // Medium/Hard: 40% chance of a negative-integer variant
         if (diff !== 'Easy' && rng() < 0.4) {
             const lim = diff === 'Medium' ? 40 : 150;
@@ -241,6 +255,24 @@ function genIntegers(rng, diff, allowedOps) {
         return { clue, answer: String(a + b) };
     }
     if (op === '-') {
+        // ~22% chance: missing-number (inverse) variant — a − □ = result
+        if (rng() < 0.22) {
+            const hi = diff === 'Easy' ? 20 : diff === 'Medium' ? 100 : 500;
+            const missing = ri(rng, 1, hi);
+            const result = ri(rng, 1, hi);
+            const a = missing + result;            // a − missing = result
+            const expr = rng() < 0.5
+                ? `${a} - \\square = ${result}`     // missing subtrahend
+                : `\\square - ${missing} = ${result}`; // missing minuend → answer a
+            const isMinuend = expr.startsWith('\\square');
+            const ans = isMinuend ? (missing + result) : missing;
+            const clue = rc(rng, [
+                `Find the missing number: $${expr}$`,
+                `What number goes in the box? $${expr}$`,
+                `Solve for the missing value: $${expr}$`,
+            ]);
+            return { clue, answer: String(ans) };
+        }
         // Medium/Hard: 40% chance of a negative-integer variant
         if (diff !== 'Easy' && rng() < 0.4) {
             const lim = diff === 'Medium' ? 40 : 150;
@@ -433,12 +465,12 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
     if (_depth > 20) return null;
     // type → sub-op mapping per difficulty
     const maps = {
-        Easy:   { 'add-subtract': [0], 'multiply-divide': [1, 2] },
+        Easy:   { 'add-subtract': [0, 3], 'multiply-divide': [1, 2] },
         Medium: { 'add-subtract': [0, 1, 3], 'multiply-divide': [2] },
         Hard:   { 'multiply-divide': [0, 1, 3], 'add-subtract': [2] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : 3);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : 3);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -450,6 +482,8 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
                     `Sarah runs $${a}$ km on Monday and $${b}$ km on Tuesday. How far did she run in total?`,
                     `A jug holds $${a}$ L of water. $${b}$ L more is added. How much water is in the jug?`,
                     `Tom spends $\\$${a}$ on a snack and $\\$${b}$ on a drink. How much did he spend altogether?`,
+                    `A plant is $${a}$ m tall and grows another $${b}$ m. What is its new height?`,
+                    `Mia walks $${a}$ km, then $${b}$ km more. How far has she walked in total?`,
                 ]);
                 return { clue: ctx, answer: String(ans) };
             }
@@ -458,6 +492,27 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
                 `Add $${a}$ to $${b}$`,
                 `Find the sum of $${a}$ and $${b}$`,
                 `What is $${a} + ${b}$?`,
+            ]);
+            return { clue: ph, answer: String(ans) };
+        }
+        // type 3: simple decimal subtraction (a > b, both one decimal place)
+        if (type === 3) {
+            const a = ri(rng, 3, 9) / 10, b = ri(rng, 1, Math.round(a * 10) - 1) / 10;
+            const bR = round(b, 1);
+            const ans = round(a - b, 2);
+            if (rng() < 0.25) {
+                const ctx = rc(rng, [
+                    `A bottle holds $${a}$ L of juice. $${bR}$ L is poured out. How much remains?`,
+                    `A ribbon is $${a}$ m long. A piece of $${bR}$ m is cut off. What length is left?`,
+                    `Sam has $\\$${a}$ and spends $\\$${bR}$. How much money is left?`,
+                ]);
+                return { clue: ctx, answer: String(ans) };
+            }
+            const ph = rc(rng, [
+                `${rc(rng, CALC_VERBS)} $${a} - ${bR}$`,
+                `Subtract $${bR}$ from $${a}$`,
+                `Find the difference between $${a}$ and $${bR}$`,
+                `What is $${a} - ${bR}$?`,
             ]);
             return { clue: ph, answer: String(ans) };
         }
@@ -614,11 +669,11 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
 function genRounding(rng, diff, allowedOps) {
     const maps = {
         Easy:   { 'nearest': [0, 1, 2] },
-        Medium: { 'nearest': [0, 3], 'decimal-places': [1, 2] },
-        Hard:   { 'nearest': [0], 'decimal-places': [1], 'sig-figs': [2, 3] },
+        Medium: { 'nearest': [0, 3, 4], 'decimal-places': [1, 2] },
+        Hard:   { 'nearest': [0, 4], 'decimal-places': [1], 'sig-figs': [2, 3] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : 3);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : 4);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -693,6 +748,19 @@ function genRounding(rng, diff, allowedOps) {
             ]);
             return { clue: ph, answer: round(n, 2).toFixed(2) };
         }
+        if (type === 4) {
+            // Estimation by rounding each factor to the nearest 10, then multiplying.
+            const a = ri(rng, 11, 89), b = ri(rng, 11, 89);
+            const ra = Math.round(a / 10) * 10, rb = Math.round(b / 10) * 10;
+            const ans = ra * rb;
+            const ph = rc(rng, [
+                `*Estimate* $${a} \\times ${b}$ by rounding each number to the nearest $10$`,
+                `By rounding each number to the nearest $10$, estimate $${a} \\times ${b}$`,
+                `Use rounding to the nearest $10$ to *estimate* the product $${a} \\times ${b}$`,
+            ]);
+            const worked = `$${a} \\times ${b} \\approx ${ra} \\times ${rb} = ${ans}$`;
+            return { clue: ph, answer: String(ans), worked };
+        }
         // type 3: nearest 5
         const n3 = ri(rng, 12, 295);
         const ans3 = Math.round(n3 / 5) * 5;
@@ -739,6 +807,30 @@ function genRounding(rng, diff, allowedOps) {
         ]);
         return { clue: ph, answer: String(ans) };
     }
+    if (type === 4) {
+        // Estimation: round each number to the nearest 100, then add or multiply.
+        const useProduct = rng() < 0.5;
+        if (useProduct) {
+            const a = ri(rng, 110, 890), b = ri(rng, 11, 89);
+            const ra = Math.round(a / 100) * 100, rb = Math.round(b / 10) * 10;
+            const ans = ra * rb;
+            const ph = rc(rng, [
+                `*Estimate* $${a} \\times ${b}$ by rounding to the nearest $100$ and $10$`,
+                `Use rounding to *estimate* the product $${a} \\times ${b}$`,
+            ]);
+            const worked = `$${a} \\times ${b} \\approx ${ra} \\times ${rb} = ${ans}$`;
+            return { clue: ph, answer: String(ans), worked };
+        }
+        const a = ri(rng, 150, 4850), b = ri(rng, 150, 4850), c = ri(rng, 150, 4850);
+        const ra = Math.round(a / 100) * 100, rb = Math.round(b / 100) * 100, rc2 = Math.round(c / 100) * 100;
+        const ans = ra + rb + rc2;
+        const ph = rc(rng, [
+            `*Estimate* $${a} + ${b} + ${c}$ by rounding each to the nearest $100$`,
+            `By rounding each number to the nearest $100$, estimate $${a} + ${b} + ${c}$`,
+        ]);
+        const worked = `$\\approx ${ra} + ${rb} + ${rc2} = ${ans}$`;
+        return { clue: ph, answer: String(ans), worked };
+    }
     // type 3: 3 significant figures
     const n3sf = ri(rng, 10000, 999999);
     const f3   = Math.pow(10, Math.floor(Math.log10(n3sf)) - 2);
@@ -758,11 +850,11 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
         Easy:   { 'fraction-of': [0, 3], 'add-subtract': [1], 'simplify-convert': [2] },
-        Medium: { 'add-subtract': [0], 'multiply-divide': [1], 'simplify-convert': [2, 3] },
+        Medium: { 'add-subtract': [0], 'multiply-divide': [1], 'simplify-convert': [2, 3, 4] },
         Hard:   { 'multiply-divide': [0], 'add-subtract': [1], 'simplify-convert': [2] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Hard' ? 2 : 3);
+    const type = _pickType(rng, filtered, diff === 'Hard' ? 2 : (diff === 'Medium' ? 4 : 3));
     if (type === -1) return null;
 
     const calcVerb = rc(rng, CALC_VERBS);
@@ -867,6 +959,18 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             ]);
             return { clue: ph, answer: String(ans) };
         }
+        if (type === 4) {
+            // fraction → percentage (denominators that divide 100 → clean %)
+            const den = rc(rng, [2, 4, 5, 10, 20, 25, 50]);
+            const num = ri(rng, 1, den - 1);
+            const pct = num * (100 / den);
+            const ph = rc(rng, [
+                `Convert $\\frac{${num}}{${den}}$ to a *percentage*`,
+                `Express $\\frac{${num}}{${den}}$ as a *percentage*`,
+                `Write $\\frac{${num}}{${den}}$ as a *percentage*`,
+            ]);
+            return { clue: ph, answer: String(pct), answerDisplay: `${pct}%` };
+        }
         // type 3: improper fraction → mixed number
         const denM = rc(rng, [2, 3, 4, 5, 6, 8]);
         const wholeM = ri(rng, 1, 5);
@@ -915,7 +1019,18 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         const ans = fracStr(numResult, l);
         return { clue: `${calcVerb} $\\frac{${bigN}}{${bigD}} - \\frac{${smN}}{${smD}}$`, answer: ans };
     }
-    // type 2: simplify-convert — fraction→decimal (fixes wiring gap)
+    // type 2: simplify-convert — fraction→decimal, or (40%) fraction→percentage
+    if (rng() < 0.4) {
+        const den = rc(rng, [4, 5, 8, 20, 25, 40, 50]);
+        const num = ri(rng, 1, den - 1);
+        const pct = round((num / den) * 100, 2);   // e.g. 3/8 = 37.5%
+        const ph = rc(rng, [
+            `Convert $\\frac{${num}}{${den}}$ to a *percentage*`,
+            `Express $\\frac{${num}}{${den}}$ as a *percentage*`,
+            `Write $\\frac{${num}}{${den}}$ as a *percentage*`,
+        ]);
+        return { clue: ph, answer: String(pct), answerDisplay: `${pct}%` };
+    }
     const denH = rc(rng, [2, 4, 5, 8, 10, 20, 25]);
     const numH = ri(rng, 1, denH - 1);
     const ansH = round(numH / denH, 4);
@@ -933,15 +1048,29 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
 function genPercentages(rng, diff, allowedOps, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
-        Easy:   { 'find-pct': [0], 'increase-decrease': [1] },
+        Easy:   { 'find-pct': [0, 2], 'increase-decrease': [1] },
         Medium: { 'find-pct': [0, 2], 'increase-decrease': [1, 3] },
         Hard:   { 'reverse-change': [0, 1, 2] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
 
     if (diff === 'Easy') {
-        const typeE = _pickType(rng, filtered, 1);
+        const typeE = _pickType(rng, filtered, 2);
         if (typeE === -1) return null;
+        if (typeE === 2) {
+            // express "a out of b" as a percentage (b divides 100 → clean %)
+            const b = rc(rng, [4, 5, 10, 20, 25, 50, 100]);
+            const a = ri(rng, 1, b - 1);
+            const pct = a * (100 / b);
+            const ph = rc(rng, [
+                `What percentage is $${a}$ out of $${b}$?`,
+                `Express $${a}$ out of $${b}$ as a percentage`,
+                `A student scored $${a}$ out of $${b}$. What percentage is this?`,
+                `In a test, $${a}$ of $${b}$ questions were correct. What percentage is that?`,
+            ]);
+            const worked = `$\\frac{${a}}{${b}} \\times 100 = ${pct}$`;
+            return { clue: ph, answer: String(pct), answerDisplay: `${pct}%`, worked };
+        }
         if (typeE === 0) {
             const pct = rc(rng, [10, 20, 25, 50, 75]);
             const denominators = { 10: 10, 20: 5, 25: 4, 50: 2, 75: 4 };
@@ -2096,6 +2225,24 @@ function genTrigonometry(rng, diff, allowedOps) {
         const opp = triple.a * scale, adj = triple.b * scale, hyp = triple.c * scale;
         const u = _geoUnit(hyp);
         const angleA = round(Math.atan2(opp, adj) * 180 / Math.PI, 1);
+        // 25% chance of a "find the hypotenuse from opposite + angle" shape (Medium/Hard only)
+        if (diff !== 'Easy' && rng() < 0.25) {
+            const scale2 = ri(rng, 3, 8);
+            const opp2 = triple.a * scale2;
+            const hyp2 = triple.c * scale2;
+            const adj2 = triple.b * scale2;
+            const u2 = _geoUnit(hyp2);
+            const angle2 = round(Math.atan2(triple.a, triple.b) * 180 / Math.PI, 1);
+            const sinV = round(Math.sin(angle2 * Math.PI / 180), 3);
+            const clue = rc(rng, [
+                `Find the *hypotenuse* of a right triangle with opposite side $${opp2}$ ${u2} and angle $${angle2}$°. Use $\\sin(${angle2}°) \\approx ${sinV}$.`,
+                `A right-angled triangle has opposite side $${opp2}$ ${u2} and angle $${angle2}$°. Calculate the *hypotenuse*. Use $\\sin(${angle2}°) \\approx ${sinV}$.`,
+            ]);
+            return {
+                clue, answer: String(hyp2), answerDisplay: `${hyp2} ${u2}`,
+                diagram: { type: 'right-triangle-trig', opp: opp2, adj: adj2, hyp: hyp2, angle: angle2, missing: 'hyp' },
+            };
+        }
         const choice = rc(rng, diff === 'Easy' ? ['sin'] : ['sin', 'cos', 'tan']);
         let clue, answer, answerDisplay, diagramAngle, diagramFind;
         if (choice === 'sin') {
@@ -2156,7 +2303,7 @@ function genTrigonometry(rng, diff, allowedOps) {
     }
 
     if (op === 'applications') {
-        // Real-world: angle of elevation
+        // Real-world right-triangle: elevation, depression, or ladder
         const triple = rc(rng, TRIG_TRIPLES);
         const scale = diff === 'Easy' ? ri(rng, 1, 3) : diff === 'Medium' ? ri(rng, 2, 6) : ri(rng, 4, 10);
         const height = triple.a * scale, dist = triple.b * scale;
@@ -2164,6 +2311,11 @@ function genTrigonometry(rng, diff, allowedOps) {
         const ph = rc(rng, [
             `A ladder leans against a wall. The base is $${dist}$ m from the wall and the ladder reaches $${height}$ m up the wall. Find the angle the ladder makes with the ground.`,
             `From a point $${dist}$ m away from a building, the *angle of elevation* to the top is measured. If the building is $${height}$ m tall, find the angle of elevation.`,
+            // Angle of depression: from a cliff of height H, looking down at a boat D m offshore — equal to angle of elevation by alternate angles
+            `From the top of a cliff $${height}$ m high, the *angle of depression* to a boat $${dist}$ m offshore is measured. Find the angle of depression.`,
+            `A drone flies at a height of $${height}$ m and spots a marker $${dist}$ m away on the ground. Find the *angle of depression* from the drone to the marker.`,
+            // Roof / ramp pitch
+            `A ramp rises $${height}$ m over a horizontal distance of $${dist}$ m. Find the angle the ramp makes with the ground.`,
         ]);
         return { clue: ph, answer: `${angle}°`, answerDisplay: `${angle}°` };
     }
@@ -2189,10 +2341,24 @@ function genTrigonometry(rng, diff, allowedOps) {
         const radians = bearing * Math.PI / 180;
         const eastward = round(dist * Math.sin(radians), 1);
         const northward = round(dist * Math.cos(radians), 1);
-        const ph = `A ship travels $${dist}$ km on a bearing of $${String(bearing).padStart(3,'0')}$°T. How far *east* (or west) of its starting point is it?`;
-        const absE = Math.abs(eastward);
-        const dir = eastward >= 0 ? 'east' : 'west';
-        return { clue: ph, answer: String(absE), answerDisplay: `${absE} km ${dir}` };
+        const bStr = String(bearing).padStart(3, '0');
+        // Half the time ask for the east/west component, half for north/south
+        if (rng() < 0.5) {
+            const ph = rc(rng, [
+                `A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *east* (or west) of its starting point is it?`,
+                `From port, a vessel sails $${dist}$ km on a bearing of $${bStr}$°T. Find its *east/west* displacement.`,
+            ]);
+            const absE = Math.abs(eastward);
+            const dir = eastward >= 0 ? 'east' : 'west';
+            return { clue: ph, answer: String(absE), answerDisplay: `${absE} km ${dir}` };
+        }
+        const ph = rc(rng, [
+            `A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *north* (or south) of its starting point is it?`,
+            `An aircraft flies $${dist}$ km on a bearing of $${bStr}$°T. Find its *north/south* displacement.`,
+        ]);
+        const absN = Math.abs(northward);
+        const dir = northward >= 0 ? 'north' : 'south';
+        return { clue: ph, answer: String(absN), answerDisplay: `${absN} km ${dir}` };
     }
 
     return null;

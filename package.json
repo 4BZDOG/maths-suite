@@ -1,11 +1,13 @@
 {
   "name": "puzzle-suite",
   "version": "60.3.0",
-  "description": "Browser-based vocabulary puzzle worksheet generator",
+  "description": "Browser-based NESA maths worksheet & question-set generator",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "bash build.sh",
-    "start": "python3 -m http.server 8082"
+    "start": "python3 -m http.server 8082",
+    "test": "node --test"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"
