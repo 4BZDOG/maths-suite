@@ -23,12 +23,6 @@ After any JS change: rebuild, then bump `?v=N` in `<script src="bundle.js?v=N">`
 
 ## Repository Structure
 
-> ⚠️ **Legacy files** marked `[dead]` below are leftovers from the app's
-> earlier vocabulary-puzzle incarnation. They are **not imported** by any live
-> entry point (`main.js`, `pdf/pdfExport.js`) and are tree-shaken out of the
-> bundle. They are slated for removal (see "Roadmap" at the end). Do not extend
-> them.
-
 ```
 maths-suite/
 ├── main.js                    # Entry point, orchestration, window API (~1376 lines)
@@ -50,22 +44,13 @@ maths-suite/
 │   ├── katexRender.js         # KaTeX math rendering on .katex-target elements
 │   ├── htmlUtils.js           # esc() HTML escaping utility
 │   ├── diagramSVG.js          # Inline SVG diagrams for geometry questions (12 shapes, ~646 lines)
-│   ├── keys.js                # Answer key page renderer
-│   ├── notes.js               # [dead] Vocabulary notes/matching table
-│   ├── wordSearch.js          # [dead] Word search grid + word bank
-│   ├── crossword.js           # [dead] ACROSS/DOWN clue layout
-│   ├── scramble.js            # [dead] Scrambled letters
-│   └── wordList.js            # [dead] Sidebar word list with placement dots
+│   └── keys.js                # Answer key page renderer
 │
 ├── pdf/                       # PDF export pipeline
 │   ├── pdfExport.js           # Orchestrator: creates doc, loops sets/pages (~1657 lines)
 │   ├── pdfHelpers.js          # Shared drawing utilities, emoji canvas fallback (~413 lines)
 │   ├── pdfFonts.js            # Lazy font loader from CDN (~94 lines)
-│   ├── pdfDrawFormulas.js     # Formula sheet page drawing (~270 lines) — LIVE
-│   ├── pdfDrawNotes.js        # [dead] Notes/matching page drawing
-│   ├── pdfDrawWordSearch.js   # [dead] Word search page drawing
-│   ├── pdfDrawCrossword.js    # [dead] Crossword page drawing
-│   └── pdfDrawScramble.js     # [dead] Scramble page drawing
+│   └── pdfDrawFormulas.js     # Formula sheet page drawing (~270 lines)
 │
 ├── ui/
 │   ├── sidebar.js             # Resizable sidebar (300–650 px), tab switching
@@ -75,14 +60,13 @@ maths-suite/
 │   ├── zoom.js                # Preview zoom 0.5x–2x
 │   ├── pageOrder.js           # Sortable page ordering via drag handles
 │   ├── accessPanel.js         # Admin feature-flag override panel (modal)
-│   └── dropZone.js            # Drag-and-drop .json/.csv/.txt config import
+│   └── dropZone.js            # Drag-and-drop .json config import
 │
 ├── generators/
 │   └── mathsQuestionGen.js    # Seeded PRNG (Mulberry32), 13 topics × 2–8 sub-ops (~2691 lines)
 │
 ├── import-export/
-│   ├── exportConfig.js        # downloadConfig() — saves state as .json
-│   └── importWords.js         # [dead] CSV/JSON word list import via modal
+│   └── exportConfig.js        # downloadConfig() — saves state as .json
 │
 ├── payments/
 │   ├── access.js              # hasFeature(), tier API, feature override management
@@ -96,14 +80,12 @@ maths-suite/
 │   ├── README.md              # Worker setup (KV, secrets, webhook registration)
 │   └── package.json
 │
-├── ai/
-│   └── aiGenerate.js          # [dead] BYOK AI word generation (Gemini, Groq, OpenAI, Anthropic, OpenRouter)
+├── test/                      # node --test correctness harness (~36 tests)
+│   ├── _helpers.mjs           # Shared utilities (gen, evaluator, structural checks)
+│   ├── generator.test.mjs     # Core Number topics + cross-topic invariants
+│   └── topics/*.test.mjs      # Per-topic verifiers (algebra, statistics, geometry, etc.)
 │
-├── workers/
-│   ├── workerBridge.js        # [dead] Web Worker interface
-│   └── generation.worker.js   # [dead] Background generation worker
-│
-└── .github/workflows/deploy.yml  # GitHub Actions → GitHub Pages (triggers on push to main)
+└── .github/workflows/deploy.yml  # GitHub Actions: test → build → deploy to Pages
 ```
 
 ## Architecture
@@ -194,9 +176,6 @@ calls `syncSettingsFromDOM()`, then renders all three difficulty bands
 — it does **not** branch on `state.activePage`. Each `renderProblemSet()` call
 returns the number of questions that fit; the key is then sliced to only those
 visible questions (see "Answer key cap" pitfall).
-
-> The `renderers/{notes,wordSearch,crossword,scramble,wordList}.js` files are
-> dead (legacy puzzle product) — not imported anywhere. Ignore them.
 
 ### Geometry Diagrams (`renderers/diagramSVG.js`)
 `renderDiagramSVG(diagram)` returns an inline SVG string for geometry questions.
@@ -322,10 +301,6 @@ The Cloudflare Worker (`stripe-worker/`) is **not** deployed by GitHub Actions �
 These are recommended follow-ups, not yet done. See
 `/root/.claude/plans/review-this-project-and-streamed-donut.md` for the full review.
 
-- **Remove dead vocabulary-puzzle code** (all files marked `[dead]` above:
-  5 renderers, 4 `pdfDraw*` drawers, `import-export/importWords.js`,
-  `workers/*`, `ai/aiGenerate.js`). They are tree-shaken out of the bundle but
-  mislead readers. ~1500+ lines.
 - **Generator correctness tests** (~36 tests, `npm test`): structural sweep across
   all 13 topics; deep arithmetic checks for the core Number topics; per-topic
   verifiers in `test/topics/*.test.mjs` for Algebra (solve + substitution),

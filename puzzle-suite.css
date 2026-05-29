@@ -286,6 +286,32 @@ body.sidebar-closed aside {
     background: var(--primary-light);
 }
 
+/* Visible focus ring for keyboard users (icon-only buttons can otherwise
+   look identical when focused vs. blurred). */
+.brand-actions button:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Visual separator between safe app actions and the destructive "reset". */
+.brand-actions-sep {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+    margin: 0 4px;
+    align-self: center;
+}
+
+/* Reset button: red-tinted on hover/focus so destructive intent is obvious. */
+.brand-action--danger:hover,
+.brand-action--danger:focus-visible {
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.10);
+}
+.brand-action--danger:focus-visible {
+    outline-color: #dc2626;
+}
+
 .nav-tabs {
     display: flex;
     padding: 0;
@@ -997,18 +1023,6 @@ main {
     z-index: 20;
 }
 
-.page-crumb {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-muted);
-    opacity: 0.8;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    pointer-events: none;
-    white-space: nowrap;
-}
-
 .page-tabs {
     display: flex;
     background: var(--input-bg);
@@ -1065,6 +1079,24 @@ main {
     font-size: 11px;
     font-weight: 600;
     color: var(--text-muted);
+    /* Now a <button> so clicking resets to 100%. Neutralise default button styling. */
+    background: transparent;
+    border: 1px solid transparent;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: 0.15s;
+}
+.zoom-display:hover {
+    color: var(--text-main);
+    background: rgba(0, 0, 0, 0.03);
+}
+.zoom-display:focus-visible,
+.zoom-btn:focus-visible,
+.page-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 .zoom-display-icon {
@@ -1710,7 +1742,6 @@ table.mode-cw td.cell.empty {
         padding-left: 8px;
     }
 
-    .page-crumb { display: none; }
 }
 
 .loading-icon {
@@ -1745,16 +1776,6 @@ table.mode-cw td.cell.empty {
 
 .btn-auto {
     width: auto;
-}
-
-.version-tag {
-    font-weight: 600;
-    font-size: 0.55em;
-    color: white;
-    background: var(--primary);
-    padding: 3px 8px;
-    border-radius: 6px;
-    vertical-align: middle;
 }
 
 .button-row {
@@ -3759,7 +3780,7 @@ details.outcomes-ws-header:not([open]) .outcomes-ws-summary::after { transform: 
 }
 .brand h1            { color: #fff; font-size: 1.1rem; }
 .brand .brand-icon   { background: rgba(255,255,255,0.2); box-shadow: 0 2px 8px rgba(0,0,0,0.15); border-radius: 9px; }
-.brand .version-tag  { background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.95); }
+.brand-actions-sep   { background: rgba(255,255,255,0.18); }
 .brand-actions button {
     color: rgba(255,255,255,0.7);
     background: transparent;
