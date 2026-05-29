@@ -82,6 +82,10 @@ function _parseLatex(s) {
         .replace(/\\infty/g,  '∞')
         .replace(/\\degree/g, '°')
         .replace(/°/g,        '°')
+        // Fill-in-the-box placeholder for missing-number questions (□).
+        // Must come before the catch-all \command strip below, or the box
+        // vanishes and the question reads "  - 48 = 92".
+        .replace(/\\square/g, '□')
         // Square root: \sqrt{x} → √(x)
         .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
         .replace(/\\sqrt\s+(\S+)/g,    '√$1')
