@@ -1299,6 +1299,18 @@ window.addEventListener('load', async () => {
         const saved = loadRawState();
         if (saved) applyStateToDOM(saved);
 
+        // Clone the Name/Class/Date strip into each problem page's header.
+        // Lives once in the HTML as a <template>; we hydrate it here.
+        const phrTpl = document.getElementById('page-header-right-tpl');
+        if (phrTpl) {
+            ['page1', 'page2', 'page3'].forEach(id => {
+                const header = document.querySelector(`#${id} .page-header`);
+                if (header && !header.querySelector('.page-header-right')) {
+                    header.appendChild(phrTpl.content.cloneNode(true));
+                }
+            });
+        }
+
         _step('Loading watermark…', 30);
         if (state.watermarkSrc) {
             document.querySelectorAll('.watermark-img').forEach(img => {

@@ -2537,6 +2537,30 @@ table.mode-cw td.cell.empty {
 .formula-bulk-diff { font-weight: 700; }
 .formula-bulk-sep { color: var(--text-muted); margin: 0 2px; }
 
+/* Per-topic block inside the Formulas & Hints card. Replaces the inline
+   styles that were duplicated 6× on the topic blocks. */
+.formula-topic {
+    margin-bottom: 8px;
+}
+.formula-topic:last-child {
+    margin-bottom: 4px;
+}
+.formula-topic-label {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text-main);
+}
+.formula-topic-label > i {
+    margin-right: 5px;
+    opacity: 0.55;
+    font-size: 10px;
+}
+.formula-topic-row {
+    display: flex;
+    justify-content: space-between;
+    max-width: 180px;
+}
+
 /* Score bar at the bottom-right of each difficulty section */
 .problem-student-header {
     display: flex;
@@ -3186,6 +3210,24 @@ table.mode-cw td.cell.empty {
     border-bottom: 2px solid var(--border, #e5e7eb);
 }
 
+/* Worksheet page title / subtitle — font-size scales with the user's
+   "Title Scale" slider (the --title-scale CSS var). Was inline-styled on
+   every page; now lives here so the four .page blocks stay readable. */
+.page .disp-title {
+    font-size: calc(1.5rem * var(--title-scale));
+}
+.page .disp-sub {
+    font-size: calc(1rem * var(--title-scale));
+    color: var(--text-muted);
+}
+
+/* Difficulty band tint on the instruction strip icon. The icon colour
+   was an inline style on each page; this consolidates them and matches
+   the colours used by .page-btn[data-page=N].active for visual coherence. */
+#p1-instruction .fa-seedling { color: #10b981; margin-right: 6px; }
+#p2-instruction .fa-bolt     { color: #f59e0b; margin-right: 6px; }
+#p3-instruction .fa-fire     { color: #ef4444; margin-right: 6px; }
+
 .page-header-right {
     text-align: right;
     display: flex;
@@ -3214,6 +3256,8 @@ table.mode-cw td.cell.empty {
     opacity: .55;
 }
 .hdr-line--wide { width: 140px; }
+
+.hdr-date-label { margin-left: 10px; }
 
 .p-area {
     flex: 1;
