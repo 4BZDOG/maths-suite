@@ -720,7 +720,81 @@ function _drawScoreLine(doc, rightX, y, label, count, opts) {
 }
 
 /**
- * Parse a clue string (AFTER LaTeX→text conversion but with emphasis markers
+ * Draw a single answer-key clue with the same bold/italic emphasis the
+ * problem-set body uses (auto-bold verb, **bold**, *italic*). Wraps within
+ * `maxW`, capped at `maxLines` lines (last line ellipsised if there's more).
+ * Returns the number of lines actually drawn.
+ */
+function _drawKeyClueRich(doc, prefix, clue, x, y, {
+    maxW, lineH, fontSizePt, pdfFont, color, maxLines = 3,
+}) {
+    // Auto-bold the leading verb if not already marked (matches HTML key).
+    let rawClue = clue || '';
+    if (!rawClue.startsWith('**')) {
+        const verb = detectVerb(rawClue);
+        if (verb) rawClue = `**${verb}**${rawClue.slice(verb.length)}`;
+    }
+    // Strip newlines — the key cell is one block; show the stem only.
+    rawClue = rawClue.replace(/\n+/g, ' ');
+
+    // Convert LaTeX→unicode while preserving emphasis markers.
+    const withLatex = latexToText(
+        rawClue.replace(/\*\*([^*]+)\*\*/g, '\x01$1\x01')
+               .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1\x02$2\x02')
+    )
+    .replace(/\x01([^\x01]*)\x01/g, '**$1**')
+    .replace(/\x02([^\x02]*)\x02/g, '*$1*');
+
+    const segs = _parseEmphasisSegments(withLatex);
+    let curX = x, curY = y, line = 0;
+
+    // Draw the leading "N. " prefix in normal style first.
+    doc.setFont(pdfFont, 'normal');
+    doc.setFontSize(fontSizePt);
+    doc.setTextColor(...color);
+    doc.text(prefix, curX, curY);
+    curX += doc.getTextWidth(prefix);
+
+    const advanceLine = () => {
+        line++;
+        if (line >= maxLines) return false;
+        curY += lineH;
+        curX = x;
+        return true;
+    };
+
+    for (const seg of segs) {
+        const isBold   = !!seg.bold;
+        const isItalic = !!seg.italic;
+        const useNativeItalic = isItalic && pdfFont === 'helvetica';
+        const style = isBold ? 'bold' : (useNativeItalic ? 'italic' : 'normal');
+        const drawColor = (isItalic && !useNativeItalic) ? [13, 148, 136] : color;
+        doc.setFont(pdfFont, style);
+        doc.setTextColor(...drawColor);
+
+        const tokens = seg.t.match(/\S+|\s+/g) || [];
+        for (const token of tokens) {
+            const tw = doc.getTextWidth(token);
+            if (token.trim() === '') { curX += tw; continue; }
+            if (curX + tw > x + maxW + 0.5 && curX > x) {
+                if (!advanceLine()) {
+                    // Out of lines — ellipsise on the previous line and stop.
+                    doc.setFont(pdfFont, 'normal');
+                    doc.setTextColor(...color);
+                    doc.text('…', curX, curY);
+                    return line + 1;
+                }
+                doc.setFont(pdfFont, style);
+                doc.setTextColor(...drawColor);
+            }
+            doc.text(token, curX, curY);
+            curX += tw;
+        }
+    }
+    return line + 1;
+}
+
+
  * still present) into an array of {t, bold, italic} segments.
  */
 function _parseEmphasisSegments(text) {
@@ -1358,6 +1432,9 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
         sec.questions.forEach((q, i) => {
             if (ky + 6 * pScale > PAGE_HEIGHT - MARGIN - 12 * pScale) return;
 
+            // Plain text for width measurement / shown-line count (the rich
+            // drawer below does its own wrapping but we still need a count
+            // for the answer-row vertical layout below).
             const clueText = latexToText(q.clue || '');
             const ansText  = latexToText(String(q.answerDisplay || q.answer || ''));
 
@@ -1365,31 +1442,16 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             doc.setFontSize(7 * pScale);
             doc.setTextColor(100, 116, 139);
             const clueLines = doc.splitTextToSize(`${i + 1}. ${clueText}`, clueW);
-            // Cap at 3 wrapped lines so a freak long clue can't blow up
-            // a key page; the rest is still summarised, not silently cut.
-            const shown = clueLines.slice(0, 3);
-            if (clueLines.length > shown.length) {
-                shown[shown.length - 1] = shown[shown.length - 1].replace(/.{0,2}$/, '…');
-            }
-            // Match HTML answer key: bold the leading verb ("Round", "Find",
-            // "Calculate:", …) on the first wrapped line. Subsequent lines plain.
-            const verb = detectVerb(clueText);
-            const numPrefix = `${i + 1}. `;
-            shown.forEach((line, li) => {
-                const yy = ky + li * lineH;
-                if (li === 0 && verb && line.startsWith(numPrefix + verb)) {
-                    doc.setFont(pdfFont, 'normal');
-                    doc.text(numPrefix, cx, yy);
-                    const numW = doc.getTextWidth(numPrefix);
-                    doc.setFont(pdfFont, 'bold');
-                    doc.text(verb, cx + numW, yy);
-                    const verbW = doc.getTextWidth(verb);
-                    doc.setFont(pdfFont, 'normal');
-                    doc.text(line.slice(numPrefix.length + verb.length), cx + numW + verbW, yy);
-                } else {
-                    doc.text(line, cx, yy);
-                }
+            // Cap at 3 wrapped lines so a freak long clue can't blow up a key page.
+            const shownCount = Math.min(clueLines.length, 3);
+
+            // Bold verb + *italic* emphasis + **bold** — matches the HTML answer key
+            // and the PDF problem-set body.
+            _drawKeyClueRich(doc, `${i + 1}. `, q.clue || '', cx, ky, {
+                maxW: clueW, lineH, fontSizePt: 7 * pScale, pdfFont,
+                color: [100, 116, 139], maxLines: 3,
             });
+            const shown = { length: shownCount };
 
             doc.setFont(pdfFont, 'bold');
             doc.setFontSize(8 * pScale);

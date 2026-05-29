@@ -21,6 +21,10 @@ function ri(rng, min, max) { return Math.floor(rng() * (max - min + 1)) + min; }
 function rc(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
 function round(n, dp) { const f = Math.pow(10, dp); return Math.round(n * f) / f; }
 
+// Format a number as a 2-decimal-place currency string. Used in answerDisplay
+// so dollar amounts always render as "$17.40" (not "$17.4").
+function money(n) { return Number(n).toFixed(2); }
+
 const CALC_VERBS   = ['Calculate:', 'Evaluate:', 'Find the value of:', 'Work out:', 'Determine:'];
 const MULT_VERBS   = ['Calculate:', 'Evaluate:', 'Find the product of:', 'Work out:', 'Find the result of:'];
 const DIV_VERBS    = ['Calculate:', 'Evaluate:', 'Find the quotient of:', 'Work out:', 'Divide:'];
@@ -660,7 +664,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
         `Calculate the cost of $${len}$ ${unit3}s of ${item3} at $\\$${rate}$ per ${unit3}.`,
         `A length of $${len}$ ${unit3}s at $\\$${rate}$ per ${unit3}. Find the *total cost*.`,
     ]);
-    return { clue: ph3h, answer: String(cost3), answerDisplay: `$${cost3}` };
+    return { clue: ph3h, answer: String(cost3), answerDisplay: `$${money(cost3)}` };
 }
 
 // ============================================================
@@ -1098,7 +1102,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             `Calculate the price after a $${pctD}\\%$ discount on $\\$${wholeD}$.`,
             `A discount of $${pctD}\\%$ is applied to $\\$${wholeD}$. What is the *final price*?`,
         ]);
-        return { clue: phD, answer: String(saleAns), answerDisplay: `$${saleAns}` };
+        return { clue: phD, answer: String(saleAns), answerDisplay: `$${money(saleAns)}` };
     }
     if (diff === 'Medium') {
         const type = _pickType(rng, filtered, 3);
@@ -1527,7 +1531,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `Determine the interest on $\\$${P}$ at $${r}\\%$ p.a. for ${yrs}.${pf}`,
             ]);
             const worked = `$I = Prn = ${P} \\times \\frac{${r}}{100} \\times ${t} = \\$${I}$`;
-            return { clue: ph, answer: String(I), answerDisplay: `$${I}`, worked };
+            return { clue: ph, answer: String(I), answerDisplay: `$${money(I)}`, worked };
         }
         if (type === 1) {
             const price = ri(rng, 5, 50) * 10;
@@ -1537,7 +1541,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `A product costs $\\$${price}$ before GST. Find the total price including $10\\%$ GST.`,
             ]);
             const gstTotal = round(price * 1.1, 2);
-            return { clue: ph, answer: String(gstTotal), answerDisplay: `$${gstTotal}` };
+            return { clue: ph, answer: String(gstTotal), answerDisplay: `$${money(gstTotal)}` };
         }
         // type 2: markup → selling price (easy numbers)
         const cost2 = ri(rng, 2, 10) * 10;
@@ -1548,7 +1552,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Find the selling price of a $\\$${cost2}$ item after a $${pct2}\\%$ mark-up.`,
             `A shopkeeper buys an item for $\\$${cost2}$ and adds $${pct2}\\%$ profit. What is the selling price?`,
         ]);
-        return { clue: ph2, answer: String(sell2), answerDisplay: `$${sell2}` };
+        return { clue: ph2, answer: String(sell2), answerDisplay: `$${money(sell2)}` };
     }
     if (diff === 'Medium') {
         if (type === 0) {
@@ -1561,7 +1565,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `An item costs $\\$${cost}$. Calculate the selling price after a $${pctProfit}\\%$ mark-up.`,
                 `Determine the selling price of a $\\$${cost}$ item with a $${pctProfit}\\%$ profit margin.`,
             ]);
-            return { clue: ph, answer: String(sell), answerDisplay: `$${sell}` };
+            return { clue: ph, answer: String(sell), answerDisplay: `$${money(sell)}` };
         }
         if (type === 1) {
             const P = ri(rng, 2, 10) * 1000, r = rc(rng, [5, 10]), t = ri(rng, 1, 3);
@@ -1575,7 +1579,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `Determine the interest on $\\$${P}$ at $${r}\\%$ per annum for ${yrs}.${pf}`,
             ]);
             const workedSI = `$I = Prn = ${P} \\times \\frac{${r}}{100} \\times ${t} = \\$${I}$`;
-            return { clue: ph, answer: String(I), answerDisplay: `$${I}`, worked: workedSI };
+            return { clue: ph, answer: String(I), answerDisplay: `$${money(I)}`, worked: workedSI };
         }
         if (type === 2) {
             // discount → sale price
@@ -1588,7 +1592,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `An item originally priced at $\\$${orig}$ is on sale at $${pctOff}\\%$ off. What is the sale price?`,
                 `Calculate the sale price of a $\\$${orig}$ item after a $${pctOff}\\%$ discount.`,
             ]);
-            return { clue: ph, answer: String(sale), answerDisplay: `$${sale}` };
+            return { clue: ph, answer: String(sale), answerDisplay: `$${money(sale)}` };
         }
         // type 3: GST-exclusive — find pre-GST price
         const gstInclusive = ri(rng, 5, 30) * 11;
@@ -1599,7 +1603,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `An item costs $\\$${gstInclusive}$ including GST. What was the price *before* GST?`,
             `The GST-inclusive price is $\\$${gstInclusive}$. Calculate the pre-GST price.`,
         ]);
-        return { clue: ph3, answer: String(preGst), answerDisplay: `$${preGst}` };
+        return { clue: ph3, answer: String(preGst), answerDisplay: `$${money(preGst)}` };
     }
     // Hard
     if (type === 0) {
@@ -1614,7 +1618,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `Calculate the total amount after compound interest: $\\$${P2}$ at $${r2}\\%$ p.a. for $${t2}$ year${t2 > 1 ? 's' : ''}.${pf}`,
                 `$\\$${P2}$ is invested at $${r2}\\%$ p.a. compound interest for $${t2}$ year${t2 > 1 ? 's' : ''}. Find the total amount.${pf}`,
             ]);
-            return { clue: ph, answer: String(A2), answerDisplay: `$${A2}` };
+            return { clue: ph, answer: String(A2), answerDisplay: `$${money(A2)}` };
         }
         const fOn = opts.showFormulas?.['compound-interest']?.[diff.toLowerCase()];
         const pf = fOn ? ' Use $A = P(1+r)^n$.' : '';
@@ -1623,7 +1627,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `$\\$${P}$ is invested at $${r}\\%$ p.a. compound interest for $${t}$ year${t > 1 ? 's' : ''}. Determine the total amount.${pf}`,
             `Find the final value of $\\$${P}$ compounded at $${r}\\%$ p.a. for $${t}$ year${t > 1 ? 's' : ''}.${pf}`,
         ]);
-        return { clue: ph, answer: String(A), answerDisplay: `$${A}` };
+        return { clue: ph, answer: String(A), answerDisplay: `$${money(A)}` };
     }
     const cost = ri(rng, 2, 15) * 100;
     const pct = rc(rng, [5, 10, 20, 25, 50]);
@@ -2178,7 +2182,7 @@ function _genFinancialS5Op(rng, diff, op) {
                 `A car worth $\\$${P}$ depreciates at $${r}\\%$ per year (straight-line). Find the *annual depreciation*.`,
                 `Using straight-line depreciation, find the annual loss on $\\$${P}$ at $${r}\\%$ p.a.`,
             ]);
-            return { clue: ph, answer: String(annualLoss), answerDisplay: `$${annualLoss}` };
+            return { clue: ph, answer: String(annualLoss), answerDisplay: `$${money(annualLoss)}` };
         }
         // Reducing balance: V = P(1-r/100)^t
         const V = round(P * Math.pow(1 - r / 100, t), 2);
@@ -2186,7 +2190,7 @@ function _genFinancialS5Op(rng, diff, op) {
             `A machine worth $\\$${P}$ depreciates at $${r}\\%$ p.a. (reducing balance). Find its value after $${t}$ year${t > 1 ? 's' : ''}.`,
             `Using $V = P(1 - r)^n$, find the value of $\\$${P}$ after $${t}$ year${t > 1 ? 's' : ''} at $${r}\\%$ p.a. depreciation.`,
         ]);
-        return { clue: ph, answer: String(V), answerDisplay: `$${V}` };
+        return { clue: ph, answer: String(V), answerDisplay: `$${money(V)}` };
     }
 
     // compound-period: compounding more than once per year
@@ -2204,7 +2208,7 @@ function _genFinancialS5Op(rng, diff, op) {
         `$\\$${P2}$ is invested at $${rAnnual}\\%$ p.a. compounded ${periodLabel} for $${t2}$ year${t2 > 1 ? 's' : ''}. Find the total amount.`,
         `Find the future value of $\\$${P2}$ compounded ${periodLabel} at $${rAnnual}\\%$ p.a. over $${t2}$ year${t2 > 1 ? 's' : ''}.`,
     ]);
-    return { clue: ph, answer: String(A), answerDisplay: `$${A}` };
+    return { clue: ph, answer: String(A), answerDisplay: `$${money(A)}` };
 }
 
 // ---- Trigonometry (Stage 5 new topic) -----------------------
@@ -2618,7 +2622,7 @@ function genRatiosRates(rng, diff, allowedOps) {
             `$${ctx.qty}$ ${ctx.item} cost $\\$${ctx.price}$. Find the cost per item (unit rate).`,
             `If $${ctx.qty}$ ${ctx.item} costs $\\$${ctx.price}$, what is the *unit rate* (cost per ${ctx.item})?`,
         ]);
-        return { clue: ph, answer: String(unitPrice), answerDisplay: `$\\$${unitPrice}$` };
+        return { clue: ph, answer: String(unitPrice), answerDisplay: `$\\$${money(unitPrice)}$` };
     }
 
     // op === 'speed'
