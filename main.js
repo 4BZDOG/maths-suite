@@ -565,22 +565,17 @@ function updatePageScales() {
     renderActivePage();
 }
 
-const _PAGE_CRUMBS = [
-    { icon: 'fa-seedling', color: '#10b981', label: 'Easy Questions'   },
-    { icon: 'fa-bolt',     color: '#f59e0b', label: 'Medium Questions' },
-    { icon: 'fa-fire',     color: '#ef4444', label: 'Hard Questions'   },
-    { icon: 'fa-key',      color: '#6366f1', label: 'Answer Key'       },
-];
-
 function showPage(n) {
     setActivePage(n);
     document.querySelectorAll('.page').forEach(p => p.classList.remove('visible'));
     const pEl = document.getElementById('page' + n);
     if (pEl) pEl.classList.add('visible');
-    document.querySelectorAll('.page-btn').forEach((b, i) => b.classList.toggle('active', i + 1 === n));
-    const c = _PAGE_CRUMBS[n - 1];
-    const crumb = document.getElementById('page-crumb');
-    if (crumb && c) crumb.innerHTML = `<i class="fas ${c.icon}" style="color:${c.color};"></i> ${c.label}`;
+    document.querySelectorAll('.page-btn').forEach((b, i) => {
+        const active = i + 1 === n;
+        b.classList.toggle('active', active);
+        if (active) b.setAttribute('aria-current', 'page');
+        else b.removeAttribute('aria-current');
+    });
     renderActivePage();
     document.querySelector('.viewport')?.scrollTo({ top: 0, behavior: 'smooth' });
 }

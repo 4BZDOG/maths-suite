@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maths Suite v62</title>
+    <title>Maths Suite</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link
         href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&family=Lora:wght@500;600;700&family=Roboto:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap"
@@ -38,17 +38,17 @@
 
     <aside>
         <div class="brand">
-            <h1><span class="brand-icon"><i class="fas fa-square-root-alt"></i></span>Maths Suite <small
-                    class="version-tag">v62</small></h1>
-            <div class="brand-actions">
-                <button onclick="toggleDarkMode()" title="Toggle Dark Mode" id="btn-dark"
-                    aria-label="Toggle dark mode"><i class="fas fa-moon"></i></button>
-                <button onclick="downloadConfig()" title="Save config (Ctrl+S)" aria-label="Save configuration"><i
-                        class="fas fa-save"></i></button>
+            <h1><span class="brand-icon" aria-hidden="true"><i class="fas fa-square-root-alt"></i></span>Maths Suite</h1>
+            <div class="brand-actions" role="toolbar" aria-label="App actions">
+                <button onclick="toggleDarkMode()" title="Toggle dark mode" id="btn-dark"
+                    aria-label="Toggle dark mode"><i class="fas fa-moon" aria-hidden="true"></i></button>
+                <button onclick="downloadConfig()" title="Save config (Ctrl+S)"
+                    aria-label="Save configuration"><i class="fas fa-save" aria-hidden="true"></i></button>
                 <button onclick="document.getElementById('file-input').click()" title="Load config"
-                    aria-label="Load configuration"><i class="fas fa-folder-open"></i></button>
-                <button onclick="hardReset()" title="Reset all settings (cannot be undone)" aria-label="Reset all settings"><i
-                        class="fas fa-rotate-left"></i></button>
+                    aria-label="Load configuration"><i class="fas fa-folder-open" aria-hidden="true"></i></button>
+                <span class="brand-actions-sep" aria-hidden="true"></span>
+                <button onclick="hardReset()" class="brand-action--danger" title="Reset all settings (cannot be undone)"
+                    aria-label="Reset all settings"><i class="fas fa-rotate-left" aria-hidden="true"></i></button>
             </div>
         </div>
         <div class="nav-tabs" role="tablist" aria-label="Sidebar panels">
@@ -412,20 +412,23 @@
 
     <main>
         <div class="preview-toolbar">
-            <div class="page-tabs">
-                <button class="page-btn active" data-page="1" onclick="showPage(1)"><i class="fas fa-seedling"></i> Easy</button>
-                <button class="page-btn" data-page="2" onclick="showPage(2)"><i class="fas fa-bolt"></i> Medium</button>
-                <button class="page-btn" data-page="3" onclick="showPage(3)"><i class="fas fa-fire"></i> Hard</button>
-                <button class="page-btn" data-page="4" onclick="showPage(4)"><i class="fas fa-key"></i> Key</button>
+            <div class="page-tabs" role="tablist" aria-label="Worksheet pages">
+                <button class="page-btn active" data-page="1" onclick="showPage(1)" role="tab" aria-current="page"
+                    aria-label="Easy page"><i class="fas fa-seedling" aria-hidden="true"></i> Easy</button>
+                <button class="page-btn" data-page="2" onclick="showPage(2)" role="tab"
+                    aria-label="Medium page"><i class="fas fa-bolt" aria-hidden="true"></i> Medium</button>
+                <button class="page-btn" data-page="3" onclick="showPage(3)" role="tab"
+                    aria-label="Hard page"><i class="fas fa-fire" aria-hidden="true"></i> Hard</button>
+                <button class="page-btn" data-page="4" onclick="showPage(4)" role="tab"
+                    aria-label="Answer key page"><i class="fas fa-key" aria-hidden="true"></i> Key</button>
             </div>
-            <div class="page-crumb" id="page-crumb"><i class="fas fa-seedling" style="color:#10b981;"></i> Easy Questions</div>
-            <div class="zoom-controls">
-                <button class="zoom-btn" onclick="adjustZoom(-0.1)" aria-label="Zoom Out"><i class="fas fa-minus"></i></button>
-                <div class="zoom-display" title="Double-click to reset zoom" ondblclick="resetZoom()">
-                    <i class="fas fa-magnifying-glass zoom-display-icon"></i>
-                    <span id="zoom-level" style="cursor:default; user-select:none;">100%</span>
-                </div>
-                <button class="zoom-btn" onclick="adjustZoom(0.1)" aria-label="Zoom In"><i class="fas fa-plus"></i></button>
+            <div class="zoom-controls" role="group" aria-label="Zoom">
+                <button class="zoom-btn" onclick="adjustZoom(-0.1)" title="Zoom out" aria-label="Zoom out"><i class="fas fa-minus" aria-hidden="true"></i></button>
+                <button class="zoom-display" type="button" title="Reset zoom to 100%" onclick="resetZoom()" aria-label="Reset zoom">
+                    <i class="fas fa-magnifying-glass zoom-display-icon" aria-hidden="true"></i>
+                    <span id="zoom-level">100%</span>
+                </button>
+                <button class="zoom-btn" onclick="adjustZoom(0.1)" title="Zoom in" aria-label="Zoom in"><i class="fas fa-plus" aria-hidden="true"></i></button>
             </div>
         </div>
         <div class="viewport">
@@ -522,7 +525,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=164"></script>
+    <script src="bundle.js?v=165"></script>
 </body>
 
 </html>
