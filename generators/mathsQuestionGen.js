@@ -2225,6 +2225,24 @@ function genTrigonometry(rng, diff, allowedOps) {
         const opp = triple.a * scale, adj = triple.b * scale, hyp = triple.c * scale;
         const u = _geoUnit(hyp);
         const angleA = round(Math.atan2(opp, adj) * 180 / Math.PI, 1);
+        // 25% chance of a "find the hypotenuse from opposite + angle" shape (Medium/Hard only)
+        if (diff !== 'Easy' && rng() < 0.25) {
+            const scale2 = ri(rng, 3, 8);
+            const opp2 = triple.a * scale2;
+            const hyp2 = triple.c * scale2;
+            const adj2 = triple.b * scale2;
+            const u2 = _geoUnit(hyp2);
+            const angle2 = round(Math.atan2(triple.a, triple.b) * 180 / Math.PI, 1);
+            const sinV = round(Math.sin(angle2 * Math.PI / 180), 3);
+            const clue = rc(rng, [
+                `Find the *hypotenuse* of a right triangle with opposite side $${opp2}$ ${u2} and angle $${angle2}$°. Use $\\sin(${angle2}°) \\approx ${sinV}$.`,
+                `A right-angled triangle has opposite side $${opp2}$ ${u2} and angle $${angle2}$°. Calculate the *hypotenuse*. Use $\\sin(${angle2}°) \\approx ${sinV}$.`,
+            ]);
+            return {
+                clue, answer: String(hyp2), answerDisplay: `${hyp2} ${u2}`,
+                diagram: { type: 'right-triangle-trig', opp: opp2, adj: adj2, hyp: hyp2, angle: angle2, missing: 'hyp' },
+            };
+        }
         const choice = rc(rng, diff === 'Easy' ? ['sin'] : ['sin', 'cos', 'tan']);
         let clue, answer, answerDisplay, diagramAngle, diagramFind;
         if (choice === 'sin') {
@@ -2285,7 +2303,7 @@ function genTrigonometry(rng, diff, allowedOps) {
     }
 
     if (op === 'applications') {
-        // Real-world: angle of elevation
+        // Real-world right-triangle: elevation, depression, or ladder
         const triple = rc(rng, TRIG_TRIPLES);
         const scale = diff === 'Easy' ? ri(rng, 1, 3) : diff === 'Medium' ? ri(rng, 2, 6) : ri(rng, 4, 10);
         const height = triple.a * scale, dist = triple.b * scale;
@@ -2293,6 +2311,11 @@ function genTrigonometry(rng, diff, allowedOps) {
         const ph = rc(rng, [
             `A ladder leans against a wall. The base is $${dist}$ m from the wall and the ladder reaches $${height}$ m up the wall. Find the angle the ladder makes with the ground.`,
             `From a point $${dist}$ m away from a building, the *angle of elevation* to the top is measured. If the building is $${height}$ m tall, find the angle of elevation.`,
+            // Angle of depression: from a cliff of height H, looking down at a boat D m offshore — equal to angle of elevation by alternate angles
+            `From the top of a cliff $${height}$ m high, the *angle of depression* to a boat $${dist}$ m offshore is measured. Find the angle of depression.`,
+            `A drone flies at a height of $${height}$ m and spots a marker $${dist}$ m away on the ground. Find the *angle of depression* from the drone to the marker.`,
+            // Roof / ramp pitch
+            `A ramp rises $${height}$ m over a horizontal distance of $${dist}$ m. Find the angle the ramp makes with the ground.`,
         ]);
         return { clue: ph, answer: `${angle}°`, answerDisplay: `${angle}°` };
     }
@@ -2318,10 +2341,24 @@ function genTrigonometry(rng, diff, allowedOps) {
         const radians = bearing * Math.PI / 180;
         const eastward = round(dist * Math.sin(radians), 1);
         const northward = round(dist * Math.cos(radians), 1);
-        const ph = `A ship travels $${dist}$ km on a bearing of $${String(bearing).padStart(3,'0')}$°T. How far *east* (or west) of its starting point is it?`;
-        const absE = Math.abs(eastward);
-        const dir = eastward >= 0 ? 'east' : 'west';
-        return { clue: ph, answer: String(absE), answerDisplay: `${absE} km ${dir}` };
+        const bStr = String(bearing).padStart(3, '0');
+        // Half the time ask for the east/west component, half for north/south
+        if (rng() < 0.5) {
+            const ph = rc(rng, [
+                `A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *east* (or west) of its starting point is it?`,
+                `From port, a vessel sails $${dist}$ km on a bearing of $${bStr}$°T. Find its *east/west* displacement.`,
+            ]);
+            const absE = Math.abs(eastward);
+            const dir = eastward >= 0 ? 'east' : 'west';
+            return { clue: ph, answer: String(absE), answerDisplay: `${absE} km ${dir}` };
+        }
+        const ph = rc(rng, [
+            `A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *north* (or south) of its starting point is it?`,
+            `An aircraft flies $${dist}$ km on a bearing of $${bStr}$°T. Find its *north/south* displacement.`,
+        ]);
+        const absN = Math.abs(northward);
+        const dir = northward >= 0 ? 'north' : 'south';
+        return { clue: ph, answer: String(absN), answerDisplay: `${absN} km ${dir}` };
     }
 
     return null;

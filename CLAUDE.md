@@ -326,12 +326,17 @@ These are recommended follow-ups, not yet done. See
   5 renderers, 4 `pdfDraw*` drawers, `import-export/importWords.js`,
   `workers/*`, `ai/aiGenerate.js`). They are tree-shaken out of the bundle but
   mislead readers. ~1500+ lines.
-- **Generator correctness tests**: a starter `node:test` harness now exists at
-  `test/generator.test.mjs` (run `npm test`) — it independently re-derives
-  answers for arithmetic clues, checks `worked`-field consistency, missing-number
-  equations, fraction/percentage conversions, sub-op filtering, and a
-  per-topic variety floor. **Coverage is currently the five core Number topics**;
-  extend it to Algebra, Geometry, Statistics, Financial, Trig, etc.
+- **Generator correctness tests** (~36 tests, `npm test`): structural sweep across
+  all 13 topics; deep arithmetic checks for the core Number topics; per-topic
+  verifiers in `test/topics/*.test.mjs` for Algebra (solve + substitution),
+  Statistics (mean/median/mode/range/IQR/missing-value), Geometry (areas /
+  perimeters / Pythagoras / angle sums / parallel-line angles), Financial Maths
+  (SI / GST / markup / discount / compound), Ratios & Rates (simplify / speed
+  triangle / equivalent), Probability (theoretical / complementary),
+  Trigonometry (find-angle / applications), and Non-linear (identify-graph /
+  parabola features). Plus `worked`-field consistency, missing-number equation
+  solver, fraction↔percentage conversion checks, sub-op-filter leak guard, and
+  a per-topic distinct-shape variety floor.
 - **CI quality gate**: add ESLint + `node --test` as a job in `deploy.yml`
   before the deploy job.
 - **Automate cache-busting**: have `build.sh` stamp `?v=<hash>` into

@@ -3,6 +3,7 @@
   "version": "60.3.0",
   "description": "Browser-based NESA maths worksheet & question-set generator",
   "private": true,
+  "type": "module",
   "scripts": {
     "build": "bash build.sh",
     "start": "python3 -m http.server 8082",
