@@ -86,6 +86,17 @@ function _parseLatex(s) {
         // Must come before the catch-all \command strip below, or the box
         // vanishes and the question reads "  - 48 = 92".
         .replace(/\\square/g, '□')
+        // Greek letters and angle marks — needed by Trigonometry answer keys
+        // ("\theta = 22.6°") and obtuse-angle clues ("\angle A = 60°").
+        .replace(/\\theta/g, 'θ')
+        .replace(/\\alpha/g, 'α')
+        .replace(/\\beta/g,  'β')
+        .replace(/\\gamma/g, 'γ')
+        .replace(/\\angle/g, '∠')
+        // \overline{x} → x̄ (combining macron). Used in stats formula hints.
+        .replace(/\\overline\{([^}]+)\}/g, (_, x) => x + '̄')
+        // \text{...} → ... (plain text inside math mode). Used in stats: "\text{sum}".
+        .replace(/\\text\{([^}]+)\}/g, '$1')
         // Square root: \sqrt{x} → √(x)
         .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
         .replace(/\\sqrt\s+(\S+)/g,    '√$1')

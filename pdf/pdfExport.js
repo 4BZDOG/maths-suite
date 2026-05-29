@@ -1371,7 +1371,25 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             if (clueLines.length > shown.length) {
                 shown[shown.length - 1] = shown[shown.length - 1].replace(/.{0,2}$/, '…');
             }
-            shown.forEach((line, li) => doc.text(line, cx, ky + li * lineH));
+            // Match HTML answer key: bold the leading verb ("Round", "Find",
+            // "Calculate:", …) on the first wrapped line. Subsequent lines plain.
+            const verb = detectVerb(clueText);
+            const numPrefix = `${i + 1}. `;
+            shown.forEach((line, li) => {
+                const yy = ky + li * lineH;
+                if (li === 0 && verb && line.startsWith(numPrefix + verb)) {
+                    doc.setFont(pdfFont, 'normal');
+                    doc.text(numPrefix, cx, yy);
+                    const numW = doc.getTextWidth(numPrefix);
+                    doc.setFont(pdfFont, 'bold');
+                    doc.text(verb, cx + numW, yy);
+                    const verbW = doc.getTextWidth(verb);
+                    doc.setFont(pdfFont, 'normal');
+                    doc.text(line.slice(numPrefix.length + verb.length), cx + numW + verbW, yy);
+                } else {
+                    doc.text(line, cx, yy);
+                }
+            });
 
             doc.setFont(pdfFont, 'bold');
             doc.setFontSize(8 * pScale);
