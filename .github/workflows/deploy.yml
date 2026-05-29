@@ -1,10 +1,13 @@
-# Deploy Puzzle Suite to GitHub Pages
-# Triggers on every push to main, and can be run manually from the Actions tab.
+# Build, test & deploy Maths Suite to GitHub Pages.
+#   - Tests run on every push to main AND on pull requests (so they gate PR #…).
+#   - Build + deploy only run on main / manual dispatch, and only after tests pass.
 
 name: Build & Deploy
 
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
   workflow_dispatch:          # allows manual runs from the GitHub Actions tab
 
@@ -13,15 +16,35 @@ permissions:
   pages: write
   id-token: write
 
-# Only one deployment runs at a time; a newer push cancels any in-progress run.
+# Serialise per ref: a newer commit on the same branch/PR cancels the older run,
+# but PR runs never cancel a main deploy (and vice versa).
 concurrency:
-  group: pages
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # ── 1. Build ────────────────────────────────────────────────────────────────
+  # ── 1. Test ─────────────────────────────────────────────────────────────────
+  # Generator correctness harness (test/*.mjs). Gates build + deploy.
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Run test suite
+        run: node --test   # no deps needed — pure ESM + node:test built-in
+
+  # ── 2. Build ────────────────────────────────────────────────────────────────
   build:
     name: Build bundle
+    needs: test                                   # only build if tests pass
+    if: github.event_name != 'pull_request'       # don't build/deploy PRs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -47,10 +70,11 @@ jobs:
         with:
           path: '.'          # serve the whole repo root as-is
 
-  # ── 2. Deploy ───────────────────────────────────────────────────────────────
+  # ── 3. Deploy ───────────────────────────────────────────────────────────────
   deploy:
     name: Deploy to GitHub Pages
     needs: build
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
