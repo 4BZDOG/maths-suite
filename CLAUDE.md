@@ -8,7 +8,7 @@ bash build.sh                  # esbuild bundles main.js → bundle.js
 npm run start                  # python3 -m http.server 8082
 # open http://localhost:8082/puzzle-suite.html
 ```
-After any JS change: rebuild, then bump `?v=N` in `<script src="bundle.js?v=N">` (puzzle-suite.html line ~461) to bypass browser cache.
+After any JS change: rebuild, then bump `?v=N` in `<script src="bundle.js?v=N">` (puzzle-suite.html line ~525) to bypass browser cache.
 
 > CI does **not** require a local build before pushing — GitHub Actions runs `bash build.sh` automatically on every push to `main`.
 
@@ -18,46 +18,53 @@ After any JS change: rebuild, then bump `?v=N` in `<script src="bundle.js?v=N">`
 - **KaTeX** — Math rendering (HTML preview + PDF)
 - **Font Awesome** — Icons
 - **Google Fonts** — Inter, Roboto, Lora, Comic Neue (loaded lazily on PDF export)
-- **localStorage key**: `puzzleSuiteV62` (v61→v62 migration in `core/storage.js`)
+- **localStorage key**: `puzzleSuiteV63` (migration chain V63→V62→V61 in `core/storage.js`)
 
 ## Repository Structure
 
+> ⚠️ **Legacy files** marked `[dead]` below are leftovers from the app's
+> earlier vocabulary-puzzle incarnation. They are **not imported** by any live
+> entry point (`main.js`, `pdf/pdfExport.js`) and are tree-shaken out of the
+> bundle. They are slated for removal (see "Roadmap" at the end). Do not extend
+> them.
+
 ```
 maths-suite/
-├── main.js                    # Entry point, orchestration, window API (~945 lines)
-├── puzzle-suite.html          # App shell, UI markup (~561 lines)
-├── puzzle-suite.css           # All styles, cascade layer architecture (~60 KB)
+├── main.js                    # Entry point, orchestration, window API (~1376 lines)
+├── puzzle-suite.html          # App shell, UI markup (~527 lines)
+├── puzzle-suite.css           # All styles, cascade layer architecture (~3950 lines / ~90 KB)
 ├── index.html                 # Redirect from / → puzzle-suite.html (GitHub Pages root)
 ├── bundle.js                  # esbuild output (do not edit)
 ├── build.sh                   # esbuild build script
 ├── package.json               # version 60.3.0, devDep: esbuild
 │
 ├── core/
-│   ├── state.js               # Single source of truth for all app state
+│   ├── state.js               # Single source of truth for all app state (~366 lines)
 │   ├── storage.js             # localStorage persistence (debounced saveState)
 │   ├── history.js             # Undo/redo (max 50 snapshots, Ctrl+Z/Y)
-│   └── outcomes.js            # NESA syllabus outcome codes & mappings
+│   └── outcomes.js            # NESA Stage 4 & Stage 5 outcome codes & mappings (~401 lines)
 │
 ├── renderers/                 # HTML preview generators (write directly to DOM)
 │   ├── problemSet.js          # Maths question grid (difficulty bands, outcome chips)
 │   ├── katexRender.js         # KaTeX math rendering on .katex-target elements
 │   ├── htmlUtils.js           # esc() HTML escaping utility
-│   ├── diagramSVG.js          # Inline SVG diagrams for geometry questions (5 shapes)
-│   ├── notes.js               # Vocabulary notes/matching table
-│   ├── wordSearch.js          # Word search grid + word bank
-│   ├── crossword.js           # ACROSS/DOWN clue layout, auto-scales to fit page
-│   ├── scramble.js            # Scrambled letters with optional first-letter hint
-│   ├── wordList.js            # Sidebar word list with color-coded placement dots
-│   └── keys.js                # Answer key page (4 mini-grids)
+│   ├── diagramSVG.js          # Inline SVG diagrams for geometry questions (12 shapes, ~646 lines)
+│   ├── keys.js                # Answer key page renderer
+│   ├── notes.js               # [dead] Vocabulary notes/matching table
+│   ├── wordSearch.js          # [dead] Word search grid + word bank
+│   ├── crossword.js           # [dead] ACROSS/DOWN clue layout
+│   ├── scramble.js            # [dead] Scrambled letters
+│   └── wordList.js            # [dead] Sidebar word list with placement dots
 │
 ├── pdf/                       # PDF export pipeline
-│   ├── pdfExport.js           # Orchestrator: creates doc, loops sets/pages (~918 lines)
-│   ├── pdfHelpers.js          # Shared drawing utilities, emoji canvas fallback (~392 lines)
+│   ├── pdfExport.js           # Orchestrator: creates doc, loops sets/pages (~1657 lines)
+│   ├── pdfHelpers.js          # Shared drawing utilities, emoji canvas fallback (~413 lines)
 │   ├── pdfFonts.js            # Lazy font loader from CDN (~94 lines)
-│   ├── pdfDrawNotes.js        # Notes/matching page drawing (~189 lines)
-│   ├── pdfDrawWordSearch.js   # Word search page drawing (~108 lines)
-│   ├── pdfDrawCrossword.js    # Crossword page drawing (~120 lines)
-│   └── pdfDrawScramble.js     # Scramble page drawing (~94 lines)
+│   ├── pdfDrawFormulas.js     # Formula sheet page drawing (~270 lines) — LIVE
+│   ├── pdfDrawNotes.js        # [dead] Notes/matching page drawing
+│   ├── pdfDrawWordSearch.js   # [dead] Word search page drawing
+│   ├── pdfDrawCrossword.js    # [dead] Crossword page drawing
+│   └── pdfDrawScramble.js     # [dead] Scramble page drawing
 │
 ├── ui/
 │   ├── sidebar.js             # Resizable sidebar (300–650 px), tab switching
@@ -70,11 +77,11 @@ maths-suite/
 │   └── dropZone.js            # Drag-and-drop .json/.csv/.txt config import
 │
 ├── generators/
-│   └── mathsQuestionGen.js    # Seeded PRNG (Mulberry32), 9 topics × 3–5 ops (~1013 lines)
+│   └── mathsQuestionGen.js    # Seeded PRNG (Mulberry32), 13 topics × 2–8 sub-ops (~2691 lines)
 │
 ├── import-export/
 │   ├── exportConfig.js        # downloadConfig() — saves state as .json
-│   └── importWords.js         # CSV/JSON word list import via modal
+│   └── importWords.js         # [dead] CSV/JSON word list import via modal
 │
 ├── payments/
 │   ├── access.js              # hasFeature(), tier API, feature override management
@@ -85,14 +92,15 @@ maths-suite/
 ├── stripe-worker/             # Cloudflare Worker — server-side Stripe proxy (deployed via wrangler)
 │   ├── index.js               # Routes: /api/checkout, /api/verify, /api/me, /api/portal, /api/webhooks
 │   ├── wrangler.toml          # Worker name, APP_URL var, KV namespace bindings
+│   ├── README.md              # Worker setup (KV, secrets, webhook registration)
 │   └── package.json
 │
 ├── ai/
-│   └── aiGenerate.js          # BYOK AI word generation (Gemini, Groq, OpenAI, Anthropic, OpenRouter)
+│   └── aiGenerate.js          # [dead] BYOK AI word generation (Gemini, Groq, OpenAI, Anthropic, OpenRouter)
 │
 ├── workers/
-│   ├── workerBridge.js        # Web Worker interface
-│   └── generation.worker.js   # Background generation worker
+│   ├── workerBridge.js        # [dead] Web Worker interface
+│   └── generation.worker.js   # [dead] Background generation worker
 │
 └── .github/workflows/deploy.yml  # GitHub Actions → GitHub Pages (triggers on push to main)
 ```
@@ -106,6 +114,20 @@ maths-suite/
 - `saveState()` — debounced 500 ms → `saveStateNow()` → `syncSettingsFromDOM()` → localStorage
 - **Pattern**: when an `oninput` handler needs the current value immediately, call `syncSettingsFromDOM()` first
 
+**Top-level state keys** (outside `settings`): `selectedTopics`, `selectedSubOps`,
+`stage` (`'Stage 4'`/`'Stage 5'`), `includePath` (5.3 Path), `selectedOutcomes`
+(outcome filter), `questionsPerSet` (pages per band, 1 or 2), `generatedSets`,
+`activePage`, `currentZoom`, `watermarkSrc`.
+
+**`state.settings` keys**: `theme`, `title`, `sub`, `font`, `globalFontScale`,
+`scales` (`{easy,medium,hard,key}`), `titleScale`, `paperSize`, `cols`,
+`showAnswerKey`, `showExportId`, `showTopic`, `showDiagrams`,
+`psShowOutcomesHeader`, `psShowOutcomeChips`, `keyShowWorked`, `showFormulaSheet`,
+`showFormulas` (per-group `{easy,medium,hard}` map), `opts`
+(`{easy,medium,hard,key}` page enable), `pageOrder`, `wmOpacity`, `sidebarWidth`,
+`exportCount`, `previewSeed`. When adding one, update both `syncSettingsFromDOM()`
+and `applyStateToDOM()` (see "Adding a New Setting").
+
 ### DOM ↔ State sync
 | Direction | Function | When |
 |-----------|----------|------|
@@ -113,7 +135,7 @@ maths-suite/
 | State → DOM | `applyStateToDOM(saved)` | Once at init (restores saved session) |
 
 ### Window API (`main.js`)
-All functions exposed both as `window.fnName` (for HTML `onclick`/`oninput`) and on `window._puzzleApp` (~line 812). When adding a new function, add it to BOTH export blocks.
+All functions exposed both as `window.fnName` (for HTML `onclick`/`oninput`) and on `window._puzzleApp` (~line 1214). When adding a new function, add it to BOTH export blocks.
 
 **Key exported functions:**
 - `generateAll()` — Main generation trigger
@@ -140,7 +162,7 @@ Layers in order (higher = wins): `base` → `layout` → `components` → `pages
 
 CSS custom properties used throughout:
 - `--global-font-scale` — set by `updateGlobalFontScale()`
-- `--page-scale` — per-page var, resolved from `--scale-notes/ws/cw/scr/key`
+- `--page-scale` — per-page var, resolved from `--scale-easy/medium/hard/key` (set by `updatePageScales()`)
 - `--title-scale` — set by `updateTitleScale()`
 - `--page-width` / `--page-height` — set by `updatePaperSize()`, drives `.page` dimensions
 - `--user-font` — the selected font family string
@@ -161,45 +183,54 @@ PDF fonts (helvetica + custom loaded fonts) don't support emoji. The canvas fall
 - `hasEmoji(str)` — detects emoji via Unicode property escapes
 - `textToImgPDF(text, opts)` — renders to HTML canvas (system emoji font), returns PNG dataURL + mm dimensions
 - `drawText()` — unified draw helper that checks `hasEmoji()` for title/subtitle/instructions; routes to canvas or `doc.text()` accordingly
-- Instruction strings in `pdfExport.js` include emoji prefixes (`📋` Notes, `🃏` Matching, `🔍` Word Search, `✏️` Crossword, `🔀` Scramble)
 - `drawHeader()` uses `drawText()` for all three text elements (title, subtitle, instructions) so emoji render correctly
 
 ### Renderers (HTML preview)
-`renderNotes / renderWordSearch / renderCrossword / renderScramble` write to DOM containers directly. They are called by `renderActivePage()` (main.js) which routes to the correct renderer based on `state.activePage`.
+The live renderers are `renderProblemSet` (`renderers/problemSet.js`) and
+`renderKeys` (`renderers/keys.js`). `renderActivePage()` (main.js ~line 229)
+calls `syncSettingsFromDOM()`, then renders all three difficulty bands
+(`p1-area`/`p2-area`/`p3-area`) plus the answer key (`key-container`) in one pass
+— it does **not** branch on `state.activePage`. Each `renderProblemSet()` call
+returns the number of questions that fit; the key is then sliced to only those
+visible questions (see "Answer key cap" pitfall).
 
-The crossword renderer auto-scales clues to fit one page via `_autoScaleCluesToFit()` after DOM insertion.
+> The `renderers/{notes,wordSearch,crossword,scramble,wordList}.js` files are
+> dead (legacy puzzle product) — not imported anywhere. Ignore them.
 
 ### Geometry Diagrams (`renderers/diagramSVG.js`)
-`renderDiagramSVG(diagram)` returns an inline SVG string for geometry questions. Supported diagram types:
-- `rectangle` — labelled length/width, `?` for missing area/perimeter
-- `right-triangle` — Pythagoras layout with right-angle mark, missing side shown as `?`
-- `triangle-angles` — scalene triangle with two known angles, third as `?`
-- `triangle-area` — triangle with dashed height line and right-angle mark
+`renderDiagramSVG(diagram)` returns an inline SVG string for geometry questions.
+Dispatch lives in the `switch` near the bottom of the file. Supported types:
+- `rectangle`, `parallelogram`, `trapezium` — labelled dimensions, `?` for the missing measure
+- `right-triangle` — Pythagoras layout with right-angle mark, missing side as `?`
+- `right-triangle-trig` — labelled angle/side for trig ratios
+- `triangle-angles` — two known angles, third as `?`
+- `triangle-area` — dashed height line and right-angle mark
 - `circle` — radius line with missing area or circumference label
+- `parabola` — non-linear relationships plot
+- `parallel-transversal`, `straight-line-angles`, `vertically-opposite` — angle configurations
 
-Shape outlines use `#10b981` (emerald); missing values use `#ef4444` (red). Labels use `currentColor` so they adapt to light/dark mode automatically.
+Shape outlines use `#10b981` (emerald, `GC`); missing values use `#ef4444` (red,
+`MC`). Labels use `currentColor` so they adapt to light/dark mode automatically.
 
 ### Question Generation (`generators/mathsQuestionGen.js`)
 - **Seeded PRNG**: Mulberry32 — deterministic and reproducible
-- **9 topics**: Integers, Decimals, Rounding, Fractions, Percentages, Algebra, Geometry, Statistics, Financial Maths
-- **3–5 operations per topic** (add, subtract, multiply, divide, BODMAS, simplify, etc.)
+- **13 topics**: Integers, Decimals, Rounding, Fractions, Percentages, Ratios & Rates, Algebra, Geometry, Statistics, Probability, Financial Maths, Trigonometry, Non-linear Relationships
+- **2–8 sub-operations per topic** defined in the exported `SUB_OPS` table; some are gated by `stages: ['Stage 5']` or `pathway: 'path'` (Stage 5.3)
 - Each question: `{id, topic, difficulty, clue, answer, answerDisplay, notes, diagram?}`
 - Difficulty controls working lines: Easy=0, Medium=1, Hard=2
-- NESA-aligned language using `CALC_VERBS` constant and keyword variety
+- NESA-aligned language using `CALC_VERBS`/`MULT_VERBS`/`DIV_VERBS`/`BODMAS_VERBS`/`SOLVE_VERBS` constants
 - Geometry questions may include a `diagram` object consumed by `renderDiagramSVG()`
+- `ALL_SUBTOPICS` and `SUB_OPS` are re-exported through `core/state.js` so the
+  topic list can never drift between the generator and state
 
 ### NESA Outcomes (`core/outcomes.js`)
-- `STAGE_OUTCOMES` — 16 outcome codes for Stage 4 (Year 7–8): MA4-INT-C-01, MA4-FRC-C-01, etc.
-- `getOutcomesForTopics()`, `getTopicsForOutcomeCodes()` — bidirectional lookup
-- Outcome filter in sidebar reduces which topics/questions are shown
-
-### Word List Status Coloring
-`renderWordList()` and `renderStatus()` accept an `activePage` parameter:
-- **Page 2 (Word Search)**: status dots reflect WS placement only
-- **Page 3 (Crossword)**: status dots reflect CW placement only
-- **Page 4 (Scramble)**: status dots reflect SCR placement (all words always included)
-- **Pages 1 & 5 (Notes & Key)**: status dots reflect overall placement (WS or CW)
-- When switching pages, `showPage(n)` calls `_renderWordListAndStatus()` to update dots immediately
+- Stage-keyed structure (`DEFAULT_STAGE = 'Stage 4'`); holds both Stage 4
+  (MA4-* , ~28 codes) and Stage 5 (MA5-*) outcomes so more stages can be added
+  without touching existing data
+- `getOutcomesForTopics()`, `getTopicsForOutcomeCodes()`, `getTopicsForStage()` — lookups
+- `STRANDS` / `TOPIC_STRAND_MAP` group topics by syllabus strand
+- The outcome filter in the sidebar reduces which topics/questions are generated;
+  `state.includePath` toggles Stage 5.3 *Path* content
 
 ### Feature Flag System (`payments/config.js` + `payments/access.js`)
 Features are gated by tier (`free`, `pro`, `admin`) and can be overridden per-session by an admin.
@@ -244,19 +275,20 @@ Key client functions in `payments/stripe.js`:
 
 To deploy the worker: `cd stripe-worker && npm install && wrangler deploy`, then set secrets via `wrangler secret put STRIPE_SECRET_KEY` etc.
 
-### AI Word Generation (`ai/aiGenerate.js`)
-- BYOK (bring your own key): user supplies API key for Gemini, Groq, OpenAI, Anthropic, or OpenRouter
-- Planned: managed proxy via Cloudflare Worker for Pro tier (no key required)
-- Generates term/definition pairs for vocabulary puzzles
+### AI Word Generation (`ai/aiGenerate.js`) — DEAD CODE
+This BYOK module (Gemini/Groq/OpenAI/Anthropic/OpenRouter) is a leftover from the
+vocabulary-puzzle product. It is **not imported** by any live entry point and is
+slated for removal. Do not extend it; if AI question generation is wanted, design
+it fresh against the maths generator.
 
 ## Common Pitfalls
 - **Bundle caching**: `http.server` caches aggressively. Always bump `?v=N` after `build.sh`.
 - **CSS layer priority**: Adding dark-mode overrides to `@layer base` won't work if same selector is in `@layer components`. Put overrides in `@layer components`.
 - **`innerText` vs `textContent`**: `innerText` returns `""` for elements inside collapsed `<details>`. Use `textContent` or call `syncSettingsFromDOM()` which uses `.value` / `.checked` (not innerText).
 - **`updatePageScales()` calls `renderActivePage()`**: it only re-renders the active page. After navigation, `showPage(n)` calls `renderActivePage()` automatically.
-- **`saveState()` is debounced 500 ms**: for sliders that need to immediately read state (e.g., `updateNotesStyles()`), always call `syncSettingsFromDOM()` first.
+- **`saveState()` is debounced 500 ms**: for sliders that need to immediately read state (e.g., `updatePageScales()`), always call `syncSettingsFromDOM()` first.
 - **Stale state on toggle changes**: `renderActivePage()` calls `syncSettingsFromDOM()` at the start so toggle/checkbox changes take effect immediately without waiting for the 500ms debounce.
-- **Both window export blocks**: any new function in `main.js` must be added to BOTH the `window.fnName` block and the `window._puzzleApp` object (~line 812).
+- **Both window export blocks**: any new function in `main.js` must be added to BOTH the `window.fnName` block and the `window._puzzleApp` object (~line 1214).
 - **Answer key cap**: answer key trims to only the cap-to-1-page visible questions. Do not pass the full question list to the key renderer.
 
 ## Adding a New Setting
@@ -269,11 +301,13 @@ To deploy the worker: `cd stripe-worker && npm install && wrangler deploy`, then
 7. If affects PDF, pass via `cfg` (which is `state.settings`) or add to `buildCtx()` return
 
 ## Adding a New PDF Page Type
-1. Add renderer in `renderers/` (HTML preview)
-2. Add drawer in `pdf/pdfDrawXxx.js`
-3. Register in `pdfExport.js` page loop
-4. Add to page order list in `ui/pageOrder.js`
-5. Add instruction string (with emoji) in `pdfExport.js`
+The live page types are the three difficulty bands, the answer key, and the
+optional formula sheet. To add another:
+1. Add/extend a renderer in `renderers/` for the HTML preview
+2. Add a drawer in `pdf/pdfDrawXxx.js` (see `pdfDrawFormulas.js` as the model)
+3. Register it in the `pdfExport.js` page loop
+4. Add it to the page-order list in `ui/pageOrder.js`
+5. Add any instruction string (with emoji) in `pdfExport.js`
 
 ## Deployment
 GitHub Actions (`.github/workflows/deploy.yml`) auto-deploys on every push to `main`:
@@ -282,3 +316,22 @@ GitHub Actions (`.github/workflows/deploy.yml`) auto-deploys on every push to `m
 3. `index.html` at the repo root redirects `/` → `puzzle-suite.html` for a clean entry URL
 
 The Cloudflare Worker (`stripe-worker/`) is **not** deployed by GitHub Actions — deploy it manually with `wrangler`. See `stripe-worker/README.md` for the full setup (KV namespace, secrets, webhook registration).
+
+## Roadmap / Known Tech Debt
+These are recommended follow-ups, not yet done. See
+`/root/.claude/plans/review-this-project-and-streamed-donut.md` for the full review.
+
+- **Remove dead vocabulary-puzzle code** (all files marked `[dead]` above:
+  5 renderers, 4 `pdfDraw*` drawers, `import-export/importWords.js`,
+  `workers/*`, `ai/aiGenerate.js`). They are tree-shaken out of the bundle but
+  mislead readers. ~1500+ lines.
+- **Generator correctness tests**: there are currently **zero tests**. A wrong
+  answer key is product-fatal. Add a `node:test` suite that generates each topic
+  × sub-op × difficulty with a fixed seed and asserts `answer` against an
+  independently computed value.
+- **CI quality gate**: add ESLint + `node --test` as a job in `deploy.yml`
+  before the deploy job.
+- **Automate cache-busting**: have `build.sh` stamp `?v=<hash>` into
+  `puzzle-suite.html` rather than the manual `?v=N` bump.
+- **`package.json` version** (60.3.0) is decoupled from the bundle cache-bust
+  (`?v=162`) and the product name; consider realigning.

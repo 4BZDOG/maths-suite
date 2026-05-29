@@ -1,6 +1,8 @@
-# Puzzle Suite
+# Maths Suite
 
-A browser-based worksheet generator that produces vocabulary notes, word search, crossword, and word scramble puzzles from a list of words and clues. Exports to a single vector PDF.
+A browser-based worksheet generator that produces differentiated **NESA-aligned
+maths question sets** (Stage 4 & Stage 5) and exports them to a single vector PDF.
+Questions are generated locally from a seeded PRNG — no API or account required.
 
 ## Quick Start
 
@@ -14,75 +16,92 @@ python3 -m http.server 8082
 
 ```bash
 bash build.sh
-# Bundles all JS via esbuild → bundle.js (~54 KB minified)
+# Bundles all JS via esbuild → bundle.js (minified)
 ```
 
-After rebuilding, bump the cache-bust query param in `puzzle-suite.html`:
+After rebuilding, bump the cache-bust query param in `puzzle-suite.html`
+(the `python3 -m http.server` dev server caches aggressively):
+
 ```html
 <script src="bundle.js?v=N"></script>
 ```
 
-## Features
+> CI does **not** require a local build before pushing — GitHub Actions runs
+> `bash build.sh` automatically on every push to `main` and deploys to Pages.
+
+## Pages
+
+Each export contains up to four pages, reorderable in the sidebar:
 
 | Page | Description |
 |------|-------------|
-| **Notes** | Vocabulary term/definition table. Optional matching mode shuffles terms. |
-| **Word Search** | Configurable grid (10–25×25). Diagonal and backwards options. |
-| **Crossword** | Auto-placed intersecting words. Two-column ACROSS/DOWN clues. Auto-scales to fit one page. |
-| **Word Scramble** | Randomised letter order with optional first-letter hint. |
-| **Answer Keys** | All four puzzles on one key page, fit to a half-page grid each. |
+| **Easy** | A grid of easy-band questions (0 working lines). |
+| **Medium** | Medium-band questions (1 working line). |
+| **Hard** | Hard-band questions (2 working lines). |
+| **Answer Key** | Compact key for all visible questions; optional worked solutions. |
 
-### Settings
-- **Title / Subtitle** — shown on every page header; emoji fully supported in PDFs
-- **Title Scale** — shrink or enlarge the header title independently of body text
-- **Paper Size** — A4 (210 × 297 mm) or US Letter (215.9 × 279.4 mm)
-- **Watermark** — upload a PNG/JPG logo; set opacity
-- **Font Family** — Inter, Roboto, Lora, Comic Neue
-- **Global Font Scale** — scale all body text up/down
-- **Per-page scales** — fine-tune notes, word bank, clue, scramble, and key fonts independently
-- **Per-page toggles** — Show Word Bank (crossword), Use Clues (word search), etc.; update preview instantly
-- **Bulk export** — generate N unique sets in one PDF
+An optional **Formula Sheet** can be appended, with formula groups shown
+per difficulty band.
 
-### Quality-of-Life Features
-- **Immediate preview updates**: Settings changes apply to preview instantly (no delay)
-- **Color-coded word status**: Sidebar word list shows placement status per puzzle page
-- **Responsive design**: Works on desktop and tablet; sidebar collapses on mobile
-- **Instruction emoji**: All puzzle pages show emoji-prefixed instructions (📋 📚 🔍 ✏️ 🔀)
+## Topics
+
+Thirteen topics span NESA Stage 4 and Stage 5 (with optional 5.3 *Path* content):
+
+Computation with Integers · Decimals · Rounding · Fractions · Percentages ·
+Ratios & Rates · Algebraic Techniques · Measurement & Geometry · Data Analysis ·
+Probability · Financial Mathematics · Trigonometry · Non-linear Relationships
+
+Each topic exposes selectable **sub-operations** (e.g. Integers → add / subtract /
+multiply / divide / BODMAS). Stage 5 unlocks additional sub-operations such as
+expand, factorise, solve quadratics, index laws, and (under *Path*) simultaneous
+equations and surds.
+
+## Features
+
+- **Stage selector** — Stage 4 or Stage 5; a *Path* toggle adds 5.3 content.
+- **NESA outcome filter** — restrict generation to selected syllabus outcome
+  codes (MA4-* / MA5-*); the question header can show outcomes and per-question
+  outcome chips.
+- **Geometry diagrams** — inline SVG figures for rectangles, triangles
+  (right-angle / angles / area), circles, parallelograms, trapezia, parabolas,
+  angle configurations, and right-triangle trig.
+- **Seeded & reproducible** — the same seed regenerates the identical set, so a
+  worksheet can be shared or re-exported deterministically.
+- **PDF export** — single vector PDF via jsPDF; KaTeX-rendered maths; emoji
+  supported via a canvas fallback.
+- **Watermark** — upload a PNG/JPG logo and set its opacity.
+- **Fonts** — Inter, Roboto, Lora, Comic Neue (loaded lazily on export).
+- **Paper size** — A4 (210 × 297 mm) or US Letter (215.9 × 279.4 mm).
+- **Typography controls** — global font scale, per-page scales, title scale,
+  column count.
+- **Bulk export** — generate N unique sets in one PDF (gated by tier).
+
+Settings persist to `localStorage` (key `puzzleSuiteV63`) and restore on reload.
+Undo/redo (Ctrl+Z / Ctrl+Y) covers the last 50 changes.
 
 ## Project Structure
 
+See [`CLAUDE.md`](CLAUDE.md) for the full repository map and architecture notes.
+Key entry points:
+
 ```
-puzzle-suite.html   Main app shell & settings sidebar
+puzzle-suite.html   App shell & settings sidebar
 puzzle-suite.css    All styles (CSS @layer: base › layout › components › pages › utils)
-main.js             Entry point; wires all events; exposes window API
-bundle.js           Minified output (generated by build.sh)
+main.js             Entry point; wires events; exposes the window API
+bundle.js           Minified esbuild output (do not edit by hand)
 
-core/
-  state.js          Single-source state + DOM sync (syncSettingsFromDOM / applyStateToDOM)
-  storage.js        localStorage persistence (debounced saveState)
-
-renderers/
-  notes.js          HTML preview for notes/vocabulary page
-  wordSearch.js     HTML preview for word search
-  crossword.js      HTML preview for crossword (two-column, auto-scale)
-  scramble.js       HTML preview for word scramble
-  wordList.js       Sidebar word list with page-aware status coloring
-
-workers/
-  workerBridge.js   Web worker interface for puzzle generation
-
-pdf/
-  pdfExport.js      Orchestrates PDF export (loops sets, calls drawHeader + drawXxx)
-  pdfHelpers.js     buildCtx(), drawHeader() — shared by all PDF drawers
-  pdfDrawNotes.js
-  pdfDrawWordSearch.js
-  pdfDrawCrossword.js
-  pdfDrawScramble.js
-  pdfFonts.js       Lazy-loads Inter/Roboto/Lora/Comic Neue from CDN
-
-ui/
-  toast.js          showToast() utility
-  zoom.js           Preview zoom controls
-
-import-export/      Save/load .json config files
+core/               state, storage, history (undo/redo), NESA outcomes
+generators/         mathsQuestionGen.js — seeded question generator
+renderers/          HTML preview (problemSet, keys, diagramSVG, KaTeX)
+pdf/                PDF export pipeline (orchestrator, helpers, drawers)
+ui/                 sidebar, dark mode, modal, toast, zoom, page order, access panel
+payments/           tier/feature gating + Stripe client
+stripe-worker/      Cloudflare Worker (server-side Stripe proxy)
 ```
+
+## Payments (optional)
+
+Pro features are gated by a tier system (`payments/`). The Stripe integration is
+served by a Cloudflare Worker (`stripe-worker/`) so the browser never holds a
+secret key. Both are inert until configured — see
+[`STRIPE_INTEGRATION.md`](STRIPE_INTEGRATION.md).

@@ -1,7 +1,7 @@
 {
   "name": "puzzle-suite",
   "version": "60.3.0",
-  "description": "Browser-based vocabulary puzzle worksheet generator",
+  "description": "Browser-based NESA maths worksheet & question-set generator",
   "private": true,
   "scripts": {
     "build": "bash build.sh",
