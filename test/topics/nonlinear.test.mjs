@@ -7,7 +7,7 @@
 // =============================================================
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gen, DIFFS } from '../_helpers.mjs';
+import { gen } from '../_helpers.mjs';
 
 function classify(eq) {
     if (/xy\s*=/.test(eq)) return 'hyperbola';

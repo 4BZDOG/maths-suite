@@ -1,7 +1,7 @@
 // =============================================================
 // test/_helpers.mjs — shared utilities for the generator test suite.
 // =============================================================
-import { generateMathsQuestions, SUB_OPS } from '../generators/mathsQuestionGen.js';
+import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
 
 export const DIFFS = ['Easy', 'Medium', 'Hard'];
 

@@ -248,7 +248,7 @@ function _drawParallelogramDiagramPDF(doc, { base, height, missing }, x0, y0, w,
     // Parallelogram vertices: BL, BR, TR, TL
     const BL = { x: bx,          y: by + dh };
     const BR = { x: bx + dw,     y: by + dh };
-    const TR = { x: bx + dw - skew, y: by };
+    const _TR = { x: bx + dw - skew, y: by };
     const TL = { x: bx - skew,   y: by };
 
     doc.setFillColor(..._GCF);
@@ -308,7 +308,7 @@ function _drawTrapeziumDiagramPDF(doc, { a, b, height, missing }, x0, y0, w, h, 
     ], BL.x, BL.y, [1, 1], 'FD');
 
     // Dashed height line
-    const hx = BL.x + (bW - aW) / 2 + aW / 2;  // roughly midpoint
+    const _hx = BL.x + (bW - aW) / 2 + aW / 2;  // roughly midpoint
     const hFootY = BL.y;
     const hTopY  = TL.y;
     doc.setLineDashPattern([1.2, 1.2], 0);
@@ -1026,7 +1026,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
             colY = [cy, cy];   // header consumed space; reset both column trackers
         }
     }
-    let rowMaxH     = 0;
+    let _rowMaxH     = 0;
     let overflowCount = 0;
     let pagesUsed   = 1;
     let pageStartY  = startY;   // Y where content begins on the current PDF page
@@ -1114,7 +1114,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
             cy         = pageStartY;
             colY       = [pageStartY, pageStartY];
             col        = 0;
-            rowMaxH    = 0;
+            _rowMaxH   = 0;
         }
 
         const itemX = col === 0 ? MARGIN : MARGIN + colW + 8;

@@ -23,10 +23,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── 1. Test ─────────────────────────────────────────────────────────────────
-  # Generator correctness harness (test/*.mjs). Gates build + deploy.
+  # ── 1. Lint + Test ──────────────────────────────────────────────────────────
+  # ESLint guards real-bug rules (no-undef, no-unused-vars, etc.); the
+  # node:test harness guards generator correctness. Either failing blocks
+  # build + deploy.
   test:
-    name: Run tests
+    name: Lint & test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -36,9 +38,16 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint -- --max-warnings 0
 
       - name: Run test suite
-        run: node --test   # no deps needed — pure ESM + node:test built-in
+        run: node --test   # pure ESM + node:test built-in
 
   # ── 2. Build ────────────────────────────────────────────────────────────────
   build:

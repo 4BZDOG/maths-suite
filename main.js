@@ -1,14 +1,13 @@
 // =============================================================
 // main.js — Application entry point (Maths Question Sets Edition)
 // =============================================================
-import { state, ALL_SUBTOPICS, SUB_OPS, setGeneratedSets, setActivePage, updateSetting, applyStateToDOM, syncSettingsFromDOM } from './core/state.js';
+import { state, ALL_SUBTOPICS, SUB_OPS, setGeneratedSets, setActivePage, applyStateToDOM, syncSettingsFromDOM } from './core/state.js';
 import { getOutcomesForTopics, getTopicsForOutcomeCodes, getTopicsForStage, STAGE_OUTCOMES, STRANDS, TOPIC_STRAND_MAP } from './core/outcomes.js';
 import { pushHistory, undo, redo } from './core/history.js';
-import { saveState, saveStateNow, loadRawState, hardReset } from './core/storage.js';
+import { saveState, loadRawState, hardReset } from './core/storage.js';
 
 import { renderProblemSet } from './renderers/problemSet.js';
 import { renderKeys } from './renderers/keys.js';
-import { renderKaTeX } from './renderers/katexRender.js';
 
 import { exportPDF } from './pdf/pdfExport.js';
 
@@ -369,7 +368,7 @@ async function _handleUpgradeClick(btn) {
         btn.textContent = 'Loading…';
         try {
             await initiateCheckout('pro', 'monthly');
-        } catch (e) {
+        } catch (_e) {
             showToast('Could not start checkout. Please try again.', 'error');
             btn.disabled    = false;
             btn.textContent = label;

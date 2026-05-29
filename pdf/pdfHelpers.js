@@ -331,7 +331,7 @@ export function drawText(doc, text, x, y, { fontSizePt, bold = false, italic = f
  * @returns {number} Y position where content should start (below header)
  */
 export function drawHeader(ctx, fullTitle, subText, instructions, isKey, setIndicator = '', pScale, exportId = '', instrColor = null) {
-    const { doc, PAGE_WIDTH, MARGIN, scale, pdfFont, showExportId } = ctx;
+    const { doc, PAGE_WIDTH, MARGIN, scale, pdfFont } = ctx;
     pScale = pScale || scale;
     const titleScale = ctx.titleScale || 1;
 

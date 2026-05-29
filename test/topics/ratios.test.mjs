@@ -9,9 +9,6 @@ import assert from 'node:assert/strict';
 import { gen, DIFFS, approxEqual } from '../_helpers.mjs';
 
 function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
-function nums(clue) {
-    return [...clue.matchAll(/\$\\?\$?(-?\d+(?:\.\d+)?)\\?%?\$/g)].map(m => Number(m[1]));
-}
 
 test('Ratios & Rates: speed / distance / time, simplify, equivalent answers match', () => {
     let checked = 0;
@@ -20,7 +17,7 @@ test('Ratios & Rates: speed / distance / time, simplify, equivalent answers matc
             const qs = gen({ topic: 'Ratios & Rates', difficulty: diff, count: 8, seed });
             for (const q of qs) {
                 const c = q.clue;
-                const ns = nums(c);
+
 
                 // --- Simplify ratio "$a : b$" → "n : d" in lowest terms
                 const sm = /Simplify the ratio|simplest form|lowest terms/i.test(c);

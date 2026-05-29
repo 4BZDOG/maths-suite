@@ -2145,7 +2145,7 @@ function _genGeometryS5Op(rng, diff, op) {
         const [l1Hi, w1Hi, h1Hi] = diff === 'Easy' ? [6, 5, 4] : diff === 'Medium' ? [10, 8, 6] : [15, 12, 8];
         const l1 = ri(rng, 3, l1Hi), w1 = ri(rng, 2, w1Hi), h1 = ri(rng, 2, h1Hi);
         const l2 = ri(rng, 2, l1), w2 = ri(rng, 2, w1), h2 = ri(rng, 2, Math.max(2, h1 - 1));
-        const u = 'm';
+        const _u = 'm';
         const v = l1 * w1 * h1 + l2 * w2 * h2;
         const ph = rc(rng, [
             `A composite solid consists of two rectangular prisms. Prism A: $${l1}$ m × $${w1}$ m × $${h1}$ m. Prism B: $${l2}$ m × $${w2}$ m × $${h2}$ m. Find the *total volume*.`,
@@ -2158,7 +2158,7 @@ function _genGeometryS5Op(rng, diff, op) {
         // Two similar triangles; find a missing side — scale and side range increase with difficulty
         const [scaleHi, sidesHi] = diff === 'Easy' ? [3, 6] : diff === 'Medium' ? [4, 9] : [6, 14];
         const scale = ri(rng, 2, scaleHi);
-        const a = ri(rng, 3, sidesHi), b = ri(rng, 3, sidesHi), c = ri(rng, 3, sidesHi);
+        const a = ri(rng, 3, sidesHi), b = ri(rng, 3, sidesHi);
         const u = 'cm';
         const ph = rc(rng, [
             `Two similar triangles have corresponding sides. If one triangle has a side of $${a}$ ${u} and the *corresponding* side of the larger triangle is $${a * scale}$ ${u}, find the side corresponding to $${b}$ ${u}.`,
@@ -2227,8 +2227,8 @@ function genTrigonometry(rng, diff, allowedOps) {
         const triple = rc(rng, TRIG_TRIPLES);
         const scale = diff === 'Easy' ? ri(rng, 1, 2) : diff === 'Medium' ? ri(rng, 2, 5) : ri(rng, 3, 8);
         const opp = triple.a * scale, adj = triple.b * scale, hyp = triple.c * scale;
-        const u = _geoUnit(hyp);
-        const angleA = round(Math.atan2(opp, adj) * 180 / Math.PI, 1);
+        const _u = _geoUnit(hyp);
+        const _angleA = round(Math.atan2(opp, adj) * 180 / Math.PI, 1);
         // 25% chance of a "find the hypotenuse from opposite + angle" shape (Medium/Hard only)
         if (diff !== 'Easy' && rng() < 0.25) {
             const scale2 = ri(rng, 3, 8);
@@ -2248,7 +2248,7 @@ function genTrigonometry(rng, diff, allowedOps) {
             };
         }
         const choice = rc(rng, diff === 'Easy' ? ['sin'] : ['sin', 'cos', 'tan']);
-        let clue, answer, answerDisplay, diagramAngle, diagramFind;
+        let clue, answer, answerDisplay;
         if (choice === 'sin') {
             // sin(A) = opp/hyp → find opp given hyp and angle
             const scale2 = ri(rng, 3, 8);
@@ -2262,7 +2262,6 @@ function genTrigonometry(rng, diff, allowedOps) {
             ]);
             answer = String(opp2);
             answerDisplay = `${opp2} ${u2}`;
-            diagramAngle = angle2; diagramFind = 'opp';
             return { clue, answer, answerDisplay, diagram: { type: 'right-triangle-trig', opp: opp2, adj: triple.b * scale2, hyp: hyp2, angle: angle2, missing: 'opp' } };
         }
         if (choice === 'cos') {
@@ -2469,12 +2468,6 @@ function genProbability(rng, diff, allowedOps) {
     const op = rc(rng, pool);
 
     if (op === 'theoretical') {
-        const CONTEXTS = [
-            { label: 'red', bag: 'bag of marbles', totalLabel: 'marbles' },
-            { label: 'hearts', bag: 'deck of cards', totalLabel: 'cards' },
-            { label: 'heads', bag: 'coin toss', totalLabel: 'sides' },
-            { label: 'sixes', bag: 'die roll', totalLabel: 'sides' },
-        ];
         if (diff === 'Easy') {
             // Simple spinner / bag: fav/total with small numbers
             const fav = ri(rng, 1, 4), other = ri(rng, 2, 6);

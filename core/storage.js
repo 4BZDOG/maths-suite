@@ -88,7 +88,7 @@ export function loadRawState() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed61));
         localStorage.removeItem(STORAGE_KEY_OLD);
         return parsed61;
-    } catch (e) {
+    } catch (_e) {
         localStorage.removeItem(STORAGE_KEY);
         showToast('Saved data was corrupted and has been reset.', 'error');
         return null;
