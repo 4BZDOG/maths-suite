@@ -1,6 +1,6 @@
 {
-  "name": "puzzle-suite",
-  "version": "60.3.0",
+  "name": "maths-suite",
+  "version": "1.0.0",
   "description": "Browser-based NESA maths worksheet & question-set generator",
   "private": true,
   "type": "module",

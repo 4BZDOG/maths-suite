@@ -794,7 +794,8 @@ function _drawKeyClueRich(doc, prefix, clue, x, y, {
     return line + 1;
 }
 
-
+/**
+ * Parse a clue string (AFTER LaTeX→text conversion but with emphasis markers
  * still present) into an array of {t, bold, italic} segments.
  */
 function _parseEmphasisSegments(text) {

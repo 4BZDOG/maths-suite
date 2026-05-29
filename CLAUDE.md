@@ -9,7 +9,7 @@ npm run start                  # python3 -m http.server 8082
 # open http://localhost:8082/puzzle-suite.html
 npm test                       # node --test — generator correctness harness (test/*.mjs)
 ```
-After any JS change: rebuild, then bump `?v=N` in `<script src="bundle.js?v=N">` (puzzle-suite.html line ~525) to bypass browser cache.
+After any JS change just rerun `bash build.sh` — it stamps a fresh content-hash into the `<script src="bundle.js?v=…">` tag automatically, so browsers always pick up the new bundle. No manual bump needed.
 
 > CI does **not** require a local build before pushing — GitHub Actions runs `bash build.sh` automatically on every push to `main`.
 
@@ -31,7 +31,7 @@ maths-suite/
 ├── index.html                 # Redirect from / → puzzle-suite.html (GitHub Pages root)
 ├── bundle.js                  # esbuild output (do not edit)
 ├── build.sh                   # esbuild build script
-├── package.json               # version 60.3.0, devDep: esbuild
+├── package.json               # version 1.0.0, devDep: esbuild
 │
 ├── core/
 │   ├── state.js               # Single source of truth for all app state (~366 lines)
@@ -262,7 +262,7 @@ slated for removal. Do not extend it; if AI question generation is wanted, desig
 it fresh against the maths generator.
 
 ## Common Pitfalls
-- **Bundle caching**: `http.server` caches aggressively. Always bump `?v=N` after `build.sh`.
+- **Bundle caching**: `http.server` caches aggressively. `build.sh` stamps a fresh content-hash into `<script src="bundle.js?v=…">` automatically — no manual bump needed.
 - **CSS layer priority**: Adding dark-mode overrides to `@layer base` won't work if same selector is in `@layer components`. Put overrides in `@layer components`.
 - **`innerText` vs `textContent`**: `innerText` returns `""` for elements inside collapsed `<details>`. Use `textContent` or call `syncSettingsFromDOM()` which uses `.value` / `.checked` (not innerText).
 - **`updatePageScales()` calls `renderActivePage()`**: it only re-renders the active page. After navigation, `showPage(n)` calls `renderActivePage()` automatically.
@@ -312,9 +312,5 @@ These are recommended follow-ups, not yet done. See
   parabola features). Plus `worked`-field consistency, missing-number equation
   solver, fraction↔percentage conversion checks, sub-op-filter leak guard, and
   a per-topic distinct-shape variety floor.
-- **CI quality gate**: add ESLint + `node --test` as a job in `deploy.yml`
-  before the deploy job.
-- **Automate cache-busting**: have `build.sh` stamp `?v=<hash>` into
-  `puzzle-suite.html` rather than the manual `?v=N` bump.
-- **`package.json` version** (60.3.0) is decoupled from the bundle cache-bust
-  (`?v=162`) and the product name; consider realigning.
+- **ESLint**: add a lint step to the CI `test` job so style/correctness lint
+  also gates deploy.
