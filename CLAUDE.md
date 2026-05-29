@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 bash build.sh                  # esbuild bundles main.js → bundle.js
 npm run start                  # python3 -m http.server 8082
 # open http://localhost:8082/puzzle-suite.html
+npm test                       # node --test — generator correctness harness (test/*.mjs)
 ```
 After any JS change: rebuild, then bump `?v=N` in `<script src="bundle.js?v=N">` (puzzle-suite.html line ~525) to bypass browser cache.
 
@@ -325,10 +326,12 @@ These are recommended follow-ups, not yet done. See
   5 renderers, 4 `pdfDraw*` drawers, `import-export/importWords.js`,
   `workers/*`, `ai/aiGenerate.js`). They are tree-shaken out of the bundle but
   mislead readers. ~1500+ lines.
-- **Generator correctness tests**: there are currently **zero tests**. A wrong
-  answer key is product-fatal. Add a `node:test` suite that generates each topic
-  × sub-op × difficulty with a fixed seed and asserts `answer` against an
-  independently computed value.
+- **Generator correctness tests**: a starter `node:test` harness now exists at
+  `test/generator.test.mjs` (run `npm test`) — it independently re-derives
+  answers for arithmetic clues, checks `worked`-field consistency, missing-number
+  equations, fraction/percentage conversions, sub-op filtering, and a
+  per-topic variety floor. **Coverage is currently the five core Number topics**;
+  extend it to Algebra, Geometry, Statistics, Financial, Trig, etc.
 - **CI quality gate**: add ESLint + `node --test` as a job in `deploy.yml`
   before the deploy job.
 - **Automate cache-busting**: have `build.sh` stamp `?v=<hash>` into

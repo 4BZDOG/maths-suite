@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "build": "bash build.sh",
-    "start": "python3 -m http.server 8082"
+    "start": "python3 -m http.server 8082",
+    "test": "node --test"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"
