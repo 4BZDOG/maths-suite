@@ -63,8 +63,8 @@ function _angleArc(vx, vy, p1x, p1y, p2x, p2y, r = 16) {
 // ─── Rectangle ───────────────────────────────────────────────────────────────
 // diagram: { type:'rectangle', l, w, missing:'area'|'perimeter' }
 function _rectangle({ l, w: wv, missing }) {
-    const VW = 184, VH = 112;
-    const boxW = 122, boxH = 64;
+    const VW = 210, VH = 112;        // +26 width vs the original — gives the
+    const boxW = 122, boxH = 64;     // left-side "w = N" label room to render.
 
     const aspect = l / wv;
     let dw = aspect >= boxW / boxH ? boxW : boxH * aspect;
@@ -110,14 +110,14 @@ function _rectangle({ l, w: wv, missing }) {
 // diagram: { type:'right-triangle', a, b, c, missing:'a'|'b'|'c' }
 // Right angle at bottom-left; a = horizontal leg, b = vertical leg, c = hyp
 function _rightTriangle({ a, b, c, missing }) {
-    const VW = 184, VH = 130;
+    const VW = 210, VH = 130;          // wider viewBox so the left "b = N" label fits
     const maxW = 110, maxH = 86;
 
     const sc  = Math.min(maxW / a, maxH / b);
     const aPx = Math.max(46, Math.min(maxW, a * sc));
     const bPx = Math.max(32, Math.min(maxH, b * sc));
 
-    const Ax = 34, Ay = VH - 18;
+    const Ax = 50, Ay = VH - 18;       // shift right to give label room
     const Bx = Ax + aPx, By = Ay;
     const Cx = Ax, Cy = Ay - bPx;
 
@@ -217,8 +217,10 @@ function _triangleArea({ base, height }) {
         _t(cx, y0 + 17, `b = ${base}`, { size: 11 }) +
         // Height label to the right of the external guide
         _t(labelX + 6, (ap.y + y0) / 2 + 4, `h = ${height}`, { anchor: 'start', size: 11 }) +
-        // Missing area label inside triangle (left of height line)
-        _t(cx - 22, (ap.y + y0) / 2 + 5, 'A = ?', { missing: true, size: 13 });
+        // Missing area label — sits just above the base, left of the height
+        // line. Was midway-up the triangle, which crashed into the apex on
+        // flat (small-height) triangles.
+        _t(cx - 22, y0 - 6, 'A = ?', { missing: true, size: 13 });
 
     return _svg(VW, VH, inner);
 }
@@ -258,10 +260,10 @@ function _circle({ r, missing }) {
 // diagram: { type:'right-triangle-trig', opp, adj, hyp, angle, missing:'opp'|'adj'|'hyp'|'angle' }
 // Layout: right-angle at bottom-left (A), theta at bottom-right (B), apex at top-left (C)
 function _rightTriangleTrig({ opp, adj, hyp, angle, missing }) {
-    const VW = 214, VH = 142;
+    const VW = 240, VH = 142;       // wider so "opp = N" doesn't clip at left
     const adjPx = 106, oppPx = 78;
 
-    const Ax = 32, Ay = VH - 20;  // right-angle (bottom-left)
+    const Ax = 52, Ay = VH - 20;    // shifted right (was 32) to make room for "opp"
     const Bx = Ax + adjPx, By = Ay;  // theta (bottom-right)
     const Cx = Ax, Cy = Ay - oppPx;  // apex (top-left)
 
@@ -408,18 +410,31 @@ function _parallelogram({ base, height, missing }) {
     const cx = x0 + bPx / 2 + skew / 2;
     const cy = y0 + hPx / 2 + 5;
 
-    // Dashed height indicator line, positioned just OUTSIDE the right edge of
-    // the parallelogram so the label doesn't collide with the slant.
+    // Internal dashed perpendicular-height line from the top-left vertex
+    // down to the base, with a small right-angle mark at the foot. Matches
+    // the textbook convention for "h" in a parallelogram.
+    const intX = x0 + skew;            // top-left x → foot x (perpendicular)
+    const internalHeight =
+        `<line x1="${intX}" y1="${y0}" x2="${intX}" y2="${y0 + hPx}" ` +
+        `stroke="${GC}" stroke-width="1.3" stroke-dasharray="4,3" opacity="0.85"/>` +
+        // Right-angle mark at the foot (legs go right and up).
+        `<polyline points="${intX+7},${y0+hPx} ${intX+7},${y0+hPx-7} ${intX},${y0+hPx-7}" ` +
+        `fill="none" stroke="${GC}" stroke-width="1.3"/>`;
+
+    // External height-dimension indicator. Strengthened: stronger stroke,
+    // 0.85 opacity, with small arrowhead ticks. Sits to the right of the
+    // parallelogram so the label can't overlap the slant.
     const hx = x0 + bPx + skew + 12;
     const heightLine =
-        `<line x1="${hx}" y1="${y0}" x2="${hx}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>` +
-        // Small horizontal connector ticks at top and bottom of the height line
-        `<line x1="${hx - 3}" y1="${y0}" x2="${hx + 3}" y2="${y0}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
-        `<line x1="${hx - 3}" y1="${y0 + hPx}" x2="${hx + 3}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        `<line x1="${hx}" y1="${y0}" x2="${hx}" y2="${y0 + hPx}" ` +
+        `stroke="${GC}" stroke-width="1.3" stroke-dasharray="4,3" opacity="0.85"/>` +
+        `<line x1="${hx - 4}" y1="${y0}" x2="${hx + 4}" y2="${y0}" stroke="${GC}" stroke-width="1.2" opacity="0.85"/>` +
+        `<line x1="${hx - 4}" y1="${y0 + hPx}" x2="${hx + 4}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1.2" opacity="0.85"/>` +
         _t(hx + 6, y0 + hPx / 2 + 4, `h = ${height}`, { anchor: 'start', size: 10 });
 
     const inner =
         `<polygon points="${pts}" fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
+        internalHeight +
         // base label
         `<line x1="${x0+4}" y1="${y0+hPx+10}" x2="${x0+bPx-4}" y2="${y0+hPx+10}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
         _t(x0 + bPx / 2, y0 + hPx + 22, `b = ${base}`) +
@@ -454,17 +469,27 @@ function _trapezium({ a, b, height, missing }) {
     const cx = x0 + bPx / 2;
     const cy = y0 + hPx / 2 + 5;
 
-    // Dashed height indicator outside the right edge of the trapezium, so the
-    // label does not collide with the shape's diagonal side.
+    // Internal perpendicular-height line from the top-left vertex down to
+    // the base, with a right-angle mark at the foot. Textbook convention.
+    const intX = x0 + offset;
+    const internalHeight =
+        `<line x1="${intX}" y1="${y0}" x2="${intX}" y2="${y0 + hPx}" ` +
+        `stroke="${GC}" stroke-width="1.3" stroke-dasharray="4,3" opacity="0.85"/>` +
+        `<polyline points="${intX+7},${y0+hPx} ${intX+7},${y0+hPx-7} ${intX},${y0+hPx-7}" ` +
+        `fill="none" stroke="${GC}" stroke-width="1.3"/>`;
+
+    // External height-dimension indicator (strengthened).
     const hx = x0 + bPx + 12;
     const heightLine =
-        `<line x1="${hx}" y1="${y0}" x2="${hx}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" stroke-dasharray="3,2" opacity="0.6"/>` +
-        `<line x1="${hx - 3}" y1="${y0}" x2="${hx + 3}" y2="${y0}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
-        `<line x1="${hx - 3}" y1="${y0 + hPx}" x2="${hx + 3}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
+        `<line x1="${hx}" y1="${y0}" x2="${hx}" y2="${y0 + hPx}" ` +
+        `stroke="${GC}" stroke-width="1.3" stroke-dasharray="4,3" opacity="0.85"/>` +
+        `<line x1="${hx - 4}" y1="${y0}" x2="${hx + 4}" y2="${y0}" stroke="${GC}" stroke-width="1.2" opacity="0.85"/>` +
+        `<line x1="${hx - 4}" y1="${y0 + hPx}" x2="${hx + 4}" y2="${y0 + hPx}" stroke="${GC}" stroke-width="1.2" opacity="0.85"/>` +
         _t(hx + 6, y0 + hPx / 2 + 4, `h = ${height}`, { anchor: 'start', size: 10 });
 
     const inner =
         `<polygon points="${pts}" fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
+        internalHeight +
         // bottom label
         `<line x1="${x0+4}" y1="${y0+hPx+10}" x2="${x0+bPx-4}" y2="${y0+hPx+10}" stroke="${GC}" stroke-width="1" opacity="0.5"/>` +
         _t(cx, y0 + hPx + 22, `b = ${b}`) +

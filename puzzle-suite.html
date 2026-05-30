@@ -311,7 +311,7 @@
                         </select>
                         <hr class="form-divider">
                         <div class="toggle-row"><label title="Show shape diagrams for geometry questions (triangles, rectangles, circles) with labelled measurements"><i class="fas fa-shapes toggle-icon"></i>Show Diagrams</label><label class="switch"><input
-                                    type="checkbox" id="psShowDiagrams" checked onchange="renderActivePage(); saveState();"><span
+                                    type="checkbox" id="psShowDiagrams" checked onchange="renderActivePage(); syncQuickDiagramsFromState(); saveState();"><span
                                     class="slider-switch"></span></label></div>
                         <hr class="form-divider">
                         <div class="toggle-row"><label><i class="fas fa-tag toggle-icon"></i>Show Topic Badge</label><label class="switch"><input
@@ -422,6 +422,16 @@
                 <button class="page-btn" data-page="4" onclick="showPage(4)" role="tab"
                     aria-label="Answer key page"><i class="fas fa-key" aria-hidden="true"></i> Key</button>
             </div>
+            <div class="preview-quick-toggles" role="group" aria-label="Preview options">
+                <!-- Quick toggle for geometry diagrams. Mirrors the Settings panel's
+                     "Show Diagrams" checkbox; this surface makes it discoverable. -->
+                <button id="quick-diagrams" class="quick-toggle" type="button"
+                        onclick="toggleQuickDiagrams()" aria-pressed="true"
+                        title="Show / hide geometry diagrams">
+                    <i class="fas fa-shapes" aria-hidden="true"></i>
+                    <span class="quick-toggle-label">Diagrams</span>
+                </button>
+            </div>
             <div class="zoom-controls" role="group" aria-label="Zoom">
                 <button class="zoom-btn" onclick="adjustZoom(-0.1)" title="Zoom out" aria-label="Zoom out"><i class="fas fa-minus" aria-hidden="true"></i></button>
                 <button class="zoom-display" type="button" title="Reset zoom to 100%" onclick="resetZoom()" aria-label="Reset zoom">
@@ -521,7 +531,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=ce596ea9c0"></script>
+    <script src="bundle.js?v=694f1b10b3"></script>
 </body>
 
 </html>

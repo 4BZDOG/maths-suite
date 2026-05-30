@@ -1104,6 +1104,52 @@ main {
     opacity: 0.55;
 }
 
+/* Preview-toolbar quick toggles (e.g. "Diagrams" on/off). Sits between
+   the page tabs and the zoom controls. Mirrors a buried Settings option
+   so it's one click away. */
+.preview-quick-toggles {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    border-left: 1px solid var(--border);
+    padding-left: 16px;
+}
+
+.quick-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    color: var(--primary);
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.15s;
+}
+.quick-toggle:hover { background: var(--primary-light); }
+.quick-toggle:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+.quick-toggle > i { font-size: 0.85em; }
+
+/* Off state — dimmed so users see at a glance that diagrams are hidden. */
+.quick-toggle--off {
+    color: var(--text-muted);
+    background: transparent;
+}
+.quick-toggle--off::after {
+    content: ' OFF';
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+}
+
 .zoom-controls {
     display: flex;
     align-items: center;

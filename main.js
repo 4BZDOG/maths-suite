@@ -1193,6 +1193,34 @@ function syncSeedInput() {
     if (el) el.dataset.auto = 'false';
 }
 
+/**
+ * Toggle whether geometry diagrams are shown — surfaced as the quick toggle
+ * in the preview toolbar. Stays in sync with the Settings panel's checkbox
+ * (`#psShowDiagrams`) and the canonical `state.settings.showDiagrams`.
+ */
+function toggleQuickDiagrams() {
+    const checkbox = document.getElementById('psShowDiagrams');
+    const btn      = document.getElementById('quick-diagrams');
+    const nowOn    = !(checkbox ? checkbox.checked : true);
+    if (checkbox) checkbox.checked = nowOn;
+    if (btn) {
+        btn.setAttribute('aria-pressed', String(nowOn));
+        btn.classList.toggle('quick-toggle--off', !nowOn);
+    }
+    renderActivePage();
+    saveState();
+}
+
+/** Sync the quick-toggle UI to the canonical setting on load / restore. */
+function syncQuickDiagramsFromState() {
+    const checkbox = document.getElementById('psShowDiagrams');
+    const btn      = document.getElementById('quick-diagrams');
+    if (!btn) return;
+    const on = checkbox ? checkbox.checked : true;
+    btn.setAttribute('aria-pressed', String(on));
+    btn.classList.toggle('quick-toggle--off', !on);
+}
+
 function copySeedToClipboard() {
     const el = document.getElementById('seed-input');
     const val = el && el.value.trim();
@@ -1263,6 +1291,8 @@ window._puzzleApp = {
     toggleFormulaHintColumn,
     syncSeedInput,
     copySeedToClipboard,
+    toggleQuickDiagrams,
+    syncQuickDiagramsFromState,
     rerollQuestion,
     toggleLockQuestion,
 };
@@ -1298,6 +1328,8 @@ window.addEventListener('load', async () => {
 
         const saved = loadRawState();
         if (saved) applyStateToDOM(saved);
+        // Mirror the canonical Settings checkbox into the preview-toolbar quick toggle.
+        syncQuickDiagramsFromState();
 
         // Clone the Name/Class/Date strip into each problem page's header.
         // Lives once in the HTML as a <template>; we hydrate it here.
