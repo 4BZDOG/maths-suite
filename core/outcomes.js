@@ -221,7 +221,8 @@ export const STAGE_OUTCOMES = {
                 contentLabel: 'Probability',
                 statement: 'calculates the probability of compound and complementary events using various representations',
             },
-            // 5.3 Path outcomes — only shown when "Include Path content" is enabled
+            // Stage 5 Path outcomes (carry -P- infix in the official 2022 syllabus)
+            // — only shown when "Include Path content" is enabled.
             {
                 code: 'MA5-TRG-C-02',
                 contentLabel: 'Non-right-angled trigonometry',
@@ -380,7 +381,7 @@ export function getTopicsForOutcomeCodes(outcomeCodes, stage = 'Stage 4') {
  *
  * @param {string[]} activeTopicKeys - e.g. ['Integers', 'Algebra']
  * @param {string}   stage           - e.g. 'Stage 4'
- * @param {boolean}  includePath     - whether to include 5.3 Path outcomes
+ * @param {boolean}  includePath     - whether to include Stage 5 Path outcomes
  * @returns {{ code, contentLabel, statement, appliesAll?, pathway? }[]}
  */
 export function getOutcomesForTopics(activeTopicKeys, stage = 'Stage 4', includePath = false) {

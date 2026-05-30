@@ -18,8 +18,11 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
 
     const cols               = settings.cols || 2;
     const showTopic          = settings.showTopic || false;
-    const showOutcomeChips   = settings.psShowOutcomeChips || false;
-    const showOutcomesHeader = settings.psShowOutcomesHeader || false;
+    // NESA-off ⇒ no outcome chips or header, even if the Settings checkbox
+    // is still on from before. Keeps the global toggle authoritative.
+    const nesaOn             = settings.nesaMode !== false;
+    const showOutcomeChips   = nesaOn && !!settings.psShowOutcomeChips;
+    const showOutcomesHeader = nesaOn && !!settings.psShowOutcomesHeader;
     const capPages           = settings.psCapPages || 0;
     const showDiagrams       = settings.showDiagrams !== false;   // default true
     const stage              = settings.stage || DEFAULT_STAGE;

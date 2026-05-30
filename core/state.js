@@ -33,7 +33,7 @@ export const state = {
     // Active NESA stage ('Stage 4' | 'Stage 5')
     stage: 'Stage 4',
 
-    // Whether to include 5.3 Path content (Stage 5 only)
+    // Whether to include Stage 5 Path content (extends Core; 2022 syllabus naming)
     includePath: false,
 
     // Outcome filter: keyed by NESA outcome code, true = selected for generation filter.
@@ -66,6 +66,10 @@ export const state = {
         showAnswerKey:   true,
         showExportId:    true,
         showTopic:             false,
+        // NESA syllabus mode. ON by default for the existing audience (NSW
+        // teachers); when OFF, all NESA-specific UI is hidden or relabelled
+        // so the tool reads as a generic maths worksheet generator.
+        nesaMode:              true,
         psShowOutcomesHeader:  false,
         psShowOutcomeChips:    false,
         keyShowWorked:         false,
@@ -131,6 +135,7 @@ export function syncSettingsFromDOM() {
     s.showAnswerKey  = getChk('showAnswerKey', s.showAnswerKey);
     s.showExportId   = getChk('showExportId', s.showExportId);
     s.showTopic             = getChk('psShowTopic',            s.showTopic);
+    s.nesaMode              = getChk('nesaModeToggle',         s.nesaMode);
     s.psShowOutcomesHeader  = getChk('psShowOutcomesHeader',   s.psShowOutcomesHeader);
     s.psShowOutcomeChips    = getChk('psShowOutcomeChips',     s.psShowOutcomeChips);
     s.keyShowWorked         = getChk('keyShowWorked',          s.keyShowWorked);
@@ -312,6 +317,7 @@ export function applyStateToDOM(s) {
         });
     }
     setChk('psShowTopic',           cfg.showTopic);
+    setChk('nesaModeToggle',        cfg.nesaMode);
     setChk('psShowOutcomesHeader',  cfg.psShowOutcomesHeader);
     setChk('psShowOutcomeChips',    cfg.psShowOutcomeChips);
     setChk('keyShowWorked',         cfg.keyShowWorked);

@@ -25,10 +25,14 @@ function round(n, dp) { const f = Math.pow(10, dp); return Math.round(n * f) / f
 // so dollar amounts always render as "$17.40" (not "$17.4").
 function money(n) { return Number(n).toFixed(2); }
 
-const CALC_VERBS   = ['Calculate:', 'Evaluate:', 'Find the value of:', 'Work out:', 'Determine:'];
-const MULT_VERBS   = ['Calculate:', 'Evaluate:', 'Find the product of:', 'Work out:', 'Find the result of:'];
-const DIV_VERBS    = ['Calculate:', 'Evaluate:', 'Find the quotient of:', 'Work out:', 'Divide:'];
-const BODMAS_VERBS = ['Evaluate:', 'Calculate:', 'Apply order of operations to find:', 'Work out:', 'Simplify:'];
+// Verb pools — the imperative that opens each clue. The base list matches the
+// NESA Mathematics K-10 (2022) syllabus voice (Calculate / Evaluate / Find /
+// Determine), broadened with the syllabus-prominent verbs Apply, Compute,
+// Verify, Show so the same skill reads in a few different ways.
+const CALC_VERBS   = ['Calculate:', 'Evaluate:', 'Find the value of:', 'Work out:', 'Determine:', 'Compute:'];
+const MULT_VERBS   = ['Calculate:', 'Evaluate:', 'Find the product of:', 'Work out:', 'Find the result of:', 'Compute:'];
+const DIV_VERBS    = ['Calculate:', 'Evaluate:', 'Find the quotient of:', 'Work out:', 'Divide:', 'Compute:'];
+const BODMAS_VERBS = ['Evaluate:', 'Calculate:', 'Apply order of operations to find:', 'Work out:', 'Simplify:', 'Compute:'];
 const SOLVE_VERBS  = ['Solve:', 'Find $x$:', 'Determine $x$:', 'Calculate $x$:', 'Find the value of $x$:', 'Solve for $x$:'];
 
 const ALGEBRA_VARS = ['x', 'n', 'm', 'k', 'p', 't'];
@@ -67,7 +71,7 @@ function fracStr(n, d) {
 // SUB_OPS metadata — defines selectable sub-operations per topic.
 // Each entry: { key, label, stages?, pathway? }
 //   stages  - which stages include this op (default: both)
-//   pathway - 'path' means Stage 5.3 Path only; omit for core
+//   pathway - 'path' means Stage 5 Path only; omit for core
 // ============================================================
 export const SUB_OPS = {
     'Integers': [
@@ -105,7 +109,7 @@ export const SUB_OPS = {
         { key: 'factorise',       label: 'Factorise expressions',  stages: ['Stage 5'] },
         { key: 'quadratic-solve', label: 'Solve quadratics',       stages: ['Stage 5'] },
         { key: 'indices-laws',    label: 'Index laws',             stages: ['Stage 5'] },
-        // Stage 5.3 Path
+        // Stage 5 Path
         { key: 'simultaneous',   label: 'Simultaneous equations', stages: ['Stage 5'], pathway: 'path' },
         { key: 'surds-simplify', label: 'Simplify surds',         stages: ['Stage 5'], pathway: 'path' },
         { key: 'surds-operate',  label: 'Add / Multiply surds',   stages: ['Stage 5'], pathway: 'path' },
@@ -2827,7 +2831,7 @@ const ALL_SUBTOPICS = Object.keys(GENERATORS);
  * @param {number}  [opts.seed]      - optional seed (uses Date.now() if omitted)
  * @param {object}  [opts.subOpsFilter] - { topic: [allowedOpKeys] } or null for all
  * @param {string}  [opts.stage]     - 'Stage 4' | 'Stage 5' (default 'Stage 4')
- * @param {boolean} [opts.includePath] - include Stage 5.3 Path ops (default false)
+ * @param {boolean} [opts.includePath] - include Stage 5 Path ops (default false)
  * @returns {Array} clue bank items
  */
 export function generateMathsQuestions({ subTopic = 'All', subTopics = null, subOpsFilter = null, difficulty = 'All', count = 10, seed, showFormulas, stage = 'Stage 4', includePath = false } = {}) {

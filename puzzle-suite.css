@@ -448,6 +448,34 @@ label.field-label {
     letter-spacing: 0.05em;
 }
 
+/* ── NESA syllabus mode toggle ──────────────────────────────────────────
+   When NESA mode is OFF the body gets .nesa-off, which:
+   - hides the "NESA " text prefix in the STAGE section label;
+   - hides the per-topic outcomes accordion;
+   - hides the Outcomes Header / Outcome Chips toggles in Settings (they
+     have no effect — the renderers also short-circuit them).
+   Underlying outcome data is preserved; flipping back ON restores everything. */
+.nesa-mode-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 6px 0 12px 0;
+    padding: 8px 12px;
+    border-radius: 7px;
+    background: rgba(99, 102, 241, 0.06);
+    border: 1px solid rgba(99, 102, 241, 0.18);
+    font-size: 0.82rem;
+}
+.nesa-mode-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--text-main); cursor: pointer; user-select: none;
+}
+.nesa-mode-icon { color: var(--primary); opacity: 0.85; }
+
+body.nesa-off [data-nesa-prefix] { display: none; }
+body.nesa-off [data-nesa-only]   { display: none !important; }
+
 .section-label {
     font-size: 0.72rem;
     font-weight: 700;

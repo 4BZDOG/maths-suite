@@ -63,8 +63,23 @@
 
             <!-- EDITOR TAB -->
             <div id="panel-content" role="tabpanel" aria-labelledby="panel-content-tab">
+                <!-- NESA SYLLABUS MODE — turning this off hides outcome codes, the
+                     "NESA" branding, and the per-topic outcomes accordion so the
+                     tool reads as a generic maths worksheet generator. -->
+                <div class="nesa-mode-row">
+                    <label class="nesa-mode-label" for="nesaModeToggle">
+                        <i class="fas fa-school nesa-mode-icon"></i>
+                        <span><strong>NESA</strong> syllabus links</span>
+                    </label>
+                    <label class="switch">
+                        <input type="checkbox" id="nesaModeToggle" checked
+                               onchange="setNesaMode(this.checked)">
+                        <span class="slider-switch"></span>
+                    </label>
+                </div>
+
                 <!-- STAGE SELECTOR -->
-                <div class="section-label" style="margin-top:4px;"><i class="fas fa-graduation-cap"></i>NESA STAGE</div>
+                <div class="section-label" id="stage-section-label" style="margin-top:4px;"><i class="fas fa-graduation-cap"></i><span data-nesa-prefix>NESA </span>STAGE</div>
                 <div class="stage-selector-group" role="group" aria-label="NESA Stage">
                     <label class="stage-btn">
                         <input type="radio" name="stage-selector" value="Stage 4" checked onchange="setStage('Stage 4')">
@@ -78,7 +93,7 @@
                 <div id="path-toggle-wrapper" style="display:none; margin-top:6px;">
                     <label class="sub-op-row" style="padding:5px 10px; border-radius:6px; background:rgba(99,102,241,0.07); border:1px solid rgba(99,102,241,0.18);">
                         <input type="checkbox" id="include-path-toggle" onchange="setIncludePath(this.checked)">
-                        <span class="sub-op-name" style="font-size:12px;"><i class="fas fa-road sub-op-icon"></i>Include 5.3 Path content</span>
+                        <span class="sub-op-name" style="font-size:12px;"><i class="fas fa-road sub-op-icon"></i>Include Stage 5 <strong>Path</strong> content</span>
                     </label>
                 </div>
 
@@ -318,14 +333,14 @@
                                     type="checkbox" id="psShowTopic" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
                         <hr class="form-divider">
-                        <div class="toggle-row"><label title="Show relevant NESA outcome codes and descriptions at the top of the Answer Key"><i class="fas fa-clipboard-list toggle-icon"></i>Outcomes Header</label><label class="switch"><input
+                        <div class="toggle-row" data-nesa-only><label title="Show relevant NESA outcome codes and descriptions at the top of the Answer Key"><i class="fas fa-clipboard-list toggle-icon"></i>Outcomes Header</label><label class="switch"><input
                                     type="checkbox" id="psShowOutcomesHeader" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
-                        <hr class="form-divider">
-                        <div class="toggle-row"><label title="Show outcome code chips on each individual question"><i class="fas fa-circle-nodes toggle-icon"></i>Outcome Chips per Question</label><label class="switch"><input
+                        <hr class="form-divider" data-nesa-only>
+                        <div class="toggle-row" data-nesa-only><label title="Show outcome code chips on each individual question"><i class="fas fa-circle-nodes toggle-icon"></i>Outcome Chips per Question</label><label class="switch"><input
                                     type="checkbox" id="psShowOutcomeChips" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
-                        <hr class="form-divider">
+                        <hr class="form-divider" data-nesa-only>
                         <div class="toggle-row"><label title="Show worked solutions on Answer Key (where available — Pythagoras, Algebra)"><i class="fas fa-pencil-alt toggle-icon"></i>Worked Solutions on Key</label><label class="switch"><input
                                     type="checkbox" id="keyShowWorked" onchange="renderActivePage(); saveState();"><span
                                     class="slider-switch"></span></label></div>
@@ -531,7 +546,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=0fe305acc4"></script>
+    <script src="bundle.js?v=ac38504ac9"></script>
 </body>
 
 </html>

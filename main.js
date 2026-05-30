@@ -681,6 +681,12 @@ function renderOutcomes() {
         const container = document.getElementById('outcomes-for-' + topicId);
         if (container) container.innerHTML = '';
     });
+    // NESA-off mode: also clear the global filter notice and skip per-topic rendering.
+    if (state.settings.nesaMode === false) {
+        const notice = document.getElementById('global-outcome-notice');
+        if (notice) notice.innerHTML = '';
+        return;
+    }
 
     const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
 
@@ -946,9 +952,12 @@ function renderTopicTogglesByStrand() {
             const topicId = t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
             const checked = state.selectedTopics[t] ? 'checked' : '';
 
-            // Primary non-WM outcome code for chip label
-            const outcomes = getOutcomesForTopics([t], state.stage, state.includePath)
-                .filter(o => !o.appliesAll);
+            // Primary non-WM outcome code for chip label. Suppressed when
+            // the user has turned NESA syllabus links OFF.
+            const nesaOn = state.settings.nesaMode !== false;
+            const outcomes = nesaOn
+                ? getOutcomesForTopics([t], state.stage, state.includePath).filter(o => !o.appliesAll)
+                : [];
             const chipCode  = outcomes[0]?.code ?? '';
             const chipTitle = outcomes[0]?.contentLabel ?? '';
             const chipHtml  = chipCode
@@ -1019,6 +1028,26 @@ function setStage(newStage) {
     debouncedGenerate();
 }
 
+/**
+ * Toggle "NESA syllabus links" mode. When OFF: hide the per-topic outcomes
+ * accordion, strip NESA branding from labels, hide the outcome-header /
+ * outcome-chip toggles in Settings. When ON: restore the syllabus-aware UI.
+ * The underlying outcome data is preserved either way — flipping back ON
+ * brings everything back without re-selecting topics or filters.
+ */
+function setNesaMode(on) {
+    syncSettingsFromDOM();
+    state.settings.nesaMode = !!on;
+    // Toggle DOM-level visibility for NESA-only chrome.
+    document.body.classList.toggle('nesa-off', !on);
+    // Per-topic UI carries NESA outcome chips and an outcomes accordion —
+    // re-render both so they appear/disappear right away.
+    renderTopicTogglesByStrand();
+    renderOutcomes();
+    renderActivePage();
+    saveState();
+}
+
 function setIncludePath(checked) {
     if (!checked) {
         // Remove any currently selected path-only ops
@@ -1034,12 +1063,12 @@ function setIncludePath(checked) {
                     .filter(op => (!op.stages || op.stages.includes(state.stage)) && op.pathway !== 'path')
                     .map(op => op.key);
                 state.selectedSubOps[t] = coreKeys;
-                showToast(`5.3 Path operations removed from ${t}`, 'info');
+                showToast(`Stage 5 Path operations removed from ${t}`, 'info');
             } else {
                 const before = state.selectedSubOps[t].length;
                 state.selectedSubOps[t] = state.selectedSubOps[t].filter(k => !pathKeys.includes(k));
                 if (state.selectedSubOps[t].length < before) {
-                    showToast(`5.3 Path operations removed from ${t}`, 'info');
+                    showToast(`Stage 5 Path operations removed from ${t}`, 'info');
                 }
             }
         });
@@ -1293,6 +1322,7 @@ window._puzzleApp = {
     copySeedToClipboard,
     toggleQuickDiagrams,
     syncQuickDiagramsFromState,
+    setNesaMode,
     rerollQuestion,
     toggleLockQuestion,
 };
@@ -1330,6 +1360,8 @@ window.addEventListener('load', async () => {
         if (saved) applyStateToDOM(saved);
         // Mirror the canonical Settings checkbox into the preview-toolbar quick toggle.
         syncQuickDiagramsFromState();
+        // Apply NESA-mode CSS state (hides/strips NESA-specific chrome).
+        document.body.classList.toggle('nesa-off', state.settings.nesaMode === false);
 
         // Clone the Name/Class/Date strip into each problem page's header.
         // Lives once in the HTML as a <template>; we hydrate it here.

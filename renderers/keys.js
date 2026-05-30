@@ -6,7 +6,9 @@ import { getOutcomesForTopics, DEFAULT_STAGE } from '../core/outcomes.js';
 export function renderKeys(container, generatedSets, settings) {
     if (!container) return;
 
-    const showOutcomesHeader = settings?.psShowOutcomesHeader || false;
+    // NESA-mode off ⇒ no outcomes anywhere on the key, even if the Settings
+    // checkbox is still ticked from before. Keeps the toggle authoritative.
+    const showOutcomesHeader = settings?.nesaMode !== false && !!settings?.psShowOutcomesHeader;
     const activeTopics       = settings?.activeTopics         || [];
     const stage              = settings?.stage                || DEFAULT_STAGE;
     const showWorked         = settings?.keyShowWorked        || false;
@@ -31,7 +33,7 @@ export function renderKeys(container, generatedSets, settings) {
             const isLong = outcomes.length > 4;
             html += `<details class="outcomes-ws-header outcomes-ws-collapsible"${isLong ? '' : ' open'}>
                 <summary class="outcomes-ws-summary">
-                    <span class="outcomes-ws-title">NESA ${esc(stage)} Outcomes</span>
+                    <span class="outcomes-ws-title">${settings?.nesaMode === false ? '' : 'NESA '}${esc(stage)} Outcomes</span>
                     <span class="outcomes-ws-count">${outcomes.length}</span>
                 </summary>
                 <div class="outcomes-ws-list">${outcomes.map(o => `
