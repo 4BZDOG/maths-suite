@@ -3,7 +3,10 @@ import { renderKaTeX } from './katexRender.js';
 import { esc, formatClue } from './htmlUtils.js';
 import { getOutcomesForTopics, DEFAULT_STAGE } from '../core/outcomes.js';
 
-export function renderKeys(container, generatedSets, settings) {
+// `startNums` maps each difficulty to its first question number so the key's
+// numbering matches the worksheet's continuous run (Easy 1.., Medium n+1..,
+// Hard ..). Defaults to 1 per section for standalone use.
+export function renderKeys(container, generatedSets, settings, startNums = {}) {
     if (!container) return;
 
     // NESA-mode off ⇒ no outcomes anywhere on the key, even if the Settings
@@ -14,9 +17,9 @@ export function renderKeys(container, generatedSets, settings) {
     const showWorked         = settings?.keyShowWorked        || false;
 
     const sets = [
-        { label: 'EASY',   icon: 'fa-seedling', color: '#10b981', questions: generatedSets.easy   || [] },
-        { label: 'MEDIUM', icon: 'fa-bolt',     color: '#f59e0b', questions: generatedSets.medium || [] },
-        { label: 'HARD',   icon: 'fa-fire',     color: '#ef4444', questions: generatedSets.hard   || [] },
+        { label: 'EASY',   icon: 'fa-seedling', color: '#10b981', questions: generatedSets.easy   || [], start: startNums.easy   || 1 },
+        { label: 'MEDIUM', icon: 'fa-bolt',     color: '#f59e0b', questions: generatedSets.medium || [], start: startNums.medium || 1 },
+        { label: 'HARD',   icon: 'fa-fire',     color: '#ef4444', questions: generatedSets.hard   || [], start: startNums.hard   || 1 },
     ].filter(s => s.questions.length > 0);
 
     if (sets.length === 0) {
@@ -51,7 +54,7 @@ export function renderKeys(container, generatedSets, settings) {
     sets.forEach(set => {
         html += `<div class="key-section">
             <div class="key-section-title" style="color:${set.color}; border-bottom: 2px solid ${set.color}40;"><i class="fas ${set.icon}" style="margin-right:5px; opacity:.85;"></i>${set.label}</div>
-            <ol class="key-list">`;
+            <ol class="key-list" start="${set.start}">`;
         set.questions.forEach((q, i) => {
             const ans = esc(q.answerDisplay || q.answer || '');
             const workedHtml = showWorked && q.worked
@@ -59,7 +62,7 @@ export function renderKeys(container, generatedSets, settings) {
                 : '';
             html += `<li class="key-item">
                 <div class="key-item-row">
-                    <span class="key-num">${i + 1}.</span>
+                    <span class="key-num">${set.start + i}.</span>
                     <span class="key-clue katex-target">${formatClue(q.clue)}</span>
                     <span class="key-answer">${ans}</span>
                 </div>

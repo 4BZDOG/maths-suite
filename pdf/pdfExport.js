@@ -958,7 +958,7 @@ function createQuestionSets(cfg, seed) {
  * Draw a question page (Easy / Medium / Hard) in PDF.
  * Returns the number of questions that did NOT fit (overflow count).
  */
-function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
+function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1) {
     if (!questions || !questions.length) return 0;
     const { doc, PAGE_WIDTH, PAGE_HEIGHT, MARGIN, scale, pdfFont, drawWatermark } = ctx;
     pScale = pScale || scale;
@@ -1086,24 +1086,14 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
             + answerLineSpacing + SECTION_PAD + 6 * pScale
             + metaH + itemGap;
 
-        // Choose shortest column (2-col), then check whether even that
-        // column can fit the item before deciding to break to a new page.
-        if (cols === 2) {
-            col = colY[0] <= colY[1] ? 0 : 1;
-        }
-        const wouldOverflow = cols === 2
-            ? (Math.min(colY[0], colY[1]) + itemH > PAGE_HEIGHT - MARGIN - 10)
-            : (cy + itemH > PAGE_HEIGHT - MARGIN - 10);
-
-        if (wouldOverflow) {
-            if (capPages > 0 && pagesUsed >= capPages) {
-                overflowCount = questions.length - i;
-                break;
-            }
+        // COLUMN-MAJOR fill (newspaper style): stack items down the current
+        // column until one won't fit, then move to the next column; when the
+        // last column on the page is full, break to a new page. This keeps the
+        // question numbers continuous down a column and then down the next —
+        // unlike shortest-column balancing, which interleaves 1,3,5 / 2,4,6.
+        const pageBottom = PAGE_HEIGHT - MARGIN - 10;
+        const breakToNewPage = () => {
             pagesUsed++;
-            // Draw divider for this page before flipping to next.
-            // Use the deepest column as the divider's bottom so the rule
-            // matches the visible content extent on this page.
             if (cols === 2) {
                 _drawColumnDivider(doc, MARGIN, colW, pageStartY, Math.max(colY[0], colY[1]));
             }
@@ -1114,7 +1104,28 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
             cy         = pageStartY;
             colY       = [pageStartY, pageStartY];
             col        = 0;
-            _rowMaxH   = 0;
+        };
+
+        if (cols === 2) {
+            if (colY[col] + itemH > pageBottom) {
+                if (col === 0) {
+                    // Left column full → continue at the top of the right column.
+                    col = 1;
+                } else {
+                    // Both columns full → next page (subject to the page cap).
+                    if (capPages > 0 && pagesUsed >= capPages) {
+                        overflowCount = questions.length - i;
+                        break;
+                    }
+                    breakToNewPage();
+                }
+            }
+        } else if (cy + itemH > pageBottom) {
+            if (capPages > 0 && pagesUsed >= capPages) {
+                overflowCount = questions.length - i;
+                break;
+            }
+            breakToNewPage();
         }
 
         const itemX = col === 0 ? MARGIN : MARGIN + colW + 8;
@@ -1124,7 +1135,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId) {
         doc.setFont(pdfFont, 'bold');
         doc.setFontSize(9 * pScale);
         doc.setTextColor(100, 116, 139);
-        doc.text(`${i + 1}.`, itemX, drawY);
+        doc.text(`${startNum + i}.`, itemX, drawY);
 
         // ── Clue text ────────────────────────────────────────────────
         // isFraction is true only when the clue fits on a single line AND
@@ -1325,7 +1336,7 @@ function _drawColumnDivider(doc, MARGIN, colW, fromY, toY) {
 /**
  * Draw the answer key page showing all 3 difficulty sets.
  */
-function drawKeyPage(ctx, sets, startY, pScale, exportId) {
+function drawKeyPage(ctx, sets, startY, pScale, exportId, startNums = {}) {
     const { doc, PAGE_WIDTH, PAGE_HEIGHT, MARGIN, scale, pdfFont } = ctx;
     pScale = pScale || scale;
 
@@ -1429,6 +1440,9 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
         const ansStripW = Math.max(18 * pScale, colW * 0.32);
         const clueW     = colW - ansStripW - 3;
         const lineH     = 3.4 * pScale;
+        // First question number for this section — keeps the key's numbering
+        // continuous across difficulties, matching the worksheet pages.
+        const secStart  = startNums[sec.key] || 1;
 
         sec.questions.forEach((q, i) => {
             if (ky + 6 * pScale > PAGE_HEIGHT - MARGIN - 12 * pScale) return;
@@ -1442,13 +1456,14 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId) {
             doc.setFont(pdfFont, 'normal');
             doc.setFontSize(7 * pScale);
             doc.setTextColor(100, 116, 139);
-            const clueLines = doc.splitTextToSize(`${i + 1}. ${clueText}`, clueW);
+            const qNum = secStart + i;
+            const clueLines = doc.splitTextToSize(`${qNum}. ${clueText}`, clueW);
             // Cap at 3 wrapped lines so a freak long clue can't blow up a key page.
             const shownCount = Math.min(clueLines.length, 3);
 
             // Bold verb + *italic* emphasis + **bold** — matches the HTML answer key
             // and the PDF problem-set body.
-            _drawKeyClueRich(doc, `${i + 1}. `, q.clue || '', cx, ky, {
+            _drawKeyClueRich(doc, `${qNum}. `, q.clue || '', cx, ky, {
                 maxW: clueW, lineH, fontSizePt: 7 * pScale, pdfFont,
                 color: [100, 116, 139], maxLines: 3,
             });
@@ -1670,6 +1685,18 @@ export async function exportPDF() {
                 hard:   selectedPages.includes('hard')   ? null : 0,
             };
 
+            // Continuous numbering across difficulties (Easy 1.., Medium n+1..,
+            // Hard ..). Computed canonically (easy→medium→hard) from visible
+            // counts; falls back to full length for a difficulty not yet drawn
+            // (only matters under a non-default page order). The answer key
+            // uses the same helper so its numbers match the worksheet.
+            const startNumFor = (diff) => {
+                const cnt = (k) => visibleCounts[k] ?? (sets[k] || []).length;
+                if (diff === 'easy')   return 1;
+                if (diff === 'medium') return 1 + cnt('easy');
+                return 1 + cnt('easy') + cnt('medium');   // hard
+            };
+
             for (const pType of selectedPages) {
                 await new Promise(r => setTimeout(r, 0));
 
@@ -1677,21 +1704,21 @@ export async function exportPDF() {
                     addPage();
                     const ps = getPScale('easy');
                     const sy = drawHeader(ctx, title, sub, '🌱 EASY — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [16, 185, 129]);
-                    const overflow = drawQuestionPage(ctx, sets.easy, sy, ps, exportId);
+                    const overflow = drawQuestionPage(ctx, sets.easy, sy, ps, exportId, startNumFor('easy'));
                     visibleCounts.easy = (sets.easy || []).length - overflow;
 
                 } else if (pType === 'medium') {
                     addPage();
                     const ps = getPScale('medium');
                     const sy = drawHeader(ctx, title, sub, '⚡ MEDIUM — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [245, 158, 11]);
-                    const overflow = drawQuestionPage(ctx, sets.medium, sy, ps, exportId);
+                    const overflow = drawQuestionPage(ctx, sets.medium, sy, ps, exportId, startNumFor('medium'));
                     visibleCounts.medium = (sets.medium || []).length - overflow;
 
                 } else if (pType === 'hard') {
                     addPage();
                     const ps = getPScale('hard');
                     const sy = drawHeader(ctx, title, sub, '🔥 HARD — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [239, 68, 68]);
-                    const overflow = drawQuestionPage(ctx, sets.hard, sy, ps, exportId);
+                    const overflow = drawQuestionPage(ctx, sets.hard, sy, ps, exportId, startNumFor('hard'));
                     visibleCounts.hard = (sets.hard || []).length - overflow;
 
                 } else if (pType === 'key') {
@@ -1704,7 +1731,12 @@ export async function exportPDF() {
                         medium: (sets.medium || []).slice(0, visibleCounts.medium ?? (sets.medium || []).length),
                         hard:   (sets.hard   || []).slice(0, visibleCounts.hard   ?? (sets.hard   || []).length),
                     };
-                    drawKeyPage(ctx, keySets, sy, ps, exportId);
+                    const keyStartNums = {
+                        Easy:   startNumFor('easy'),
+                        Medium: startNumFor('medium'),
+                        Hard:   startNumFor('hard'),
+                    };
+                    drawKeyPage(ctx, keySets, sy, ps, exportId, keyStartNums);
                 }
             }
         }

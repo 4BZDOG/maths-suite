@@ -13,7 +13,10 @@ const TOPIC_COLOURS = {
     'Ratios & Rates': '#0ea5e9',
 };
 
-export function renderProblemSet(container, questions, settings, difficultyLabel) {
+// `startNum` is the question number to assign to the first question in this
+// set, so numbering runs continuously across difficulties (Easy 1..n,
+// Medium n+1.., Hard ..). Defaults to 1 for standalone use.
+export function renderProblemSet(container, questions, settings, difficultyLabel, startNum = 1) {
     if (!container) return;
 
     const cols               = settings.cols || 2;
@@ -95,7 +98,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
         html += `<div class="problem-item${isLocked ? ' is-locked' : ''}">
             ${actionsHtml}
             <div class="problem-clue-row">
-                <span class="problem-num">${i + 1}.</span>
+                <span class="problem-num">${startNum + i}.</span>
                 <div class="problem-clue katex-target">${formatClue(item.clue)}</div>
             </div>
             ${diagramHtml}
@@ -183,12 +186,20 @@ function _capToPages(container, total, capPages) {
     let hiddenCount = 0;
 
     // Read all rects in one pass (single forced reflow), then write in a second pass.
+    // Hide a CONTIGUOUS TAIL: find the first item (in document order) that
+    // overflows the cap region, then hide it and everything after it. This
+    // guarantees the visible questions are 1..k with no gaps in the numbering
+    // — without it, a tall item near the bottom of column 1 could be hidden
+    // while shorter items at the top of column 2 stayed visible, producing
+    // a sequence like 1,2,3,4,6,7 (item 5 missing).
     const rects = items.map(item => item.getBoundingClientRect());
+    let firstOverflow = items.length;
     for (let i = 0; i < items.length; i++) {
-        if (rects[i].bottom > limitBottom - 4) {
-            hiddenCount++;
-            items[i].style.display = 'none';
-        }
+        if (rects[i].bottom > limitBottom - 4) { firstOverflow = i; break; }
+    }
+    for (let i = firstOverflow; i < items.length; i++) {
+        items[i].style.display = 'none';
+        hiddenCount++;
     }
 
     // Overflow notice removed — students should focus on visible questions only
