@@ -10,6 +10,70 @@ import { gen, DIFFS, approxEqual } from '../_helpers.mjs';
 
 function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 
+test('Ratios & Rates: scale-drawing answer = drawn-cm × (real-per-cm)', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+        const qs = gen({
+            topic: 'Ratios & Rates', difficulty: 'Medium', count: 8, seed,
+            subOpsFilter: { 'Ratios & Rates': ['unit-rate'] },
+        });
+        for (const q of qs) {
+            const m = q.clue.match(/\$1\$\s*cm\s*[=$ ]+\s*\$(\d+)\$\s*m.*?\$(\d+)\$\s*cm/i)
+                  ||  q.clue.match(/\$1\$\s*cm represents\s*\$(\d+)\$\s*m.*?\$(\d+)\$\s*cm/i);
+            if (!m) continue;
+            const per = +m[1], drawn = +m[2];
+            assert.equal(Number(q.answer), per * drawn,
+                `seed${seed}: scale 1 cm = ${per} m × ${drawn} cm → "${q.answer}" (expected ${per * drawn})`);
+            checked++;
+        }
+    }
+    assert.ok(checked > 5, `only ${checked} scale-drawing questions verified`);
+});
+
+test('Ratios & Rates: km/h → m/s conversion (÷ 3.6)', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+        const qs = gen({
+            topic: 'Ratios & Rates', difficulty: 'Medium', count: 8, seed,
+            subOpsFilter: { 'Ratios & Rates': ['speed'] },
+        });
+        for (const q of qs) {
+            const m = q.clue.match(/\$(\d+)\$\s*km\/h.*\bm\/s\b/);
+            if (!m) continue;
+            const kmh = +m[1];
+            assert.ok(Math.abs(Number(q.answer) - kmh / 3.6) < 1e-9,
+                `seed${seed}: ${kmh} km/h → "${q.answer}" m/s (expected ${kmh / 3.6})`);
+            checked++;
+        }
+    }
+    assert.ok(checked > 5, `only ${checked} km/h→m/s conversions verified`);
+});
+
+test('Ratios & Rates: three-part ratio split sums to the total', () => {
+    let checked = 0;
+    for (const diff of ['Medium', 'Hard']) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = gen({
+                topic: 'Ratios & Rates', difficulty: diff, count: 8, seed,
+                subOpsFilter: { 'Ratios & Rates': ['divide-ratio'] },
+            });
+            for (const q of qs) {
+                // Three-part answer is "A : B : C" (vs two-part "A : B")
+                const parts = q.answer.split(':').map(s => Number(s.trim()));
+                if (parts.length !== 3 || parts.some(p => !Number.isFinite(p))) continue;
+                // Stated total in clue: "Share $T$ <unit>"
+                const tm = q.clue.match(/\$(\d+)\$\s+\w+/);
+                if (!tm) continue;
+                const total = +tm[1];
+                assert.equal(parts.reduce((a, b) => a + b, 0), total,
+                    `${diff}/seed${seed}: ${q.answer} sum ≠ ${total} | "${q.clue}"`);
+                checked++;
+            }
+        }
+    }
+    assert.ok(checked > 5, `only ${checked} three-part ratio splits verified`);
+});
+
 test('Ratios & Rates: speed / distance / time, simplify, equivalent answers match', () => {
     let checked = 0;
     for (const diff of DIFFS) {

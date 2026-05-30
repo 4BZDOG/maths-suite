@@ -673,11 +673,11 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
 function genRounding(rng, diff, allowedOps) {
     const maps = {
         Easy:   { 'nearest': [0, 1, 2] },
-        Medium: { 'nearest': [0, 3, 4], 'decimal-places': [1, 2] },
-        Hard:   { 'nearest': [0, 4], 'decimal-places': [1], 'sig-figs': [2, 3] },
+        Medium: { 'nearest': [0, 3, 4, 5], 'decimal-places': [1, 2] },
+        Hard:   { 'nearest': [0, 4, 5], 'decimal-places': [1], 'sig-figs': [2, 3] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : 4);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : 5);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -765,6 +765,18 @@ function genRounding(rng, diff, allowedOps) {
             const worked = `$${a} \\times ${b} \\approx ${ra} \\times ${rb} = ${ans}$`;
             return { clue: ph, answer: String(ans), worked };
         }
+        if (type === 5) {
+            // Round to nearest 25 (common in time / currency / measurement).
+            const factor = rc(rng, [25, 50]);
+            const n = ri(rng, factor * 2, factor * 80);
+            const ans = Math.round(n / factor) * factor;
+            const ph = rc(rng, [
+                `Round $${n}$ to the nearest $${factor}$`,
+                `Write $${n}$ correct to the nearest $${factor}$`,
+                `Approximate $${n}$ to the nearest $${factor}$`,
+            ]);
+            return { clue: ph, answer: String(ans) };
+        }
         // type 3: nearest 5
         const n3 = ri(rng, 12, 295);
         const ans3 = Math.round(n3 / 5) * 5;
@@ -833,6 +845,23 @@ function genRounding(rng, diff, allowedOps) {
             `By rounding each number to the nearest $100$, estimate $${a} + ${b} + ${c}$`,
         ]);
         const worked = `$\\approx ${ra} + ${rb} + ${rc2} = ${ans}$`;
+        return { clue: ph, answer: String(ans), worked };
+    }
+    if (type === 5) {
+        // Estimation by division. Round dividend and divisor sensibly, then divide.
+        // Pick a divisor and a dividend designed to give a clean integer ratio
+        // after rounding (so the answer is a tidy number to compute mentally).
+        const divisor = rc(rng, [10, 20, 25, 50, 100]);
+        const quotient = ri(rng, 4, 30);
+        const noise = ri(rng, -divisor / 4 | 0, divisor / 4 | 0);
+        const dividend = divisor * quotient + noise;
+        const roundedD = Math.round(dividend / divisor) * divisor;
+        const ans = roundedD / divisor;
+        const ph = rc(rng, [
+            `*Estimate* $${dividend} \\div ${divisor}$ by rounding $${dividend}$ first.`,
+            `Use rounding to *estimate* $${dividend} \\div ${divisor}$.`,
+        ]);
+        const worked = `$\\approx ${roundedD} \\div ${divisor} = ${ans}$`;
         return { clue: ph, answer: String(ans), worked };
     }
     // type 3: 3 significant figures
@@ -2578,12 +2607,25 @@ function genRatiosRates(rng, diff, allowedOps) {
 
     if (op === 'divide-ratio') {
         const total = diff === 'Easy' ? rc(rng, [24, 30, 36, 48]) : diff === 'Medium' ? rc(rng, [60, 90, 120, 150]) : rc(rng, [200, 300, 500, 1000]);
+        const unit = diff === 'Hard' ? 'dollars' : rc(rng, ['lollies', 'points', 'tiles', 'cm']);
+        // 30% of the time on Medium/Hard: three-part ratio split (a : b : c)
+        if (diff !== 'Easy' && rng() < 0.3) {
+            const a = ri(rng, 1, 4), b = ri(rng, 1, 4), c = ri(rng, 1, 4);
+            const denom = a + b + c;
+            if (total % denom !== 0) return genRatiosRates(rng, diff, allowedOps);
+            const share = total / denom;
+            const A = share * a, B = share * b, C = share * c;
+            const ph = rc(rng, [
+                `Share $${total}$ ${unit} between three people in the ratio $${a} : ${b} : ${c}$.`,
+                `Divide $${total}$ ${unit} in the ratio $${a} : ${b} : ${c}$.`,
+            ]);
+            return { clue: ph, answer: `${A} : ${B} : ${C}`, answerDisplay: `$${A} : ${B} : ${C}$` };
+        }
         const partsA = ri(rng, 1, 5), partsB = ri(rng, 1, 5);
         const denomParts = partsA + partsB;
         if (total % denomParts !== 0) return genRatiosRates(rng, diff, allowedOps);
         const shareA = (total / denomParts) * partsA;
         const shareB = total - shareA;
-        const unit = diff === 'Hard' ? 'dollars' : rc(rng, ['lollies', 'points', 'tiles', 'cm']);
         const ph = rc(rng, [
             `Divide $${total}$ ${unit} in the ratio $${partsA} : ${partsB}$.`,
             `Share $${total}$ ${unit} in the ratio $${partsA} : ${partsB}$.`,
@@ -2604,6 +2646,32 @@ function genRatiosRates(rng, diff, allowedOps) {
     }
 
     if (op === 'unit-rate') {
+        // 25% on Medium/Hard: scale-drawing problem (a kind of unit rate).
+        if (diff !== 'Easy' && rng() < 0.25) {
+            const scaleCm = 1, scaleReal = rc(rng, [10, 20, 25, 50, 100]); // 1 cm = N m
+            const drawCm  = ri(rng, 3, 12);
+            const real    = drawCm * scaleReal;
+            const ph = rc(rng, [
+                `A map uses the scale $${scaleCm}$ cm $= ${scaleReal}$ m. On the map, a path measures $${drawCm}$ cm. What is the *actual* length in metres?`,
+                `On a scale drawing $${scaleCm}$ cm represents $${scaleReal}$ m. A wall is drawn as $${drawCm}$ cm long. Find the *actual* length.`,
+            ]);
+            return { clue: ph, answer: String(real), answerDisplay: `${real} m` };
+        }
+        // 30% of the time (Medium/Hard): "best buy" comparison — pick the
+        // cheaper pack and state its unit rate.
+        if (diff !== 'Easy' && rng() < 0.3) {
+            const item = rc(rng, ['cereal (g)', 'shampoo (mL)', 'rice (g)', 'detergent (mL)']);
+            // Construct two packs with distinct unit prices.
+            const q1 = rc(rng, [250, 500, 750, 1000]);
+            const q2 = rc(rng, [200, 400, 600, 800, 1000, 1250]);
+            const p1 = ri(rng, 2, 12);                 // cheaper-looking
+            const p2 = ri(rng, p1 + 2, p1 + 18);
+            const r1 = p1 / q1, r2 = p2 / q2;
+            if (r1 === r2) return genRatiosRates(rng, diff, allowedOps);
+            const cheaper = r1 < r2 ? 'Pack A' : 'Pack B';
+            const ph = `Pack A: $${q1}$ ${item} for $\\$${money(p1)}$. Pack B: $${q2}$ ${item} for $\\$${money(p2)}$. Which is the *better buy*?`;
+            return { clue: ph, answer: cheaper, answerDisplay: cheaper };
+        }
         const UNIT_CONTEXTS = [
             { item: 'apples', price: ri(rng, 2, 8), qty: ri(rng, 2, 6) * rc(rng, [2, 3, 4]) },
             { item: 'litres of petrol', price: ri(rng, 150, 210), qty: rc(rng, [10, 20, 40, 50]) },
@@ -2625,6 +2693,16 @@ function genRatiosRates(rng, diff, allowedOps) {
         { vehicle: 'cyclist', unit: 'km/h' },
     ];
     const ctx = rc(rng, SPEED_CONTEXTS);
+    // 20% on Medium/Hard: km/h ↔ m/s conversion (a fundamental rate skill).
+    if (diff !== 'Easy' && rng() < 0.2) {
+        const kmh = rc(rng, [18, 36, 54, 72, 90, 108]);  // each divisible by 3.6
+        const ms  = kmh / 3.6;
+        const ph = rc(rng, [
+            `Convert $${kmh}$ km/h to *m/s*. ($1$ km/h $= \\frac{1}{3.6}$ m/s.)`,
+            `A ${ctx.vehicle} travels at $${kmh}$ km/h. Express this speed in *m/s*.`,
+        ]);
+        return { clue: ph, answer: String(ms), answerDisplay: `${ms} m/s` };
+    }
     const findWhat = rc(rng, diff === 'Easy' ? ['speed', 'distance'] : ['speed', 'distance', 'time']);
     if (findWhat === 'speed') {
         const d = ri(rng, 2, 15) * 10, t = ri(rng, 1, 4);
