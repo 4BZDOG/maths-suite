@@ -1,7 +1,7 @@
 // =============================================================
 // test/_helpers.mjs — shared utilities for the generator test suite.
 // =============================================================
-import { generateMathsQuestions, SUB_OPS } from '../generators/mathsQuestionGen.js';
+import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
 
 export const DIFFS = ['Easy', 'Medium', 'Hard'];
 
@@ -9,8 +9,14 @@ export const STAGE4_TOPICS = [
     'Integers', 'Decimals', 'Rounding', 'Fractions', 'Percentages',
     'Algebra', 'Geometry', 'Statistics', 'Financial Maths',
     'Probability', 'Ratios & Rates',
+    // 2022-syllabus focus areas
+    'Indices', 'Linear Relationships',
 ];
-export const STAGE5_TOPICS = ['Trigonometry', 'Non-linear Relationships'];
+export const STAGE5_TOPICS = [
+    'Trigonometry', 'Non-linear Relationships',
+    // 2022-syllabus focus areas (Stage 5 only)
+    'Properties of Geometrical Figures', 'Variation & Rates of Change',
+];
 
 export const VALID_DIAGRAMS = new Set([
     'rectangle', 'right-triangle', 'triangle-angles', 'triangle-area', 'circle',

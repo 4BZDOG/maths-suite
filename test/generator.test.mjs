@@ -205,6 +205,11 @@ const VARIETY_FLOOR = {
     Algebra: 8, Geometry: 8, Statistics: 8, 'Financial Maths': 7,
     Probability: 6, 'Ratios & Rates': 8,
     Trigonometry: 12, 'Non-linear Relationships': 8,
+    // Starter topics added in the 2022-syllabus alignment pass — lower
+    // floors initially because each ships with a small handful of sub-ops.
+    // Raise as content is fleshed out.
+    'Indices': 4, 'Linear Relationships': 4,
+    'Properties of Geometrical Figures': 3, 'Variation & Rates of Change': 2,
 };
 
 test('variety: a single-topic page yields a healthy spread of distinct clues', () => {

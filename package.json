@@ -1,15 +1,18 @@
 {
-  "name": "puzzle-suite",
-  "version": "60.3.0",
+  "name": "maths-suite",
+  "version": "1.0.0",
   "description": "Browser-based NESA maths worksheet & question-set generator",
   "private": true,
   "type": "module",
   "scripts": {
     "build": "bash build.sh",
     "start": "python3 -m http.server 8082",
-    "test": "node --test"
+    "test": "node --test",
+    "lint": "eslint ."
   },
   "devDependencies": {
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "eslint": "^10.4.1",
+    "globals": "^17.6.0"
   }
 }

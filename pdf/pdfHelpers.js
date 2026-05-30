@@ -82,6 +82,21 @@ function _parseLatex(s) {
         .replace(/\\infty/g,  '∞')
         .replace(/\\degree/g, '°')
         .replace(/°/g,        '°')
+        // Fill-in-the-box placeholder for missing-number questions (□).
+        // Must come before the catch-all \command strip below, or the box
+        // vanishes and the question reads "  - 48 = 92".
+        .replace(/\\square/g, '□')
+        // Greek letters and angle marks — needed by Trigonometry answer keys
+        // ("\theta = 22.6°") and obtuse-angle clues ("\angle A = 60°").
+        .replace(/\\theta/g, 'θ')
+        .replace(/\\alpha/g, 'α')
+        .replace(/\\beta/g,  'β')
+        .replace(/\\gamma/g, 'γ')
+        .replace(/\\angle/g, '∠')
+        // \overline{x} → x̄ (combining macron). Used in stats formula hints.
+        .replace(/\\overline\{([^}]+)\}/g, (_, x) => x + '̄')
+        // \text{...} → ... (plain text inside math mode). Used in stats: "\text{sum}".
+        .replace(/\\text\{([^}]+)\}/g, '$1')
         // Square root: \sqrt{x} → √(x)
         .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
         .replace(/\\sqrt\s+(\S+)/g,    '√$1')
@@ -316,7 +331,7 @@ export function drawText(doc, text, x, y, { fontSizePt, bold = false, italic = f
  * @returns {number} Y position where content should start (below header)
  */
 export function drawHeader(ctx, fullTitle, subText, instructions, isKey, setIndicator = '', pScale, exportId = '', instrColor = null) {
-    const { doc, PAGE_WIDTH, MARGIN, scale, pdfFont, showExportId } = ctx;
+    const { doc, PAGE_WIDTH, MARGIN, scale, pdfFont } = ctx;
     pScale = pScale || scale;
     const titleScale = ctx.titleScale || 1;
 

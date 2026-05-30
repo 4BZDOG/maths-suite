@@ -14,7 +14,11 @@ export function esc(str) {
 //   2. IMPERATIVE_RE  — fallback: the leading imperative word alone
 //      (e.g. "Find the area of a rectangle..." → bold just "Find").
 const VERB_PHRASE_RE = /^([A-Za-z][^:.*]{0,50}:\s)/;
-const IMPERATIVE_LIST = 'Approximate|Calculate|Compare|Compute|Convert|Decrease|Describe|Determine|Divide|Estimate|Evaluate|Expand|Express|Factorise|Find|How many|How much|Identify|Increase|Label|List|Order|Reduce|Round|Share|Show|Simplify|Solve|Split|State|Substitute|Use|What is|Work out|Write';
+// Imperative verbs we recognise as the leading verb of a clue (rendered bold
+// in the preview and PDF). Includes the NESA Mathematics K-10 (2022) syllabus
+// voice — Apply / Construct / Graph / Interpret / Investigate / Justify /
+// Plot / Represent / Sketch / Verify — added in the 2025 refresh.
+const IMPERATIVE_LIST = 'Apply|Approximate|Calculate|Classify|Compare|Compute|Construct|Convert|Decrease|Demonstrate|Describe|Determine|Divide|Estimate|Evaluate|Expand|Explain|Express|Factorise|Find|Graph|How many|How much|Identify|Increase|Interpret|Investigate|Justify|Label|List|Model|Order|Plot|Predict|Recognise|Reduce|Represent|Round|Share|Show|Simplify|Sketch|Solve|Split|State|Substitute|Use|Verify|What is|Work out|Write';
 const IMPERATIVE_RE  = new RegExp(`^(${IMPERATIVE_LIST})\\b`);
 // Mid-sentence imperative: catches clues like "A rectangle has...Determine its
 // area." (verb after ". ") and "If y = 2x + 5, find y when x = 3" (lowercase

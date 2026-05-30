@@ -448,6 +448,34 @@ label.field-label {
     letter-spacing: 0.05em;
 }
 
+/* ── NESA syllabus mode toggle ──────────────────────────────────────────
+   When NESA mode is OFF the body gets .nesa-off, which:
+   - hides the "NESA " text prefix in the STAGE section label;
+   - hides the per-topic outcomes accordion;
+   - hides the Outcomes Header / Outcome Chips toggles in Settings (they
+     have no effect — the renderers also short-circuit them).
+   Underlying outcome data is preserved; flipping back ON restores everything. */
+.nesa-mode-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 6px 0 12px 0;
+    padding: 8px 12px;
+    border-radius: 7px;
+    background: rgba(99, 102, 241, 0.06);
+    border: 1px solid rgba(99, 102, 241, 0.18);
+    font-size: 0.82rem;
+}
+.nesa-mode-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--text-main); cursor: pointer; user-select: none;
+}
+.nesa-mode-icon { color: var(--primary); opacity: 0.85; }
+
+body.nesa-off [data-nesa-prefix] { display: none; }
+body.nesa-off [data-nesa-only]   { display: none !important; }
+
 .section-label {
     font-size: 0.72rem;
     font-weight: 700;
@@ -1102,6 +1130,52 @@ main {
 .zoom-display-icon {
     font-size: 9px;
     opacity: 0.55;
+}
+
+/* Preview-toolbar quick toggles (e.g. "Diagrams" on/off). Sits between
+   the page tabs and the zoom controls. Mirrors a buried Settings option
+   so it's one click away. */
+.preview-quick-toggles {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    border-left: 1px solid var(--border);
+    padding-left: 16px;
+}
+
+.quick-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-panel);
+    color: var(--primary);
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.15s;
+}
+.quick-toggle:hover { background: var(--primary-light); }
+.quick-toggle:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+.quick-toggle > i { font-size: 0.85em; }
+
+/* Off state — dimmed so users see at a glance that diagrams are hidden. */
+.quick-toggle--off {
+    color: var(--text-muted);
+    background: transparent;
+}
+.quick-toggle--off::after {
+    content: ' OFF';
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
 }
 
 .zoom-controls {
@@ -2537,6 +2611,30 @@ table.mode-cw td.cell.empty {
 .formula-bulk-diff { font-weight: 700; }
 .formula-bulk-sep { color: var(--text-muted); margin: 0 2px; }
 
+/* Per-topic block inside the Formulas & Hints card. Replaces the inline
+   styles that were duplicated 6× on the topic blocks. */
+.formula-topic {
+    margin-bottom: 8px;
+}
+.formula-topic:last-child {
+    margin-bottom: 4px;
+}
+.formula-topic-label {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text-main);
+}
+.formula-topic-label > i {
+    margin-right: 5px;
+    opacity: 0.55;
+    font-size: 10px;
+}
+.formula-topic-row {
+    display: flex;
+    justify-content: space-between;
+    max-width: 180px;
+}
+
 /* Score bar at the bottom-right of each difficulty section */
 .problem-student-header {
     display: flex;
@@ -3186,6 +3284,24 @@ table.mode-cw td.cell.empty {
     border-bottom: 2px solid var(--border, #e5e7eb);
 }
 
+/* Worksheet page title / subtitle — font-size scales with the user's
+   "Title Scale" slider (the --title-scale CSS var). Was inline-styled on
+   every page; now lives here so the four .page blocks stay readable. */
+.page .disp-title {
+    font-size: calc(1.5rem * var(--title-scale));
+}
+.page .disp-sub {
+    font-size: calc(1rem * var(--title-scale));
+    color: var(--text-muted);
+}
+
+/* Difficulty band tint on the instruction strip icon. The icon colour
+   was an inline style on each page; this consolidates them and matches
+   the colours used by .page-btn[data-page=N].active for visual coherence. */
+#p1-instruction .fa-seedling { color: #10b981; margin-right: 6px; }
+#p2-instruction .fa-bolt     { color: #f59e0b; margin-right: 6px; }
+#p3-instruction .fa-fire     { color: #ef4444; margin-right: 6px; }
+
 .page-header-right {
     text-align: right;
     display: flex;
@@ -3214,6 +3330,8 @@ table.mode-cw td.cell.empty {
     opacity: .55;
 }
 .hdr-line--wide { width: 140px; }
+
+.hdr-date-label { margin-left: 10px; }
 
 .p-area {
     flex: 1;

@@ -112,7 +112,7 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
 
     pScale = pScale || 1;
     const availW = PAGE_WIDTH - MARGIN * 2;
-    const availH = PAGE_HEIGHT - MARGIN * 2;
+    const _availH = PAGE_HEIGHT - MARGIN * 2;
 
     // Collect all formula cards for active topics first — bail out before
     // drawing anything if there's nothing to show.
