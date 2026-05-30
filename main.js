@@ -240,17 +240,23 @@ function renderActivePage() {
     const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
     const sWithTopics = { ...s, activeTopics, stage: state.stage, psCapPages: pages };
 
-    const nEasy   = renderProblemSet(document.getElementById('p1-area'), sets.easy,   sWithTopics, 'Easy');
-    const nMedium = renderProblemSet(document.getElementById('p2-area'), sets.medium, sWithTopics, 'Medium');
-    const nHard   = renderProblemSet(document.getElementById('p3-area'), sets.hard,   sWithTopics, 'Hard');
+    // Continuous numbering across difficulties: Easy starts at 1, Medium
+    // continues from Easy's last visible question, Hard from Medium's. The
+    // offset must use the VISIBLE count (after cap-to-page), which each
+    // renderProblemSet() call returns — so render them in order.
+    const nEasy   = renderProblemSet(document.getElementById('p1-area'), sets.easy,   sWithTopics, 'Easy',   1);
+    const nMedium = renderProblemSet(document.getElementById('p2-area'), sets.medium, sWithTopics, 'Medium', 1 + nEasy);
+    const nHard   = renderProblemSet(document.getElementById('p3-area'), sets.hard,   sWithTopics, 'Hard',   1 + nEasy + nMedium);
 
-    // Answer key always shows only the questions visible in the preview
+    // Answer key always shows only the questions visible in the preview, and
+    // mirrors the same continuous numbering.
     const keySets = {
         easy:   (sets.easy   || []).slice(0, nEasy),
         medium: (sets.medium || []).slice(0, nMedium),
         hard:   (sets.hard   || []).slice(0, nHard),
     };
-    renderKeys(document.getElementById('key-container'), keySets, sWithTopics);
+    const keyStartNums = { easy: 1, medium: 1 + nEasy, hard: 1 + nEasy + nMedium };
+    renderKeys(document.getElementById('key-container'), keySets, sWithTopics, keyStartNums);
 
     _lastRenderedCounts = { easy: nEasy, medium: nMedium, hard: nHard };
     _updateQuestionsPerPageSummary(nEasy, nMedium, nHard, pages);
