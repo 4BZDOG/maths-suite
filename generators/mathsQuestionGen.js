@@ -167,6 +167,35 @@ export const SUB_OPS = {
         { key: 'unit-rate',    label: 'Unit rate' },
         { key: 'speed',        label: 'Speed / Distance / Time' },
     ],
+    // ─── 2022-syllabus focus areas added as standalone topics ───────────
+    // These mirror the NESA Mathematics K-10 (2022) focus areas that aren't
+    // discoverable inside the Algebra / Geometry umbrellas. Existing users
+    // who already had Algebra/Geometry selected keep those — the new topics
+    // are purely additive.
+    'Indices': [
+        // Stage 4 introduces index laws on numerical bases
+        { key: 'indices-multiply', label: 'Multiply (same base)' },
+        { key: 'indices-divide',   label: 'Divide (same base)' },
+        { key: 'indices-power',    label: 'Power of a power' },
+        { key: 'indices-zero',     label: 'Zero index',  stages: ['Stage 5'] },
+        { key: 'indices-negative', label: 'Negative index', stages: ['Stage 5'] },
+    ],
+    'Linear Relationships': [
+        { key: 'plot-line',         label: 'Plot points on y = mx + c' },
+        { key: 'gradient-two-points', label: 'Gradient from two points' },
+        { key: 'midpoint',          label: 'Midpoint of two points' },
+        { key: 'distance',          label: 'Distance between points', stages: ['Stage 5'] },
+        { key: 'equation-from-gp',  label: 'Equation from gradient + point', stages: ['Stage 5'] },
+    ],
+    'Properties of Geometrical Figures': [
+        { key: 'congruent-tests',   label: 'Congruence tests',   stages: ['Stage 5'] },
+        { key: 'similar-ratio',     label: 'Similarity scale factor', stages: ['Stage 5'] },
+        { key: 'quad-properties',   label: 'Quadrilateral properties', stages: ['Stage 5'] },
+    ],
+    'Variation & Rates of Change': [
+        { key: 'direct-variation',   label: 'Direct variation  y = kx', stages: ['Stage 5'] },
+        { key: 'inverse-variation',  label: 'Inverse variation  y = k/x', stages: ['Stage 5'] },
+    ],
 };
 
 // Helper: check if a sub-op is allowed (null = all allowed)
@@ -2737,6 +2766,252 @@ function genRatiosRates(rng, diff, allowedOps) {
     return { clue: ph, answer: String(time2), answerDisplay: `${time2} h` };
 }
 
+// ============================================================
+// INDICES (Stage 4 introduces; Stage 5 adds zero + negative)
+// ============================================================
+function genIndices(rng, diff, allowedOps) {
+    const OPS = ['indices-multiply', 'indices-divide', 'indices-power',
+                 'indices-zero', 'indices-negative'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+    const verb = rc(rng, CALC_VERBS);
+
+    if (op === 'indices-multiply') {
+        const base = ri(rng, 2, diff === 'Hard' ? 6 : 4);
+        const m = ri(rng, 2, diff === 'Easy' ? 3 : 5);
+        const n = ri(rng, 1, diff === 'Easy' ? 2 : 4);
+        const ans = Math.pow(base, m + n);
+        if (ans > 999999) return null;
+        return {
+            clue: `${verb}\n$${base}^${m} \\times ${base}^${n}$`,
+            answer: String(ans),
+            answerDisplay: `$${base}^{${m + n}} = ${ans}$`,
+            worked: `$${base}^${m} \\times ${base}^${n} = ${base}^{${m}+${n}} = ${base}^{${m + n}} = ${ans}$`,
+        };
+    }
+    if (op === 'indices-divide') {
+        const base = ri(rng, 2, diff === 'Hard' ? 6 : 4);
+        const n = ri(rng, 1, diff === 'Easy' ? 2 : 4);
+        const extra = ri(rng, 1, diff === 'Easy' ? 2 : 4);
+        const m = n + extra;
+        const ans = Math.pow(base, extra);
+        if (ans > 999999) return null;
+        return {
+            clue: `${verb}\n$${base}^${m} \\div ${base}^${n}$`,
+            answer: String(ans),
+            answerDisplay: `$${base}^{${extra}} = ${ans}$`,
+            worked: `$${base}^${m} \\div ${base}^${n} = ${base}^{${m}-${n}} = ${base}^{${extra}} = ${ans}$`,
+        };
+    }
+    if (op === 'indices-power') {
+        const base = ri(rng, 2, diff === 'Hard' ? 5 : 3);
+        const m = ri(rng, 2, 3), n = ri(rng, 2, 3);
+        const ans = Math.pow(base, m * n);
+        if (ans > 999999) return null;
+        return {
+            clue: `${verb}\n$(${base}^${m})^${n}$`,
+            answer: String(ans),
+            answerDisplay: `$${base}^{${m * n}} = ${ans}$`,
+            worked: `$(${base}^${m})^${n} = ${base}^{${m} \\times ${n}} = ${base}^{${m * n}} = ${ans}$`,
+        };
+    }
+    if (op === 'indices-zero') {
+        const base = ri(rng, 2, 20);
+        return {
+            clue: `${verb}\n$${base}^0$`,
+            answer: '1',
+            answerDisplay: '$1$',
+            worked: `Any non-zero number to the power $0$ equals $1$.`,
+        };
+    }
+    // indices-negative: a^(-n) = 1/a^n
+    const base = ri(rng, 2, 5), n = ri(rng, 1, 3);
+    const denom = Math.pow(base, n);
+    return {
+        clue: `${verb}\n$${base}^{-${n}}$`,
+        answer: `1/${denom}`,
+        answerDisplay: `$\\frac{1}{${denom}}$`,
+        worked: `$${base}^{-${n}} = \\frac{1}{${base}^${n}} = \\frac{1}{${denom}}$`,
+    };
+}
+
+// ============================================================
+// LINEAR RELATIONSHIPS (Cartesian-plane work)
+// ============================================================
+function genLinear(rng, diff, allowedOps) {
+    const OPS = ['plot-line', 'gradient-two-points', 'midpoint', 'distance', 'equation-from-gp'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+
+    if (op === 'plot-line') {
+        // Given y = mx + c and x, find y. The student would also "plot" the
+        // point in a real worksheet; here we ask for the y-value.
+        const m = ri(rng, 1, diff === 'Easy' ? 3 : 5) * (rng() < 0.4 ? -1 : 1);
+        const c = ri(rng, -5, 8);
+        const x = ri(rng, -4, 6);
+        const y = m * x + c;
+        const mStr = m === 1 ? 'x' : m === -1 ? '-x' : `${m}x`;
+        const cStr = c === 0 ? '' : (c > 0 ? ` + ${c}` : ` - ${Math.abs(c)}`);
+        return {
+            clue: `Find $y$ when $x = ${x}$ for $y = ${mStr}${cStr}$.`,
+            answer: String(y),
+            answerDisplay: `$y = ${y}$`,
+            worked: `$y = ${m}(${x})${cStr} = ${y}$`,
+        };
+    }
+    if (op === 'gradient-two-points') {
+        // m = (y2 - y1) / (x2 - x1). Choose integer-gradient points.
+        const x1 = ri(rng, -6, 6), y1 = ri(rng, -6, 6);
+        const dx = ri(rng, 1, diff === 'Easy' ? 4 : 6);
+        const m = ri(rng, -3, 4) || 1;
+        const x2 = x1 + dx;
+        const y2 = y1 + m * dx;
+        return {
+            clue: `Find the *gradient* of the line through $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
+            answer: String(m),
+            answerDisplay: `$m = ${m}$`,
+            worked: `$m = \\frac{${y2} - ${y1}}{${x2} - ${x1}} = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
+        };
+    }
+    if (op === 'midpoint') {
+        // Midpoint M = ((x1+x2)/2, (y1+y2)/2). Choose even coords for tidy answer.
+        const x1 = ri(rng, -6, 6) * 2, y1 = ri(rng, -6, 6) * 2;
+        const x2 = ri(rng, -6, 6) * 2, y2 = ri(rng, -6, 6) * 2;
+        if (x1 === x2 && y1 === y2) return genLinear(rng, diff, allowedOps);
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        return {
+            clue: `Find the *midpoint* of the segment from $(${x1}, ${y1})$ to $(${x2}, ${y2})$.`,
+            answer: `(${mx},${my})`,
+            answerDisplay: `$(${mx}, ${my})$`,
+            worked: `$M = \\left(\\frac{${x1} + ${x2}}{2}, \\frac{${y1} + ${y2}}{2}\\right) = (${mx}, ${my})$`,
+        };
+    }
+    if (op === 'distance') {
+        // Stage 5: distance d = √((x2-x1)² + (y2-y1)²). Use Pythagorean
+        // triples so the answer is integer.
+        const triples = [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17]];
+        const [a, b, c] = rc(rng, triples);
+        const x1 = ri(rng, -5, 5), y1 = ri(rng, -5, 5);
+        const x2 = x1 + a, y2 = y1 + b;
+        return {
+            clue: `Find the *distance* between $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
+            answer: String(c),
+            answerDisplay: `$d = ${c}$ units`,
+            worked: `$d = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} = ${c}$`,
+        };
+    }
+    // equation-from-gp: y - y1 = m(x - x1) → y = mx + (y1 - m·x1)
+    const m = ri(rng, 1, 4) * (rng() < 0.5 ? -1 : 1);
+    const x1 = ri(rng, -4, 4), y1 = ri(rng, -6, 6);
+    const c = y1 - m * x1;
+    const mStr = m === 1 ? 'x' : m === -1 ? '-x' : `${m}x`;
+    const cStr = c === 0 ? '' : (c > 0 ? ` + ${c}` : ` - ${Math.abs(c)}`);
+    return {
+        clue: `Find the equation of the line with gradient $${m}$ passing through $(${x1}, ${y1})$.`,
+        answer: `y=${mStr}${c >= 0 ? '+' : ''}${c}`,
+        answerDisplay: `$y = ${mStr}${cStr}$`,
+        worked: `$y - ${y1} = ${m}(x - ${x1})$, so $y = ${mStr}${cStr}$`,
+    };
+}
+
+// ============================================================
+// PROPERTIES OF GEOMETRICAL FIGURES (Stage 5)
+// Congruence tests, similarity ratio, quadrilateral properties
+// ============================================================
+function genPropsOfFigures(rng, diff, allowedOps) {
+    const OPS = ['congruent-tests', 'similar-ratio', 'quad-properties'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+
+    if (op === 'congruent-tests') {
+        // Identify which congruence test applies: SSS, SAS, AAS (ASA), RHS.
+        const tests = [
+            { name: 'SSS', desc: 'three pairs of equal sides' },
+            { name: 'SAS', desc: 'two equal sides and the included angle' },
+            { name: 'AAS', desc: 'two equal angles and one corresponding side' },
+            { name: 'RHS', desc: 'right angle, equal hypotenuse and one equal side' },
+        ];
+        const t = rc(rng, tests);
+        return {
+            clue: `Two triangles share ${t.desc}. State the *congruence test* that applies.`,
+            answer: t.name,
+            answerDisplay: t.name,
+        };
+    }
+    if (op === 'similar-ratio') {
+        // Two similar triangles, scale factor k. Given a side on the original,
+        // find the matching side on the image.
+        const k = rc(rng, [2, 3, 4, 1.5]);
+        const orig = ri(rng, 4, 12);
+        const image = orig * k;
+        if (!Number.isInteger(image)) return genPropsOfFigures(rng, diff, allowedOps);
+        return {
+            clue: `Two triangles are *similar* with scale factor $${k}$. A side on the smaller triangle is $${orig}$ cm. Find the matching side on the larger triangle.`,
+            answer: String(image),
+            answerDisplay: `${image} cm`,
+            worked: `Scaled side $= ${orig} \\times ${k} = ${image}$ cm`,
+        };
+    }
+    // quad-properties: name the quadrilateral from its properties.
+    const quads = [
+        { name: 'square',         clue: 'four equal sides and four right angles' },
+        { name: 'rectangle',      clue: 'opposite sides equal and four right angles' },
+        { name: 'rhombus',        clue: 'four equal sides and opposite angles equal' },
+        { name: 'parallelogram',  clue: 'opposite sides parallel and equal, opposite angles equal' },
+        { name: 'trapezium',      clue: 'exactly one pair of parallel sides' },
+        { name: 'kite',           clue: 'two pairs of adjacent equal sides' },
+    ];
+    const q = rc(rng, quads);
+    return {
+        clue: `Name the quadrilateral with ${q.clue}.`,
+        answer: q.name,
+        answerDisplay: q.name,
+    };
+}
+
+// ============================================================
+// VARIATION & RATES OF CHANGE (Stage 5)
+// Direct: y = kx ; Inverse: y = k/x
+// ============================================================
+function genVariation(rng, diff, allowedOps) {
+    const OPS = ['direct-variation', 'inverse-variation'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+
+    if (op === 'direct-variation') {
+        // y varies directly as x. Given a pair (x1, y1), find k; then evaluate at x2.
+        const k = ri(rng, 2, diff === 'Easy' ? 6 : 12);
+        const x1 = ri(rng, 2, 6), y1 = k * x1;
+        const x2 = ri(rng, 2, 8);
+        const y2 = k * x2;
+        return {
+            clue: `$y$ varies *directly* as $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+            answer: String(y2),
+            answerDisplay: `$y = ${y2}$`,
+            worked: `$k = \\frac{${y1}}{${x1}} = ${k}$, so $y = ${k}x$. At $x = ${x2}$: $y = ${k} \\times ${x2} = ${y2}$`,
+        };
+    }
+    // inverse-variation: y = k/x. Pick k as product so divisions are clean.
+    const x1 = ri(rng, 2, 8), y1 = ri(rng, 2, 8);
+    const k = x1 * y1;
+    // Choose x2 from k's divisors to keep y2 integer.
+    const divisors = [];
+    for (let d = 2; d <= k; d++) if (k % d === 0 && d !== x1) divisors.push(d);
+    if (divisors.length === 0) return genVariation(rng, diff, allowedOps);
+    const x2 = rc(rng, divisors);
+    const y2 = k / x2;
+    return {
+        clue: `$y$ varies *inversely* as $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+        answer: String(y2),
+        answerDisplay: `$y = ${y2}$`,
+        worked: `$k = ${x1} \\times ${y1} = ${k}$, so $y = \\frac{${k}}{x}$. At $x = ${x2}$: $y = \\frac{${k}}{${x2}} = ${y2}$`,
+    };
+}
+
 // ---- Stage 5 wrappers for existing generators ---------------
 // Each public function delegates S5-only ops to the Stage 5 helper,
 // falling back to the original Stage 4 core for S4 ops.
@@ -2801,6 +3076,11 @@ const GENERATORS = {
     'Non-linear Relationships': genNonLinear,
     'Probability':              genProbability,
     'Ratios & Rates':           genRatiosRates,
+    // 2022-syllabus focus areas (additive — see comment near SUB_OPS)
+    'Indices':                          genIndices,
+    'Linear Relationships':             genLinear,
+    'Properties of Geometrical Figures': genPropsOfFigures,
+    'Variation & Rates of Change':      genVariation,
 };
 
 // Map generator sub-topic → clue bank topic field
@@ -2818,6 +3098,10 @@ const TOPIC_MAP = {
     'Non-linear Relationships': 'Algebra',
     'Probability':              'Probability',
     'Ratios & Rates':           'Number',
+    'Indices':                          'Algebra',
+    'Linear Relationships':             'Algebra',
+    'Properties of Geometrical Figures': 'Geometry',
+    'Variation & Rates of Change':      'Algebra',
 };
 
 const ALL_SUBTOPICS = Object.keys(GENERATORS);

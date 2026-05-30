@@ -28,9 +28,13 @@ export const TOPIC_STRAND_MAP = {
     'Percentages':              'Number & Algebra',
     'Ratios & Rates':           'Number & Algebra',
     'Algebra':                  'Number & Algebra',
+    'Indices':                  'Number & Algebra',
+    'Linear Relationships':     'Number & Algebra',
     'Financial Maths':          'Number & Algebra',
     'Non-linear Relationships': 'Number & Algebra',
+    'Variation & Rates of Change': 'Number & Algebra',
     'Geometry':                 'Measurement & Space',
+    'Properties of Geometrical Figures': 'Measurement & Space',
     'Trigonometry':             'Measurement & Space',
     'Statistics':               'Statistics & Probability',
     'Probability':              'Statistics & Probability',
@@ -40,13 +44,15 @@ export const TOPIC_STRAND_MAP = {
 export const STAGE_TOPICS = {
     'Stage 4': [
         'Integers', 'Decimals', 'Rounding', 'Fractions', 'Percentages',
-        'Ratios & Rates', 'Algebra', 'Geometry', 'Statistics',
-        'Probability', 'Financial Maths',
+        'Ratios & Rates', 'Algebra', 'Indices', 'Linear Relationships',
+        'Geometry', 'Statistics', 'Probability', 'Financial Maths',
     ],
     'Stage 5': [
         'Integers', 'Decimals', 'Rounding', 'Fractions', 'Percentages',
-        'Ratios & Rates', 'Algebra', 'Geometry', 'Statistics',
-        'Probability', 'Financial Maths',
+        'Ratios & Rates', 'Algebra', 'Indices', 'Linear Relationships',
+        'Variation & Rates of Change',
+        'Geometry', 'Properties of Geometrical Figures',
+        'Statistics', 'Probability', 'Financial Maths',
         'Trigonometry', 'Non-linear Relationships',
     ],
 };
@@ -247,7 +253,9 @@ export const TOPIC_OUTCOME_MAP = {
         displayName: 'Computation with Integers',
         outcomes: {
             'Stage 4': ['MA4-INT-C-01'],
-            'Stage 5': ['MA5-IND-C-01'],
+            // Stage 5 has no dedicated "Integers" outcome — number work rolls
+            // into FRC (fractions / decimals / percentages / rates) at this stage.
+            'Stage 5': ['MA5-FRC-C-01'],
         },
     },
     'Decimals': {
@@ -331,6 +339,38 @@ export const TOPIC_OUTCOME_MAP = {
         displayName: 'Non-linear Relationships',
         outcomes: {
             'Stage 5': ['MA5-NLR-C-01'],
+        },
+    },
+    // ── 2022-syllabus focus areas (added in the alignment pass) ──────────
+    'Indices': {
+        displayName: 'Indices',
+        outcomes: {
+            'Stage 4': ['MA4-IND-C-01'],
+            'Stage 5': ['MA5-IND-C-01'],
+        },
+    },
+    'Linear Relationships': {
+        displayName: 'Linear Relationships',
+        outcomes: {
+            'Stage 4': ['MA4-LIN-C-01'],
+            'Stage 5': ['MA5-LIN-C-01'],
+        },
+    },
+    'Properties of Geometrical Figures': {
+        displayName: 'Properties of Geometrical Figures',
+        outcomes: {
+            // Stage 5-only topic per the 2022 syllabus (proofs of congruence /
+            // similarity are introduced at Stage 5; Stage 4 covers basic
+            // properties via MA4-GEO-C-01 already through the Geometry topic).
+            'Stage 5': ['MA5-GEO-C-01'],
+        },
+    },
+    'Variation & Rates of Change': {
+        displayName: 'Variation & Rates of Change',
+        outcomes: {
+            // No dedicated outcome code — variation work sits inside the
+            // Linear/Non-linear relationships outcomes at Stage 5.
+            'Stage 5': ['MA5-LIN-C-01', 'MA5-NLR-C-01'],
         },
     },
 };

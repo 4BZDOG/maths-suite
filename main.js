@@ -49,6 +49,11 @@ const TOPIC_META = {
     'Financial Maths':          { label: 'Financial Mathematics',        icon: 'fas fa-dollar-sign' },
     'Trigonometry':             { label: 'Trigonometry',                 icon: 'fas fa-drafting-compass' },
     'Non-linear Relationships': { label: 'Non-linear Relationships',     icon: 'fas fa-chart-line' },
+    // 2022-syllabus focus areas added in the alignment pass
+    'Indices':                          { label: 'Indices',                          icon: 'fas fa-superscript' },
+    'Linear Relationships':             { label: 'Linear Relationships',             icon: 'fas fa-chart-line' },
+    'Properties of Geometrical Figures': { label: 'Properties of Geometrical Figures', icon: 'fas fa-shapes' },
+    'Variation & Rates of Change':      { label: 'Variation & Rates of Change',      icon: 'fas fa-arrow-trend-up' },
 };
 
 const debounceFn = (func, wait) => {
