@@ -209,9 +209,9 @@ function updateStatus() {
         if (visible > 0) {
             pc.innerText = `${visible} question${visible !== 1 ? 's' : ''} on page`;
         } else if (generated > 0) {
-            pc.innerText = `0 fit — adjust font/paper`;
+            pc.innerText = `0 fit — try a smaller font or larger paper`;
         } else {
-            pc.innerText = `0 questions`;
+            pc.innerText = `No questions yet`;
         }
     }
 
@@ -1265,8 +1265,22 @@ function copySeedToClipboard() {
     const el = document.getElementById('seed-input');
     const val = el && el.value.trim();
     if (!val) { showToast('Generate questions first to get a seed.', 'info'); return; }
+    // Briefly flash a tick on the button itself so the copy registers even if
+    // the toast is missed (e.g. on rapid repeat clicks).
+    const flashCopied = () => {
+        const btn = document.getElementById('copy-seed-btn');
+        const icon = btn && btn.querySelector('i');
+        if (!icon) return;
+        icon.className = 'fas fa-check';
+        btn.classList.add('copied');
+        clearTimeout(btn._copyTimer);
+        btn._copyTimer = setTimeout(() => {
+            icon.className = 'fas fa-copy';
+            btn.classList.remove('copied');
+        }, 1300);
+    };
     navigator.clipboard?.writeText(val)
-        .then(() => showToast(`Seed ${val} copied to clipboard.`, 'success'))
+        .then(() => { flashCopied(); showToast(`Seed ${val} copied to clipboard.`, 'success'); })
         .catch(() => showToast(`Seed: ${val}`, 'info'));
 }
 

@@ -2,7 +2,9 @@
 // ui/toast.js — Non-blocking toast notification system
 // =============================================================
 
-const TOAST_DURATION = 3000;
+// Warnings and errors carry information the user needs to act on, so they
+// linger longer than transient success/info confirmations.
+const TOAST_DURATION = { success: 3000, info: 3500, warning: 5500, error: 6500 };
 
 export function showToast(msg, type = 'success') {
     const tc = document.getElementById('toast-container');
@@ -23,5 +25,5 @@ export function showToast(msg, type = 'success') {
     setTimeout(() => {
         t.classList.remove('show');
         setTimeout(() => t.remove(), 300);
-    }, TOAST_DURATION);
+    }, TOAST_DURATION[type] || 3000);
 }

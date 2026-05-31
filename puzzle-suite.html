@@ -127,8 +127,8 @@
                     <input id="seed-input" type="number" placeholder="auto" title="Enter a seed to reproduce this question set exactly, or leave blank for a fresh seed each time"
                         data-auto="true"
                         oninput="syncSeedInput()" />
-                    <button class="btn-icon" onclick="copySeedToClipboard()" title="Copy seed">
-                        <i class="fas fa-copy"></i>
+                    <button id="copy-seed-btn" class="btn-icon" onclick="copySeedToClipboard()" title="Copy seed" aria-label="Copy seed to clipboard">
+                        <i class="fas fa-copy" aria-hidden="true"></i>
                     </button>
                 </div>
 
@@ -546,7 +546,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=847fa79fbc"></script>
+    <script src="bundle.js?v=5ca87b9392"></script>
 </body>
 
 </html>

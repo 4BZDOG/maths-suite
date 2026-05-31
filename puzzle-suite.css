@@ -4066,6 +4066,13 @@ details.outcomes-ws-header:not([open]) .outcomes-ws-summary::after { transform: 
     border-color: var(--primary);
     background: var(--primary-light);
 }
+/* Brief confirmation after copying the seed. */
+.btn-icon.copied,
+.btn-icon.copied:hover {
+    color: #10b981;
+    border-color: #10b981;
+    background: #10b9811a;
+}
 
 /* ─── Status row — inset card matching seed row ──────────────── */
 .status-row {
