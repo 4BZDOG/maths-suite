@@ -558,8 +558,8 @@ function _drawParabolaPDF(doc, { h: ph, k, a }, x0, y0, w, h, ps, font) {
     const axT = y0 + 3, axB = y0 + h - 3;
 
     // Axes
-    doc.setDrawColor(140, 140, 140);
-    doc.setFillColor(140, 140, 140);
+    doc.setDrawColor(115, 115, 115);
+    doc.setFillColor(115, 115, 115);
     doc.setLineWidth(0.35);
     doc.line(axL, oy, axR, oy);
     doc.line(ox, axB, ox, axT);
@@ -567,10 +567,10 @@ function _drawParabolaPDF(doc, { h: ph, k, a }, x0, y0, w, h, ps, font) {
     doc.triangle(axR, oy, axR - 2.5, oy - 1.2, axR - 2.5, oy + 1.2, 'F');
     doc.triangle(ox, axT, ox - 1.2, axT + 2.5, ox + 1.2, axT + 2.5, 'F');
 
-    // Axis labels
+    // Axis labels — italic only for helvetica (custom fonts ship normal+bold only)
     doc.setFontSize(7 * ps);
-    doc.setFont(font, 'italic');
-    doc.setTextColor(120, 120, 120);
+    doc.setFont(font, font === 'helvetica' ? 'italic' : 'normal');
+    doc.setTextColor(110, 110, 110);
     doc.text('x', axR - 1, oy - 2, { align: 'right' });
     doc.text('y', ox + 2, axT + 4, { align: 'left' });
 
@@ -581,18 +581,18 @@ function _drawParabolaPDF(doc, { h: ph, k, a }, x0, y0, w, h, ps, font) {
         if (i === 0) continue;
         const tx = ox + i * scX;
         if (tx > axL + 2 && tx < axR - 2) {
-            doc.setDrawColor(160, 160, 160);
+            doc.setDrawColor(135, 135, 135);
             doc.setLineWidth(0.25);
             doc.line(tx, oy - 1.2, tx, oy + 1.2);
-            doc.setTextColor(150, 150, 150);
+            doc.setTextColor(120, 120, 120);
             doc.text(String(i), tx, oy + 3.5, { align: 'center' });
         }
         const ty = oy - i * scY;
         if (ty > axT + 2 && ty < axB - 2) {
-            doc.setDrawColor(160, 160, 160);
+            doc.setDrawColor(135, 135, 135);
             doc.setLineWidth(0.25);
             doc.line(ox - 1.2, ty, ox + 1.2, ty);
-            doc.setTextColor(150, 150, 150);
+            doc.setTextColor(120, 120, 120);
             doc.text(String(i), ox - 1.8, ty + 1.8, { align: 'right' });
         }
     }
@@ -1490,15 +1490,18 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId, startNums = {}) {
 
             let blockH = Math.max(shown.length * lineH, 5 * pScale);
 
-            // Worked solution — shown when "Show worked" is toggled on
+            // Worked solution — shown when "Show worked" is toggled on.
+            // Normal weight (not italic): the custom fonts ship only normal+bold,
+            // so italic would fall back inconsistently — distinction comes from
+            // the slate colour and indent instead.
             if (showWorkedPDF && q.worked) {
                 const workedText = latexToText(q.worked);
-                doc.setFont(pdfFont, 'italic');
-                doc.setFontSize(5.8 * pScale);
-                doc.setTextColor(148, 163, 184);
+                doc.setFont(pdfFont, 'normal');
+                doc.setFontSize(6.5 * pScale);
+                doc.setTextColor(71, 85, 105);          // slate-600 — legible
                 const workedLines = doc.splitTextToSize(workedText, colW - 4).slice(0, 2);
-                workedLines.forEach((line, li) => doc.text(line, cx + 2, ky + blockH + li * 3 * pScale));
-                blockH += workedLines.length * 3 * pScale + 1;
+                workedLines.forEach((line, li) => doc.text(line, cx + 2, ky + blockH + li * 3.3 * pScale));
+                blockH += workedLines.length * 3.3 * pScale + 1;
             }
 
             doc.setDrawColor(220, 220, 220);
