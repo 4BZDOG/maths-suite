@@ -930,15 +930,16 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             const num = ri(rng, 1, den - 1);
             const whole = den * ri(rng, 2, 12);
             const ans = (num * whole) / den;
-            // 35% chance real-world context
+            // 35% chance real-world context. Pair each clue with its noun so the
+            // worksheet answer line and answer key can show the unit (e.g.
+            // "12 students") instead of a bare number.
             if (rng() < 0.35) {
-                const ctx = rc(rng, [
-                    `A class has $${whole}$ students. $\\frac{${num}}{${den}}$ of them play sport. How many students play sport?`,
-                    `There are $${whole}$ lollies in a bag. Tom eats $\\frac{${num}}{${den}}$ of them. How many did Tom eat?`,
-                    `A pizza was cut into $${den}$ equal slices. If $${num}$ slice${num > 1 ? 's were' : ' was'} eaten, how many pieces of a $${whole}$-slice order is that?`,
-                    `A farm has $${whole}$ animals. $\\frac{${num}}{${den}}$ are cows. How many cows are there?`,
+                const wp = rc(rng, [
+                    { c: `A class has $${whole}$ students. $\\frac{${num}}{${den}}$ of them play sport. How many students play sport?`, n: 'students' },
+                    { c: `There are $${whole}$ lollies in a bag. Tom eats $\\frac{${num}}{${den}}$ of them. How many lollies did Tom eat?`, n: 'lollies' },
+                    { c: `A farm has $${whole}$ animals. $\\frac{${num}}{${den}}$ are cows. How many cows are there?`, n: 'cows' },
                 ]);
-                return { clue: ctx, answer: String(ans) };
+                return { clue: wp.c, answer: String(ans), answerDisplay: `${ans} ${wp.n}`, unit: wp.n };
             }
             const ph = rc(rng, [
                 `Find $\\frac{${num}}{${den}}$ of $${whole}$`,
@@ -971,8 +972,8 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             const ans = fracStr(num, den);
             const ph = rc(rng, [
                 `Simplify $\\frac{${num}}{${den}}$`,
-                `Write $\\frac{${num}}{${den}}$ in its *simplest form*`,
-                `Express $\\frac{${num}}{${den}}$ in *lowest terms*`,
+                `Write $\\frac{${num}}{${den}}$ in its **simplest form**`,
+                `Express $\\frac{${num}}{${den}}$ in **lowest terms**`,
                 `Reduce $\\frac{${num}}{${den}}$ to its *simplest form*`,
             ]);
             return { clue: ph, answer: ans };
@@ -1787,9 +1788,9 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 return { clue: ph, answer: String(x), answerDisplay: `${x}°`, unit: '°', diagram: { type: 'straight-line-angles', a } };
             }
             const ph = rc(rng, [
-                `Two straight lines intersect. One angle is $${a}$°. State the *vertically opposite* angle.`,
-                `Find the angle *vertically opposite* to $${a}$°.`,
-                `Two lines cross. One angle measures $${a}$°. What is the *vertically opposite* angle?`,
+                `Two straight lines intersect. One angle is $${a}$°. State the **vertically opposite** angle.`,
+                `Find the angle **vertically opposite** to $${a}$°.`,
+                `Two lines cross. One angle measures $${a}$°. What is the **vertically opposite** angle?`,
             ]);
             return { clue: ph, answer: String(a), answerDisplay: `${a}°`, unit: '°', diagram: { type: 'vertically-opposite', a } };
         }
@@ -2641,8 +2642,8 @@ function genRatiosRates(rng, diff, allowedOps) {
         const s = simplify(a, b);
         const ph = rc(rng, [
             `Simplify the ratio $${a} : ${b}$.`,
-            `Write $${a} : ${b}$ in its simplest form.`,
-            `Reduce $${a} : ${b}$ to its lowest terms.`,
+            `Write $${a} : ${b}$ in its **simplest form**.`,
+            `Reduce $${a} : ${b}$ to its **lowest terms**.`,
         ]);
         return { clue: ph, answer: `${s.n} : ${s.d}`, answerDisplay: `$${s.n} : ${s.d}$` };
     }

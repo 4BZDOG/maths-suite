@@ -339,7 +339,7 @@ function _parabola({ h, k, a }) {
         if (tx > axL + 4 && tx < axR - 4) {
             ticks +=
                 `<line x1="${tx}" y1="${oy - 3}" x2="${tx}" y2="${oy + 3}" ` +
-                `stroke="currentColor" stroke-width="0.9" opacity="0.4"/>`;
+                `stroke="currentColor" stroke-width="0.9" opacity="0.55"/>`;
             if (i !== 0)
                 ticks += _t(tx, oy + 12, String(i), { size: 8, opacity: 0.6 });
         }
@@ -348,7 +348,7 @@ function _parabola({ h, k, a }) {
         if (i !== 0 && ty > axT + 4 && ty < axB - 4) {
             ticks +=
                 `<line x1="${ox - 3}" y1="${ty}" x2="${ox + 3}" y2="${ty}" ` +
-                `stroke="currentColor" stroke-width="0.9" opacity="0.4"/>`;
+                `stroke="currentColor" stroke-width="0.9" opacity="0.55"/>`;
             ticks += _t(ox - 5, ty + 3, String(i), { anchor: 'end', size: 8, opacity: 0.6 });
         }
     }
@@ -519,8 +519,8 @@ function _parallelTransversal({ a, angleType }) {
 
     // Parallel-line tick marks (two short chevrons) away from transversal
     const parallelTick = (x, y) =>
-        `<line x1="${x-5}" y1="${y-6}" x2="${x+1}" y2="${y}" stroke="${GC}" stroke-width="1.2" opacity="0.6"/>` +
-        `<line x1="${x-5}" y1="${y+6}" x2="${x+1}" y2="${y}" stroke="${GC}" stroke-width="1.2" opacity="0.6"/>`;
+        `<line x1="${x-5}" y1="${y-6}" x2="${x+1}" y2="${y}" stroke="${GC}" stroke-width="1.3" opacity="0.85"/>` +
+        `<line x1="${x-5}" y1="${y+6}" x2="${x+1}" y2="${y}" stroke="${GC}" stroke-width="1.3" opacity="0.85"/>`;
     const tickMarks =
         parallelTick(48, y1) + parallelTick(54, y1) +
         parallelTick(48, y2) + parallelTick(54, y2);

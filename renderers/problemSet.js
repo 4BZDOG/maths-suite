@@ -89,10 +89,12 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
             : '';
 
         const isLocked = item._locked === true;
+        const qNum = startNum + i;
+        const lockVerb = isLocked ? 'Unlock' : 'Lock';
         const actionsHtml =
             `<div class="problem-actions">` +
-            `<button class="prob-btn prob-reroll" onclick="window.rerollQuestion('${esc(item.difficulty)}',${i})" title="Re-roll this question"><i class="fas fa-sync-alt"></i></button>` +
-            `<button class="prob-btn prob-lock${isLocked ? ' is-locked' : ''}" onclick="window.toggleLockQuestion('${esc(item.difficulty)}',${i})" title="${isLocked ? 'Unlock' : 'Lock'} this question"><i class="fas fa-${isLocked ? 'lock' : 'lock-open'}"></i></button>` +
+            `<button type="button" class="prob-btn prob-reroll" onclick="window.rerollQuestion('${esc(item.difficulty)}',${i})" title="Re-roll this question" aria-label="Re-roll question ${qNum}"><i class="fas fa-sync-alt" aria-hidden="true"></i></button>` +
+            `<button type="button" class="prob-btn prob-lock${isLocked ? ' is-locked' : ''}" onclick="window.toggleLockQuestion('${esc(item.difficulty)}',${i})" title="${lockVerb} this question" aria-label="${lockVerb} question ${qNum}" aria-pressed="${isLocked}"><i class="fas fa-${isLocked ? 'lock' : 'lock-open'}" aria-hidden="true"></i></button>` +
             `</div>`;
 
         html += `<div class="problem-item${isLocked ? ' is-locked' : ''}">

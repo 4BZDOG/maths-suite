@@ -2745,11 +2745,16 @@ table.mode-cw td.cell.empty {
     right: 7px;
     display: flex;
     gap: 3px;
-    opacity: 0;
+    /* Faintly visible at rest so the controls are discoverable on touch and
+       keyboard (not hover-only); brighten on hover/focus. */
+    opacity: 0.4;
     transition: opacity 0.15s;
     z-index: 2;
 }
-.problem-item:hover .problem-actions { opacity: 1; }
+.problem-item:hover .problem-actions,
+.problem-actions:focus-within { opacity: 1; }
+/* A locked question keeps its lock control visible as a status cue. */
+.problem-item.is-locked .problem-actions { opacity: 1; }
 
 .prob-btn {
     background: none;
@@ -2766,6 +2771,10 @@ table.mode-cw td.cell.empty {
     background: var(--bg-page);
     border-color: var(--border);
     color: var(--text);
+}
+.prob-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 1px;
 }
 .prob-btn.prob-lock.is-locked {
     color: #f59e0b;
@@ -3208,7 +3217,21 @@ table.mode-cw td.cell.empty {
 
 .key-section {
     break-inside: avoid;
+    /* Subtle tinted card (tint set inline per difficulty) so the three bands
+       read as distinct columns on a dense answer key. */
+    border-radius: 8px;
+    padding: 8px 10px;
 }
+
+/* Worked solution under a key answer — legible, distinct from the answer. */
+.key-worked {
+    font-size: 0.92em;
+    color: #475569;          /* slate-600 — readable on white */
+    padding-left: 18px;
+    margin-top: 3px;
+    line-height: 1.35;
+}
+[data-theme="dark"] .key-worked { color: #cbd5e1; }   /* slate-300 on dark */
 
 .key-section-title {
     font-weight: 700;

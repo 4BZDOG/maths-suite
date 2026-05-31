@@ -52,13 +52,13 @@ export function renderKeys(container, generatedSets, settings, startNums = {}) {
     html += '<div class="key-sets-grid">';
 
     sets.forEach(set => {
-        html += `<div class="key-section">
+        html += `<div class="key-section" style="background:${set.color}0a; border:1px solid ${set.color}26;">
             <div class="key-section-title" style="color:${set.color}; border-bottom: 2px solid ${set.color}40;"><i class="fas ${set.icon}" style="margin-right:5px; opacity:.85;"></i>${set.label}</div>
             <ol class="key-list" start="${set.start}">`;
         set.questions.forEach((q, i) => {
             const ans = esc(q.answerDisplay || q.answer || '');
             const workedHtml = showWorked && q.worked
-                ? `<div class="key-worked katex-target" style="font-size:0.82em;color:var(--text-muted,#64748b);padding-left:18px;margin-top:2px;">${esc(q.worked)}</div>`
+                ? `<div class="key-worked katex-target">${esc(q.worked)}</div>`
                 : '';
             html += `<li class="key-item">
                 <div class="key-item-row">
