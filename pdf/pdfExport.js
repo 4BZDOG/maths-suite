@@ -814,6 +814,22 @@ function _parseEmphasisSegments(text) {
 }
 
 /**
+ * Convert every $...$ math region in a clue to unicode and wrap it in atomic
+ * sentinels (open…close) so the inline renderer can keep each expression on a
+ * single line instead of breaking it between operators. Bold/italic emphasis
+ * markers are left intact (they live in the prose and may even surround a math
+ * region, e.g. the auto-bolded verb "Find $x$:"). Escaped \$ are preserved as
+ * literal dollar signs.
+ */
+function _convertMathAtomic(clue, open, close) {
+    const safe = (clue || '').replace(/\\\$/g, '\x00');
+    return safe
+        .replace(/\$([^$]+)\$/g, (_, inner) =>
+            open + latexToText('$' + inner.split('\x00').join('\\$') + '$') + close)
+        .split('\x00').join('$');
+}
+
+/**
  * Draw clue text inline, switching font weight for **bold** and *italic* markers.
  * LaTeX is converted to unicode before rendering.
  * Returns the Y baseline of the last drawn line.
@@ -861,74 +877,70 @@ function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, line
         }
     }
 
-    // Convert LaTeX regions to unicode first, keeping emphasis markers
-    const withLatex = latexToText(
-        rawClue.replace(/\*\*([^*]+)\*\*/g, '\x01$1\x01')  // protect ** with control chars
-               .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1\x02$2\x02')  // protect * with control chars
-    )
-    .replace(/\x01([^\x01]*)\x01/g, '**$1**')   // restore bold markers
-    .replace(/\x02([^\x02]*)\x02/g, '*$1*');    // restore italic markers
-
-    const segs = _parseEmphasisSegments(withLatex);
+    // Convert $...$ math to unicode and mark each expression as an ATOMIC unit
+    // (between \x03…\x04), keeping the **bold**/*italic* markers. Emphasis is
+    // then parsed on the prepared string; a segment may interleave breakable
+    // prose with atomic math runs.
+    const ATOM_O = '\x03', ATOM_C = '\x04';
+    const prepared = _convertMathAtomic(rawClue, ATOM_O, ATOM_C);
+    const segs = _parseEmphasisSegments(prepared);
     let curX = x, curY = y;
 
-    for (const seg of segs) {
-        // Bold uses font weight (works on every font we ship).
-        // Italic: helvetica supports it natively; custom fonts (Inter/Roboto/
-        // Lora/Comic) only ship normal+bold TTFs, so we substitute a teal
-        // accent color so the emphasis is still visible to students.
-        const isBold     = !!seg.bold;
-        const isItalic   = !!seg.italic;
-        const useNativeItalic = isItalic && pdfFont === 'helvetica';
-        const style = isBold ? 'bold'
-            : (useNativeItalic ? 'italic' : 'normal');
-        const drawColor = (isItalic && !useNativeItalic)
-            ? [13, 148, 136]   // teal-600: visible italic substitute
-            : color;
-        doc.setFont(pdfFont, style);
+    // Bold uses font weight (works on every font we ship). Italic: helvetica
+    // supports it natively; the custom fonts (Inter/Roboto/Lora/Comic) only ship
+    // normal+bold TTFs, so we substitute a teal accent colour so emphasis stays
+    // visible. Re-applied after every Y advance.
+    const applyStyle = (seg) => {
+        const useNativeItalic = seg.italic && pdfFont === 'helvetica';
+        doc.setFont(pdfFont, seg.bold ? 'bold' : (useNativeItalic ? 'italic' : 'normal'));
         doc.setFontSize(fontSizePt);
-        doc.setTextColor(...drawColor);
-
-        // Split segment into tokens (words + spaces) to support mid-segment wrapping
-        const tokens = seg.t.match(/\S+|\s+/g) || [];
+        doc.setTextColor(...((seg.italic && !useNativeItalic) ? [13, 148, 136] : color));
+    };
+    // Last-resort break for a token wider than the whole column (e.g. a lone
+    // math expression too wide to fit) — split it character-by-character.
+    const charBreak = (token, seg) => {
+        let buf = '';
+        for (const ch of token) {
+            const next = buf + ch;
+            if (curX + doc.getTextWidth(next) > x + maxW + 0.5 && buf) {
+                doc.text(buf, curX, curY);
+                curY += lineH; curX = x; applyStyle(seg);
+                buf = ch;
+            } else { buf = next; }
+        }
+        if (buf) { doc.text(buf, curX, curY); curX += doc.getTextWidth(buf); }
+    };
+    // Atomic run: keep the whole math expression on one line — wrap it as a unit
+    // to the next line if it doesn't fit, and only char-break if it alone is
+    // wider than the column. This stops expressions splitting between operators.
+    const drawUnit = (text, seg) => {
+        const w = doc.getTextWidth(text);
+        if (w > maxW + 0.5) { charBreak(text, seg); return; }
+        if (curX + w > x + maxW + 0.5 && curX > x) { curY += lineH; curX = x; applyStyle(seg); }
+        doc.text(text, curX, curY);
+        curX += w;
+    };
+    // Prose run: wrap on word boundaries.
+    const drawWrapped = (text, seg) => {
+        const tokens = text.match(/\S+|\s+/g) || [];
         for (const token of tokens) {
             const tw = doc.getTextWidth(token);
-            if (token.trim() === '') {
-                curX += tw;
-                continue;
-            }
-            if (curX + tw > x + maxW + 0.5 && curX > x) {
-                curY += lineH;
-                curX  = x;
-                doc.setFont(pdfFont, style);  // re-apply after Y advance
-                doc.setTextColor(...drawColor);
-            }
-            // Long token (e.g. "1/2(a+b)h." after LaTeX conversion) wider than
-            // the column — break it character-by-character so it wraps instead
-            // of overflowing into the adjacent column.
-            if (tw > maxW + 0.5) {
-                let buf = '';
-                for (const ch of token) {
-                    const next = buf + ch;
-                    if (curX + doc.getTextWidth(next) > x + maxW + 0.5 && buf) {
-                        doc.text(buf, curX, curY);
-                        curY += lineH;
-                        curX  = x;
-                        doc.setFont(pdfFont, style);
-                        doc.setTextColor(...drawColor);
-                        buf = ch;
-                    } else {
-                        buf = next;
-                    }
-                }
-                if (buf) {
-                    doc.text(buf, curX, curY);
-                    curX += doc.getTextWidth(buf);
-                }
-                continue;
-            }
+            if (token.trim() === '') { curX += tw; continue; }
+            if (curX + tw > x + maxW + 0.5 && curX > x) { curY += lineH; curX = x; applyStyle(seg); }
+            if (tw > maxW + 0.5) { charBreak(token, seg); continue; }
             doc.text(token, curX, curY);
             curX += tw;
+        }
+    };
+
+    for (const seg of segs) {
+        applyStyle(seg);
+        // A segment may interleave prose with atomic math runs (\x03…\x04).
+        const parts = seg.t.split(/(\x03[^\x04]*\x04)/);
+        for (const part of parts) {
+            if (!part) continue;
+            if (part.charCodeAt(0) === 3) drawUnit(part.slice(1, -1), seg);
+            else                          drawWrapped(part, seg);
         }
     }
     return curY;
