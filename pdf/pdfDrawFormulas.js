@@ -1,6 +1,7 @@
 // =============================================================
 // pdf/pdfDrawFormulas.js — Formula reference sheet for PDF export
 // =============================================================
+import { _winAnsiSafe } from './pdfHelpers.js';
 
 const FORMULA_CONTENT = {
     'Integers': [
@@ -113,6 +114,10 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
     pScale = pScale || 1;
     const availW = PAGE_WIDTH - MARGIN * 2;
     const _availH = PAGE_HEIGHT - MARGIN * 2;
+    // On the standard-font fallback (custom font CDN unreachable), downgrade
+    // non-WinAnsi glyphs (π, θ, ², ⁿ, sin⁻¹, ≤, −, →) to ASCII so the formula
+    // sheet stays readable instead of rendering mojibake.
+    const safe = s => pdfFont === 'helvetica' ? _winAnsiSafe(s) : s;
 
     // Collect all formula cards for active topics first — bail out before
     // drawing anything if there's nothing to show.
@@ -166,7 +171,7 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
         doc.setFont(pdfFont, 'normal');
         doc.setFontSize(formulaFontPt);
         const totalLines = card.formulas.reduce((sum, f) => {
-            return sum + doc.splitTextToSize(f, colW - cardPad * 2).length;
+            return sum + doc.splitTextToSize(safe(f), colW - cardPad * 2).length;
         }, 0);
 
         const hintH = card.hint ? lineH : 0;
@@ -191,7 +196,7 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
         doc.setFont(pdfFont, 'bold');
         doc.setFontSize(titleFontPt);
         doc.setTextColor(..._HDR_CLR);
-        doc.text(card.name, cx + cardPad + 1.5, iy);
+        doc.text(safe(card.name), cx + cardPad + 1.5, iy);
         iy += lineH * 0.2;
 
         // Formula lines
@@ -199,7 +204,7 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
         doc.setFontSize(formulaFontPt);
         doc.setTextColor(..._FML_CLR);
         card.formulas.forEach(f => {
-            const fLines = doc.splitTextToSize(f, cw - cardPad * 2 - 1.5);
+            const fLines = doc.splitTextToSize(safe(f), cw - cardPad * 2 - 1.5);
             fLines.forEach(line => {
                 iy += lineH;
                 doc.text(line, cx + cardPad + 1.5, iy);
@@ -209,10 +214,10 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
         // Optional hint line
         if (card.hint) {
             iy += lineH;
-            doc.setFont(pdfFont, 'italic');
+            doc.setFont(pdfFont, pdfFont === 'helvetica' ? 'italic' : 'normal');
             doc.setFontSize(hintFontPt);
             doc.setTextColor(..._HNT_CLR);
-            doc.text(card.hint, cx + cardPad + 1.5, iy);
+            doc.text(safe(card.hint), cx + cardPad + 1.5, iy);
         }
     }
 
@@ -239,7 +244,7 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
     }
 
     function drawFooter() {
-        doc.setFont(pdfFont, 'italic');
+        doc.setFont(pdfFont, pdfFont === 'helvetica' ? 'italic' : 'normal');
         doc.setFontSize(6 * pScale);
         doc.setTextColor(..._HNT_CLR);
         doc.text('Formulas shown are for topics selected in this assessment only.', PAGE_WIDTH / 2, PAGE_HEIGHT - MARGIN - 2 * pScale, { align: 'center' });

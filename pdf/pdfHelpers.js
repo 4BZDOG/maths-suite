@@ -53,7 +53,36 @@ export function latexToText(str) {
     s = s
         .replace(/\*\*([^*]+)\*\*/g, '$1')
         .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1$2');
+    // When the embedded Unicode font couldn't load and we're on the standard
+    // helvetica fallback, downgrade non-WinAnsi glyphs to readable ASCII so the
+    // worksheet stays correct instead of emitting garbage (π→"À", x⁶→"xv").
+    if (_asciiFallback) s = _winAnsiSafe(s);
     return s;
+}
+
+// ─── Standard-font (helvetica) fallback safety ──────────────────────────────
+// jsPDF's built-in fonts use WinAnsi encoding, which has no glyphs for π, √,
+// Greek letters, or superscripts above ³ — so a clue like "π ≈ 3.14" or "x⁶"
+// renders as mojibake. We only hit this path when the embedded Unicode font
+// (Inter/Roboto/…) fails to load — e.g. a school network blocks the font CDN.
+// `setLatexAsciiFallback(true)` is flipped on by the exporter in that case and
+// latexToText() then maps the offending glyphs to plain ASCII.
+let _asciiFallback = false;
+export function setLatexAsciiFallback(on) { _asciiFallback = !!on; }
+
+const _SUP_REV = { '⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9','ⁿ':'n','ˣ':'x','⁺':'+','⁻':'-' };
+const _WINANSI_MAP = {
+    'π':'pi', '≈':'~', '≤':'<=', '≥':'>=', '≠':'!=', '√':'sqrt', '∞':'inf',
+    'θ':'theta', 'α':'alpha', 'β':'beta', 'γ':'gamma', '∠':'angle ',
+    '−':'-',    // U+2212 minus sign → ASCII hyphen
+    '→':'->',   // U+2192 rightwards arrow
+    '̄':'',   // combining macron (overline, e.g. x̄) — drop, keep the base letter
+};
+export function _winAnsiSafe(s) {
+    if (!s) return s;
+    // Collapse runs of superscript characters into caret notation: x⁴→x^4, 2¹²→2^12
+    s = s.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹ⁿˣ⁺⁻]+/g, run => '^' + [...run].map(c => _SUP_REV[c] || '').join(''));
+    return s.replace(/[π≈≤≥≠√∞θαβγ∠−→̄]/g, c => (c in _WINANSI_MAP ? _WINANSI_MAP[c] : c));
 }
 
 const _SUP_MAP = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','n':'ⁿ','x':'ˣ','+':'⁺','-':'⁻'};

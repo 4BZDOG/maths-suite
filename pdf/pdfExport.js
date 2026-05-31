@@ -5,7 +5,7 @@ import { state, syncSettingsFromDOM } from '../core/state.js';
 import { showToast } from '../ui/toast.js';
 import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
 import { loadJSPDF, loadFontForPDF, FONT_SELECT_MAP } from './pdfFonts.js';
-import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue, drawText } from './pdfHelpers.js';
+import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue, drawText, setLatexAsciiFallback } from './pdfHelpers.js';
 import { detectVerb, detectMidVerb, autoBoldVerb } from '../renderers/htmlUtils.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
@@ -548,7 +548,7 @@ function _drawRightTriangleTrigPDF(doc, { opp, adj, hyp, angle, missing }, x0, y
     doc.setFontSize(7 * ps);
     doc.setFont(font, isMissing('angle') ? 'bold' : 'normal');
     doc.setTextColor(...(isMissing('angle') ? _MC : _LC));
-    doc.text(`θ=${lbl('angle', angle, '°')}`, Bx - arcR - 7 * ps, By - arcR * 0.5, { align: 'right' });
+    doc.text(`${font === 'helvetica' ? 'theta' : 'θ'}=${lbl('angle', angle, '°')}`, Bx - arcR - 7 * ps, By - arcR * 0.5, { align: 'right' });
 }
 
 function _drawParabolaPDF(doc, { h: ph, k, a }, x0, y0, w, h, ps, font) {
@@ -1649,6 +1649,11 @@ export async function exportPDF() {
             } catch (e) { console.warn('Unexpected font load error:', e); }
         }
         ctx = buildCtx(doc, pdfFont, wmImg, scale, { PAGE_WIDTH, PAGE_HEIGHT, MARGIN }, cfg);
+
+        // If we fell back to the standard (helvetica) font — e.g. the font CDN
+        // was blocked — switch latexToText to ASCII-safe output so π, √ and
+        // superscripts don't render as mojibake.
+        setLatexAsciiFallback(pdfFont === 'helvetica');
 
         // Derive cap from pages-per-difficulty selector (state.questionsPerSet is 1 or 2)
         cfg.psCapPages = state.questionsPerSet || 1;
