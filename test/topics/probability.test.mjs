@@ -30,8 +30,10 @@ test('Probability theoretical (bag of marbles): answer = favourable/total simpli
                 subOpsFilter: { Probability: ['theoretical'] },
             });
             for (const q of qs) {
-                // "A bag contains $f$ <colour> and $o$ <colour> marbles. Find P(<colour>)."
-                const m = q.clue.match(/\$(\d+)\$\s+(\w+).*?\$(\d+)\$\s+\w+\s+marbles.*?P\((\w+)\)/i);
+                // Easy bag-of-marbles clues use plain English (no P( ) notation):
+                // "A bag contains $f$ <colour> and $o$ <colour> marbles. Find the
+                //  probability of picking a <colour> marble."
+                const m = q.clue.match(/\$(\d+)\$\s+(\w+).*?\$(\d+)\$.*?probability of (?:picking|selecting) (?:a )?(\w+) marble/i);
                 if (!m) continue;
                 const fav = +m[1], colour = m[2], other = +m[3], target = m[4];
                 if (colour.toLowerCase() !== target.toLowerCase()) continue;

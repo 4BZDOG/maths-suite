@@ -46,6 +46,26 @@ export function detectMidVerb(s) {
     return { index: m.index + m[1].length, verb: m[2] };
 }
 
+/**
+ * Return the clue with its leading (or mid-sentence) instruction verb wrapped
+ * in **bold** markers, so PDF renderers that don't auto-detect the verb (e.g.
+ * the stacked-fraction drawer) still emphasise it consistently with the inline
+ * renderer and the HTML preview. No-op if the clue already starts with **.
+ */
+export function autoBoldVerb(clue) {
+    let raw = clue || '';
+    if (raw.startsWith('**')) return raw;
+    const verb = detectVerb(raw);
+    if (verb) return `**${verb}**${raw.slice(verb.length)}`;
+    const mid = detectMidVerb(raw);
+    if (mid) {
+        return raw.slice(0, mid.index)
+             + `**${mid.verb}**`
+             + raw.slice(mid.index + mid.verb.length);
+    }
+    return raw;
+}
+
 // Apply our small markdown subset (**bold**, *italic*) to an already
 // HTML-escaped string, while leaving any KaTeX math regions ($...$) untouched.
 function applyMarkdownEmphasis(escaped) {

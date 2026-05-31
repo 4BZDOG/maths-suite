@@ -2537,8 +2537,9 @@ function genProbability(rng, diff, allowedOps) {
             const colour = rc(rng, ['red', 'blue', 'green', 'yellow']);
             const other_colour = rc(rng, ['blue', 'green', 'orange'].filter(c => c !== colour));
             const s = simplify(fav, total);
+            // Easy: plain-English wording only — avoid P( ) notation at this level.
             const ph = rc(rng, [
-                `A bag contains $${fav}$ ${colour} and $${other}$ ${other_colour} marbles. Find P(${colour}).`,
+                `A bag contains $${fav}$ ${colour} and $${other}$ ${other_colour} marbles. Find the probability of picking a ${colour} marble.`,
                 `A bag has $${fav}$ ${colour} marbles and $${other}$ ${other_colour} marbles. What is the probability of picking a ${colour} marble?`,
                 `There are $${fav}$ ${colour} and $${other}$ ${other_colour} marbles in a bag. Find the probability of selecting a ${colour} marble.`,
             ]);
@@ -2584,11 +2585,18 @@ function genProbability(rng, diff, allowedOps) {
         const s = simplify(n, d);
         const compS = simplify(d - n, d);
         const event = rc(rng, ['winning', 'rain tomorrow', 'selecting a red card', 'rolling a 6']);
-        const ph = rc(rng, [
-            `P(${event}) $= \\frac{${s.n}}{${s.d}}$. Find P(not ${event}).`,
-            `If the probability of ${event} is $\\frac{${s.n}}{${s.d}}$, what is the probability of NOT ${event}?`,
-            `The probability of ${event} is $\\frac{${s.n}}{${s.d}}$. Find the *complementary* probability.`,
-        ]);
+        // Easy: spell the idea out in plain English; reserve P( ) notation for
+        // Medium/Hard where students are expected to read and write it.
+        const ph = diff === 'Easy'
+            ? rc(rng, [
+                `The probability of ${event} is $\\frac{${s.n}}{${s.d}}$. Find the probability of NOT ${event}.`,
+                `If the probability of ${event} is $\\frac{${s.n}}{${s.d}}$, what is the probability that it does not happen?`,
+              ])
+            : rc(rng, [
+                `P(${event}) $= \\frac{${s.n}}{${s.d}}$. Find P(not ${event}).`,
+                `If the probability of ${event} is $\\frac{${s.n}}{${s.d}}$, what is the probability of NOT ${event}?`,
+                `The probability of ${event} is $\\frac{${s.n}}{${s.d}}$. Find the *complementary* probability.`,
+              ]);
         return { clue: ph, answer: fracStr(compS.n, compS.d), answerDisplay: `$\\frac{${compS.n}}{${compS.d}}$` };
     }
 
@@ -2598,9 +2606,10 @@ function genProbability(rng, diff, allowedOps) {
         const d = rc(rng, [6, 8, 10]);
         const a = ri(rng, 1, 3), b = ri(rng, 1, d - a - 1);
         const s = simplify(a + b, d);
+        // Easy: plain-English wording only — no P( ) notation.
         const ph = rc(rng, [
-            `A bag has $${a}$ red, $${b}$ blue and $${d - a - b}$ green marbles. Find P(red *or* blue).`,
-            `P(red) $= \\frac{${a}}{${d}}$ and P(blue) $= \\frac{${b}}{${d}}$. Find P(red or blue).`,
+            `A bag has $${a}$ red, $${b}$ blue and $${d - a - b}$ green marbles. Find the probability of picking a red *or* a blue marble.`,
+            `A bag has $${a}$ red, $${b}$ blue and $${d - a - b}$ green marbles. One marble is drawn. What is the probability it is red or blue?`,
         ]);
         return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
     }

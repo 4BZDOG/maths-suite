@@ -6,7 +6,7 @@ import { showToast } from '../ui/toast.js';
 import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
 import { loadJSPDF, loadFontForPDF, FONT_SELECT_MAP } from './pdfFonts.js';
 import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue, drawText } from './pdfHelpers.js';
-import { detectVerb, detectMidVerb } from '../renderers/htmlUtils.js';
+import { detectVerb, detectMidVerb, autoBoldVerb } from '../renderers/htmlUtils.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
 import { getOutcomesForTopics, getTopicOutcomeCodes } from '../core/outcomes.js';
@@ -1145,7 +1145,9 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
         let clueEndY;
         const clueX = itemX + 9;
         if (isFraction) {
-            const r = drawFractionClue(doc, item.clue || '', clueX, drawY, {
+            // Auto-bold the leading verb so fraction clues emphasise it the same
+            // way the inline renderer does (drawFractionClue honours ** markers).
+            const r = drawFractionClue(doc, autoBoldVerb(item.clue || ''), clueX, drawY, {
                 fontSizePt: 9 * pScale, pdfFont, color: [15, 23, 42],
             });
             clueEndY = drawY + r.belowBaseline + 1;

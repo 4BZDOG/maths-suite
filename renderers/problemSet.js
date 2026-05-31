@@ -169,7 +169,9 @@ function _capToPages(container, total, capPages) {
     const pageHeight = (cssMinH > 0 && Number.isFinite(cssMinH))
         ? cssMinH
         : (page.getBoundingClientRect().bottom - pageTop);
-    const limitBottom = pageTop + (pageHeight * capPages);
+    // Reserve a little room at the bottom so the score bar stays on the page.
+    const SCORE_RESERVE = 34;
+    const limitBottom = pageTop + (pageHeight * capPages) - SCORE_RESERVE;
 
     const grid = container.querySelector('.problem-set-grid');
     if (!grid) {
@@ -182,20 +184,37 @@ function _capToPages(container, total, capPages) {
         return total;
     }
 
+    // Fill the columns top-to-bottom (column-major, "newspaper" style) to match
+    // the PDF export, rather than CSS's default `column-fill: balance` which
+    // spreads all 30 questions evenly into two very tall columns. With balance,
+    // a contiguous-tail cut in document order would hide most of column 2 (its
+    // items physically sit beside column 1 but come later in the source), so the
+    // preview showed far fewer questions than the export. By constraining the
+    // grid to the available page height with `column-fill: auto`, column 1 fills
+    // to the page bottom, then column 2, and any remainder spills into a clipped
+    // overflow column — exactly the questions the PDF would push to the next page.
+    const gridTop = grid.getBoundingClientRect().top;
+    const availH  = Math.max(0, limitBottom - gridTop);
+    grid.style.height     = availH + 'px';
+    grid.style.columnFill = 'auto';
+    grid.style.overflow   = 'hidden';
+    // Force reflow so the new height/column-fill take effect before measuring.
+    const gridRight = grid.getBoundingClientRect().right;
+
     const items = Array.from(grid.querySelectorAll('.problem-item'));
     let hiddenCount = 0;
 
-    // Read all rects in one pass (single forced reflow), then write in a second pass.
-    // Hide a CONTIGUOUS TAIL: find the first item (in document order) that
-    // overflows the cap region, then hide it and everything after it. This
-    // guarantees the visible questions are 1..k with no gaps in the numbering
-    // — without it, a tall item near the bottom of column 1 could be hidden
-    // while shorter items at the top of column 2 stayed visible, producing
-    // a sequence like 1,2,3,4,6,7 (item 5 missing).
+    // Read all rects in one pass (single forced reflow), then write in a second
+    // pass. An item is "off-page" once it spills past the page bottom (1-column
+    // layout) or into a 3rd+ overflow column to the right of the grid box
+    // (2-column layout). Because the fill is column-major, the off-page items
+    // form a CONTIGUOUS TAIL in document order — so the visible questions are
+    // always 1..k with no gaps in the numbering.
     const rects = items.map(item => item.getBoundingClientRect());
     let firstOverflow = items.length;
     for (let i = 0; i < items.length; i++) {
-        if (rects[i].bottom > limitBottom - 4) { firstOverflow = i; break; }
+        const r = rects[i];
+        if (r.bottom > limitBottom + 1 || r.right > gridRight + 1) { firstOverflow = i; break; }
     }
     for (let i = firstOverflow; i < items.length; i++) {
         items[i].style.display = 'none';

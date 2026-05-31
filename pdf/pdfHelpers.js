@@ -180,6 +180,37 @@ function _parseClueSegments(text) {
 }
 
 /**
+ * Draw a run of plain text at baseline y, honouring **bold** / *italic*
+ * markers. Italics fall back to a teal accent colour for the custom fonts
+ * (which ship normal+bold only), matching _drawClueInline in pdfExport.js.
+ * Returns the X position after the last glyph. Single-line only (no wrapping)
+ * — fraction clues are only drawn this way when they fit on one line.
+ */
+function _drawEmphasisTokens(doc, value, x, y, fontSizePt, pdfFont, color) {
+    if (!value) return x;
+    let curX = x;
+    const re = /(\*\*([^*]+)\*\*|\*([^*\s][^*]*?)\*)(?!\*)/g;
+    let lastIdx = 0, m;
+    const draw = (t, bold, italic) => {
+        if (!t) return;
+        const useNativeItalic = italic && pdfFont === 'helvetica';
+        doc.setFont(pdfFont, bold ? 'bold' : (useNativeItalic ? 'italic' : 'normal'));
+        doc.setFontSize(fontSizePt);
+        doc.setTextColor(...((italic && !useNativeItalic) ? [13, 148, 136] : color));
+        doc.text(t, curX, y);
+        curX += doc.getTextWidth(t);
+    };
+    while ((m = re.exec(value)) !== null) {
+        if (m.index > lastIdx) draw(value.slice(lastIdx, m.index), false, false);
+        if (m[0].startsWith('**')) draw(m[2], true, false);
+        else                        draw(m[3], false, true);
+        lastIdx = m.index + m[0].length;
+    }
+    if (lastIdx < value.length) draw(value.slice(lastIdx), false, false);
+    return curX;
+}
+
+/**
  * Draw a clue inline, rendering \frac{n}{d} as a stacked fraction.
  * All plain/math text baselines are at y.
  * The fraction bar sits at y − 40% of the main font height, so fractions
@@ -202,7 +233,12 @@ export function drawFractionClue(doc, text, x, y, {
     let curX = x;
 
     for (const seg of _parseClueSegments(text)) {
-        if (seg.type === 'plain' || seg.type === 'math') {
+        if (seg.type === 'plain') {
+            // Plain text may carry **bold** / *italic* emphasis markers (incl.
+            // the auto-bolded leading verb). Render each run in its own weight so
+            // fraction-bearing clues bold their key words like every other clue.
+            curX = _drawEmphasisTokens(doc, seg.value, curX, y, fontSizePt, pdfFont, color);
+        } else if (seg.type === 'math') {
             doc.setFont(pdfFont, 'normal');
             doc.setFontSize(fontSizePt);
             doc.setTextColor(...color);
