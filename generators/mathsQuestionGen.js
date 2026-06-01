@@ -2998,8 +2998,12 @@ function genVariation(rng, diff, allowedOps) {
         const x1 = ri(rng, 2, 6), y1 = k * x1;
         const x2 = ri(rng, 2, 8);
         const y2 = k * x2;
+        const clue = rc(rng, [
+            `$y$ is **directly proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+            `$y$ varies **directly** with $x$. Given that $x = ${x1}$ when $y = ${y1}$, find $y$ when $x = ${x2}$.`,
+        ]);
         return {
-            clue: `$y$ varies *directly* as $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+            clue,
             answer: String(y2),
             answerDisplay: `$y = ${y2}$`,
             worked: `$k = \\frac{${y1}}{${x1}} = ${k}$, so $y = ${k}x$. At $x = ${x2}$: $y = ${k} \\times ${x2} = ${y2}$`,
@@ -3014,8 +3018,12 @@ function genVariation(rng, diff, allowedOps) {
     if (divisors.length === 0) return genVariation(rng, diff, allowedOps);
     const x2 = rc(rng, divisors);
     const y2 = k / x2;
+    const clue = rc(rng, [
+        `$y$ is **inversely proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+        `$y$ varies **inversely** with $x$. Given that $x = ${x1}$ when $y = ${y1}$, find $y$ when $x = ${x2}$.`,
+    ]);
     return {
-        clue: `$y$ varies *inversely* as $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+        clue,
         answer: String(y2),
         answerDisplay: `$y = ${y2}$`,
         worked: `$k = ${x1} \\times ${y1} = ${k}$, so $y = \\frac{${k}}{x}$. At $x = ${x2}$: $y = \\frac{${k}}{${x2}} = ${y2}$`,
