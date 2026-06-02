@@ -3006,7 +3006,7 @@ function genVariation(rng, diff, allowedOps) {
             clue,
             answer: String(y2),
             answerDisplay: `$y = ${y2}$`,
-            worked: `$k = \\frac{${y1}}{${x1}} = ${k}$, so $y = ${k}x$. At $x = ${x2}$: $y = ${k} \\times ${x2} = ${y2}$`,
+            worked: `$y = kx$. Constant of proportionality $k = \\frac{${y1}}{${x1}} = ${k}$, so $y = ${k}x$. At $x = ${x2}$: $y = ${k} \\times ${x2} = ${y2}$`,
         };
     }
     // inverse-variation: y = k/x. Pick k as product so divisions are clean.
@@ -3026,7 +3026,7 @@ function genVariation(rng, diff, allowedOps) {
         clue,
         answer: String(y2),
         answerDisplay: `$y = ${y2}$`,
-        worked: `$k = ${x1} \\times ${y1} = ${k}$, so $y = \\frac{${k}}{x}$. At $x = ${x2}$: $y = \\frac{${k}}{${x2}} = ${y2}$`,
+        worked: `$y = \\frac{k}{x}$. Constant of proportionality $k = ${x1} \\times ${y1} = ${k}$, so $y = \\frac{${k}}{x}$. At $x = ${x2}$: $y = \\frac{${k}}{${x2}} = ${y2}$`,
     };
 }
 
