@@ -154,8 +154,10 @@ test('fraction→percentage and fraction→decimal conversions are correct', () 
                         `${diff}/seed${seed}: ${num}/${den} → ${q.answer}% (expected ${(num / den) * 100}%)`);
                     checked++;
                 } else if (/decimal/.test(q.clue)) {
-                    assert.ok(approxEqual(Number(q.answer), num / den),
-                        `${diff}/seed${seed}: ${num}/${den} → ${q.answer} (expected ${num / den})`);
+                    const rounded = /round|d\.p\.|decimal place/.test(q.clue);
+                    const expected = rounded ? Math.round((num / den) * 1e4) / 1e4 : num / den;
+                    assert.ok(approxEqual(Number(q.answer), expected),
+                        `${diff}/seed${seed}: ${num}/${den} → ${q.answer} (expected ${expected})`);
                     checked++;
                 }
             }

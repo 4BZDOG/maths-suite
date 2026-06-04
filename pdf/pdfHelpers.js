@@ -82,7 +82,7 @@ export function _winAnsiSafe(s) {
     if (!s) return s;
     // Collapse runs of superscript characters into caret notation: x⁴→x^4, 2¹²→2^12
     s = s.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹ⁿˣ⁺⁻]+/g, run => '^' + [...run].map(c => _SUP_REV[c] || '').join(''));
-    return s.replace(/[π≈≤≥≠√∞θαβγ∠−→̄]/g, c => (c in _WINANSI_MAP ? _WINANSI_MAP[c] : c));
+    return s.replace(/[π≈≤≥≠√∞θαβγ∠−→]/g, c => (c in _WINANSI_MAP ? _WINANSI_MAP[c] : c)).replace(/\u0304/g, '');
 }
 
 const _SUP_MAP = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','n':'ⁿ','x':'ˣ','+':'⁺','-':'⁻'};
