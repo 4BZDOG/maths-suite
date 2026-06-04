@@ -926,9 +926,9 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
     const calcVerb = rc(rng, CALC_VERBS);
     if (diff === 'Easy') {
         if (type === 0) {
-            const den = rc(rng, [2, 4, 5, 10]);
+            const den = rc(rng, [2, 3, 4, 5, 6, 8, 10]);
             const num = ri(rng, 1, den - 1);
-            const whole = den * ri(rng, 2, 12);
+            const whole = den * ri(rng, 3, 15);
             const ans = (num * whole) / den;
             // 35% chance real-world context. Pair each clue with its noun so the
             // worksheet answer line and answer key can show the unit (e.g.
@@ -950,7 +950,19 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             return { clue: ph, answer: String(ans) };
         }
         if (type === 1) {
-            const den = rc(rng, [4, 5, 6, 8, 10]);
+            // ~40% unlike-denominator pairs where one divides the other
+            if (rng() < 0.4) {
+                const pairs = [[2, 4], [2, 6], [2, 8], [2, 10], [3, 6], [3, 9], [3, 12], [4, 8], [4, 12], [5, 10]];
+                const [sd, ld] = rc(rng, pairs);
+                const n1 = ri(rng, 1, sd - 1), n2 = ri(rng, 1, ld - 1);
+                const e1 = n1 * (ld / sd), sumNum = e1 + n2;
+                const { n: sn1, d: sd1 } = simplify(sumNum, ld);
+                const ans = sd1 === 1 ? String(sn1) : `$\\frac{${sn1}}{${sd1}}$`;
+                const inlineAns1 = sd1 === 1 ? String(sn1) : `\\frac{${sn1}}{${sd1}}`;
+                const worked = `$\\frac{${e1}}{${ld}} + \\frac{${n2}}{${ld}} = \\frac{${sumNum}}{${ld}} = ${inlineAns1}$`;
+                return { clue: `${calcVerb} $\\frac{${n1}}{${sd}} + \\frac{${n2}}{${ld}}$`, answer: ans, worked };
+            }
+            const den = rc(rng, [3, 4, 5, 6, 8, 10, 12]);
             const n1 = ri(rng, 1, den - 2), n2 = ri(rng, 1, den - n1 - 1);
             const { n: sn1, d: sd1 } = simplify(n1 + n2, den);
             const ans = sd1 === 1 ? String(sn1) : `$\\frac{${sn1}}{${sd1}}$`;
@@ -959,7 +971,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             return { clue: `${calcVerb} $\\frac{${n1}}{${den}} + \\frac{${n2}}{${den}}$`, answer: ans, worked };
         }
         if (type === 2) {
-            const den = rc(rng, [4, 6, 8, 9, 10, 12, 15]);
+            const den = rc(rng, [4, 6, 8, 9, 10, 12, 14, 15, 18, 20]);
             // Pick a factor that truly divides den (guarantees GCD > 1 after reduction)
             const divisors = [];
             for (let f = 2; f <= den / 2; f++) { if (den % f === 0) divisors.push(f); }
@@ -979,9 +991,9 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             return { clue: ph, answer: ans };
         }
         // type 3: fraction-of with real-world context
-        const den3 = rc(rng, [2, 4, 5, 10]);
+        const den3 = rc(rng, [2, 3, 4, 5, 6, 8, 10]);
         const num3 = ri(rng, 1, den3 - 1);
-        const whole3 = den3 * ri(rng, 2, 12);
+        const whole3 = den3 * ri(rng, 3, 15);
         const ans3 = (num3 * whole3) / den3;
         const ctx3 = rc(rng, [
             `$${whole3}$ students walk to school. $\\frac{${num3}}{${den3}}$ of them walk every day. How many is that?`,
@@ -993,10 +1005,20 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
 
     if (diff === 'Medium') {
         if (type === 0) {
-            const d1 = rc(rng, [2, 3, 4, 5]), d2 = rc(rng, [3, 4, 5, 6]);
+            const d1 = rc(rng, [2, 3, 4, 5, 6, 7]), d2 = rc(rng, [3, 4, 5, 6, 7, 8]);
             const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
             const l = lcm(d1, d2);
             const e1 = n1 * (l / d1), e2 = n2 * (l / d2);
+            // ~30% subtraction
+            if (rng() < 0.3 && e1 !== e2) {
+                const [bigE, smE] = e1 > e2 ? [e1, e2] : [e2, e1];
+                const [bigN, bigD, smN, smD] = e1 > e2 ? [n1, d1, n2, d2] : [n2, d2, n1, d1];
+                const { n: sn2, d: sd2 } = simplify(bigE - smE, l);
+                const ans = sd2 === 1 ? String(sn2) : `$\\frac{${sn2}}{${sd2}}$`;
+                const inlineAns2 = sd2 === 1 ? String(sn2) : `\\frac{${sn2}}{${sd2}}`;
+                const worked = `LCD $= ${l}$: $\\frac{${bigE}}{${l}} - \\frac{${smE}}{${l}} = \\frac{${bigE-smE}}{${l}} = ${inlineAns2}$`;
+                return { clue: `${calcVerb} $\\frac{${bigN}}{${bigD}} - \\frac{${smN}}{${smD}}$`, answer: ans, worked };
+            }
             const { n: sn2, d: sd2 } = simplify(e1 + e2, l);
             const ans = sd2 === 1 ? String(sn2) : `$\\frac{${sn2}}{${sd2}}$`;
             const inlineAns2 = sd2 === 1 ? String(sn2) : `\\frac{${sn2}}{${sd2}}`;
@@ -1004,8 +1026,8 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} + \\frac{${n2}}{${d2}}$`, answer: ans, worked };
         }
         if (type === 1) {
-            const d1 = ri(rng, 3, 7), n1 = ri(rng, 1, d1 - 1);
-            const d2 = ri(rng, 3, 7), n2 = ri(rng, 1, d2 - 1);
+            const d1 = ri(rng, 2, 9), n1 = ri(rng, 1, d1 - 1);
+            const d2 = ri(rng, 2, 9), n2 = ri(rng, 1, d2 - 1);
             const ans = fracStr(n1 * n2, d1 * d2);
             const ph = rc(rng, [
                 `${calcVerb} $\\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}}$`,
@@ -1016,6 +1038,19 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             return { clue: ph, answer: ans };
         }
         if (type === 2) {
+            // ~35% mixed number → improper fraction variant
+            if (rng() < 0.35) {
+                const denC = rc(rng, [2, 3, 4, 5, 6, 8]);
+                const wholeC = ri(rng, 1, 6);
+                const numC = ri(rng, 1, denC - 1);
+                const improperAns = wholeC * denC + numC;
+                const ph = rc(rng, [
+                    `Convert $${wholeC}\\frac{${numC}}{${denC}}$ to an *improper fraction*`,
+                    `Write $${wholeC}\\frac{${numC}}{${denC}}$ as an *improper fraction*`,
+                    `Express $${wholeC}\\frac{${numC}}{${denC}}$ as an *improper fraction*`,
+                ]);
+                return { clue: ph, answer: `$\\frac{${improperAns}}{${denC}}$` };
+            }
             const den = rc(rng, [2, 4, 5, 8, 10, 20, 25]);
             const num = ri(rng, 1, den - 1);
             const ans = round(num / den, 4);
@@ -1039,8 +1074,8 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             return { clue: ph, answer: String(pct), answerDisplay: `${pct}%` };
         }
         // type 3: improper fraction → mixed number
-        const denM = rc(rng, [2, 3, 4, 5, 6, 8]);
-        const wholeM = ri(rng, 1, 5);
+        const denM = rc(rng, [2, 3, 4, 5, 6, 7, 8, 10]);
+        const wholeM = ri(rng, 2, 8);
         const numRem = ri(rng, 1, denM - 1);
         const improper = wholeM * denM + numRem;
         const { n: sn, d: sd } = simplify(numRem, denM);
@@ -1056,10 +1091,10 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
     // Hard
     if (type === 0) {
         // Build coprime fractions directly: pick d, then pick n from coprime candidates
-        const d1 = ri(rng, 3, 8);
+        const d1 = ri(rng, 3, 10);
         const cops1 = Array.from({ length: d1 - 1 }, (_, i) => i + 1).filter(n => gcd(n, d1) === 1);
         const n1 = rc(rng, cops1);
-        const d2 = ri(rng, 3, 8);
+        const d2 = ri(rng, 3, 10);
         const cops2 = Array.from({ length: d2 - 1 }, (_, i) => i + 1).filter(n => gcd(n, d2) === 1);
         const n2 = rc(rng, cops2);
         const ans = fracStr(n1 * d2, d1 * n2);
@@ -1072,25 +1107,46 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         return { clue: ph, answer: ans };
     }
     if (type === 1) {
-        // Avoid d1===d2 directly; ensure result is positive by ordering fractions
-        const dPool = [3, 4, 5, 6];
+        // ~35% mixed number subtraction
+        if (rng() < 0.35) {
+            const denA = rc(rng, [3, 4, 5, 6, 8]);
+            const denB = rc(rng, [3, 4, 5, 6, 8].filter(d => d !== denA));
+            const wA = ri(rng, 2, 5), nA = ri(rng, 1, denA - 1);
+            const wB = ri(rng, 1, wA - 1), nB = ri(rng, 1, denB - 1);
+            const l = lcm(denA, denB);
+            const totalA = (wA * denA + nA) * (l / denA);
+            const totalB = (wB * denB + nB) * (l / denB);
+            if (totalA <= totalB) return genFractions(rng, diff, allowedOps, _depth + 1);
+            const diff_num = totalA - totalB;
+            const ans = fracStr(diff_num, l);
+            // If result > 1 show as mixed number
+            const wholeRes = Math.floor(diff_num / l);
+            const remRes = diff_num % l;
+            let displayAns = ans;
+            if (wholeRes > 0 && remRes > 0) {
+                const { n: rn, d: rd } = simplify(remRes, l);
+                displayAns = `$${wholeRes}\\frac{${rn}}{${rd}}$`;
+            }
+            return { clue: `${calcVerb} $${wA}\\frac{${nA}}{${denA}} - ${wB}\\frac{${nB}}{${denB}}$`, answer: displayAns };
+        }
+        const dPool = [3, 4, 5, 6, 7, 8, 9];
         const d1 = rc(rng, dPool);
         const d2 = rc(rng, dPool.filter(d => d !== d1));
         const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
         const l = lcm(d1, d2);
         const a = n1 * (l / d1), b = n2 * (l / d2);
-        // Use larger minus smaller so result is always positive
         const [bigN, bigD, smN, smD] = a > b ? [n1, d1, n2, d2] : [n2, d2, n1, d1];
         const numResult = Math.abs(a - b);
         if (numResult === 0) return genFractions(rng, diff, allowedOps, _depth + 1);
         const ans = fracStr(numResult, l);
         return { clue: `${calcVerb} $\\frac{${bigN}}{${bigD}} - \\frac{${smN}}{${smD}}$`, answer: ans };
     }
-    // type 2: simplify-convert — fraction→decimal, or (40%) fraction→percentage
-    if (rng() < 0.4) {
-        const den = rc(rng, [4, 5, 8, 20, 25, 40, 50]);
+    // type 2: simplify-convert — fraction→percentage (40%), recurring decimal (25%), clean decimal (35%)
+    const convRoll = rng();
+    if (convRoll < 0.4) {
+        const den = rc(rng, [4, 5, 8, 16, 20, 25, 40, 50, 80]);
         const num = ri(rng, 1, den - 1);
-        const pct = round((num / den) * 100, 2);   // e.g. 3/8 = 37.5%
+        const pct = round((num / den) * 100, 2);
         const ph = rc(rng, [
             `Convert $\\frac{${num}}{${den}}$ to a *percentage*`,
             `Express $\\frac{${num}}{${den}}$ as a *percentage*`,
@@ -1098,7 +1154,20 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         ]);
         return { clue: ph, answer: String(pct), answerDisplay: `${pct}%` };
     }
-    const denH = rc(rng, [2, 4, 5, 8, 10, 20, 25]);
+    if (convRoll < 0.65) {
+        // recurring decimal: denominators that don't divide powers of 10
+        const den = rc(rng, [3, 6, 7, 9, 11, 12]);
+        const num = ri(rng, 1, den - 1);
+        if (gcd(num, den) > 1) return genFractions(rng, diff, allowedOps, _depth + 1);
+        const ans = round(num / den, 4);
+        const ph = rc(rng, [
+            `Convert $\\frac{${num}}{${den}}$ to a *decimal* (round to 4 d.p.)`,
+            `Express $\\frac{${num}}{${den}}$ as a *decimal* (4 decimal places)`,
+            `Write $\\frac{${num}}{${den}}$ as a *decimal*, rounding to 4 d.p.`,
+        ]);
+        return { clue: ph, answer: String(ans) };
+    }
+    const denH = rc(rng, [2, 4, 5, 8, 10, 16, 20, 25, 40]);
     const numH = ri(rng, 1, denH - 1);
     const ansH = round(numH / denH, 4);
     const phH = rc(rng, [
@@ -1275,12 +1344,12 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
 // ============================================================
 function _genAlgebraCore(rng, diff, allowedOps) {
     const maps = {
-        Easy:   { 'solve': [0, 1] },
-        Medium: { 'solve': [0, 1, 3, 4], 'substitution': [2] },
-        Hard:   { 'solve': [0, 2], 'substitution': [1] },
+        Easy:   { 'solve': [0, 1, 2] },
+        Medium: { 'solve': [0, 1, 2, 3], 'substitution': [4] },
+        Hard:   { 'solve': [0, 1, 2], 'substitution': [3] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 1 : diff === 'Medium' ? 4 : 2);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : diff === 'Medium' ? 4 : 3);
     if (type === -1) return null;
 
     const v = rc(rng, ALGEBRA_VARS);
@@ -1288,7 +1357,19 @@ function _genAlgebraCore(rng, diff, allowedOps) {
 
     if (diff === 'Easy') {
         if (type === 0) {
-            const ans = ri(rng, 1, 20), a = ri(rng, 1, 20);
+            const ans = ri(rng, 1, 25), a = ri(rng, 2, 30);
+            // ~40% subtraction variant
+            if (rng() < 0.4) {
+                if (rng() < 0.35) {
+                    const clue = rc(rng, [
+                        `A number decreased by $${a}$ equals $${ans - a}$. Find the number.`,
+                        `When $${a}$ is subtracted from a number, the result is $${ans - a}$. What is the number?`,
+                        `A number minus $${a}$ gives $${ans - a}$. Find the number.`,
+                    ]);
+                    return { clue, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+                }
+                return { clue: `${solveVerb}\n$${v} - ${a} = ${ans - a}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            }
             if (rng() < 0.35) {
                 const clue = rc(rng, [
                     `A number increased by $${a}$ equals $${ans + a}$. Find the number.`,
@@ -1300,44 +1381,45 @@ function _genAlgebraCore(rng, diff, allowedOps) {
             }
             return { clue: `${solveVerb}\n$${v} + ${a} = ${ans + a}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
         }
-        const a = ri(rng, 2, 12), ans = ri(rng, 2, 12);
-        if (rng() < 0.35) {
-            const clue = rc(rng, [
-                `A number multiplied by $${a}$ gives $${a * ans}$. Find the number.`,
-                `When a number is multiplied by $${a}$, the result is $${a * ans}$. What is the number?`,
-                `$${a}$ times a number equals $${a * ans}$. Find the number.`,
-                `Think of a number. Multiply it by $${a}$. The answer is $${a * ans}$. What is the number?`,
-            ]);
-            return { clue, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+        if (type === 1) {
+            const a = ri(rng, 2, 12), ans = ri(rng, 2, 15);
+            if (rng() < 0.35) {
+                const clue = rc(rng, [
+                    `A number multiplied by $${a}$ gives $${a * ans}$. Find the number.`,
+                    `When a number is multiplied by $${a}$, the result is $${a * ans}$. What is the number?`,
+                    `$${a}$ times a number equals $${a * ans}$. Find the number.`,
+                    `Think of a number. Multiply it by $${a}$. The answer is $${a * ans}$. What is the number?`,
+                ]);
+                return { clue, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            }
+            return { clue: `${solveVerb}\n$${a}${v} = ${a * ans}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
         }
-        return { clue: `${solveVerb}\n$${a}${v} = ${a * ans}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+        // type 2: simple two-step ax + b = c
+        const a2 = ri(rng, 2, 4), ans2 = ri(rng, 1, 8), b2 = ri(rng, 1, 10);
+        const worked = `$${a2}${v} = ${a2 * ans2 + b2} - ${b2} = ${a2 * ans2}$, so $${v} = ${ans2}$`;
+        return { clue: `${solveVerb}\n$${a2}${v} + ${b2} = ${a2 * ans2 + b2}$`, answer: String(ans2), answerDisplay: `$${v} = ${ans2}$`, worked };
     }
     if (diff === 'Medium') {
         if (type === 0) {
-            const a = ri(rng, 2, 6), ans = ri(rng, 1, 10), b = ri(rng, 1, 20);
+            const a = ri(rng, 2, 8), ans = ri(rng, 1, 15), b = ri(rng, 1, 25);
             const worked = `$${a}${v} = ${a * ans + b} - ${b} = ${a * ans}$, so $${v} = ${ans}$`;
             return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${a * ans + b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked };
         }
         if (type === 1) {
-            const a = ri(rng, 2, 6), ans = ri(rng, 2, 10), b = ri(rng, 1, 10);
+            const a = ri(rng, 2, 8), ans = ri(rng, 2, 15), b = ri(rng, 1, 15);
             const worked = `$${a}${v} = ${a * ans - b} + ${b} = ${a * ans}$, so $${v} = ${ans}$`;
             return { clue: `${solveVerb}\n$${a}${v} - ${b} = ${a * ans - b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked };
         }
         if (type === 2) {
-            const [fv, iv] = rc(rng, SUBST_PAIRS);
-            const a = ri(rng, 2, 6), b = ri(rng, 1, 12), n = ri(rng, 1, 8);
-            const subVerb = rc(rng, [
-                `If $${fv} = ${a}${iv} + ${b}$, find $${fv}$ when $${iv} = ${n}$`,
-                `Evaluate $${fv} = ${a}${iv} + ${b}$ when $${iv} = ${n}$`,
-                `Calculate $${fv}$ given $${fv} = ${a}${iv} + ${b}$ and $${iv} = ${n}$`,
-                `Substitute $${iv} = ${n}$ into $${fv} = ${a}${iv} + ${b}$`,
-                `Find the value of $${fv}$ if $${fv} = ${a}${iv} + ${b}$ and $${iv} = ${n}$`,
-            ]);
-            return { clue: subVerb, answer: String(a * n + b) };
+            // variables on both sides (simple coefficients)
+            const ans = ri(rng, 1, 8);
+            const a = ri(rng, 2, 5), c = ri(rng, 1, a - 1), b = ri(rng, 1, 15);
+            const d = (a - c) * ans + b;
+            return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${c}${v} + ${d}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
         }
         if (type === 3) {
             // word-problem solve (linear)
-            const a3 = ri(rng, 2, 6), ans3 = ri(rng, 2, 12), b3 = ri(rng, 1, 20);
+            const a3 = ri(rng, 2, 8), ans3 = ri(rng, 2, 15), b3 = ri(rng, 1, 25);
             const R3 = a3 * ans3 + b3;
             const wp3 = rc(rng, [
                 `A number is multiplied by $${a3}$ then $${b3}$ is added, giving $${R3}$. Find the number.`,
@@ -1346,32 +1428,54 @@ function _genAlgebraCore(rng, diff, allowedOps) {
             ]);
             return { clue: wp3, answer: String(ans3), answerDisplay: `$${v} = ${ans3}$` };
         }
-        // type 4: division equation x/a = c
-        const a4 = ri(rng, 2, 9), ans4 = ri(rng, 2, 12);
-        return { clue: `${solveVerb}\n$\\frac{${v}}{${a4}} = ${ans4}$`, answer: String(a4 * ans4), answerDisplay: `$${v} = ${a4 * ans4}$` };
+        // type 4: substitution y = ax + b
+        const [fv, iv] = rc(rng, SUBST_PAIRS);
+        const a4 = ri(rng, 2, 8), b4 = ri(rng, 1, 15), n4 = ri(rng, 1, 10);
+        const subVerb = rc(rng, [
+            `If $${fv} = ${a4}${iv} + ${b4}$, find $${fv}$ when $${iv} = ${n4}$`,
+            `Evaluate $${fv} = ${a4}${iv} + ${b4}$ when $${iv} = ${n4}$`,
+            `Calculate $${fv}$ given $${fv} = ${a4}${iv} + ${b4}$ and $${iv} = ${n4}$`,
+            `Substitute $${iv} = ${n4}$ into $${fv} = ${a4}${iv} + ${b4}$`,
+            `Find the value of $${fv}$ if $${fv} = ${a4}${iv} + ${b4}$ and $${iv} = ${n4}$`,
+        ]);
+        return { clue: subVerb, answer: String(a4 * n4 + b4) };
     }
     // Hard
     if (type === 0) {
-        const ans = ri(rng, 1, 10);
-        const a = ri(rng, 3, 8), c = ri(rng, 1, a - 1), b = ri(rng, 1, 20);
+        const ans = ri(rng, 1, 12);
+        const a = ri(rng, 3, 9), c = ri(rng, 1, a - 1), b = ri(rng, 1, 30);
         const d = (a - c) * ans + b;
+        // ~30% bracket form: a(v + b) = cv + d
+        if (rng() < 0.3) {
+            const ab = ri(rng, 1, 8);
+            const db = a * ab + (a - c) * ans;
+            return { clue: `${solveVerb}\n$${a}(${v} + ${ab}) = ${c}${v} + ${db}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+        }
         return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${c}${v} + ${d}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
     }
     if (type === 1) {
-        const [fv, iv] = rc(rng, SUBST_PAIRS);
-        const a = ri(rng, 1, 4), b = ri(rng, 1, 15), n = ri(rng, 2, 6);
-        const coeff = a === 1 ? '' : String(a);
-        const subVerb = rc(rng, [
-            `If $${fv} = ${coeff}${iv}^2 + ${b}$, find $${fv}$ when $${iv} = ${n}$`,
-            `Evaluate $${fv} = ${coeff}${iv}^2 + ${b}$ when $${iv} = ${n}$`,
-            `Calculate $${fv}$ given $${fv} = ${coeff}${iv}^2 + ${b}$ and $${iv} = ${n}$`,
-            `Substitute $${iv} = ${n}$ into $${fv} = ${coeff}${iv}^2 + ${b}$`,
-        ]);
-        return { clue: subVerb, answer: String(a * n * n + b) };
+        // bracket equation: a(v + b) = c
+        const a1 = ri(rng, 2, 6), ans1 = ri(rng, 1, 10), b1 = ri(rng, 1, 8);
+        const rhs = a1 * (ans1 + b1);
+        return { clue: `${solveVerb}\n$${a1}(${v} + ${b1}) = ${rhs}$`, answer: String(ans1), answerDisplay: `$${v} = ${ans1}$` };
     }
-    const a = ri(rng, 2, 5), bMult = ri(rng, 1, 8);
-    const ans2 = -bMult;
-    return { clue: `${solveVerb}\n$${a}${v} + ${a * bMult} = 0$`, answer: String(ans2), answerDisplay: `$${v} = ${ans2}$` };
+    if (type === 2) {
+        // negative solution: av + ab = 0
+        const a2 = ri(rng, 2, 7), bMult = ri(rng, 1, 12);
+        const ans2 = -bMult;
+        return { clue: `${solveVerb}\n$${a2}${v} + ${a2 * bMult} = 0$`, answer: String(ans2), answerDisplay: `$${v} = ${ans2}$` };
+    }
+    // type 3: quadratic substitution
+    const [fv, iv] = rc(rng, SUBST_PAIRS);
+    const a3 = ri(rng, 1, 4), b3 = ri(rng, 1, 15), n3 = ri(rng, 2, 6);
+    const coeff = a3 === 1 ? '' : String(a3);
+    const subVerb = rc(rng, [
+        `If $${fv} = ${coeff}${iv}^2 + ${b3}$, find $${fv}$ when $${iv} = ${n3}$`,
+        `Evaluate $${fv} = ${coeff}${iv}^2 + ${b3}$ when $${iv} = ${n3}$`,
+        `Calculate $${fv}$ given $${fv} = ${coeff}${iv}^2 + ${b3}$ and $${iv} = ${n3}$`,
+        `Substitute $${iv} = ${n3}$ into $${fv} = ${coeff}${iv}^2 + ${b3}$`,
+    ]);
+    return { clue: subVerb, answer: String(a3 * n3 * n3 + b3) };
 }
 
 // ============================================================
@@ -3175,6 +3279,8 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
 
     const results = [];
     const seenClues = new Set();
+    const shapeCount = {};
+    const MAX_SAME_SHAPE = 3;
     let attempts = 0;
     let planIdx = 0;
     const maxAttempts = count * 20;
@@ -3214,6 +3320,10 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
         if (!ans || displayStr.length > 60 || ans === 'NaN' || ans === 'Infinity' || ans === '-Infinity') continue;
 
         if (seenClues.has(q.clue)) continue;
+
+        const shape = q.clue.replace(/\d+(\.\d+)?/g, '#').replace(/\\square/g, '□');
+        shapeCount[shape] = (shapeCount[shape] || 0) + 1;
+        if (shapeCount[shape] > MAX_SAME_SHAPE) continue;
 
         seenClues.add(q.clue);
         results.push({
