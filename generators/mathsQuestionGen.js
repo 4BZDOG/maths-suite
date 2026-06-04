@@ -436,62 +436,106 @@ function genIntegers(rng, diff, allowedOps) {
     }
     if (op === 'bodmas') {
         const verb = rc(rng, BODMAS_VERBS);
-        // Medium: forms 0–4 (mixed ops and brackets, no exponents — Stage 4 core)
-        // Hard: forms 0–10 (all including exponents and nested brackets)
-        const maxForm = diff === 'Medium' ? 4 : 10;
-        const form = ri(rng, 0, maxForm);
-        // Medium: smaller operands so answers stay manageable
-        const [aHi, bHi, cHi] = diff === 'Medium' ? [15, 9, 8] : [25, 15, 15];
+        if (diff === 'Medium') {
+            // Medium: forms 0–5 (mixed ops and brackets, no exponents)
+            const form = ri(rng, 0, 5);
+            if (form === 0) {
+                const a = ri(rng, 2, 15), b = ri(rng, 2, 9), c = ri(rng, 2, 8);
+                return { clue: `${verb}\n$${a} + ${b} \\times ${c}$`, answer: String(a + b * c) };
+            }
+            if (form === 1) {
+                const a = ri(rng, 2, 9), b = ri(rng, 2, 9), c = ri(rng, 2, 8);
+                return { clue: `${verb}\n$(${a} + ${b}) \\times ${c}$`, answer: String((a + b) * c) };
+            }
+            if (form === 2) {
+                const a = ri(rng, 2, 9), b = ri(rng, 2, 8), c = ri(rng, 2, 9), d = ri(rng, 2, 6);
+                return { clue: `${verb}\n$${a} \\times ${b} + ${c} \\times ${d}$`, answer: String(a * b + c * d) };
+            }
+            if (form === 3) {
+                const b = ri(rng, 2, 12), c = ri(rng, 3, 10);
+                const a = ri(rng, b + 1, b + 15);
+                return { clue: `${verb}\n$(${a} - ${b}) \\times ${c}$`, answer: String((a - b) * c) };
+            }
+            if (form === 4) {
+                const a = ri(rng, 3, 20), b = ri(rng, 2, 10), c = ri(rng, 2, 8);
+                return { clue: `${verb}\n$${a} - ${b} \\times ${c}$`, answer: String(a - b * c) };
+            }
+            // form 5: division with addition/subtraction
+            const a = ri(rng, 2, 8), b = ri(rng, 2, 8);
+            const c = a * b;
+            const d = ri(rng, 2, 15);
+            return { clue: `${verb}\n$${c} \\div ${a} + ${d}$`, answer: String(b + d) };
+        }
+        // Hard: forms 0–12 — exponents, nested brackets, larger operands, multi-step
+        const form = ri(rng, 0, 12);
         if (form === 0) {
-            const a = ri(rng, 2, aHi), b = ri(rng, 2, bHi), c = ri(rng, 2, cHi);
+            const a = ri(rng, 5, 30), b = ri(rng, 3, 15), c = ri(rng, 3, 12);
             return { clue: `${verb}\n$${a} + ${b} \\times ${c}$`, answer: String(a + b * c) };
         }
         if (form === 1) {
-            const a = ri(rng, 2, bHi), b = ri(rng, 2, bHi), c = ri(rng, 2, cHi);
+            const a = ri(rng, 5, 15), b = ri(rng, 3, 12), c = ri(rng, 3, 10);
             return { clue: `${verb}\n$(${a} + ${b}) \\times ${c}$`, answer: String((a + b) * c) };
         }
         if (form === 2) {
-            const a = ri(rng, 2, 9), b = ri(rng, 2, 8), c = ri(rng, 2, 9), d = ri(rng, 2, 6);
+            // a × b + c × d with larger operands
+            const a = ri(rng, 3, 12), b = ri(rng, 3, 12), c = ri(rng, 3, 10), d = ri(rng, 3, 10);
             return { clue: `${verb}\n$${a} \\times ${b} + ${c} \\times ${d}$`, answer: String(a * b + c * d) };
         }
         if (form === 3) {
-            const b = ri(rng, 2, 12), c = ri(rng, 3, 10);
-            const a = ri(rng, b + 1, b + 15);
-            return { clue: `${verb}\n$(${a} - ${b}) \\times ${c}$`, answer: String((a - b) * c) };
-        }
-        if (form === 4) {
-            const a = ri(rng, 3, 20), b = ri(rng, 2, 10), c = ri(rng, 2, 8);
-            return { clue: `${verb}\n$${a} - ${b} \\times ${c}$`, answer: String(a - b * c) };
-        }
-        // Hard-only forms — exponents and nested brackets
-        if (form === 5) {
             // a^n + b  (n = 2 or 3)
             const base = ri(rng, 2, 7), exp = ri(rng, 2, 3), add = ri(rng, 2, 20);
             return { clue: `${verb}\n$${base}^{${exp}} + ${add}$`, answer: String(base ** exp + add) };
         }
-        if (form === 6) {
+        if (form === 4) {
             // (a + b)^2
             const a = ri(rng, 2, 8), b = ri(rng, 2, 8);
             return { clue: `${verb}\n$(${a} + ${b})^2$`, answer: String((a + b) ** 2) };
         }
-        if (form === 7) {
+        if (form === 5) {
             // (a − b)^2
             const b = ri(rng, 1, 7), a = ri(rng, b + 1, b + 8);
             return { clue: `${verb}\n$(${a} - ${b})^2$`, answer: String((a - b) ** 2) };
         }
-        if (form === 8) {
+        if (form === 6) {
             // a^2 + b × c
             const a = ri(rng, 2, 9), b = ri(rng, 2, 8), c = ri(rng, 2, 7);
             return { clue: `${verb}\n$${a}^2 + ${b} \\times ${c}$`, answer: String(a ** 2 + b * c) };
         }
-        if (form === 9) {
+        if (form === 7) {
             // a × (b^2 − c)  where b^2 > c
             const b = ri(rng, 3, 7), c = ri(rng, 1, b * b - 2), a = ri(rng, 2, 8);
             return { clue: `${verb}\n$${a} \\times (${b}^2 - ${c})$`, answer: String(a * (b ** 2 - c)) };
         }
-        // form === 10: (a + b)^2 − c × d
-        const a = ri(rng, 2, 6), b = ri(rng, 2, 6), c = ri(rng, 2, 5), d = ri(rng, 2, 5);
-        return { clue: `${verb}\n$(${a} + ${b})^2 - ${c} \\times ${d}$`, answer: String((a + b) ** 2 - c * d) };
+        if (form === 8) {
+            // (a + b)^2 − c × d
+            const a = ri(rng, 2, 6), b = ri(rng, 2, 6), c = ri(rng, 2, 5), d = ri(rng, 2, 5);
+            return { clue: `${verb}\n$(${a} + ${b})^2 - ${c} \\times ${d}$`, answer: String((a + b) ** 2 - c * d) };
+        }
+        if (form === 9) {
+            // nested brackets: a × ((b + c) × d − e)
+            const b = ri(rng, 2, 6), c = ri(rng, 2, 6), d = ri(rng, 2, 4);
+            const inner = (b + c) * d;
+            const e = ri(rng, 1, inner - 1);
+            const a = ri(rng, 2, 5);
+            return { clue: `${verb}\n$${a} \\times ((${b} + ${c}) \\times ${d} - ${e})$`, answer: String(a * (inner - e)) };
+        }
+        if (form === 10) {
+            // division within BODMAS: (a × b + c) ÷ d
+            const d = ri(rng, 2, 6), q = ri(rng, 3, 15);
+            const total = d * q;
+            const a = ri(rng, 2, 8), bProd = ri(rng, 2, 6);
+            const c = total - a * bProd;
+            if (c < 1 || c > 50) return genIntegers(rng, diff, allowedOps);
+            return { clue: `${verb}\n$(${a} \\times ${bProd} + ${c}) \\div ${d}$`, answer: String(q) };
+        }
+        if (form === 11) {
+            // a^2 − b^2 (difference of squares, larger numbers)
+            const a = ri(rng, 4, 12), b = ri(rng, 1, a - 1);
+            return { clue: `${verb}\n$${a}^2 - ${b}^2$`, answer: String(a ** 2 - b ** 2) };
+        }
+        // form 12: a^3 − b × c
+        const a = ri(rng, 2, 5), b = ri(rng, 2, 8), c = ri(rng, 2, 6);
+        return { clue: `${verb}\n$${a}^{3} - ${b} \\times ${c}$`, answer: String(a ** 3 - b * c) };
     }
 }
 
@@ -1485,17 +1529,16 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
     if (_depth > 30) return null;
     const maps = {
         Easy:   { 'mean-median': [0, 1], 'mode-range': [2, 3] },
-        Medium: { 'mode-range': [0, 1], 'mean-median': [2, 3] },
-        Hard:   { 'iqr': [0], 'mean-median': [1, 2] },
+        Medium: { 'mode-range': [0, 1], 'mean-median': [2, 3, 4] },
+        Hard:   { 'iqr': [0], 'mean-median': [1, 2, 3], 'mode-range': [4] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : diff === 'Medium' ? 3 : 2);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : 4);
     if (type === -1) return null;
 
     const ctx = rc(rng, DATA_CONTEXTS);
     if (diff === 'Easy') {
         if (type === 0) {
-            // Construct dataset so mean is always a whole number
             const n = ri(rng, 3, 5);
             const meanV = ri(rng, 2, 12);
             const spread = Math.max(1, meanV - 1);
@@ -1527,7 +1570,6 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             return { clue: ph, answer: String(data[Math.floor(n / 2)]) };
         }
         if (type === 2) {
-            // mode: 5 values with one value appearing twice, rest distinct
             const mode = ri(rng, 1, 10);
             const others = [];
             while (others.length < 3) {
@@ -1558,8 +1600,8 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
     }
     if (diff === 'Medium') {
         if (type === 0) {
-            const n = ri(rng, 4, 7);
-            const data = Array.from({ length: n }, () => ri(rng, 1, 40));
+            const n = ri(rng, 5, 8);
+            const data = Array.from({ length: n }, () => ri(rng, 1, 50));
             const ph = rc(rng, [
                 `Find the *range* of: $${data.join(', ')}$`,
                 `Calculate the *range* of these ${ctx}: $${data.join(', ')}$`,
@@ -1570,12 +1612,14 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             return { clue: ph, answer: String(Math.max(...data) - Math.min(...data)) };
         }
         if (type === 1) {
-            const mode = ri(rng, 1, 15);
+            const mode = ri(rng, 1, 20);
             const usedVals = new Set([mode]);
-            const others = Array.from({ length: 4 }, () => {
-                let v; do { v = ri(rng, 1, 20); } while (usedVals.has(v)); usedVals.add(v); return v;
+            const nOthers = ri(rng, 4, 6);
+            const others = Array.from({ length: nOthers }, () => {
+                let v; do { v = ri(rng, 1, 30); } while (usedVals.has(v)); usedVals.add(v); return v;
             });
-            const data = [...others, mode, mode].sort((a, b) => a - b);
+            const reps = ri(rng, 2, 3);
+            const data = [...others, ...Array(reps).fill(mode)].sort((a, b) => a - b);
             const ph = rc(rng, [
                 `Identify the *mode* of: $${data.join(', ')}$`,
                 `State the *mode* of these ${ctx}: $${data.join(', ')}$`,
@@ -1586,12 +1630,12 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             return { clue: ph, answer: String(mode) };
         }
         if (type === 2) {
-            const n = ri(rng, 4, 6);
-            const meanV = ri(rng, 5, 25);
+            const n = ri(rng, 5, 8);
+            const meanV = ri(rng, 5, 30);
             const offset = Math.max(1, Math.floor(meanV / n));
             const others = Array.from({ length: n - 1 }, () => meanV + ri(rng, -offset, offset));
             const last = meanV * n - others.reduce((a, b) => a + b, 0);
-            if (last < 1 || last > 40) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
+            if (last < 1 || last > 50) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
             const data = [...others, last].sort((a, b) => a - b);
             const fOn2 = opts.showFormulas?.['mean-median']?.[diff.toLowerCase()];
             const pf2 = fOn2 ? ' Use $\\overline{x} = \\text{sum} \\div n$.' : '';
@@ -1603,31 +1647,47 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             ]);
             return { clue: ph, answer: String(meanV) };
         }
-        // type 3: find missing value given mean
-        const n3 = ri(rng, 4, 5);
-        const mean3 = ri(rng, 5, 20);
-        const spread3 = Math.max(2, Math.floor(mean3 * 0.5));
-        const target3 = mean3 * n3;
-        const known3 = Array.from({ length: n3 - 1 }, () => mean3 + ri(rng, -spread3, spread3));
-        const missing3 = target3 - known3.reduce((a, b) => a + b, 0);
-        if (missing3 < 1 || missing3 > 50) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
-        const display3 = [...known3, '?'].join(', ');
-        const fOn3 = opts.showFormulas?.['mean-median']?.[diff.toLowerCase()];
-        const pf3 = fOn3 ? ' Use $\\overline{x} = \\text{sum} \\div n$.' : '';
-        const ph3 = rc(rng, [
-            `The *mean* of $${display3}$ is $${mean3}$. Find the missing value.${pf3}`,
-            `${n3} ${ctx} have a *mean* of $${mean3}$. ${n3 - 1} are $${known3.join(', ')}$. Find the missing value.${pf3}`,
-            `Find the missing number if the *mean* of $${display3}$ is $${mean3}$.${pf3}`,
-            `The *mean* of these values is $${mean3}$: $${display3}$. What is the missing value?${pf3}`,
+        if (type === 3) {
+            // find missing value given mean
+            const n3 = ri(rng, 4, 6);
+            const mean3 = ri(rng, 5, 25);
+            const spread3 = Math.max(2, Math.floor(mean3 * 0.5));
+            const target3 = mean3 * n3;
+            const known3 = Array.from({ length: n3 - 1 }, () => mean3 + ri(rng, -spread3, spread3));
+            const missing3 = target3 - known3.reduce((a, b) => a + b, 0);
+            if (missing3 < 1 || missing3 > 50) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
+            const display3 = [...known3, '?'].join(', ');
+            const fOn3 = opts.showFormulas?.['mean-median']?.[diff.toLowerCase()];
+            const pf3 = fOn3 ? ' Use $\\overline{x} = \\text{sum} \\div n$.' : '';
+            const ph3 = rc(rng, [
+                `The *mean* of $${display3}$ is $${mean3}$. Find the missing value.${pf3}`,
+                `${n3} ${ctx} have a *mean* of $${mean3}$. ${n3 - 1} are $${known3.join(', ')}$. Find the missing value.${pf3}`,
+                `Find the missing number if the *mean* of $${display3}$ is $${mean3}$.${pf3}`,
+                `The *mean* of these values is $${mean3}$: $${display3}$. What is the missing value?${pf3}`,
+            ]);
+            return { clue: ph3, answer: String(missing3) };
+        }
+        // type 4: median of even-count dataset (requires averaging middle two)
+        const n4 = rc(rng, [6, 8]);
+        const data4 = Array.from({ length: n4 }, () => ri(rng, 1, 20) * 2).sort((a, b) => a - b);
+        const med4 = (data4[n4 / 2 - 1] + data4[n4 / 2]) / 2;
+        const ph4 = rc(rng, [
+            `Find the *median* of: $${data4.join(', ')}$`,
+            `Calculate the *median* of these ${ctx}: $${data4.join(', ')}$`,
+            `Determine the *median* of: $${data4.join(', ')}$`,
+            `The ${ctx} are $${data4.join(', ')}$. Find the *median*.`,
         ]);
-        return { clue: ph3, answer: String(missing3) };
+        return { clue: ph4, answer: String(med4) };
     }
     // Hard
     if (type === 0) {
-        // Use even numbers so adjacent pairs always sum to even → integer quartiles
-        const data = Array.from({ length: 8 }, () => ri(rng, 1, 10) * 2).sort((a, b) => a - b);
-        const q1 = (data[1] + data[2]) / 2;
-        const q3 = (data[5] + data[6]) / 2;
+        const n0 = rc(rng, [10, 12]);
+        const data = Array.from({ length: n0 }, () => ri(rng, 1, 25) * 2).sort((a, b) => a - b);
+        const half = Math.floor(n0 / 2);
+        const lower = data.slice(0, half);
+        const upper = data.slice(half);
+        const q1 = lower.length % 2 ? lower[Math.floor(lower.length / 2)] : (lower[lower.length / 2 - 1] + lower[lower.length / 2]) / 2;
+        const q3 = upper.length % 2 ? upper[Math.floor(upper.length / 2)] : (upper[upper.length / 2 - 1] + upper[upper.length / 2]) / 2;
         const iqr = q3 - q1;
         if (iqr <= 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
         const ph = rc(rng, [
@@ -1639,9 +1699,8 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
         return { clue: ph, answer: String(iqr) };
     }
     if (type === 1) {
-        const n = rc(rng, [4, 6]);
-        // Even-count dataset: ensure middle two values sum to even → integer median
-        const data = Array.from({ length: n }, () => ri(rng, 1, 15) * 2).sort((a, b) => a - b);
+        const n = rc(rng, [8, 10]);
+        const data = Array.from({ length: n }, () => ri(rng, 1, 25) * 2).sort((a, b) => a - b);
         const med = (data[n / 2 - 1] + data[n / 2]) / 2;
         const ph = rc(rng, [
             `Find the *median* of: $${data.join(', ')}$`,
@@ -1651,22 +1710,60 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
         ]);
         return { clue: ph, answer: String(med) };
     }
-    // type 2: find missing value given mean (harder dataset)
-    const n2 = ri(rng, 5, 7);
-    const mean2 = ri(rng, 10, 30);
-    const spread2 = Math.floor(mean2 * 0.5);
-    const target2 = mean2 * n2;
-    const known2 = Array.from({ length: n2 - 1 }, () => mean2 + ri(rng, -spread2, spread2));
-    const missing2 = target2 - known2.reduce((a, b) => a + b, 0);
-    if (missing2 < 1 || missing2 > 70) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
-    const display2 = [...known2, '?'].join(', ');
-    const ph2 = rc(rng, [
-        `The *mean* of $${display2}$ is $${mean2}$. Find the missing value.`,
-        `Find the missing value if the *mean* of $${display2}$ is $${mean2}$.`,
-        `The *mean* of these ${ctx} is $${mean2}$: $${display2}$. What is the missing value?`,
-        `Determine the missing value given that the *mean* of $${display2}$ is $${mean2}$.`,
+    if (type === 2) {
+        // find missing value given mean (harder dataset)
+        const n2 = ri(rng, 6, 8);
+        const mean2 = ri(rng, 15, 40);
+        const spread2 = Math.floor(mean2 * 0.5);
+        const target2 = mean2 * n2;
+        const known2 = Array.from({ length: n2 - 1 }, () => mean2 + ri(rng, -spread2, spread2));
+        const missing2 = target2 - known2.reduce((a, b) => a + b, 0);
+        if (missing2 < 1 || missing2 > 80) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
+        const display2 = [...known2, '?'].join(', ');
+        const ph2 = rc(rng, [
+            `The *mean* of $${display2}$ is $${mean2}$. Find the missing value.`,
+            `Find the missing value if the *mean* of $${display2}$ is $${mean2}$.`,
+            `The *mean* of these ${ctx} is $${mean2}$: $${display2}$. What is the missing value?`,
+            `Determine the missing value given that the *mean* of $${display2}$ is $${mean2}$.`,
+        ]);
+        return { clue: ph2, answer: String(missing2) };
+    }
+    if (type === 3) {
+        // effect on mean: "a value is added, find the new mean"
+        const n3 = ri(rng, 5, 7);
+        const meanV = ri(rng, 8, 25);
+        const spread = Math.max(2, Math.floor(meanV * 0.4));
+        const others = Array.from({ length: n3 - 1 }, () => meanV + ri(rng, -spread, spread));
+        const last = meanV * n3 - others.reduce((a, b) => a + b, 0);
+        if (last < 1 || last > 50) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
+        const data = [...others, last].sort((a, b) => a - b);
+        const extra = ri(rng, meanV + 3, meanV + 15);
+        const newSum = data.reduce((a, b) => a + b, 0) + extra;
+        const newMean = newSum / (n3 + 1);
+        if (!Number.isInteger(newMean)) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
+        const ph3 = rc(rng, [
+            `The ${ctx} are $${data.join(', ')}$. A new value of $${extra}$ is added. Find the new *mean*.`,
+            `Given the data $${data.join(', ')}$, a value of $${extra}$ is added. Calculate the new *mean*.`,
+            `The *mean* of $${data.join(', ')}$ changes when $${extra}$ is included. Find the new *mean*.`,
+        ]);
+        return { clue: ph3, answer: String(newMean) };
+    }
+    // type 4: mode with larger dataset
+    const mode4 = ri(rng, 5, 30);
+    const usedVals4 = new Set([mode4]);
+    const nOthers4 = ri(rng, 6, 8);
+    const others4 = Array.from({ length: nOthers4 }, () => {
+        let v; do { v = ri(rng, 1, 40); } while (usedVals4.has(v)); usedVals4.add(v); return v;
+    });
+    const reps4 = 3;
+    const data4 = [...others4, ...Array(reps4).fill(mode4)].sort((a, b) => a - b);
+    const ph4 = rc(rng, [
+        `Find the *mode* of: $${data4.join(', ')}$`,
+        `Identify the *mode* of these ${ctx}: $${data4.join(', ')}$`,
+        `What is the *mode* of $${data4.join(', ')}$?`,
+        `The ${ctx} are $${data4.join(', ')}$. Find the *mode*.`,
     ]);
-    return { clue: ph2, answer: String(missing2) };
+    return { clue: ph4, answer: String(mode4) };
 }
 
 // ============================================================
@@ -1824,23 +1921,19 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
         Easy:   { 'area-perimeter': [0, 1, 3], 'angles': [2] },
-        Medium: { 'area-perimeter': [0, 5], 'pythagoras': [1], 'angles': [2, 3, 4] },
-        Hard:   { 'circles': [0, 2, 5], 'pythagoras': [1], 'area-perimeter': [6], 'angles': [3, 4] },
+        Medium: { 'area-perimeter': [0, 5, 6], 'pythagoras': [1], 'angles': [2, 3, 4] },
+        Hard:   { 'circles': [0, 2, 5], 'pythagoras': [1], 'area-perimeter': [6, 7], 'angles': [3, 4] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    // Easy: 0=area(rect/para/trap), 1=perimeter, 2=angles, 3=find-length-from-area
-    // Medium: 0=triangle-area, 1=pythag, 2=triangle-angles, 3=co-interior, 4=corresponding/alt, 5=rect-area-from-perimeter
-    // Hard: 0=circle-area, 1=pythag-leg, 2=circle-circumference, 3=co-interior, 4=corresponding/alt, 5=radius-from-area, 6=triangle-height
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : diff === 'Hard' ? 6 : 5);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : 7);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
         if (type === 0) {
-            const shapeForm = ri(rng, 0, 2); // 0=rectangle, 1=parallelogram, 2=trapezium
-            const u = diff === 'Easy' ? 'cm' : rc(rng, ['cm', 'm']);
+            const shapeForm = ri(rng, 0, 2);
+            const u = 'cm';
             if (shapeForm === 1) {
-                // Parallelogram: area = base × height
-                const base = ri(rng, 3, 12), height = ri(rng, 2, 8);
+                const base = ri(rng, 3, 15), height = ri(rng, 2, 10);
                 const ans = base * height;
                 const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
                 const pf = fOn ? ' Use $A = b \\times h$.' : '';
@@ -1852,8 +1945,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, diagram: { type: 'parallelogram', base, height, missing: 'area' } };
             }
             if (shapeForm === 2) {
-                // Trapezium: area = (a + b) × h / 2
-                const a = ri(rng, 2, 8) * 2, bTrap = ri(rng, a / 2 + 2, a + 6), height = ri(rng, 2, 8);
+                const a = ri(rng, 2, 10) * 2, bTrap = ri(rng, a / 2 + 2, a + 8), height = ri(rng, 2, 10);
                 const ans = ((a + bTrap) * height) / 2;
                 if (!Number.isInteger(ans)) return _genGeometryCore(rng, diff, allowedOps, opts, _depth + 1);
                 const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
@@ -1866,7 +1958,6 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 const diagA = Math.min(a, bTrap), diagB = Math.max(a, bTrap);
                 return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, diagram: { type: 'trapezium', a: diagA, b: diagB, height, missing: 'area' } };
             }
-            // shapeForm === 0: rectangle
             const l = ri(rng, 2, 15), w = ri(rng, 2, 12);
             const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
             const pf = fOn ? ' Use $A = l \\times w$.' : '';
@@ -1879,7 +1970,6 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             return { clue: ph, answer: String(l * w), answerDisplay: `${l * w} ${u}²`, unit: `${u}²`, diagram: { type: 'rectangle', l, w, missing: 'area' } };
         }
         if (type === 2) {
-            // angles on a straight line / vertically opposite
             const a = ri(rng, 25, 155);
             const form = ri(rng, 0, 1);
             if (form === 0) {
@@ -1925,8 +2015,8 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     }
     if (diff === 'Medium') {
         if (type === 0) {
-            const b = ri(rng, 2, 12) * 2;
-            const h = ri(rng, 3, 15);
+            const b = ri(rng, 2, 14) * 2;
+            const h = ri(rng, 3, 18);
             const u = _geoUnit(Math.max(b, h));
             const ans = (b * h) / 2;
             const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
@@ -1939,7 +2029,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'triangle-area', base: b, height: h } };
         }
         if (type === 1) {
-            const triples = [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17], [9, 12, 15]];
+            const triples = [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17], [9, 12, 15], [7, 24, 25]];
             const [a, b, c] = rc(rng, triples);
             const scale = ri(rng, 1, 3);
             const u = _geoUnit(c * scale);
@@ -1954,7 +2044,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             return { clue: ph, answer: String(c * scale), answerDisplay: `${c * scale} ${u}`, worked, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'c' } };
         }
         if (type === 2) {
-            const angles = [30, 40, 45, 50, 60, 70, 80, 90];
+            const angles = [25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90];
             const a1 = rc(rng, angles);
             const remaining = angles.filter(a => a < 180 - a1 && a !== a1);
             if (remaining.length === 0) return _genGeometryCore(rng, diff, allowedOps, opts, _depth + 1);
@@ -1969,7 +2059,6 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             return { clue: ph, answer: String(a3), answerDisplay: `${a3}°`, diagram: { type: 'triangle-angles', a1, a2, a3, missing: 'a3' } };
         }
         if (type === 3) {
-            // Co-interior (same-side interior) angles on parallel lines — sum to 180°
             const a = rc(rng, [40, 50, 55, 60, 65, 70, 80, 110, 120]);
             const x = 180 - a;
             const ph = rc(rng, [
@@ -1980,7 +2069,6 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             return { clue: ph, answer: String(x), answerDisplay: `${x}°`, diagram: { type: 'parallel-transversal', a, angleType: 'co-interior' } };
         }
         if (type === 4) {
-            // Corresponding and alternate angles on parallel lines — equal
             const a = rc(rng, [40, 50, 55, 60, 65, 70, 80, 110, 120]);
             const form = ri(rng, 0, 1);
             if (form === 0) {
@@ -1998,21 +2086,50 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             ]);
             return { clue: ph, answer: String(a), answerDisplay: `${a}°`, diagram: { type: 'parallel-transversal', a, angleType: 'alternate' } };
         }
-        // type 5: find area of rectangle given perimeter and width (no diagram)
-        const w3 = ri(rng, 3, 10), l3 = ri(rng, w3 + 2, 18);
-        const P3 = 2 * (l3 + w3);
-        const u3 = _geoUnit(Math.max(l3, w3));
-        const ph3 = rc(rng, [
-            `A rectangle has perimeter $${P3}$ ${u3} and width $${w3}$ ${u3}. Find its area.`,
-            `The perimeter of a rectangle is $${P3}$ ${u3} and its width is $${w3}$ ${u3}. Calculate the area.`,
-            `Find the area of a rectangle with perimeter $${P3}$ ${u3} and width $${w3}$ ${u3}.`,
-            `A rectangle with perimeter $${P3}$ ${u3} has a width of $${w3}$ ${u3}. What is its area?`,
+        if (type === 5) {
+            // find area of rectangle given perimeter and width (no diagram)
+            const w3 = ri(rng, 3, 10), l3 = ri(rng, w3 + 2, 18);
+            const P3 = 2 * (l3 + w3);
+            const u3 = _geoUnit(Math.max(l3, w3));
+            const ph3 = rc(rng, [
+                `A rectangle has perimeter $${P3}$ ${u3} and width $${w3}$ ${u3}. Find its area.`,
+                `The perimeter of a rectangle is $${P3}$ ${u3} and its width is $${w3}$ ${u3}. Calculate the area.`,
+                `Find the area of a rectangle with perimeter $${P3}$ ${u3} and width $${w3}$ ${u3}.`,
+                `A rectangle with perimeter $${P3}$ ${u3} has a width of $${w3}$ ${u3}. What is its area?`,
+            ]);
+            return { clue: ph3, answer: String(l3 * w3), answerDisplay: `${l3 * w3} ${u3}²` };
+        }
+        // type 6: parallelogram — find base given area and height (inverse)
+        const h6 = ri(rng, 3, 12), b6 = ri(rng, 4, 15);
+        const area6 = b6 * h6;
+        const u6 = _geoUnit(Math.max(b6, h6));
+        const ph6 = rc(rng, [
+            `A parallelogram has area $${area6}$ ${u6}² and perpendicular height $${h6}$ ${u6}. Find its base.`,
+            `The area of a parallelogram is $${area6}$ ${u6}² and its height is $${h6}$ ${u6}. Calculate the base.`,
+            `Find the base of a parallelogram with area $${area6}$ ${u6}² and height $${h6}$ ${u6}.`,
         ]);
-        return { clue: ph3, answer: String(l3 * w3), answerDisplay: `${l3 * w3} ${u3}²` };
+        return { clue: ph6, answer: String(b6), answerDisplay: `${b6} ${u6}` };
     }
     // Hard
     if (type === 0) {
-        const r = ri(rng, 2, 10);
+        // circle area — including from diameter
+        const fromDiam = ri(rng, 0, 1);
+        if (fromDiam) {
+            const d = ri(rng, 4, 20) * 2;
+            const r = d / 2;
+            const u = _geoUnit(d);
+            const ans = round(3.14 * r * r, 2);
+            const fOn = opts.showFormulas?.['circles']?.[diff.toLowerCase()];
+            const pf = fOn ? ' Use $A = \\pi r^2$.' : '';
+            const ph = rc(rng, [
+                `Find the *area* of a circle with diameter $${d}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+                `Calculate the *area* of a circle of diameter $${d}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+                `A circle has diameter $${d}$ ${u}. Find its area. Use $\\pi \\approx 3.14$.${pf}`,
+            ]);
+            const workedCircA = `$r = ${d} \\div 2 = ${r},\\; A = \\pi r^2 \\approx 3.14 \\times ${r}^2 = ${ans}$ ${u}²`;
+            return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, worked: workedCircA, diagram: { type: 'circle', r, missing: 'area' } };
+        }
+        const r = ri(rng, 2, 12);
         const u = _geoUnit(r);
         const ans = round(3.14 * r * r, 2);
         const fOn = opts.showFormulas?.['circles']?.[diff.toLowerCase()];
@@ -2026,7 +2143,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, worked: workedCircA, diagram: { type: 'circle', r, missing: 'area' } };
     }
     if (type === 1) {
-        const triples = [[3, 4, 5], [5, 12, 13], [8, 15, 17]];
+        const triples = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [9, 40, 41]];
         const [a, b, c] = rc(rng, triples);
         const scale = ri(rng, 1, 3);
         const u = _geoUnit(c * scale);
@@ -2041,7 +2158,6 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}`, worked: worked2, diagram: { type: 'right-triangle', a: a * scale, b: b * scale, c: c * scale, missing: 'b' } };
     }
     if (type === 3) {
-        // Co-interior angles — parallel lines, harder context
         const a = rc(rng, [35, 48, 52, 67, 73, 112, 127]);
         const x = 180 - a;
         const ph = rc(rng, [
@@ -2052,7 +2168,6 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         return { clue: ph, answer: String(x), answerDisplay: `${x}°`, diagram: { type: 'parallel-transversal', a, angleType: 'co-interior' } };
     }
     if (type === 4) {
-        // Corresponding and alternate angles — parallel lines
         const a = rc(rng, [38, 47, 53, 61, 74, 82, 119, 134]);
         const form = ri(rng, 0, 1);
         if (form === 0) {
@@ -2071,7 +2186,24 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         return { clue: ph, answer: String(a), answerDisplay: `${a}°`, diagram: { type: 'parallel-transversal', a, angleType: 'alternate' } };
     }
     if (type === 2) {
-        const r = ri(rng, 2, 15);
+        // circumference — including from diameter
+        const fromDiam = ri(rng, 0, 1);
+        if (fromDiam) {
+            const d = ri(rng, 4, 30) * 2;
+            const r = d / 2;
+            const u = _geoUnit(d);
+            const ans = round(3.14 * d, 2);
+            const fOn = opts.showFormulas?.['circles']?.[diff.toLowerCase()];
+            const pf = fOn ? ' Use $C = \\pi d$.' : '';
+            const ph = rc(rng, [
+                `Find the *circumference* of a circle with diameter $${d}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+                `Calculate the *circumference* of a circle of diameter $${d}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+                `A circle has diameter $${d}$ ${u}. Find its circumference. Use $\\pi \\approx 3.14$.${pf}`,
+            ]);
+            const workedCircC = `$C = \\pi d \\approx 3.14 \\times ${d} = ${ans}$ ${u}`;
+            return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, worked: workedCircC, diagram: { type: 'circle', r, missing: 'circumference' } };
+        }
+        const r = ri(rng, 2, 18);
         const u = _geoUnit(r);
         const ans = round(2 * 3.14 * r, 2);
         const fOn = opts.showFormulas?.['circles']?.[diff.toLowerCase()];
@@ -2084,9 +2216,9 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         const workedCircC = `$C = 2\\pi r \\approx 2 \\times 3.14 \\times ${r} = ${ans}$ ${u}`;
         return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, worked: workedCircC, diagram: { type: 'circle', r, missing: 'circumference' } };
     }
-    // type 5: find radius given area (no diagram — avoids mislabelling diagram center)
     if (type === 5) {
-        const r3 = ri(rng, 2, 9);
+        // find radius given area
+        const r3 = ri(rng, 2, 12);
         const u3 = _geoUnit(r3);
         const area3 = round(3.14 * r3 * r3, 2);
         const ph3 = rc(rng, [
@@ -2097,21 +2229,49 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         ]);
         return { clue: ph3, answer: String(r3), answerDisplay: `${r3} ${u3}` };
     }
-    // type 6: find triangle height given area and base (no diagram)
-    if (type !== 6) return _genGeometryCore(rng, diff, allowedOps, opts, _depth + 1);
-    const b4 = ri(rng, 2, 14) * 2;
-    const h4 = ri(rng, 3, 18);
-    const area4 = (b4 * h4) / 2;
-    const u4 = _geoUnit(Math.max(b4, h4));
-    const fOn4 = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
-    const pf4 = fOn4 ? ' Use $A = \\frac{1}{2}bh$.' : '';
-    const ph4 = rc(rng, [
-        `A triangle has area $${area4}$ ${u4}² and base $${b4}$ ${u4}. Find its *perpendicular height*.${pf4}`,
-        `The area of a triangle is $${area4}$ ${u4}² and its base is $${b4}$ ${u4}. Calculate the *height*.${pf4}`,
-        `Find the *height* of a triangle with area $${area4}$ ${u4}² and base $${b4}$ ${u4}.${pf4}`,
-        `A triangle with base $${b4}$ ${u4} has area $${area4}$ ${u4}². Determine the *perpendicular height*.${pf4}`,
+    if (type === 6) {
+        // find triangle height given area and base
+        const b4 = ri(rng, 2, 14) * 2;
+        const h4 = ri(rng, 3, 18);
+        const area4 = (b4 * h4) / 2;
+        const u4 = _geoUnit(Math.max(b4, h4));
+        const fOn4 = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
+        const pf4 = fOn4 ? ' Use $A = \\frac{1}{2}bh$.' : '';
+        const ph4 = rc(rng, [
+            `A triangle has area $${area4}$ ${u4}² and base $${b4}$ ${u4}. Find its *perpendicular height*.${pf4}`,
+            `The area of a triangle is $${area4}$ ${u4}² and its base is $${b4}$ ${u4}. Calculate the *height*.${pf4}`,
+            `Find the *height* of a triangle with area $${area4}$ ${u4}² and base $${b4}$ ${u4}.${pf4}`,
+            `A triangle with base $${b4}$ ${u4} has area $${area4}$ ${u4}². Determine the *perpendicular height*.${pf4}`,
+        ]);
+        return { clue: ph4, answer: String(h4), answerDisplay: `${h4} ${u4}` };
+    }
+    // type 7: composite shape — rectangle + triangle or two rectangles
+    const compForm = ri(rng, 0, 1);
+    if (compForm === 0) {
+        // L-shape: two rectangles
+        const w1 = ri(rng, 3, 8), h1 = ri(rng, 4, 10);
+        const w2 = ri(rng, 2, w1 - 1), h2 = ri(rng, 2, 6);
+        const area = w1 * h1 + w2 * h2;
+        const u = _geoUnit(Math.max(w1, h1));
+        const ph = rc(rng, [
+            `An L-shaped figure is formed by a $${w1}$ ${u} × $${h1}$ ${u} rectangle and a $${w2}$ ${u} × $${h2}$ ${u} rectangle. Find the total area.`,
+            `Find the *area* of an L-shape made from rectangles measuring $${w1}$ ${u} × $${h1}$ ${u} and $${w2}$ ${u} × $${h2}$ ${u}.`,
+            `Calculate the total *area* of a composite shape: rectangle $${w1}$ × $${h1}$ ${u} joined with rectangle $${w2}$ × $${h2}$ ${u}.`,
+        ]);
+        return { clue: ph, answer: String(area), answerDisplay: `${area} ${u}²` };
+    }
+    // rectangle + right triangle on top
+    const rW = ri(rng, 4, 10), rH = ri(rng, 3, 8);
+    const tH = ri(rng, 2, 6);
+    const area = rW * rH + (rW * tH) / 2;
+    if (!Number.isInteger(area)) return _genGeometryCore(rng, diff, allowedOps, opts, _depth + 1);
+    const u = _geoUnit(Math.max(rW, rH));
+    const ph = rc(rng, [
+        `A shape is made of a $${rW}$ ${u} × $${rH}$ ${u} rectangle with a triangle (base $${rW}$ ${u}, height $${tH}$ ${u}) on top. Find the total area.`,
+        `Find the *area* of a composite figure: a $${rW}$ × $${rH}$ ${u} rectangle plus a triangle with base $${rW}$ ${u} and height $${tH}$ ${u}.`,
+        `Calculate the total *area*: rectangle $${rW}$ × $${rH}$ ${u}, triangle base $${rW}$ ${u} height $${tH}$ ${u}.`,
     ]);
-    return { clue: ph4, answer: String(h4), answerDisplay: `${h4} ${u4}` };
+    return { clue: ph, answer: String(area), answerDisplay: `${area} ${u}²` };
 }
 
 // ============================================================
@@ -2636,13 +2796,11 @@ function genProbability(rng, diff, allowedOps) {
 
     if (op === 'theoretical') {
         if (diff === 'Easy') {
-            // Simple spinner / bag: fav/total with small numbers
             const fav = ri(rng, 1, 4), other = ri(rng, 2, 6);
             const total = fav + other;
             const colour = rc(rng, ['red', 'blue', 'green', 'yellow']);
             const other_colour = rc(rng, ['blue', 'green', 'orange'].filter(c => c !== colour));
             const s = simplify(fav, total);
-            // Easy: plain-English wording only — avoid P( ) notation at this level.
             const ph = rc(rng, [
                 `A bag contains $${fav}$ ${colour} and $${other}$ ${other_colour} marbles. Find the probability of picking a ${colour} marble.`,
                 `A bag has $${fav}$ ${colour} marbles and $${other}$ ${other_colour} marbles. What is the probability of picking a ${colour} marble?`,
@@ -2651,16 +2809,18 @@ function genProbability(rng, diff, allowedOps) {
             return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
         }
         if (diff === 'Medium') {
-            // Die or spinner with larger total
             const sides = rc(rng, [6, 8, 10, 12]);
-            const target = rc(rng, ['even', 'greater than 4', 'a prime', 'less than 3']);
+            const target = rc(rng, ['even', 'odd', 'greater than 4', 'a prime', 'less than 3', 'a multiple of 3']);
             let fav;
             if (target === 'even') fav = Math.floor(sides / 2);
+            else if (target === 'odd') fav = Math.ceil(sides / 2);
             else if (target === 'greater than 4') fav = sides - 4;
             else if (target === 'a prime') {
                 const primes = [2, 3, 5, 7, 11].filter(p => p <= sides);
                 fav = primes.length;
-            } else fav = 2; // less than 3: 1, 2
+            } else if (target === 'a multiple of 3') {
+                fav = Math.floor(sides / 3);
+            } else fav = 2;
             if (fav <= 0 || fav >= sides) return genProbability(rng, diff, allowedOps);
             const s = simplify(fav, sides);
             const ph = rc(rng, [
@@ -2670,28 +2830,73 @@ function genProbability(rng, diff, allowedOps) {
             ]);
             return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
         }
-        // Hard: cards or frequency table
-        const suit = rc(rng, ['hearts', 'spades', 'diamonds', 'clubs']);
-        const fav = 13, total = 52;
-        const s = simplify(fav, total);
+        // Hard: compound card conditions or multi-colour bag
+        const form = ri(rng, 0, 2);
+        if (form === 0) {
+            // Card: face card / number card / specific value
+            const cond = rc(rng, ['a face card', 'a number card (2–10)', 'a card less than 5', 'an ace or king']);
+            let fav;
+            if (cond === 'a face card') fav = 12;
+            else if (cond === 'a number card (2–10)') fav = 36;
+            else if (cond === 'a card less than 5') fav = 12;
+            else fav = 8;
+            const total = 52;
+            const s = simplify(fav, total);
+            const ph = rc(rng, [
+                `A standard deck of 52 cards is shuffled. Find P(drawing ${cond}).`,
+                `One card is drawn from a standard 52-card deck. What is P(${cond})?`,
+                `What is the probability of drawing ${cond} from a shuffled 52-card deck?`,
+            ]);
+            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+        }
+        if (form === 1) {
+            // Multi-colour bag with 3+ colours
+            const c1 = ri(rng, 2, 6), c2 = ri(rng, 2, 6), c3 = ri(rng, 1, 5);
+            const total = c1 + c2 + c3;
+            const colours = ['red', 'blue', 'green', 'yellow', 'white'];
+            const col = rc(rng, colours);
+            const others = colours.filter(c => c !== col);
+            const col2 = rc(rng, others);
+            const col3 = rc(rng, others.filter(c => c !== col2));
+            const target = rc(rng, [col, `not ${col2}`]);
+            let fav;
+            if (target === col) fav = c1;
+            else fav = total - c2;
+            const s = simplify(fav, total);
+            const ph = rc(rng, [
+                `A bag has $${c1}$ ${col}, $${c2}$ ${col2} and $${c3}$ ${col3} marbles. Find P(${target}).`,
+                `There are $${c1}$ ${col}, $${c2}$ ${col2} and $${c3}$ ${col3} balls in a bag. What is P(drawing ${target})?`,
+            ]);
+            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+        }
+        // form === 2: die with compound condition
+        const sides = rc(rng, [8, 10, 12, 20]);
+        const cond = rc(rng, ['even and greater than 6', 'odd and less than 8', 'a prime greater than 5', 'a multiple of 4']);
+        let fav;
+        const nums = Array.from({ length: sides }, (_, i) => i + 1);
+        if (cond === 'even and greater than 6') fav = nums.filter(n => n % 2 === 0 && n > 6).length;
+        else if (cond === 'odd and less than 8') fav = nums.filter(n => n % 2 === 1 && n < 8).length;
+        else if (cond === 'a prime greater than 5') fav = nums.filter(n => [7, 11, 13, 17, 19].includes(n)).length;
+        else fav = nums.filter(n => n % 4 === 0).length;
+        if (fav <= 0 || fav >= sides) return genProbability(rng, diff, allowedOps);
+        const s = simplify(fav, sides);
         const ph = rc(rng, [
-            `A standard deck of 52 cards is shuffled. Find P(${suit}).`,
-            `One card is drawn from a standard 52-card deck. What is P(drawing a ${suit})?`,
-            `What is the probability of drawing a ${suit} from a shuffled 52-card deck?`,
+            `A fair $${sides}$-sided die is rolled. Find P(${cond}).`,
+            `A spinner has $${sides}$ equal sections numbered 1 to $${sides}$. Find P(landing on a number that is ${cond}).`,
         ]);
         return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
     }
 
     if (op === 'complementary') {
-        // P(event) given, find P(not event)
-        const denoms = diff === 'Easy' ? [4, 5, 6, 8] : diff === 'Medium' ? [5, 6, 8, 10, 12] : [10, 12, 20, 100];
+        const denoms = diff === 'Easy' ? [4, 5, 6, 8] : diff === 'Medium' ? [5, 6, 8, 10, 12] : [10, 12, 20, 50, 100];
         const d = rc(rng, denoms);
         const n = ri(rng, 1, d - 1);
         const s = simplify(n, d);
         const compS = simplify(d - n, d);
-        const event = rc(rng, ['winning', 'rain tomorrow', 'selecting a red card', 'rolling a 6']);
-        // Easy: spell the idea out in plain English; reserve P( ) notation for
-        // Medium/Hard where students are expected to read and write it.
+        const events = diff === 'Hard'
+            ? ['winning', 'rain tomorrow', 'selecting a red card', 'rolling a 6', 'passing the test', 'a bus arriving on time', 'a defective item']
+            : ['winning', 'rain tomorrow', 'selecting a red card', 'rolling a 6'];
+        const event = rc(rng, events);
         const ph = diff === 'Easy'
             ? rc(rng, [
                 `The probability of ${event} is $\\frac{${s.n}}{${s.d}}$. Find the probability of NOT ${event}.`,
@@ -2707,26 +2912,52 @@ function genProbability(rng, diff, allowedOps) {
 
     // op === 'multi-event'
     if (diff === 'Easy') {
-        // Mutually exclusive: P(A) + P(B)
         const d = rc(rng, [6, 8, 10]);
         const a = ri(rng, 1, 3), b = ri(rng, 1, d - a - 1);
         const s = simplify(a + b, d);
-        // Easy: plain-English wording only — no P( ) notation.
         const ph = rc(rng, [
             `A bag has $${a}$ red, $${b}$ blue and $${d - a - b}$ green marbles. Find the probability of picking a red *or* a blue marble.`,
             `A bag has $${a}$ red, $${b}$ blue and $${d - a - b}$ green marbles. One marble is drawn. What is the probability it is red or blue?`,
         ]);
         return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
     }
-    // Medium/Hard: two independent events (with replacement)
-    const d1 = rc(rng, [4, 6]), d2 = rc(rng, [4, 6]);
-    const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
-    const numProd = n1 * n2, denProd = d1 * d2;
+    if (diff === 'Medium') {
+        // Two independent events with replacement — small denominators
+        const d1 = rc(rng, [4, 5, 6]), d2 = rc(rng, [4, 5, 6]);
+        const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
+        const numProd = n1 * n2, denProd = d1 * d2;
+        const s = simplify(numProd, denProd);
+        const col1 = rc(rng, ['red', 'blue']), col2 = rc(rng, ['green', 'yellow']);
+        const ph = rc(rng, [
+            `A bag has $${n1}$ ${col1} out of $${d1}$ marbles and another bag has $${n2}$ ${col2} out of $${d2}$ marbles. Find P(${col1} *and* ${col2}) if one marble is drawn from each bag.`,
+            `P(${col1}) $= \\frac{${n1}}{${d1}}$ and P(${col2}) $= \\frac{${n2}}{${d2}}$. These are *independent* events. Find P(${col1} and ${col2}).`,
+        ]);
+        return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+    }
+    // Hard: three independent events or two events with larger denominators
+    const form = ri(rng, 0, 1);
+    if (form === 0) {
+        // Two events with larger denominators
+        const d1 = rc(rng, [6, 8, 10]), d2 = rc(rng, [6, 8, 10]);
+        const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
+        const numProd = n1 * n2, denProd = d1 * d2;
+        const s = simplify(numProd, denProd);
+        const col1 = rc(rng, ['red', 'blue', 'white']), col2 = rc(rng, ['green', 'yellow', 'black']);
+        const ph = rc(rng, [
+            `A bag has $${n1}$ ${col1} out of $${d1}$ marbles and another bag has $${n2}$ ${col2} out of $${d2}$ marbles. Find P(${col1} *and* ${col2}).`,
+            `P(${col1}) $= \\frac{${n1}}{${d1}}$ and P(${col2}) $= \\frac{${n2}}{${d2}}$. The events are *independent*. Find P(${col1} and ${col2}).`,
+            `A spinner shows ${col1} with probability $\\frac{${n1}}{${d1}}$ and a die shows ${col2} with probability $\\frac{${n2}}{${d2}}$. Find P(both occur).`,
+        ]);
+        return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+    }
+    // Three independent events
+    const d1 = rc(rng, [4, 6]), d2 = rc(rng, [4, 6]), d3 = rc(rng, [2, 4]);
+    const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1), n3 = ri(rng, 1, d3 - 1);
+    const numProd = n1 * n2 * n3, denProd = d1 * d2 * d3;
     const s = simplify(numProd, denProd);
-    const col1 = rc(rng, ['red', 'blue']), col2 = rc(rng, ['green', 'yellow']);
     const ph = rc(rng, [
-        `A bag has $${n1}$ ${col1} out of $${d1}$ marbles and another bag has $${n2}$ ${col2} out of $${d2}$ marbles. Find P(${col1} *and* ${col2}) if one marble is drawn from each bag.`,
-        `P(${col1}) $= \\frac{${n1}}{${d1}}$ and P(${col2}) $= \\frac{${n2}}{${d2}}$. These are *independent* events. Find P(${col1} and ${col2}).`,
+        `Three *independent* events have probabilities $\\frac{${n1}}{${d1}}$, $\\frac{${n2}}{${d2}}$ and $\\frac{${n3}}{${d3}}$. Find the probability that all three occur.`,
+        `P(A) $= \\frac{${n1}}{${d1}}$, P(B) $= \\frac{${n2}}{${d2}}$ and P(C) $= \\frac{${n3}}{${d3}}$. Events A, B, C are *independent*. Find P(A and B and C).`,
     ]);
     return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
 }

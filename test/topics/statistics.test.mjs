@@ -44,7 +44,17 @@ test('Statistics: mean/median/mode/range answers match recomputed values', () =>
                     const [q1, q3] = quartiles(data);
                     expected = q3 - q1;
                 }
-                else if (/\bmean\b|\\overline\{x\}/i.test(q.clue) && !/missing/i.test(q.clue)) expected = mean(data);
+                else if (/\bmean\b|\\overline\{x\}/i.test(q.clue) && !/missing/i.test(q.clue)) {
+                    if (/added|included/i.test(q.clue)) {
+                        const em = q.clue.match(/value of \$(\d+)\$/i) || q.clue.match(/when \$(\d+)\$/i);
+                        if (em) {
+                            const extra = Number(em[1]);
+                            expected = (data.reduce((a, b) => a + b, 0) + extra) / (data.length + 1);
+                        }
+                    } else {
+                        expected = mean(data);
+                    }
+                }
                 else if (/\bmedian\b/i.test(q.clue)) expected = median(data);
                 else if (/\bmode\b/i.test(q.clue)) expected = mode(data);
                 else if (/\brange\b/i.test(q.clue)) expected = range(data);
