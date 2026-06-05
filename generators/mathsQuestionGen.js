@@ -548,10 +548,10 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
     const maps = {
         Easy:   { 'add-subtract': [0, 3], 'multiply-divide': [1, 2] },
         Medium: { 'add-subtract': [0, 1, 3], 'multiply-divide': [2] },
-        Hard:   { 'multiply-divide': [0, 1, 3], 'add-subtract': [2] },
+        Hard:   { 'multiply-divide': [1, 3, 4], 'add-subtract': [0, 2] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : 3);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : diff === 'Medium' ? 3 : 4);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -630,7 +630,8 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
     }
     if (diff === 'Medium') {
         if (type === 0) {
-            const a = ri(rng, 10, 99) / 10, b = ri(rng, 10, 99) / 10;
+            // two-decimal-place addition (a genuine step up from one-dp Easy)
+            const a = ri(rng, 105, 999) / 100, b = ri(rng, 105, 999) / 100;
             const ans = round(a + b, 2);
             if (rng() < 0.25) {
                 const ctx = rc(rng, [
@@ -649,27 +650,28 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
             return { clue: ph, answer: String(ans) };
         }
         if (type === 1) {
-            const a = ri(rng, 20, 99) / 10, b = ri(rng, 1, Math.floor(a * 10) - 1) / 10;
-            const bR = round(b, 1);
+            // two-decimal-place subtraction
+            const a = ri(rng, 205, 999) / 100, b = ri(rng, 105, Math.floor(a * 100) - 5) / 100;
             const ans = round(a - b, 2);
             if (rng() < 0.25) {
                 const ctx = rc(rng, [
-                    `A water tank holds $${a}$ L. $${bR}$ L is used. How much remains?`,
-                    `A plank is $${a}$ m long. A piece of $${bR}$ m is cut off. What length is left?`,
-                    `A bag weighs $${a}$ kg. After removing $${bR}$ kg of contents, what is the new mass?`,
+                    `A water tank holds $${a}$ L. $${b}$ L is used. How much remains?`,
+                    `A plank is $${a}$ m long. A piece of $${b}$ m is cut off. What length is left?`,
+                    `A bag weighs $${a}$ kg. After removing $${b}$ kg of contents, what is the new mass?`,
                 ]);
                 return { clue: ctx, answer: String(ans) };
             }
             const ph = rc(rng, [
-                `${rc(rng, CALC_VERBS)} $${a} - ${bR}$`,
-                `Subtract $${bR}$ from $${a}$`,
-                `Find the difference of $${a}$ and $${bR}$`,
-                `What is $${a} - ${bR}$?`,
+                `${rc(rng, CALC_VERBS)} $${a} - ${b}$`,
+                `Subtract $${b}$ from $${a}$`,
+                `Find the difference of $${a}$ and $${b}$`,
+                `What is $${a} - ${b}$?`,
             ]);
             return { clue: ph, answer: String(ans) };
         }
         if (type === 2) {
-            const a = ri(rng, 10, 99) / 10, b = ri(rng, 10, 99) / 10;
+            // two-decimal-place number × small integer (exact, harder than 1dp×1dp)
+            const a = ri(rng, 105, 999) / 100, b = ri(rng, 3, 12);
             const ph = rc(rng, [
                 `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
                 `Multiply $${a}$ by $${b}$`,
@@ -695,23 +697,24 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
     }
     // Hard
     if (type === 0) {
-        const a = ri(rng, 11, 99) / 10, b = ri(rng, 11, 99) / 10;
+        // three-number two-decimal-place addition (single span → harder mental arithmetic)
+        const a = ri(rng, 105, 999) / 100, b = ri(rng, 105, 999) / 100, c = ri(rng, 105, 999) / 100;
+        const ans = round(a + b + c, 2);
         const ph = rc(rng, [
-            `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
-            `Multiply $${a}$ by $${b}$`,
-            `Find the product of $${a}$ and $${b}$`,
-            `What is $${a} \\times ${b}$?`,
+            `${rc(rng, CALC_VERBS)} $${a} + ${b} + ${c}$`,
+            `Find the sum of $${a}$, $${b}$ and $${c}$`,
+            `What is $${a} + ${b} + ${c}$?`,
         ]);
-        return { clue: ph, answer: String(round(a * b, 2)) };
+        return { clue: ph, answer: String(ans) };
     }
     if (type === 1) {
-        const a = ri(rng, 10, 99) / 10, b = ri(rng, 10, 99) / 10;
+        // division giving a non-terminating quotient — round to 2 decimal places
+        const a = ri(rng, 25, 99) / 10, b = ri(rng, 12, 39) / 10;
         const ans = round(a / b, 2);
         const ph = rc(rng, [
-            `${rc(rng, CALC_VERBS)} $${a} \\div ${b}$`,
-            `Divide $${a}$ by $${b}$`,
-            `Find the quotient of $${a}$ and $${b}$`,
-            `What is $${a} \\div ${b}$?`,
+            `Calculate $${a} \\div ${b}$, giving your answer to **2 decimal places**.`,
+            `Divide $${a}$ by $${b}$ and round the answer to **2 decimal places**.`,
+            `Find $${a} \\div ${b}$ correct to **2 decimal places**.`,
         ]);
         return { clue: ph, answer: String(ans) };
     }
@@ -724,6 +727,17 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
             `What is $${a} - ${b}$?`,
         ]);
         return { clue: ph, answer: String(round(a - b, 2)) };
+    }
+    if (type === 4) {
+        // two-decimal-place number × small integer (exact, larger operands)
+        const a = ri(rng, 105, 999) / 100, b = ri(rng, 4, 15);
+        const ph = rc(rng, [
+            `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
+            `Multiply $${a}$ by $${b}$`,
+            `Find the product of $${a}$ and $${b}$`,
+            `What is $${a} \\times ${b}$?`,
+        ]);
+        return { clue: ph, answer: String(round(a * b, 2)) };
     }
     // type 3: measurement-cost multiply — ensure len has a decimal part
     const lenTenths = ri(rng, 11, 99);
@@ -750,11 +764,11 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
 function genRounding(rng, diff, allowedOps) {
     const maps = {
         Easy:   { 'nearest': [0, 1, 2] },
-        Medium: { 'nearest': [0, 3, 4, 5], 'decimal-places': [1, 2] },
+        Medium: { 'nearest': [0, 3, 4, 5], 'decimal-places': [1, 2], 'sig-figs': [6] },
         Hard:   { 'nearest': [0, 4, 5], 'decimal-places': [1], 'sig-figs': [2, 3] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : 5);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : diff === 'Medium' ? 6 : 5);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -854,6 +868,20 @@ function genRounding(rng, diff, allowedOps) {
             ]);
             return { clue: ph, answer: String(ans) };
         }
+        if (type === 6) {
+            // Round to 1 significant figure — bridges to the 2-3 s.f. work at Hard.
+            const n = ri(rng, 100, 9999);
+            const factor = Math.pow(10, Math.floor(Math.log10(n)));
+            const ans = Math.round(n / factor) * factor;
+            const orderAbove = Math.pow(10, Math.floor(Math.log10(n)) + 1);
+            const edgeNote = ans >= orderAbove ? ' *Note: trailing zeros are not significant.*' : '';
+            const ph = rc(rng, [
+                `Round $${n}$ to *1 significant figure*${edgeNote}`,
+                `Write $${n}$ correct to *1 significant figure*${edgeNote}`,
+                `Express $${n}$ to 1 s.f.${edgeNote}`,
+            ]);
+            return { clue: ph, answer: String(ans) };
+        }
         // type 3: nearest 5
         const n3 = ri(rng, 12, 295);
         const ans3 = Math.round(n3 / 5) * 5;
@@ -876,14 +904,17 @@ function genRounding(rng, diff, allowedOps) {
         return { clue: ph, answer: String(ans) };
     }
     if (type === 1) {
-        const n = ri(rng, 10000, 999999) / 10000;
-        const display = n.toFixed(4);
+        // round to 3 or 4 decimal places (the source value carries one extra place)
+        const dp = rc(rng, [3, 4]);
+        const denom = Math.pow(10, dp + 1);
+        const n = ri(rng, denom, denom * 100 - 1) / denom;
+        const display = n.toFixed(dp + 1);
         const ph = rc(rng, [
-            `Round $${display}$ to 3 decimal places`,
-            `Express $${display}$ correct to 3 decimal places`,
-            `Write $${display}$ to 3 d.p.`,
+            `Round $${display}$ to ${dp} decimal places`,
+            `Express $${display}$ correct to ${dp} decimal places`,
+            `Write $${display}$ to ${dp} d.p.`,
         ]);
-        return { clue: ph, answer: round(n, 3).toFixed(3) };
+        return { clue: ph, answer: round(n, dp).toFixed(dp) };
     }
     if (type === 2) {
         const sigFigs = rc(rng, [1, 2]);
@@ -1226,11 +1257,11 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
 // PERCENTAGES
 // ============================================================
 function genPercentages(rng, diff, allowedOps, _depth = 0) {
-    if (_depth > 20) return null;
+    if (_depth > 25) return null;
     const maps = {
         Easy:   { 'find-pct': [0, 2], 'increase-decrease': [1] },
         Medium: { 'find-pct': [0, 2], 'increase-decrease': [1, 3] },
-        Hard:   { 'reverse-change': [0, 1, 2] },
+        Hard:   { 'reverse-change': [0, 1], 'find-pct': [2], 'increase-decrease': [3, 4] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
 
@@ -1284,9 +1315,9 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
         const type = _pickType(rng, filtered, 3);
         if (type === -1) return null;
         if (type === 0) {
-            const pct = rc(rng, [5, 10, 15, 20, 30, 40, 60, 70, 80]);
-            const candidates = [20, 40, 60, 80, 100, 120, 200, 250, 400, 500];
-            for (let i = 0; i < 20; i++) {
+            const pct = rc(rng, [5, 10, 15, 20, 30, 35, 40, 60, 65, 70, 80]);
+            const candidates = [20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 250, 300, 400, 500];
+            for (let i = 0; i < 25; i++) {
                 const whole = rc(rng, candidates);
                 const ans = (pct / 100) * whole;
                 if (Number.isInteger(ans)) {
@@ -1294,18 +1325,20 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
                         `Find $${pct}\\%$ of $${whole}$`,
                         `Calculate $${pct}\\%$ of $${whole}$`,
                         `Determine $${pct}\\%$ of $${whole}$`,
+                        `What is $${pct}\\%$ of $${whole}$?`,
                     ]);
                     const worked = `$${pct}\\% \\times ${whole} = \\frac{${pct}}{100} \\times ${whole} = ${ans}$`;
                     return { clue: ph, answer: String(ans), worked };
                 }
             }
+            return genPercentages(rng, diff, allowedOps, _depth + 1);
         }
         if (type === 1) {
-            // multiples of 20 guarantee integer results for all pct in [5,10,20,25,50]
-            const orig = ri(rng, 1, 10) * 20;
-            const pct = rc(rng, [5, 10, 20, 25, 50]);
+            // multiples of 20 guarantee integer results for the percentage pool
+            const orig = ri(rng, 1, 20) * 20;
+            const pct = rc(rng, [5, 10, 15, 20, 25, 40, 50]);
             const ans = orig * (1 + pct / 100);
-            const ctx = rc(rng, ['price', 'value', 'amount', 'score']);
+            const ctx = rc(rng, ['price', 'value', 'amount', 'score', 'population', 'membership']);
             const ph = rc(rng, [
                 `Increase $${orig}$ by $${pct}\\%$`,
                 `A ${ctx} of $${orig}$ is increased by $${pct}\\%$. Find the **new** ${ctx}.`,
@@ -1318,7 +1351,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             return { clue: ph, answer: String(ans), worked };
         }
         if (type === 2) {
-            const b = rc(rng, [10, 20, 25, 50, 100]);
+            const b = rc(rng, [8, 10, 16, 20, 25, 40, 50, 100]);
             const a = ri(rng, 1, b - 1);
             const ans = (a / b) * 100;
             if (!Number.isInteger(ans)) return genPercentages(rng, diff, allowedOps, _depth + 1);
@@ -1331,10 +1364,10 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             return { clue: ph, answer: String(ans), answerDisplay: `${ans}%` };
         }
         // type 3: decrease/discount — multiples of 20 guarantee integer results
-        const origDec = ri(rng, 1, 10) * 20;
-        const pctDec = rc(rng, [5, 10, 20, 25, 50]);
+        const origDec = ri(rng, 1, 20) * 20;
+        const pctDec = rc(rng, [5, 10, 15, 20, 25, 40, 50]);
         const ansDec = origDec * (1 - pctDec / 100);
-        const ctxDec = rc(rng, ['price', 'salary', 'value', 'cost']);
+        const ctxDec = rc(rng, ['price', 'salary', 'value', 'cost', 'attendance']);
         const phDec = rc(rng, [
             `Decrease $${origDec}$ by $${pctDec}\\%$`,
             `A ${ctxDec} of $${origDec}$ is reduced by $${pctDec}\\%$. Find the **new** ${ctxDec}.`,
@@ -1344,9 +1377,10 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
         return { clue: phDec, answer: String(ansDec) };
     }
     // Hard
-    const type = _pickType(rng, filtered, 2);
+    const type = _pickType(rng, filtered, 4);
     if (type === -1) return null;
     if (type === 0) {
+        // reverse a percentage increase: find the original
         const orig = ri(rng, 5, 20) * 20;
         const pct = rc(rng, [10, 20, 25, 50]);
         const final = round(orig * (1 + pct / 100), 2);
@@ -1358,17 +1392,58 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
         return { clue: ph, answer: String(orig) };
     }
     if (type === 1) {
+        // percentage change given before and after (increase or decrease)
         const orig = ri(rng, 4, 20) * 25;
-        const pct = rc(rng, [10, 20, 25, 50]);
-        const newVal = round(orig * (1 + pct / 100), 2);
-        if (!Number.isInteger(newVal)) return genPercentages(rng, diff, allowedOps, _depth + 1);
-        const ph = rc(rng, [
-            `A price rises from $\\$${orig}$ to $\\$${newVal}$. What is the *percentage increase*?`,
-            `Calculate the *percentage increase* from $\\$${orig}$ to $\\$${newVal}$.`,
-            `Determine the *percentage change* when a value goes from $${orig}$ to $${newVal}$.`,
-        ]);
+        const pct = rc(rng, [10, 20, 25, 40, 50]);
+        const goUp = rng() < 0.5;
+        const newVal = round(orig * (goUp ? 1 + pct / 100 : 1 - pct / 100), 2);
+        if (!Number.isInteger(newVal) || newVal <= 0) return genPercentages(rng, diff, allowedOps, _depth + 1);
+        const ph = goUp
+            ? rc(rng, [
+                `A price rises from $\\$${orig}$ to $\\$${newVal}$. What is the *percentage increase*?`,
+                `Calculate the *percentage increase* from $\\$${orig}$ to $\\$${newVal}$.`,
+              ])
+            : rc(rng, [
+                `A price falls from $\\$${orig}$ to $\\$${newVal}$. What is the *percentage decrease*?`,
+                `Calculate the *percentage decrease* from $\\$${orig}$ to $\\$${newVal}$.`,
+              ]);
         return { clue: ph, answer: String(pct), answerDisplay: `${pct}%` };
     }
+    if (type === 2) {
+        // find an awkward percentage of a larger number (genuinely harder mental work)
+        const pct = rc(rng, [5, 15, 35, 45, 55, 65, 85, 12.5, 37.5, 62.5]);
+        const candidates = [80, 120, 160, 200, 240, 320, 400, 600, 800, 1000, 1200];
+        for (let i = 0; i < 25; i++) {
+            const whole = rc(rng, candidates);
+            const ans = (pct / 100) * whole;
+            if (Number.isInteger(ans)) {
+                const ph = rc(rng, [
+                    `Find $${pct}\\%$ of $${whole}$`,
+                    `Calculate $${pct}\\%$ of $${whole}$`,
+                    `Determine $${pct}\\%$ of $${whole}$`,
+                ]);
+                return { clue: ph, answer: String(ans) };
+            }
+        }
+        return genPercentages(rng, diff, allowedOps, _depth + 1);
+    }
+    if (type === 3) {
+        // successive percentage change — multi-step
+        const orig = ri(rng, 2, 10) * 100;
+        const p1 = rc(rng, [10, 20, 25, 50]);
+        const p2 = rc(rng, [10, 20, 25, 50]);
+        const dir1 = rng() < 0.5 ? 'increased' : 'decreased';
+        const dir2 = rng() < 0.5 ? 'increased' : 'decreased';
+        const afterFirst = dir1 === 'increased' ? orig * (1 + p1 / 100) : orig * (1 - p1 / 100);
+        const final = dir2 === 'increased' ? afterFirst * (1 + p2 / 100) : afterFirst * (1 - p2 / 100);
+        if (!Number.isInteger(final) || final <= 0) return genPercentages(rng, diff, allowedOps, _depth + 1);
+        const ph = rc(rng, [
+            `A value of $${orig}$ is ${dir1} by $${p1}\\%$, then ${dir2} by $${p2}\\%$. Find the **final** value.`,
+            `Starting at $${orig}$, a quantity is ${dir1} by $${p1}\\%$ and then ${dir2} by $${p2}\\%$. What is the final amount?`,
+        ]);
+        return { clue: ph, answer: String(final) };
+    }
+    // type 4: percentage of a percentage (cascading)
     const pct1 = rc(rng, [10, 20, 25, 50]);
     const whole = ri(rng, 4, 20) * 100;
     const partial = (pct1 / 100) * whole;
@@ -1774,10 +1849,10 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     const maps = {
         Easy:   { 'simple-interest': [0], 'gst': [1], 'markup-profit': [2] },
         Medium: { 'markup-profit': [0, 2], 'simple-interest': [1], 'gst': [3] },
-        Hard:   { 'compound-interest': [0], 'markup-profit': [1] },
+        Hard:   { 'compound-interest': [0], 'markup-profit': [1], 'simple-interest': [2, 3] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : diff === 'Medium' ? 3 : 1);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 2 : 3);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -1832,7 +1907,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             return { clue: ph, answer: String(sell), answerDisplay: `$${money(sell)}` };
         }
         if (type === 1) {
-            const P = ri(rng, 2, 10) * 1000, r = rc(rng, [5, 10]), t = ri(rng, 1, 3);
+            const P = ri(rng, 2, 12) * 1000, r = rc(rng, [4, 5, 6, 8, 10]), t = ri(rng, 1, 4);
             const I = P * r / 100 * t;
             const yrs = `$${t}$ year${t > 1 ? 's' : ''}`;
             const fOn = opts.showFormulas?.['simple-interest']?.[diff.toLowerCase()];
@@ -1871,7 +1946,8 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     }
     // Hard
     if (type === 0) {
-        const P = ri(rng, 2, 8) * 1000, r = rc(rng, [5, 10]), t = ri(rng, 2, 4);
+        // compound interest — try a wider rate pool, fall back to a clean case
+        const P = ri(rng, 2, 10) * 1000, r = rc(rng, [4, 5, 8, 10]), t = ri(rng, 2, 4);
         const A = round(P * Math.pow(1 + r / 100, t), 2);
         if (!Number.isInteger(A)) {
             const P2 = ri(rng, 1, 5) * 2000, r2 = 10, t2 = ri(rng, 2, 3);
@@ -1893,15 +1969,55 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         ]);
         return { clue: ph, answer: String(A), answerDisplay: `$${money(A)}` };
     }
-    const cost = ri(rng, 2, 15) * 100;
-    const pct = rc(rng, [5, 10, 20, 25, 50]);
-    const sell = round(cost + cost * pct / 100, 2);
-    const ph = rc(rng, [
-        `An item costs $\\$${cost}$ and sells for $\\$${sell}$. Calculate the *percentage profit*.`,
-        `Find the *percentage profit*: cost $\\$${cost}$, selling price $\\$${sell}$.`,
-        `Determine the *profit percentage* given a cost of $\\$${cost}$ and a selling price of $\\$${sell}$.`,
-    ]);
-    return { clue: ph, answer: String(pct), answerDisplay: `${pct}%` };
+    if (type === 1) {
+        // percentage profit given cost and selling price
+        const cost = ri(rng, 2, 15) * 100;
+        const pct = rc(rng, [5, 10, 20, 25, 50]);
+        const sell = round(cost + cost * pct / 100, 2);
+        const ph = rc(rng, [
+            `An item costs $\\$${cost}$ and sells for $\\$${sell}$. Calculate the *percentage profit*.`,
+            `Find the *percentage profit*: cost $\\$${cost}$, selling price $\\$${sell}$.`,
+            `Determine the *profit percentage* given a cost of $\\$${cost}$ and a selling price of $\\$${sell}$.`,
+        ]);
+        return { clue: ph, answer: String(pct), answerDisplay: `${pct}%` };
+    }
+    if (type === 2) {
+        // simple interest with harder numbers and a wider rate pool
+        const P = ri(rng, 2, 20) * 500, r = rc(rng, [4, 6, 7, 8, 12, 15]), t = ri(rng, 2, 5);
+        const I = P * r / 100 * t;
+        if (!Number.isInteger(I)) return _genFinancialCore(rng, diff, allowedOps, opts, _depth + 1);
+        const yrs = `$${t}$ year${t > 1 ? 's' : ''}`;
+        const fOn = opts.showFormulas?.['simple-interest']?.[diff.toLowerCase()];
+        const pf = fOn ? ' Use $I = Prn$.' : '';
+        const ph = rc(rng, [
+            `Calculate the *simple interest* on $\\$${P}$ at $${r}\\%$ p.a. for ${yrs}.${pf}`,
+            `Find the *simple interest* earned on a $\\$${P}$ investment at $${r}\\%$ p.a. over ${yrs}.${pf}`,
+            `Determine the interest on $\\$${P}$ at $${r}\\%$ per annum for ${yrs}.${pf}`,
+        ]);
+        const workedSI = `$I = Prn = ${P} \\times \\frac{${r}}{100} \\times ${t} = \\$${I}$`;
+        return { clue: ph, answer: String(I), answerDisplay: `$${money(I)}`, worked: workedSI };
+    }
+    // type 3: inverse simple interest — find the rate or the time
+    {
+        const P = ri(rng, 2, 16) * 500, r = rc(rng, [4, 5, 6, 8, 10]), t = ri(rng, 2, 5);
+        const I = P * r / 100 * t;
+        if (!Number.isInteger(I)) return _genFinancialCore(rng, diff, allowedOps, opts, _depth + 1);
+        const yrs = `$${t}$ year${t > 1 ? 's' : ''}`;
+        if (rng() < 0.5) {
+            // find the rate — clue carries no percentage so it is unambiguous
+            const ph = rc(rng, [
+                `An investment of $\\$${P}$ earns $\\$${I}$ *simple interest* over ${yrs}. Find the annual interest *rate*.`,
+                `$\\$${P}$ earns $\\$${I}$ in *simple interest* after ${yrs}. What is the annual *rate*?`,
+            ]);
+            return { clue: ph, answer: String(r), answerDisplay: `${r}%` };
+        }
+        // find the time — clue carries the rate but no "for N years" phrasing
+        const ph = rc(rng, [
+            `How many *years* will it take for $\\$${P}$ at $${r}\\%$ p.a. *simple interest* to earn $\\$${I}$?`,
+            `$\\$${P}$ is invested at $${r}\\%$ p.a. *simple interest*. Find the *time* (in years) needed to earn $\\$${I}$.`,
+        ]);
+        return { clue: ph, answer: String(t), answerDisplay: `${t} years` };
+    }
 }
 
 // ============================================================
@@ -2972,8 +3088,19 @@ function genRatiosRates(rng, diff, allowedOps) {
     const op = rc(rng, pool);
 
     if (op === 'simplify') {
-        const factor = ri(rng, 2, diff === 'Easy' ? 5 : 10);
-        const a = ri(rng, 1, 8) * factor, b = ri(rng, 1, 8) * factor;
+        // Hard: occasionally a three-term ratio a : b : c to reduce.
+        if (diff === 'Hard' && rng() < 0.35) {
+            const factor = ri(rng, 3, 12);
+            const a = ri(rng, 1, 9) * factor, b = ri(rng, 1, 9) * factor, c = ri(rng, 1, 9) * factor;
+            const g = gcd(gcd(a, b), c);
+            const ph = rc(rng, [
+                `Simplify the ratio $${a} : ${b} : ${c}$.`,
+                `Write $${a} : ${b} : ${c}$ in its **simplest form**.`,
+            ]);
+            return { clue: ph, answer: `${a / g} : ${b / g} : ${c / g}`, answerDisplay: `$${a / g} : ${b / g} : ${c / g}$` };
+        }
+        const factor = ri(rng, 2, diff === 'Easy' ? 6 : diff === 'Medium' ? 10 : 15);
+        const a = ri(rng, 1, diff === 'Easy' ? 8 : 12) * factor, b = ri(rng, 1, diff === 'Easy' ? 8 : 12) * factor;
         const s = simplify(a, b);
         const ph = rc(rng, [
             `Simplify the ratio $${a} : ${b}$.`,
@@ -2984,11 +3111,13 @@ function genRatiosRates(rng, diff, allowedOps) {
     }
 
     if (op === 'divide-ratio') {
-        const total = diff === 'Easy' ? rc(rng, [24, 30, 36, 48]) : diff === 'Medium' ? rc(rng, [60, 90, 120, 150]) : rc(rng, [200, 300, 500, 1000]);
-        const unit = diff === 'Hard' ? 'dollars' : rc(rng, ['lollies', 'points', 'tiles', 'cm']);
-        // 30% of the time on Medium/Hard: three-part ratio split (a : b : c)
-        if (diff !== 'Easy' && rng() < 0.3) {
-            const a = ri(rng, 1, 4), b = ri(rng, 1, 4), c = ri(rng, 1, 4);
+        const total = diff === 'Easy' ? rc(rng, [24, 30, 36, 40, 48, 60])
+            : diff === 'Medium' ? rc(rng, [60, 80, 90, 120, 150, 180, 240])
+            : rc(rng, [200, 250, 300, 400, 500, 600, 800, 1000]);
+        const unit = diff === 'Hard' ? rc(rng, ['dollars', 'grams', 'litres']) : rc(rng, ['lollies', 'points', 'tiles', 'cm', 'marbles', 'cards']);
+        // Three-part ratio split (a : b : c) — half the time on Medium/Hard.
+        if (diff !== 'Easy' && rng() < 0.5) {
+            const a = ri(rng, 1, 5), b = ri(rng, 1, 5), c = ri(rng, 1, 5);
             const denom = a + b + c;
             if (total % denom !== 0) return genRatiosRates(rng, diff, allowedOps);
             const share = total / denom;
@@ -2999,7 +3128,7 @@ function genRatiosRates(rng, diff, allowedOps) {
             ]);
             return { clue: ph, answer: `${A} : ${B} : ${C}`, answerDisplay: `$${A} : ${B} : ${C}$` };
         }
-        const partsA = ri(rng, 1, 5), partsB = ri(rng, 1, 5);
+        const partsA = ri(rng, 1, diff === 'Hard' ? 7 : 5), partsB = ri(rng, 1, diff === 'Hard' ? 7 : 5);
         const denomParts = partsA + partsB;
         if (total % denomParts !== 0) return genRatiosRates(rng, diff, allowedOps);
         const shareA = (total / denomParts) * partsA;
@@ -3013,8 +3142,8 @@ function genRatiosRates(rng, diff, allowedOps) {
     }
 
     if (op === 'equivalent') {
-        const a = ri(rng, 1, 6), b = ri(rng, 1, 6);
-        const mult = ri(rng, 2, diff === 'Easy' ? 4 : 8);
+        const a = ri(rng, 1, diff === 'Easy' ? 6 : 9), b = ri(rng, 1, diff === 'Easy' ? 6 : 9);
+        const mult = ri(rng, 2, diff === 'Easy' ? 4 : diff === 'Medium' ? 8 : 12);
         const ph = rc(rng, [
             `Find the missing value: $${a} : ${b} = ? : ${b * mult}$.`,
             `Complete the equivalent ratio: $${a} : ${b} = \\square : ${b * mult}$.`,
@@ -3054,6 +3183,9 @@ function genRatiosRates(rng, diff, allowedOps) {
             { item: 'apples', price: ri(rng, 2, 8), qty: ri(rng, 2, 6) * rc(rng, [2, 3, 4]) },
             { item: 'litres of petrol', price: ri(rng, 150, 210), qty: rc(rng, [10, 20, 40, 50]) },
             { item: 'bottles of water', price: ri(rng, 5, 20), qty: rc(rng, [6, 10, 12, 24]) },
+            { item: 'oranges', price: ri(rng, 3, 12), qty: ri(rng, 2, 6) * rc(rng, [2, 3, 5]) },
+            { item: 'pencils', price: ri(rng, 2, 10), qty: rc(rng, [5, 10, 15, 20]) },
+            { item: 'kilograms of rice', price: ri(rng, 4, 16), qty: rc(rng, [2, 4, 5, 8]) },
         ];
         const ctx = rc(rng, UNIT_CONTEXTS);
         const unitPrice = round(ctx.price / ctx.qty, 2);
@@ -3069,8 +3201,24 @@ function genRatiosRates(rng, diff, allowedOps) {
         { vehicle: 'car', unit: 'km/h' },
         { vehicle: 'train', unit: 'km/h' },
         { vehicle: 'cyclist', unit: 'km/h' },
+        { vehicle: 'bus', unit: 'km/h' },
+        { vehicle: 'truck', unit: 'km/h' },
+        { vehicle: 'runner', unit: 'km/h' },
     ];
     const ctx = rc(rng, SPEED_CONTEXTS);
+    // Hard, 30%: combined-speed multi-step (two objects, opposite/same direction).
+    if (diff === 'Hard' && rng() < 0.3) {
+        const s1 = ri(rng, 3, 11) * 10, s2 = ri(rng, 3, 11) * 10, t = ri(rng, 2, 5);
+        const opposite = rng() < 0.5;
+        if (!opposite && s1 === s2) return genRatiosRates(rng, diff, allowedOps);
+        const apart = opposite ? (s1 + s2) * t : Math.abs(s1 - s2) * t;
+        const dirText = opposite ? 'in opposite directions' : 'in the same direction';
+        const ph = rc(rng, [
+            `Two trains leave the same station ${dirText} at $${s1}$ km/h and $${s2}$ km/h. How many kilometres apart are they after $${t}$ hours?`,
+            `Two cars start together and travel ${dirText} at $${s1}$ km/h and $${s2}$ km/h. What is the separation between them after $${t}$ hours?`,
+        ]);
+        return { clue: ph, answer: String(apart), answerDisplay: `${apart} km` };
+    }
     // 20% on Medium/Hard: km/h ↔ m/s conversion (a fundamental rate skill).
     if (diff !== 'Easy' && rng() < 0.2) {
         const kmh = rc(rng, [18, 36, 54, 72, 90, 108]);  // each divisible by 3.6

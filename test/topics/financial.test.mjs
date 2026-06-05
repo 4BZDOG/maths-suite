@@ -90,3 +90,41 @@ test('Financial: SI, GST, markup, discount, compound answers match recomputed va
     }
     assert.ok(checked > 80, `only ${checked} financial questions verified`);
 });
+
+test('Financial (Hard): inverse simple interest — find rate / find time', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 250; seed++) {
+        const qs = gen({
+            topic: 'Financial Maths', difficulty: 'Hard', count: 8, seed,
+            subOpsFilter: { 'Financial Maths': ['simple-interest'] },
+        });
+        for (const q of qs) {
+            const c = q.clue;
+            const ans = Number(q.answer);
+            if (!Number.isFinite(ans)) continue;
+            const D = dollars(c), P = pcts(c);
+
+            // --- Find the rate: two dollars (P, I), no percent, "over/after N years"
+            if (/simple interest/i.test(c) && /rate/i.test(c) && D.length >= 2 && P.length === 0) {
+                const tm = c.match(/(?:over|after) \$(\d+)\$ year/);
+                if (tm) {
+                    const Pr = D[0], I = D[1], t = +tm[1];
+                    const exp = I * 100 / (Pr * t);
+                    assert.ok(approxEqual(ans, exp),
+                        `seed${seed}: find-rate "${c.slice(0,70)}…" → ${ans} (expected ${exp})`);
+                    checked++; continue;
+                }
+            }
+            // --- Find the time: two dollars (P, I), one percent (rate), asks for years
+            if (/simple interest/i.test(c) && /\byears?\b/i.test(c) && /time|How many/i.test(c)
+                && D.length >= 2 && P.length >= 1) {
+                const Pr = D[0], I = D[1], r = P[0];
+                const exp = I * 100 / (Pr * r);
+                assert.ok(approxEqual(ans, exp),
+                    `seed${seed}: find-time "${c.slice(0,70)}…" → ${ans} (expected ${exp})`);
+                checked++; continue;
+            }
+        }
+    }
+    assert.ok(checked > 10, `only ${checked} inverse-SI questions verified`);
+});

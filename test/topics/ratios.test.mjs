@@ -74,6 +74,29 @@ test('Ratios & Rates: three-part ratio split sums to the total', () => {
     assert.ok(checked > 5, `only ${checked} three-part ratio splits verified`);
 });
 
+test('Ratios & Rates (Hard): combined-speed separation = (sum or diff) × time', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 250; seed++) {
+        const qs = gen({
+            topic: 'Ratios & Rates', difficulty: 'Hard', count: 8, seed,
+            subOpsFilter: { 'Ratios & Rates': ['speed'] },
+        });
+        for (const q of qs) {
+            const c = q.clue;
+            if (!/opposite directions|same direction/i.test(c)) continue;
+            const speeds = [...c.matchAll(/\$(\d+)\$\s*km\/h/g)].map(m => +m[1]);
+            const tm = c.match(/\$(\d+)\$\s*hours/);
+            if (speeds.length < 2 || !tm) continue;
+            const [s1, s2] = speeds, t = +tm[1];
+            const exp = /opposite directions/i.test(c) ? (s1 + s2) * t : Math.abs(s1 - s2) * t;
+            assert.equal(Number(q.answer), exp,
+                `seed${seed}: combined-speed "${c.slice(0,80)}…" → ${q.answer} (expected ${exp})`);
+            checked++;
+        }
+    }
+    assert.ok(checked > 5, `only ${checked} combined-speed questions verified`);
+});
+
 test('Ratios & Rates: speed / distance / time, simplify, equivalent answers match', () => {
     let checked = 0;
     for (const diff of DIFFS) {
