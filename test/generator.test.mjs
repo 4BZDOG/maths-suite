@@ -211,7 +211,7 @@ const VARIETY_FLOOR = {
     // floors initially because each ships with a small handful of sub-ops.
     // Raise as content is fleshed out.
     'Indices': 8, 'Linear Relationships': 7,
-    'Properties of Geometrical Figures': 3, 'Variation & Rates of Change': 2,
+    'Properties of Geometrical Figures': 5, 'Variation & Rates of Change': 4,
 };
 
 test('variety: a single-topic page yields a healthy spread of distinct clues', () => {

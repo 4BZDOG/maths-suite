@@ -2553,20 +2553,34 @@ function _genAlgebraOp(rng, diff, op) {
 // ---- Statistics Stage 5 operations -------------------------
 function _genStatisticsS5Op(rng, diff, op) {
     if (op === 'five-number-summary') {
-        // Use even numbers so all adjacent-pair averages are integers
-        const n = 8;
-        const data = Array.from({ length: n }, () => ri(rng, 1, 15) * 2).sort((a, b) => a - b);
-        const q1 = (data[1] + data[2]) / 2;
-        const q3 = (data[5] + data[6]) / 2;
-        const med = (data[3] + data[4]) / 2;
+        const n = diff === 'Easy' ? 8 : diff === 'Medium' ? 10 : 12;
+        const hi = diff === 'Easy' ? 15 : diff === 'Medium' ? 25 : 40;
+        const data = Array.from({ length: n }, () => ri(rng, 1, hi) * 2).sort((a, b) => a - b);
+        const mid = Math.floor(n / 2);
+        const lower = data.slice(0, mid);
+        const upper = data.slice(n % 2 ? mid + 1 : mid);
+        const medArr = n % 2 ? [data[mid]] : [data[mid - 1], data[mid]];
+        const med = medArr.length === 1 ? medArr[0] : (medArr[0] + medArr[1]) / 2;
+        const lMid = Math.floor(lower.length / 2);
+        const q1 = lower.length % 2 ? lower[lMid] : (lower[lMid - 1] + lower[lMid]) / 2;
+        const uMid = Math.floor(upper.length / 2);
+        const q3 = upper.length % 2 ? upper[uMid] : (upper[uMid - 1] + upper[uMid]) / 2;
         const iqr = q3 - q1;
         if (iqr <= 0) return null;
-        const choice = rc(rng, ['Q1', 'Q3', 'median', 'IQR']);
+        const choices = diff === 'Easy'
+            ? ['Q1', 'Q3', 'median']
+            : diff === 'Medium'
+            ? ['Q1', 'Q3', 'median', 'IQR']
+            : ['IQR', 'Q1', 'Q3', 'min', 'max', 'range'];
+        const choice = rc(rng, choices);
         let ans, clueQ;
         if (choice === 'Q1') { ans = q1; clueQ = 'Find **Q1** (lower quartile)'; }
         else if (choice === 'Q3') { ans = q3; clueQ = 'Find **Q3** (upper quartile)'; }
         else if (choice === 'median') { ans = med; clueQ = 'Find the **median**'; }
-        else { ans = iqr; clueQ = 'Find the **interquartile range (IQR)**'; }
+        else if (choice === 'IQR') { ans = iqr; clueQ = 'Find the **interquartile range (IQR)**'; }
+        else if (choice === 'min') { ans = data[0]; clueQ = 'Find the **minimum** value'; }
+        else if (choice === 'max') { ans = data[n - 1]; clueQ = 'Find the **maximum** value'; }
+        else { ans = data[n - 1] - data[0]; clueQ = 'Find the **range**'; }
         return { clue: `${clueQ} of: $${data.join(', ')}$`, answer: String(ans) };
     }
 
@@ -2591,16 +2605,29 @@ function _genStatisticsS5Op(rng, diff, op) {
 // ---- Geometry Stage 5 operations ----------------------------
 function _genGeometryS5Op(rng, diff, op) {
     if (op === 'surface-area') {
-        const [lHi, wHi, hHi] = diff === 'Easy' ? [6, 5, 5] : diff === 'Medium' ? [10, 8, 8] : [15, 12, 10];
-        const l = ri(rng, 2, lHi), w = ri(rng, 2, wHi), h = ri(rng, 2, hHi);
-        const u = _geoUnit(Math.max(l, w, h));
-        const sa = 2 * (l * w + l * h + w * h);
-        const ph = rc(rng, [
-            `Find the *surface area* of a rectangular prism: length $${l}$ ${u}, width $${w}$ ${u}, height $${h}$ ${u}.`,
-            `Calculate the *total surface area* of a rectangular box with dimensions $${l}$ ${u} × $${w}$ ${u} × $${h}$ ${u}.`,
-            `A rectangular prism has dimensions $${l}$ ${u} by $${w}$ ${u} by $${h}$ ${u}. Find its surface area.`,
-        ]);
-        return { clue: ph, answer: String(sa), answerDisplay: `${sa} ${u}²` };
+        const type = diff === 'Hard' ? ri(rng, 0, 1) : 0;
+        if (type === 0) {
+            // Rectangular prism
+            const [lHi, wHi, hHi] = diff === 'Easy' ? [6, 5, 5] : diff === 'Medium' ? [10, 8, 8] : [15, 12, 10];
+            const l = ri(rng, 2, lHi), w = ri(rng, 2, wHi), h = ri(rng, 2, hHi);
+            const u = _geoUnit(Math.max(l, w, h));
+            const sa = 2 * (l * w + l * h + w * h);
+            const ph = rc(rng, [
+                `Find the *surface area* of a rectangular prism: length $${l}$ ${u}, width $${w}$ ${u}, height $${h}$ ${u}.`,
+                `Calculate the *total surface area* of a rectangular box with dimensions $${l}$ ${u} × $${w}$ ${u} × $${h}$ ${u}.`,
+                `A rectangular prism has dimensions $${l}$ ${u} by $${w}$ ${u} by $${h}$ ${u}. Find its surface area.`,
+            ]);
+            return { clue: ph, answer: String(sa), answerDisplay: `${sa} ${u}²` };
+        }
+        // Cylinder: SA = 2πr² + 2πrh
+        const r = ri(rng, 2, 8), h = ri(rng, 3, 12);
+        const sa = round(2 * Math.PI * r * r + 2 * Math.PI * r * h, 2);
+        return {
+            clue: `Find the *surface area* of a cylinder with radius $${r}$ cm and height $${h}$ cm. Give your answer to 2 decimal places.`,
+            answer: String(sa),
+            answerDisplay: `${sa} cm²`,
+            worked: `$SA = 2\\pi r^2 + 2\\pi rh = 2\\pi(${r})^2 + 2\\pi(${r})(${h}) = ${sa}$ cm²`,
+        };
     }
 
     if (op === 'composite-volume') {
@@ -3958,48 +3985,122 @@ function genPropsOfFigures(rng, diff, allowedOps) {
     const op = rc(rng, pool);
 
     if (op === 'congruent-tests') {
-        // Identify which congruence test applies: SSS, SAS, AAS (ASA), RHS.
         const tests = [
             { name: 'SSS', desc: 'three pairs of equal sides' },
             { name: 'SAS', desc: 'two equal sides and the included angle' },
             { name: 'AAS', desc: 'two equal angles and one corresponding side' },
             { name: 'RHS', desc: 'right angle, equal hypotenuse and one equal side' },
         ];
-        const t = rc(rng, tests);
+        if (diff === 'Easy') {
+            const t = rc(rng, tests);
+            return {
+                clue: `Two triangles share ${t.desc}. State the *congruence test* that applies.`,
+                answer: t.name,
+                answerDisplay: t.name,
+            };
+        }
+        if (diff === 'Medium') {
+            const t = rc(rng, tests);
+            return {
+                clue: `To prove two triangles congruent using *${t.name}*, what information do you need? Answer: ${t.desc}.
+How many pieces of information does ${t.name} require?`,
+                answer: t.name === 'SSS' ? '3' : t.name === 'RHS' ? '3' : '3',
+                answerDisplay: '3 pieces',
+                worked: `${t.name} requires ${t.desc} — that is 3 independent measurements.`,
+            };
+        }
+        // Hard: given measurements, identify the test and find a missing value
+        const a = ri(rng, 5, 12), b = ri(rng, 5, 12);
+        const c = Math.round(Math.sqrt(a * a + b * b) * 100) / 100;
+        const isClean = Number.isInteger(c);
+        if (isClean) {
+            return {
+                clue: `Triangle PQR has a right angle at Q, with $PQ = ${a}$ cm and $QR = ${b}$ cm. Triangle XYZ has a right angle at Y with $XY = ${a}$ cm and hypotenuse $XZ = ${c}$ cm. Are these triangles congruent? State the test.`,
+                answer: 'RHS',
+                answerDisplay: 'RHS',
+                worked: `Both have a right angle, equal side ($${a}$ cm) and equal hypotenuse ($${c}$ cm) → RHS.`,
+            };
+        }
+        const ang = ri(rng, 30, 80);
         return {
-            clue: `Two triangles share ${t.desc}. State the *congruence test* that applies.`,
-            answer: t.name,
-            answerDisplay: t.name,
+            clue: `Two triangles both have sides $${a}$ cm and $${b}$ cm with an included angle of $${ang}°$. Are they congruent? State the test.`,
+            answer: 'SAS',
+            answerDisplay: 'SAS',
+            worked: `Two equal sides ($${a}$ cm, $${b}$ cm) and the included angle ($${ang}°$) → SAS.`,
         };
     }
+
     if (op === 'similar-ratio') {
-        // Two similar triangles, scale factor k. Given a side on the original,
-        // find the matching side on the image.
-        const k = rc(rng, [2, 3, 4, 1.5]);
-        const orig = ri(rng, 4, 12);
-        const image = orig * k;
-        if (!Number.isInteger(image)) return genPropsOfFigures(rng, diff, allowedOps);
+        if (diff === 'Easy') {
+            const k = rc(rng, [2, 3, 4, 5]);
+            const orig = ri(rng, 3, 10);
+            const image = orig * k;
+            return {
+                clue: `Two triangles are *similar* with scale factor $${k}$. A side on the smaller triangle is $${orig}$ cm. Find the matching side on the larger triangle.`,
+                answer: String(image),
+                answerDisplay: `${image} cm`,
+                worked: `Scaled side $= ${orig} \\times ${k} = ${image}$ cm`,
+            };
+        }
+        if (diff === 'Medium') {
+            // Find the scale factor, then a missing side
+            const k = rc(rng, [2, 3, 4, 1.5, 2.5]);
+            const a = ri(rng, 4, 10);
+            const aImg = a * k;
+            if (!Number.isInteger(aImg)) return genPropsOfFigures(rng, diff, allowedOps);
+            const b = ri(rng, 3, 8);
+            const bImg = b * k;
+            if (!Number.isInteger(bImg)) return genPropsOfFigures(rng, diff, allowedOps);
+            return {
+                clue: `Two similar triangles have corresponding sides $${a}$ cm and $${aImg}$ cm. Find the side corresponding to $${b}$ cm.`,
+                answer: String(bImg),
+                answerDisplay: `${bImg} cm`,
+                worked: `Scale factor $= \\frac{${aImg}}{${a}} = ${k}$. Missing side $= ${b} \\times ${k} = ${bImg}$ cm.`,
+            };
+        }
+        // Hard: area ratio = k²
+        const k = rc(rng, [2, 3, 4, 5]);
+        const areaSmall = ri(rng, 5, 20);
+        const areaLarge = areaSmall * k * k;
         return {
-            clue: `Two triangles are *similar* with scale factor $${k}$. A side on the smaller triangle is $${orig}$ cm. Find the matching side on the larger triangle.`,
-            answer: String(image),
-            answerDisplay: `${image} cm`,
-            worked: `Scaled side $= ${orig} \\times ${k} = ${image}$ cm`,
+            clue: `Two similar figures have a scale factor of $${k}$. The area of the smaller figure is $${areaSmall}$ cm². Find the area of the larger figure.`,
+            answer: String(areaLarge),
+            answerDisplay: `$${areaLarge}$ cm²`,
+            worked: `Area ratio $= ${k}^2 = ${k * k}$. Larger area $= ${areaSmall} \\times ${k * k} = ${areaLarge}$ cm².`,
         };
     }
-    // quad-properties: name the quadrilateral from its properties.
+
+    // quad-properties
     const quads = [
-        { name: 'square',         clue: 'four equal sides and four right angles' },
-        { name: 'rectangle',      clue: 'opposite sides equal and four right angles' },
-        { name: 'rhombus',        clue: 'four equal sides and opposite angles equal' },
-        { name: 'parallelogram',  clue: 'opposite sides parallel and equal, opposite angles equal' },
-        { name: 'trapezium',      clue: 'exactly one pair of parallel sides' },
-        { name: 'kite',           clue: 'two pairs of adjacent equal sides' },
+        { name: 'square',         desc: 'four equal sides and four right angles', sym: 4, diag: 'equal and bisect at right angles' },
+        { name: 'rectangle',      desc: 'opposite sides equal and four right angles', sym: 2, diag: 'equal and bisect each other' },
+        { name: 'rhombus',        desc: 'four equal sides and opposite angles equal', sym: 2, diag: 'bisect each other at right angles' },
+        { name: 'parallelogram',  desc: 'opposite sides parallel and equal, opposite angles equal', sym: 0, diag: 'bisect each other' },
+        { name: 'trapezium',      desc: 'exactly one pair of parallel sides', sym: 0, diag: 'do not bisect each other' },
+        { name: 'kite',           desc: 'two pairs of adjacent equal sides', sym: 1, diag: 'one bisects the other at right angles' },
     ];
-    const q = rc(rng, quads);
+    if (diff === 'Easy') {
+        const q = rc(rng, quads);
+        return { clue: `Name the quadrilateral with ${q.desc}.`, answer: q.name, answerDisplay: q.name };
+    }
+    if (diff === 'Medium') {
+        const q = rc(rng, quads);
+        return {
+            clue: `How many lines of *symmetry* does a **${q.name}** have?`,
+            answer: String(q.sym),
+            answerDisplay: `${q.sym}`,
+            worked: `A ${q.name} has ${q.sym} line${q.sym !== 1 ? 's' : ''} of symmetry.`,
+        };
+    }
+    // Hard: find missing angle in a quadrilateral
+    const a1 = ri(rng, 60, 110), a2 = ri(rng, 60, 110), a3 = ri(rng, 50, 100);
+    const a4 = 360 - a1 - a2 - a3;
+    if (a4 < 30 || a4 > 170) return genPropsOfFigures(rng, diff, allowedOps);
     return {
-        clue: `Name the quadrilateral with ${q.clue}.`,
-        answer: q.name,
-        answerDisplay: q.name,
+        clue: `A quadrilateral has angles $${a1}°$, $${a2}°$, and $${a3}°$. Find the *fourth angle*.`,
+        answer: String(a4),
+        answerDisplay: `$${a4}°$`,
+        worked: `Angle sum $= 360°$. Fourth angle $= 360 - ${a1} - ${a2} - ${a3} = ${a4}°$.`,
     };
 }
 
@@ -4014,40 +4115,130 @@ function genVariation(rng, diff, allowedOps) {
     const op = rc(rng, pool);
 
     if (op === 'direct-variation') {
-        // y varies directly as x. Given a pair (x1, y1), find k; then evaluate at x2.
-        const k = ri(rng, 2, diff === 'Easy' ? 6 : 12);
+        if (diff === 'Easy') {
+            const k = ri(rng, 2, 6);
+            const x1 = ri(rng, 2, 5), y1 = k * x1;
+            const x2 = ri(rng, 2, 8);
+            const y2 = k * x2;
+            return {
+                clue: rc(rng, [
+                    `$y$ is **directly proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                    `$y$ varies **directly** with $x$. Given that $x = ${x1}$ when $y = ${y1}$, find $y$ when $x = ${x2}$.`,
+                ]),
+                answer: String(y2),
+                answerDisplay: `$y = ${y2}$`,
+                worked: `$k = \\frac{${y1}}{${x1}} = ${k}$. $y = ${k} \\times ${x2} = ${y2}$`,
+            };
+        }
+        if (diff === 'Medium') {
+            const type = ri(rng, 0, 1);
+            if (type === 0) {
+                // Find k then evaluate — wider ranges
+                const k = ri(rng, 3, 10);
+                const x1 = ri(rng, 2, 8), y1 = k * x1;
+                const x2 = ri(rng, 3, 12);
+                const y2 = k * x2;
+                return {
+                    clue: `$y$ is **directly proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                    answer: String(y2),
+                    answerDisplay: `$y = ${y2}$`,
+                    worked: `$k = \\frac{${y1}}{${x1}} = ${k}$. $y = ${k} \\times ${x2} = ${y2}$`,
+                };
+            }
+            // Real-world context
+            const k = ri(rng, 3, 8);
+            const x1 = ri(rng, 2, 6), y1 = k * x1;
+            const x2 = ri(rng, 3, 10);
+            const y2 = k * x2;
+            return {
+                clue: `The cost $C$ varies directly with the number of items $n$. $${x1}$ items cost $\\$${y1}$. Find the cost of $${x2}$ items.`,
+                answer: String(y2),
+                answerDisplay: `$\\$${y2}$`,
+                worked: `$k = \\frac{${y1}}{${x1}} = ${k}$. Cost $= ${k} \\times ${x2} = \\$${y2}$`,
+            };
+        }
+        // Hard: y = kx² (power law)
+        const type = ri(rng, 0, 1);
+        if (type === 0) {
+            const k = ri(rng, 2, 8);
+            const x1 = ri(rng, 2, 5), y1 = k * x1 * x1;
+            const x2 = ri(rng, 2, 6);
+            const y2 = k * x2 * x2;
+            return {
+                clue: `$y$ is **directly proportional** to $x^2$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                answer: String(y2),
+                answerDisplay: `$y = ${y2}$`,
+                worked: `$y = kx^2$. $k = \\frac{${y1}}{${x1}^2} = \\frac{${y1}}{${x1 * x1}} = ${k}$. $y = ${k} \\times ${x2}^2 = ${k} \\times ${x2 * x2} = ${y2}$`,
+            };
+        }
+        // Find k given two data points, then evaluate
+        const k = ri(rng, 4, 15);
         const x1 = ri(rng, 2, 6), y1 = k * x1;
-        const x2 = ri(rng, 2, 8);
+        const x2 = ri(rng, 3, 10);
         const y2 = k * x2;
-        const clue = rc(rng, [
-            `$y$ is **directly proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
-            `$y$ varies **directly** with $x$. Given that $x = ${x1}$ when $y = ${y1}$, find $y$ when $x = ${x2}$.`,
-        ]);
         return {
-            clue,
+            clue: `$y \\propto x$. When $x = ${x1}$, $y = ${y1}$. Find the *constant of proportionality* $k$, then find $y$ when $x = ${x2}$.`,
             answer: String(y2),
-            answerDisplay: `$y = ${y2}$`,
-            worked: `$y = kx$. Constant of proportionality $k = \\frac{${y1}}{${x1}} = ${k}$, so $y = ${k}x$. At $x = ${x2}$: $y = ${k} \\times ${x2} = ${y2}$`,
+            answerDisplay: `$k = ${k},\\ y = ${y2}$`,
+            worked: `$k = \\frac{${y1}}{${x1}} = ${k}$. $y = ${k} \\times ${x2} = ${y2}$`,
         };
     }
-    // inverse-variation: y = k/x. Pick k as product so divisions are clean.
-    const x1 = ri(rng, 2, 8), y1 = ri(rng, 2, 8);
+
+    // inverse-variation
+    if (diff === 'Easy') {
+        const x1 = ri(rng, 2, 6), y1 = ri(rng, 2, 6);
+        const k = x1 * y1;
+        const divisors = [];
+        for (let d = 2; d <= k; d++) if (k % d === 0 && d !== x1) divisors.push(d);
+        if (divisors.length === 0) return genVariation(rng, diff, allowedOps);
+        const x2 = rc(rng, divisors);
+        const y2 = k / x2;
+        return {
+            clue: rc(rng, [
+                `$y$ is **inversely proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                `$y$ varies **inversely** with $x$. Given that $x = ${x1}$ when $y = ${y1}$, find $y$ when $x = ${x2}$.`,
+            ]),
+            answer: String(y2),
+            answerDisplay: `$y = ${y2}$`,
+            worked: `$k = ${x1} \\times ${y1} = ${k}$. $y = \\frac{${k}}{${x2}} = ${y2}$`,
+        };
+    }
+    if (diff === 'Medium') {
+        const type = ri(rng, 0, 1);
+        const x1 = ri(rng, 2, 8), y1 = ri(rng, 2, 8);
+        const k = x1 * y1;
+        const divisors = [];
+        for (let d = 2; d <= k; d++) if (k % d === 0 && d !== x1) divisors.push(d);
+        if (divisors.length === 0) return genVariation(rng, diff, allowedOps);
+        const x2 = rc(rng, divisors);
+        const y2 = k / x2;
+        if (type === 0) {
+            return {
+                clue: `$y$ is **inversely proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                answer: String(y2),
+                answerDisplay: `$y = ${y2}$`,
+                worked: `$k = ${x1} \\times ${y1} = ${k}$. $y = \\frac{${k}}{${x2}} = ${y2}$`,
+            };
+        }
+        // Real-world context
+        return {
+            clue: `$${x1}$ workers can complete a job in $${y1}$ days. How many days would $${x2}$ workers take?`,
+            answer: String(y2),
+            answerDisplay: `${y2} days`,
+            worked: `$k = ${x1} \\times ${y1} = ${k}$. Days $= \\frac{${k}}{${x2}} = ${y2}$`,
+        };
+    }
+    // Hard: find k, then find x given y
+    const x1 = ri(rng, 2, 10), y1 = ri(rng, 2, 10);
     const k = x1 * y1;
-    // Choose x2 from k's divisors to keep y2 integer.
-    const divisors = [];
-    for (let d = 2; d <= k; d++) if (k % d === 0 && d !== x1) divisors.push(d);
-    if (divisors.length === 0) return genVariation(rng, diff, allowedOps);
-    const x2 = rc(rng, divisors);
-    const y2 = k / x2;
-    const clue = rc(rng, [
-        `$y$ is **inversely proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
-        `$y$ varies **inversely** with $x$. Given that $x = ${x1}$ when $y = ${y1}$, find $y$ when $x = ${x2}$.`,
-    ]);
+    const y2 = ri(rng, 2, 8);
+    if (k % y2 !== 0) return genVariation(rng, diff, allowedOps);
+    const x2 = k / y2;
     return {
-        clue,
-        answer: String(y2),
-        answerDisplay: `$y = ${y2}$`,
-        worked: `$y = \\frac{k}{x}$. Constant of proportionality $k = ${x1} \\times ${y1} = ${k}$, so $y = \\frac{${k}}{x}$. At $x = ${x2}$: $y = \\frac{${k}}{${x2}} = ${y2}$`,
+        clue: `$y$ is **inversely proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $x$ when $y = ${y2}$.`,
+        answer: String(x2),
+        answerDisplay: `$x = ${x2}$`,
+        worked: `$k = ${x1} \\times ${y1} = ${k}$. $x = \\frac{${k}}{${y2}} = ${x2}$`,
     };
 }
 
