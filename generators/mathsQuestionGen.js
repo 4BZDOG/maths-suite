@@ -173,7 +173,7 @@ export const SUB_OPS = {
     // who already had Algebra/Geometry selected keep those — the new topics
     // are purely additive.
     'Indices': [
-        // Stage 4 introduces index laws on numerical bases
+        { key: 'indices-evaluate', label: 'Evaluate a power' },
         { key: 'indices-multiply', label: 'Multiply (same base)' },
         { key: 'indices-divide',   label: 'Divide (same base)' },
         { key: 'indices-power',    label: 'Power of a power' },
@@ -184,6 +184,7 @@ export const SUB_OPS = {
         { key: 'plot-line',         label: 'Plot points on y = mx + c' },
         { key: 'gradient-two-points', label: 'Gradient from two points' },
         { key: 'midpoint',          label: 'Midpoint of two points' },
+        { key: 'intercepts',        label: 'Find intercepts' },
         { key: 'distance',          label: 'Distance between points', stages: ['Stage 5'] },
         { key: 'equation-from-gp',  label: 'Equation from gradient + point', stages: ['Stage 5'] },
     ],
@@ -362,14 +363,23 @@ function genIntegers(rng, diff, allowedOps) {
         return { clue, answer: String(a - b) };
     }
     if (op === '×') {
-        const [lo, hi] = diff === 'Easy' ? [2, 12] : diff === 'Medium' ? [3, 25] : [12, 50];
+        const [lo, hi] = diff === 'Easy' ? [2, 12] : diff === 'Medium' ? [3, 30] : [12, 60];
         // ~20% chance: square a single number instead of a × b (Medium/Hard only)
         if (diff !== 'Easy' && rng() < 0.20) {
-            const base = diff === 'Medium' ? ri(rng, 4, 15) : ri(rng, 12, 30);
+            const base = diff === 'Medium' ? ri(rng, 4, 18) : ri(rng, 12, 35);
             const verb = rc(rng, CALC_VERBS);
             return { clue: `${verb}\n$${base}^2$`, answer: String(base * base) };
         }
         const a = ri(rng, lo, hi), b = ri(rng, lo, hi);
+        // Easy: 25% word problem
+        if (diff === 'Easy' && rng() < 0.25) {
+            const ctx = rc(rng, [
+                { stem: `A box contains $${a}$ items. There are $${b}$ boxes. How many items altogether?`, ans: a * b },
+                { stem: `Each row has $${a}$ seats and there are $${b}$ rows. How many seats in total?`, ans: a * b },
+                { stem: `A pack of pencils contains $${a}$ pencils. How many pencils in $${b}$ packs?`, ans: a * b },
+            ]);
+            return { clue: ctx.stem, answer: String(ctx.ans) };
+        }
         // Medium/Hard: 40% chance of negative operand(s)
         if (diff !== 'Easy' && rng() < 0.4) {
             const negForm = diff === 'Hard' ? ri(rng, 0, 2) : ri(rng, 0, 1);
@@ -414,8 +424,18 @@ function genIntegers(rng, diff, allowedOps) {
         return { clue, answer: String(a * b) };
     }
     if (op === '÷') {
-        const [lo, hi] = diff === 'Easy' ? [2, 12] : diff === 'Medium' ? [3, 20] : [6, 40];
+        const [lo, hi] = diff === 'Easy' ? [2, 12] : diff === 'Medium' ? [3, 25] : [8, 50];
         const b = ri(rng, lo, hi), ans = ri(rng, lo, hi);
+        // Easy: 25% word problem
+        if (diff === 'Easy' && rng() < 0.25) {
+            const total = b * ans;
+            const ctx = rc(rng, [
+                { stem: `$${total}$ lollies are shared equally among $${b}$ children. How many does each child get?` },
+                { stem: `A farmer packs $${total}$ eggs into boxes of $${b}$. How many boxes are needed?` },
+                { stem: `$${total}$ students are split into $${b}$ equal groups. How many in each group?` },
+            ]);
+            return { clue: ctx.stem, answer: String(ans) };
+        }
         // Medium/Hard: 40% chance of negative dividend
         if (diff !== 'Easy' && rng() < 0.4) {
             const dividend = -(b * ans);
@@ -3263,128 +3283,646 @@ function genRatiosRates(rng, diff, allowedOps) {
 // INDICES (Stage 4 introduces; Stage 5 adds zero + negative)
 // ============================================================
 function genIndices(rng, diff, allowedOps) {
-    const OPS = ['indices-multiply', 'indices-divide', 'indices-power',
+    const OPS = ['indices-evaluate', 'indices-multiply', 'indices-divide', 'indices-power',
                  'indices-zero', 'indices-negative'];
     const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
     const verb = rc(rng, CALC_VERBS);
 
+    if (op === 'indices-evaluate') {
+        if (diff === 'Easy') {
+            const base = ri(rng, 2, 5), exp = ri(rng, 2, 4);
+            const ans = Math.pow(base, exp);
+            const expanded = Array(exp).fill(base).join(' \\times ');
+            return {
+                clue: `${verb}\n$${base}^{${exp}}$`,
+                answer: String(ans),
+                answerDisplay: `$${ans}$`,
+                worked: `$${base}^{${exp}} = ${expanded} = ${ans}$`,
+            };
+        }
+        if (diff === 'Medium') {
+            const type = ri(rng, 0, 2);
+            if (type === 0) {
+                const base = ri(rng, 3, 12), exp = ri(rng, 2, 3);
+                const ans = Math.pow(base, exp);
+                return {
+                    clue: `${verb}\n$${base}^{${exp}}$`,
+                    answer: String(ans),
+                    answerDisplay: `$${ans}$`,
+                    worked: `$${base}^{${exp}} = ${ans}$`,
+                };
+            }
+            if (type === 1) {
+                const n = ri(rng, 5, 15);
+                return {
+                    clue: `What is the *square* of $${n}$?`,
+                    answer: String(n * n),
+                    answerDisplay: `$${n * n}$`,
+                    worked: `$${n}^2 = ${n} \\times ${n} = ${n * n}$`,
+                };
+            }
+            const n = ri(rng, 3, 8);
+            return {
+                clue: `What is the *cube* of $${n}$?`,
+                answer: String(n * n * n),
+                answerDisplay: `$${n * n * n}$`,
+                worked: `$${n}^3 = ${n} \\times ${n} \\times ${n} = ${n * n * n}$`,
+            };
+        }
+        // Hard
+        const type = ri(rng, 0, 2);
+        if (type === 0) {
+            const b1 = ri(rng, 2, 5), e1 = ri(rng, 2, 4);
+            let b2 = ri(rng, 2, 5);
+            if (b2 === b1) b2 = b1 < 5 ? b1 + 1 : 2;
+            const e2 = ri(rng, 2, 3);
+            const v1 = Math.pow(b1, e1), v2 = Math.pow(b2, e2);
+            const ans = v1 * v2;
+            if (ans > 999999) return null;
+            return {
+                clue: `${verb}\n$${b1}^{${e1}} \\times ${b2}^{${e2}}$`,
+                answer: String(ans),
+                answerDisplay: `$${ans}$`,
+                worked: `$${b1}^{${e1}} \\times ${b2}^{${e2}} = ${v1} \\times ${v2} = ${ans}$`,
+            };
+        }
+        if (type === 1) {
+            const root = ri(rng, 4, 20);
+            const sq = root * root;
+            return {
+                clue: `Find $\\sqrt{${sq}}$`,
+                answer: String(root),
+                answerDisplay: `$${root}$`,
+                worked: `$\\sqrt{${sq}} = ${root}$ because $${root}^2 = ${sq}$`,
+            };
+        }
+        const root = ri(rng, 2, 8);
+        const cube = root * root * root;
+        return {
+            clue: `Find $\\sqrt[3]{${cube}}$`,
+            answer: String(root),
+            answerDisplay: `$${root}$`,
+            worked: `$\\sqrt[3]{${cube}} = ${root}$ because $${root}^3 = ${cube}$`,
+        };
+    }
+
     if (op === 'indices-multiply') {
-        const base = ri(rng, 2, diff === 'Hard' ? 6 : 4);
-        const m = ri(rng, 2, diff === 'Easy' ? 3 : 5);
-        const n = ri(rng, 1, diff === 'Easy' ? 2 : 4);
-        const ans = Math.pow(base, m + n);
-        if (ans > 999999) return null;
+        if (diff === 'Easy') {
+            const base = ri(rng, 2, 5);
+            const m = ri(rng, 2, 3), n = ri(rng, 1, 2);
+            const sum = m + n;
+            const ans = Math.pow(base, sum);
+            if (ans > 999999) return null;
+            return {
+                clue: `${verb}\n$${base}^{${m}} \\times ${base}^{${n}}$`,
+                answer: String(ans),
+                answerDisplay: `$${base}^{${sum}} = ${ans}$`,
+                worked: `$${base}^{${m}} \\times ${base}^{${n}} = ${base}^{${m}+${n}} = ${base}^{${sum}} = ${ans}$`,
+            };
+        }
+        if (diff === 'Medium') {
+            const type = ri(rng, 0, 2);
+            if (type === 0) {
+                const base = ri(rng, 2, 7);
+                const m = ri(rng, 2, 5), n = ri(rng, 2, 4);
+                const sum = m + n;
+                const ans = Math.pow(base, sum);
+                if (ans > 999999) return null;
+                return {
+                    clue: `${verb}\n$${base}^{${m}} \\times ${base}^{${n}}$`,
+                    answer: String(ans),
+                    answerDisplay: `$${base}^{${sum}} = ${ans}$`,
+                    worked: `$${base}^{${m}} \\times ${base}^{${n}} = ${base}^{${m}+${n}} = ${base}^{${sum}} = ${ans}$`,
+                };
+            }
+            if (type === 1) {
+                const base = ri(rng, 2, 8);
+                const m = ri(rng, 2, 5), n = ri(rng, 2, 4);
+                const sum = m + n;
+                return {
+                    clue: `Simplify $${base}^{${m}} \\times ${base}^{${n}}$, writing your answer as a power of $${base}$.`,
+                    answer: `${base}^${sum}`,
+                    answerDisplay: `$${base}^{${sum}}$`,
+                    worked: `$${base}^{${m}} \\times ${base}^{${n}} = ${base}^{${m}+${n}} = ${base}^{${sum}}$`,
+                };
+            }
+            const base = ri(rng, 2, 5);
+            const m = ri(rng, 1, 3), n = ri(rng, 1, 3), p = ri(rng, 1, 3);
+            const sum = m + n + p;
+            const ans = Math.pow(base, sum);
+            if (ans > 999999) return null;
+            return {
+                clue: `${verb}\n$${base}^{${m}} \\times ${base}^{${n}} \\times ${base}^{${p}}$`,
+                answer: String(ans),
+                answerDisplay: `$${base}^{${sum}} = ${ans}$`,
+                worked: `$${base}^{${m}} \\times ${base}^{${n}} \\times ${base}^{${p}} = ${base}^{${m}+${n}+${p}} = ${base}^{${sum}} = ${ans}$`,
+            };
+        }
+        // Hard
+        const type = ri(rng, 0, 2);
+        if (type === 0) {
+            const base = ri(rng, 2, 9);
+            const m = ri(rng, 2, 6), n = ri(rng, 2, 5);
+            const sum = m + n;
+            const ans = Math.pow(base, sum);
+            if (ans > 999999) return null;
+            return {
+                clue: `${verb}\n$${base}^{${m}} \\times ${base}^{${n}}$`,
+                answer: String(ans),
+                answerDisplay: `$${base}^{${sum}} = ${ans}$`,
+                worked: `$${base}^{${m}} \\times ${base}^{${n}} = ${base}^{${m}+${n}} = ${base}^{${sum}} = ${ans}$`,
+            };
+        }
+        if (type === 1) {
+            const base = ri(rng, 2, 6);
+            const missing = ri(rng, 2, 5), n = ri(rng, 2, 5);
+            const total = missing + n;
+            return {
+                clue: `Find the missing index: $${base}^{?} \\times ${base}^{${n}} = ${base}^{${total}}$`,
+                answer: String(missing),
+                answerDisplay: `$${missing}$`,
+                worked: `$? + ${n} = ${total}$, so $? = ${total} - ${n} = ${missing}$`,
+            };
+        }
+        const base = ri(rng, 2, 7);
+        const m = ri(rng, 3, 7), n = ri(rng, 3, 6);
+        const sum = m + n;
         return {
-            clue: `${verb}\n$${base}^${m} \\times ${base}^${n}$`,
-            answer: String(ans),
-            answerDisplay: `$${base}^{${m + n}} = ${ans}$`,
-            worked: `$${base}^${m} \\times ${base}^${n} = ${base}^{${m}+${n}} = ${base}^{${m + n}} = ${ans}$`,
+            clue: `Simplify $${base}^{${m}} \\times ${base}^{${n}}$, writing your answer as a power of $${base}$.`,
+            answer: `${base}^${sum}`,
+            answerDisplay: `$${base}^{${sum}}$`,
+            worked: `$${base}^{${m}} \\times ${base}^{${n}} = ${base}^{${m}+${n}} = ${base}^{${sum}}$`,
         };
     }
+
     if (op === 'indices-divide') {
-        const base = ri(rng, 2, diff === 'Hard' ? 6 : 4);
-        const n = ri(rng, 1, diff === 'Easy' ? 2 : 4);
-        const extra = ri(rng, 1, diff === 'Easy' ? 2 : 4);
-        const m = n + extra;
-        const ans = Math.pow(base, extra);
+        if (diff === 'Easy') {
+            const base = ri(rng, 2, 5);
+            const n = ri(rng, 1, 2), extra = ri(rng, 1, 2);
+            const m = n + extra;
+            const ans = Math.pow(base, extra);
+            if (ans > 999999) return null;
+            return {
+                clue: `${verb}\n$${base}^{${m}} \\div ${base}^{${n}}$`,
+                answer: String(ans),
+                answerDisplay: `$${base}^{${extra}} = ${ans}$`,
+                worked: `$${base}^{${m}} \\div ${base}^{${n}} = ${base}^{${m}-${n}} = ${base}^{${extra}} = ${ans}$`,
+            };
+        }
+        if (diff === 'Medium') {
+            const type = ri(rng, 0, 1);
+            const base = ri(rng, 2, 7);
+            const n = ri(rng, 2, 4), extra = ri(rng, 2, 4);
+            const m = n + extra;
+            if (type === 0) {
+                const ans = Math.pow(base, extra);
+                if (ans > 999999) return null;
+                return {
+                    clue: `${verb}\n$${base}^{${m}} \\div ${base}^{${n}}$`,
+                    answer: String(ans),
+                    answerDisplay: `$${base}^{${extra}} = ${ans}$`,
+                    worked: `$${base}^{${m}} \\div ${base}^{${n}} = ${base}^{${m}-${n}} = ${base}^{${extra}} = ${ans}$`,
+                };
+            }
+            return {
+                clue: `Simplify $${base}^{${m}} \\div ${base}^{${n}}$, writing your answer as a power of $${base}$.`,
+                answer: `${base}^${extra}`,
+                answerDisplay: `$${base}^{${extra}}$`,
+                worked: `$${base}^{${m}} \\div ${base}^{${n}} = ${base}^{${m}-${n}} = ${base}^{${extra}}$`,
+            };
+        }
+        // Hard
+        const type = ri(rng, 0, 2);
+        if (type === 0) {
+            const base = ri(rng, 2, 9);
+            const n = ri(rng, 2, 5), extra = ri(rng, 2, 5);
+            const m = n + extra;
+            const ans = Math.pow(base, extra);
+            if (ans > 999999) return null;
+            return {
+                clue: `${verb}\n$${base}^{${m}} \\div ${base}^{${n}}$`,
+                answer: String(ans),
+                answerDisplay: `$${base}^{${extra}} = ${ans}$`,
+                worked: `$${base}^{${m}} \\div ${base}^{${n}} = ${base}^{${m}-${n}} = ${base}^{${extra}} = ${ans}$`,
+            };
+        }
+        if (type === 1) {
+            const base = ri(rng, 2, 6);
+            const result = ri(rng, 1, 4), miss = ri(rng, 2, 5);
+            const m = miss + result;
+            return {
+                clue: `Find the missing index: $${base}^{${m}} \\div ${base}^{?} = ${base}^{${result}}$`,
+                answer: String(miss),
+                answerDisplay: `$${miss}$`,
+                worked: `$${m} - ? = ${result}$, so $? = ${m} - ${result} = ${miss}$`,
+            };
+        }
+        // Combined multiply + divide
+        const base = ri(rng, 2, 5);
+        const m = ri(rng, 2, 4), n = ri(rng, 2, 4), p = ri(rng, 1, 3);
+        const total = m + n - p;
+        if (total < 1) return null;
+        const ans = Math.pow(base, total);
         if (ans > 999999) return null;
         return {
-            clue: `${verb}\n$${base}^${m} \\div ${base}^${n}$`,
+            clue: `${verb}\n$${base}^{${m}} \\times ${base}^{${n}} \\div ${base}^{${p}}$`,
             answer: String(ans),
-            answerDisplay: `$${base}^{${extra}} = ${ans}$`,
-            worked: `$${base}^${m} \\div ${base}^${n} = ${base}^{${m}-${n}} = ${base}^{${extra}} = ${ans}$`,
+            answerDisplay: `$${base}^{${total}} = ${ans}$`,
+            worked: `$${base}^{${m}+${n}-${p}} = ${base}^{${total}} = ${ans}$`,
         };
     }
+
     if (op === 'indices-power') {
-        const base = ri(rng, 2, diff === 'Hard' ? 5 : 3);
-        const m = ri(rng, 2, 3), n = ri(rng, 2, 3);
-        const ans = Math.pow(base, m * n);
+        if (diff === 'Easy') {
+            const base = ri(rng, 2, 3);
+            const m = ri(rng, 2, 3), n = 2;
+            const prod = m * n;
+            const ans = Math.pow(base, prod);
+            if (ans > 999999) return null;
+            return {
+                clue: `${verb}\n$(${base}^{${m}})^{${n}}$`,
+                answer: String(ans),
+                answerDisplay: `$${base}^{${prod}} = ${ans}$`,
+                worked: `$(${base}^{${m}})^{${n}} = ${base}^{${m} \\times ${n}} = ${base}^{${prod}} = ${ans}$`,
+            };
+        }
+        if (diff === 'Medium') {
+            const type = ri(rng, 0, 1);
+            const base = ri(rng, 2, 5);
+            const m = ri(rng, 2, 3), n = ri(rng, 2, 3);
+            const prod = m * n;
+            if (type === 0) {
+                const ans = Math.pow(base, prod);
+                if (ans > 999999) return null;
+                return {
+                    clue: `${verb}\n$(${base}^{${m}})^{${n}}$`,
+                    answer: String(ans),
+                    answerDisplay: `$${base}^{${prod}} = ${ans}$`,
+                    worked: `$(${base}^{${m}})^{${n}} = ${base}^{${m} \\times ${n}} = ${base}^{${prod}} = ${ans}$`,
+                };
+            }
+            return {
+                clue: `Simplify $(${base}^{${m}})^{${n}}$, writing your answer as a power of $${base}$.`,
+                answer: `${base}^${prod}`,
+                answerDisplay: `$${base}^{${prod}}$`,
+                worked: `$(${base}^{${m}})^{${n}} = ${base}^{${m} \\times ${n}} = ${base}^{${prod}}$`,
+            };
+        }
+        // Hard
+        const type = ri(rng, 0, 2);
+        if (type === 0) {
+            const base = ri(rng, 2, 5);
+            const m = ri(rng, 2, 4), n = ri(rng, 2, 3);
+            const prod = m * n;
+            const ans = Math.pow(base, prod);
+            if (ans > 999999) return null;
+            return {
+                clue: `${verb}\n$(${base}^{${m}})^{${n}}$`,
+                answer: String(ans),
+                answerDisplay: `$${base}^{${prod}} = ${ans}$`,
+                worked: `$(${base}^{${m}})^{${n}} = ${base}^{${m} \\times ${n}} = ${base}^{${prod}} = ${ans}$`,
+            };
+        }
+        if (type === 1) {
+            const base = ri(rng, 2, 5);
+            const missing = ri(rng, 2, 4), n = ri(rng, 2, 3);
+            const prod = missing * n;
+            return {
+                clue: `Find the missing index: $(${base}^{?})^{${n}} = ${base}^{${prod}}$`,
+                answer: String(missing),
+                answerDisplay: `$${missing}$`,
+                worked: `$? \\times ${n} = ${prod}$, so $? = ${prod} \\div ${n} = ${missing}$`,
+            };
+        }
+        // Combined: (a^m)^n × a^p
+        const base = ri(rng, 2, 4);
+        const m = ri(rng, 2, 3), n = ri(rng, 2, 3), p = ri(rng, 1, 3);
+        const total = m * n + p;
+        const ans = Math.pow(base, total);
         if (ans > 999999) return null;
         return {
-            clue: `${verb}\n$(${base}^${m})^${n}$`,
+            clue: `${verb}\n$(${base}^{${m}})^{${n}} \\times ${base}^{${p}}$`,
             answer: String(ans),
-            answerDisplay: `$${base}^{${m * n}} = ${ans}$`,
-            worked: `$(${base}^${m})^${n} = ${base}^{${m} \\times ${n}} = ${base}^{${m * n}} = ${ans}$`,
+            answerDisplay: `$${base}^{${total}} = ${ans}$`,
+            worked: `$(${base}^{${m}})^{${n}} \\times ${base}^{${p}} = ${base}^{${m * n}} \\times ${base}^{${p}} = ${base}^{${m * n}+${p}} = ${base}^{${total}} = ${ans}$`,
         };
     }
+
     if (op === 'indices-zero') {
-        const base = ri(rng, 2, 20);
+        if (diff === 'Easy') {
+            const base = ri(rng, 2, 10);
+            return {
+                clue: `${verb}\n$${base}^0$`,
+                answer: '1',
+                answerDisplay: '$1$',
+                worked: `Any non-zero number to the power $0$ equals $1$.`,
+            };
+        }
+        if (diff === 'Medium') {
+            const base = ri(rng, 2, 20);
+            const extra = ri(rng, 1, 5);
+            const ans = Math.pow(base, 0) + extra;
+            return {
+                clue: `${verb}\n$${base}^0 + ${extra}$`,
+                answer: String(ans),
+                answerDisplay: `$${ans}$`,
+                worked: `$${base}^0 + ${extra} = 1 + ${extra} = ${ans}$`,
+            };
+        }
+        // Hard
+        const base = ri(rng, 2, 10);
+        const k = ri(rng, 2, 6);
+        const ans = k;
         return {
-            clue: `${verb}\n$${base}^0$`,
-            answer: '1',
-            answerDisplay: '$1$',
-            worked: `Any non-zero number to the power $0$ equals $1$.`,
+            clue: `${verb}\n$${k} \\times ${base}^0$`,
+            answer: String(ans),
+            answerDisplay: `$${ans}$`,
+            worked: `$${k} \\times ${base}^0 = ${k} \\times 1 = ${ans}$`,
         };
     }
+
     // indices-negative: a^(-n) = 1/a^n
-    const base = ri(rng, 2, 5), n = ri(rng, 1, 3);
+    if (diff === 'Easy') {
+        const base = ri(rng, 2, 4), n = 1;
+        const denom = Math.pow(base, n);
+        return {
+            clue: `${verb}\n$${base}^{-${n}}$`,
+            answer: `1/${denom}`,
+            answerDisplay: `$\\frac{1}{${denom}}$`,
+            worked: `$${base}^{-${n}} = \\frac{1}{${base}^${n}} = \\frac{1}{${denom}}$`,
+        };
+    }
+    if (diff === 'Medium') {
+        const base = ri(rng, 2, 5), n = ri(rng, 1, 3);
+        const denom = Math.pow(base, n);
+        return {
+            clue: `${verb}\n$${base}^{-${n}}$`,
+            answer: `1/${denom}`,
+            answerDisplay: `$\\frac{1}{${denom}}$`,
+            worked: `$${base}^{-${n}} = \\frac{1}{${base}^${n}} = \\frac{1}{${denom}}$`,
+        };
+    }
+    // Hard: express as fraction and evaluate
+    const base = ri(rng, 2, 6), n = ri(rng, 2, 3);
     const denom = Math.pow(base, n);
+    const k = ri(rng, 2, 5);
+    const ans = k * denom;
     return {
-        clue: `${verb}\n$${base}^{-${n}}$`,
-        answer: `1/${denom}`,
-        answerDisplay: `$\\frac{1}{${denom}}$`,
-        worked: `$${base}^{-${n}} = \\frac{1}{${base}^${n}} = \\frac{1}{${denom}}$`,
+        clue: `Find the value of $${k} \\div ${base}^{-${n}}$`,
+        answer: String(ans),
+        answerDisplay: `$${ans}$`,
+        worked: `$${k} \\div ${base}^{-${n}} = ${k} \\times ${base}^{${n}} = ${k} \\times ${denom} = ${ans}$`,
     };
 }
 
 // ============================================================
 // LINEAR RELATIONSHIPS (Cartesian-plane work)
 // ============================================================
+function _linEqStr(m, c) {
+    const mStr = m === 1 ? 'x' : m === -1 ? '-x' : `${m}x`;
+    const cStr = c === 0 ? '' : (c > 0 ? ` + ${c}` : ` - ${Math.abs(c)}`);
+    return { mStr, cStr, full: `${mStr}${cStr}` };
+}
+
 function genLinear(rng, diff, allowedOps) {
-    const OPS = ['plot-line', 'gradient-two-points', 'midpoint', 'distance', 'equation-from-gp'];
+    const OPS = ['plot-line', 'gradient-two-points', 'midpoint', 'intercepts',
+                 'distance', 'equation-from-gp'];
     const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
 
     if (op === 'plot-line') {
-        // Given y = mx + c and x, find y. The student would also "plot" the
-        // point in a real worksheet; here we ask for the y-value.
-        const m = ri(rng, 1, diff === 'Easy' ? 3 : 5) * (rng() < 0.4 ? -1 : 1);
-        const c = ri(rng, -5, 8);
-        const x = ri(rng, -4, 6);
-        const y = m * x + c;
-        const mStr = m === 1 ? 'x' : m === -1 ? '-x' : `${m}x`;
-        const cStr = c === 0 ? '' : (c > 0 ? ` + ${c}` : ` - ${Math.abs(c)}`);
+        if (diff === 'Easy') {
+            const m = ri(rng, 1, 3);
+            const c = ri(rng, 0, 6);
+            const x = ri(rng, 1, 5);
+            const y = m * x + c;
+            const { cStr, full } = _linEqStr(m, c);
+            return {
+                clue: `Find $y$ when $x = ${x}$ for $y = ${full}$.`,
+                answer: String(y),
+                answerDisplay: `$y = ${y}$`,
+                worked: `$y = ${m}(${x})${cStr} = ${y}$`,
+            };
+        }
+        if (diff === 'Medium') {
+            const type = ri(rng, 0, 1);
+            const m = ri(rng, 1, 5) * (rng() < 0.4 ? -1 : 1);
+            const c = ri(rng, -8, 8);
+            const { cStr, full } = _linEqStr(m, c);
+            if (type === 0) {
+                const x = ri(rng, -4, 6);
+                const y = m * x + c;
+                return {
+                    clue: `Find $y$ when $x = ${x}$ for $y = ${full}$.`,
+                    answer: String(y),
+                    answerDisplay: `$y = ${y}$`,
+                    worked: `$y = ${m}(${x})${cStr} = ${y}$`,
+                };
+            }
+            // Inverse: find x given y
+            const ans = ri(rng, -3, 5);
+            const y = m * ans + c;
+            return {
+                clue: `Find $x$ when $y = ${y}$ for $y = ${full}$.`,
+                answer: String(ans),
+                answerDisplay: `$x = ${ans}$`,
+                worked: `$${y} = ${m}x${cStr}$, so $x = ${ans}$`,
+            };
+        }
+        // Hard: does point lie on line?
+        const type = ri(rng, 0, 1);
+        const m = ri(rng, 1, 6) * (rng() < 0.5 ? -1 : 1);
+        const c = ri(rng, -10, 10);
+        const { full } = _linEqStr(m, c);
+        if (type === 0) {
+            const x = ri(rng, -5, 8);
+            const y = m * x + c;
+            return {
+                clue: `Find $y$ when $x = ${x}$ for $y = ${full}$.`,
+                answer: String(y),
+                answerDisplay: `$y = ${y}$`,
+                worked: `$y = ${m}(${x}) + ${c} = ${y}$`,
+            };
+        }
+        // Check if point lies on line
+        const px = ri(rng, -4, 6);
+        const onLine = rng() < 0.5;
+        const py = onLine ? (m * px + c) : (m * px + c + ri(rng, 1, 4));
         return {
-            clue: `Find $y$ when $x = ${x}$ for $y = ${mStr}${cStr}$.`,
-            answer: String(y),
-            answerDisplay: `$y = ${y}$`,
-            worked: `$y = ${m}(${x})${cStr} = ${y}$`,
+            clue: `Does the point $(${px}, ${py})$ lie on the line $y = ${full}$? Answer *Yes* or *No*.`,
+            answer: onLine ? 'Yes' : 'No',
+            answerDisplay: onLine ? 'Yes' : 'No',
+            worked: `$y = ${m}(${px}) + ${c} = ${m * px + c}$. Since $${m * px + c} ${onLine ? '=' : '\\neq'} ${py}$, the answer is ${onLine ? 'Yes' : 'No'}.`,
         };
     }
+
     if (op === 'gradient-two-points') {
-        // m = (y2 - y1) / (x2 - x1). Choose integer-gradient points.
-        const x1 = ri(rng, -6, 6), y1 = ri(rng, -6, 6);
-        const dx = ri(rng, 1, diff === 'Easy' ? 4 : 6);
-        const m = ri(rng, -3, 4) || 1;
-        const x2 = x1 + dx;
-        const y2 = y1 + m * dx;
+        if (diff === 'Easy') {
+            const x1 = ri(rng, 0, 5), y1 = ri(rng, 0, 5);
+            const dx = ri(rng, 1, 4);
+            const m = ri(rng, 1, 4);
+            const x2 = x1 + dx, y2 = y1 + m * dx;
+            return {
+                clue: `Find the *gradient* of the line through $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
+                answer: String(m),
+                answerDisplay: `$m = ${m}$`,
+                worked: `$m = \\frac{${y2} - ${y1}}{${x2} - ${x1}} = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
+            };
+        }
+        if (diff === 'Medium') {
+            const type = ri(rng, 0, 2);
+            if (type <= 1) {
+                const x1 = ri(rng, -6, 6), y1 = ri(rng, -6, 6);
+                const dx = ri(rng, 1, 6);
+                const m = ri(rng, -4, 4) || 1;
+                const x2 = x1 + dx, y2 = y1 + m * dx;
+                if (type === 0) {
+                    return {
+                        clue: `Find the *gradient* of the line through $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
+                        answer: String(m),
+                        answerDisplay: `$m = ${m}$`,
+                        worked: `$m = \\frac{${y2} - ${y1}}{${x2} - ${x1}} = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
+                    };
+                }
+                // Parallel: what gradient is parallel?
+                return {
+                    clue: `A line passes through $(${x1}, ${y1})$ and $(${x2}, ${y2})$. What is the gradient of any line *parallel* to it?`,
+                    answer: String(m),
+                    answerDisplay: `$m = ${m}$`,
+                    worked: `Gradient $= \\frac{${y2 - y1}}{${dx}} = ${m}$. Parallel lines have equal gradients.`,
+                };
+            }
+            // Horizontal line (gradient 0)
+            const y1 = ri(rng, -6, 6);
+            const x1 = ri(rng, -5, 5), x2 = ri(rng, x1 + 1, x1 + 6);
+            return {
+                clue: `Find the *gradient* of the line through $(${x1}, ${y1})$ and $(${x2}, ${y1})$.`,
+                answer: '0',
+                answerDisplay: `$m = 0$`,
+                worked: `$m = \\frac{${y1} - ${y1}}{${x2} - ${x1}} = \\frac{0}{${x2 - x1}} = 0$`,
+            };
+        }
+        // Hard
+        const type = ri(rng, 0, 1);
+        if (type === 0) {
+            // Steep/negative gradient with larger coords
+            const x1 = ri(rng, -8, 8), y1 = ri(rng, -8, 8);
+            const dx = ri(rng, 1, 6);
+            const m = ri(rng, -5, 5) || -2;
+            const x2 = x1 + dx, y2 = y1 + m * dx;
+            return {
+                clue: `Find the *gradient* of the line through $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
+                answer: String(m),
+                answerDisplay: `$m = ${m}$`,
+                worked: `$m = \\frac{${y2} - ${y1}}{${x2} - ${x1}} = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
+            };
+        }
+        // Perpendicular gradient
+        const x1 = ri(rng, -5, 5), y1 = ri(rng, -5, 5);
+        const dx = ri(rng, 1, 4);
+        const m = ri(rng, 1, 4) * (rng() < 0.5 ? -1 : 1);
+        const x2 = x1 + dx, y2 = y1 + m * dx;
+        const perpM = m === 1 ? -1 : m === -1 ? 1 : (Number.isInteger(-1 / m) ? -1 / m : null);
+        if (perpM === null) {
+            return {
+                clue: `Find the *gradient* of the line through $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
+                answer: String(m),
+                answerDisplay: `$m = ${m}$`,
+                worked: `$m = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
+            };
+        }
         return {
-            clue: `Find the *gradient* of the line through $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
-            answer: String(m),
-            answerDisplay: `$m = ${m}$`,
-            worked: `$m = \\frac{${y2} - ${y1}}{${x2} - ${x1}} = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
+            clue: `A line passes through $(${x1}, ${y1})$ and $(${x2}, ${y2})$. Find the gradient of a line *perpendicular* to it.`,
+            answer: String(perpM),
+            answerDisplay: `$m = ${perpM}$`,
+            worked: `Original gradient $= ${m}$. Perpendicular gradient $= -\\frac{1}{${m}} = ${perpM}$.`,
         };
     }
+
     if (op === 'midpoint') {
-        // Midpoint M = ((x1+x2)/2, (y1+y2)/2). Choose even coords for tidy answer.
-        const x1 = ri(rng, -6, 6) * 2, y1 = ri(rng, -6, 6) * 2;
-        const x2 = ri(rng, -6, 6) * 2, y2 = ri(rng, -6, 6) * 2;
-        if (x1 === x2 && y1 === y2) return genLinear(rng, diff, allowedOps);
-        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        if (diff === 'Easy') {
+            const x1 = ri(rng, 0, 8) * 2, y1 = ri(rng, 0, 8) * 2;
+            const x2 = ri(rng, 0, 8) * 2, y2 = ri(rng, 0, 8) * 2;
+            if (x1 === x2 && y1 === y2) return genLinear(rng, diff, allowedOps);
+            const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+            return {
+                clue: `Find the *midpoint* of the segment from $(${x1}, ${y1})$ to $(${x2}, ${y2})$.`,
+                answer: `(${mx},${my})`,
+                answerDisplay: `$(${mx}, ${my})$`,
+                worked: `$M = \\left(\\frac{${x1} + ${x2}}{2}, \\frac{${y1} + ${y2}}{2}\\right) = (${mx}, ${my})$`,
+            };
+        }
+        if (diff === 'Medium') {
+            const x1 = ri(rng, -6, 6) * 2, y1 = ri(rng, -6, 6) * 2;
+            const x2 = ri(rng, -6, 6) * 2, y2 = ri(rng, -6, 6) * 2;
+            if (x1 === x2 && y1 === y2) return genLinear(rng, diff, allowedOps);
+            const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+            return {
+                clue: `Find the *midpoint* of the segment from $(${x1}, ${y1})$ to $(${x2}, ${y2})$.`,
+                answer: `(${mx},${my})`,
+                answerDisplay: `$(${mx}, ${my})$`,
+                worked: `$M = \\left(\\frac{${x1} + ${x2}}{2}, \\frac{${y1} + ${y2}}{2}\\right) = (${mx}, ${my})$`,
+            };
+        }
+        // Hard: find the other endpoint given midpoint and one endpoint
+        const ax = ri(rng, -6, 6), ay = ri(rng, -6, 6);
+        const mx = ri(rng, -4, 4), my = ri(rng, -4, 4);
+        const bx = 2 * mx - ax, by = 2 * my - ay;
         return {
-            clue: `Find the *midpoint* of the segment from $(${x1}, ${y1})$ to $(${x2}, ${y2})$.`,
-            answer: `(${mx},${my})`,
-            answerDisplay: `$(${mx}, ${my})$`,
-            worked: `$M = \\left(\\frac{${x1} + ${x2}}{2}, \\frac{${y1} + ${y2}}{2}\\right) = (${mx}, ${my})$`,
+            clue: `The *midpoint* of $AB$ is $(${mx}, ${my})$. If $A = (${ax}, ${ay})$, find $B$.`,
+            answer: `(${bx},${by})`,
+            answerDisplay: `$(${bx}, ${by})$`,
+            worked: `$B_x = 2(${mx}) - ${ax} = ${bx}$, $B_y = 2(${my}) - ${ay} = ${by}$`,
         };
     }
+
+    if (op === 'intercepts') {
+        if (diff === 'Easy') {
+            const m = ri(rng, 1, 4) * (rng() < 0.3 ? -1 : 1);
+            const c = ri(rng, -6, 8);
+            const { full } = _linEqStr(m, c);
+            return {
+                clue: `What is the *y-intercept* of the line $y = ${full}$?`,
+                answer: String(c),
+                answerDisplay: `$${c}$`,
+                worked: `The y-intercept is the constant term: $c = ${c}$`,
+            };
+        }
+        if (diff === 'Medium') {
+            // x-intercept: 0 = mx + c → x = −c/m. Ensure integer answer.
+            const m = rc(rng, [1, -1, 2, -2, 3, -3, 4, -4, 5]);
+            const ans = ri(rng, -5, 5) || 1;
+            const c = -m * ans;
+            const { full } = _linEqStr(m, c);
+            return {
+                clue: `Find the *x-intercept* of the line $y = ${full}$.`,
+                answer: String(ans),
+                answerDisplay: `$x = ${ans}$`,
+                worked: `Set $y = 0$: $0 = ${m}x + ${c > 0 ? c : `(${c})`}$, so $x = ${ans}$`,
+            };
+        }
+        // Hard: both intercepts, area of triangle with axes
+        const m = rc(rng, [1, -1, 2, -2, 3, -3, 4, -4]);
+        const xInt = ri(rng, 1, 6) * (rng() < 0.5 ? -1 : 1);
+        const c = -m * xInt;
+        const yInt = c;
+        const area = Math.abs(xInt * yInt) / 2;
+        const { full } = _linEqStr(m, c);
+        return {
+            clue: `The line $y = ${full}$ forms a triangle with the coordinate axes. Find the *area* of this triangle.`,
+            answer: String(area),
+            answerDisplay: `$${area}$ square units`,
+            worked: `x-intercept $= ${xInt}$, y-intercept $= ${yInt}$. Area $= \\frac{1}{2} \\times |${xInt}| \\times |${yInt}| = ${area}$`,
+        };
+    }
+
     if (op === 'distance') {
-        // Stage 5: distance d = √((x2-x1)² + (y2-y1)²). Use Pythagorean
-        // triples so the answer is integer.
-        const triples = [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17]];
+        const triples = diff === 'Hard'
+            ? [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17], [7, 24, 25]]
+            : [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17]];
         const [a, b, c] = rc(rng, triples);
         const x1 = ri(rng, -5, 5), y1 = ri(rng, -5, 5);
         const x2 = x1 + a, y2 = y1 + b;
@@ -3395,17 +3933,17 @@ function genLinear(rng, diff, allowedOps) {
             worked: `$d = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} = ${c}$`,
         };
     }
-    // equation-from-gp: y - y1 = m(x - x1) → y = mx + (y1 - m·x1)
-    const m = ri(rng, 1, 4) * (rng() < 0.5 ? -1 : 1);
+
+    // equation-from-gp
+    const m = ri(rng, 1, diff === 'Easy' ? 3 : 5) * (rng() < 0.5 ? -1 : 1);
     const x1 = ri(rng, -4, 4), y1 = ri(rng, -6, 6);
     const c = y1 - m * x1;
-    const mStr = m === 1 ? 'x' : m === -1 ? '-x' : `${m}x`;
-    const cStr = c === 0 ? '' : (c > 0 ? ` + ${c}` : ` - ${Math.abs(c)}`);
+    const { mStr, full } = _linEqStr(m, c);
     return {
         clue: `Find the equation of the line with gradient $${m}$ passing through $(${x1}, ${y1})$.`,
         answer: `y=${mStr}${c >= 0 ? '+' : ''}${c}`,
-        answerDisplay: `$y = ${mStr}${cStr}$`,
-        worked: `$y - ${y1} = ${m}(x - ${x1})$, so $y = ${mStr}${cStr}$`,
+        answerDisplay: `$y = ${full}$`,
+        worked: `$y - ${y1} = ${m}(x - ${x1})$, so $y = ${full}$`,
     };
 }
 

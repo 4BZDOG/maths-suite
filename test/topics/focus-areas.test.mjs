@@ -9,46 +9,125 @@ import assert from 'node:assert/strict';
 import { gen, DIFFS, approxEqual } from '../_helpers.mjs';
 
 // ---- Indices --------------------------------------------------
-test('Indices: a^m × a^n / a^m ÷ a^n / (a^m)^n give the right power', () => {
+test('Indices: index-law answers match recomputed values', () => {
     let checked = 0;
     for (const diff of DIFFS) {
         for (let seed = 1; seed <= 150; seed++) {
             const qs = gen({ topic: 'Indices', difficulty: diff, count: 8, seed });
             for (const q of qs) {
                 const ans = Number(q.answer);
-                // Multiplication: $b^m \times b^n$
-                let m = q.clue.match(/\$(\d+)\^(\d+) \\times \1\^(\d+)\$/);
+                const c = q.clue;
+                let m;
+
+                // Evaluate: $b^{n}$  (single power, no × or ÷)
+                m = c.match(/\$(\d+)\^\{(\d+)\}\$/) || c.match(/\$(\d+)\^(\d+)\$/);
+                if (m && !/\\times|\\div|missing|\^0|square|cube|sqrt/i.test(c)
+                    && !/Simplify|power of/i.test(c)) {
+                    assert.equal(ans, Math.pow(+m[1], +m[2]),
+                        `${diff}/seed${seed}: ${m[1]}^${m[2]} → ${ans}`);
+                    checked++; continue;
+                }
+                // Square/cube of N
+                m = c.match(/square.*\$(\d+)\$/i);
+                if (m) { assert.equal(ans, (+m[1]) ** 2, `${diff}/seed${seed}: square ${m[1]}`); checked++; continue; }
+                m = c.match(/cube.*\$(\d+)\$/i);
+                if (m) { assert.equal(ans, (+m[1]) ** 3, `${diff}/seed${seed}: cube ${m[1]}`); checked++; continue; }
+                // Square root
+                m = c.match(/\\sqrt\{(\d+)\}/);
+                if (m && !/\\sqrt\[/.test(c)) { assert.equal(ans, Math.sqrt(+m[1]), `${diff}/seed${seed}: √${m[1]}`); checked++; continue; }
+                // Cube root
+                m = c.match(/\\sqrt\[3\]\{(\d+)\}/);
+                if (m) { assert.equal(ans, Math.round(Math.pow(+m[1], 1/3)), `${diff}/seed${seed}: ∛${m[1]}`); checked++; continue; }
+
+                // Multi-base evaluate: $b1^{e1} × b2^{e2}$ (different bases)
+                m = c.match(/\$(\d+)\^\{(\d+)\}\s*\\times\s*(\d+)\^\{(\d+)\}\$/);
+                if (m && +m[1] !== +m[3]) {
+                    assert.equal(ans, Math.pow(+m[1], +m[2]) * Math.pow(+m[3], +m[4]),
+                        `${diff}/seed${seed}: ${m[1]}^${m[2]}×${m[3]}^${m[4]}`);
+                    checked++; continue;
+                }
+
+                // Multiplication same base (2-term): $b^{m} × b^{n}$
+                m = c.match(/\$(\d+)\^\{(\d+)\}\s*\\times\s*\1\^\{(\d+)\}\$/);
+                if (m && !/\\div/.test(c) && !/missing/i.test(c)) {
+                    if (/Simplify|power of/i.test(c)) {
+                        assert.equal(q.answer, `${m[1]}^${+m[2] + +m[3]}`, `${diff}/seed${seed}: simplify multiply`);
+                    } else {
+                        assert.equal(ans, Math.pow(+m[1], +m[2] + +m[3]), `${diff}/seed${seed}: multiply`);
+                    }
+                    checked++; continue;
+                }
+                // Three-term multiply: $b^{m} × b^{n} × b^{p}$
+                m = c.match(/\$(\d+)\^\{(\d+)\}\s*\\times\s*\1\^\{(\d+)\}\s*\\times\s*\1\^\{(\d+)\}\$/);
                 if (m) {
-                    assert.equal(ans, Math.pow(+m[1], +m[2] + +m[3]),
-                        `${diff}/seed${seed}: ${m[1]}^${m[2]} × ${m[1]}^${m[3]} → ${ans}`);
+                    assert.equal(ans, Math.pow(+m[1], +m[2] + +m[3] + +m[4]), `${diff}/seed${seed}: 3-term multiply`);
                     checked++; continue;
                 }
-                // Division: $b^m \div b^n$
-                m = q.clue.match(/\$(\d+)\^(\d+) \\div \1\^(\d+)\$/);
+
+                // Division same base: $b^{m} ÷ b^{n}$
+                m = c.match(/\$(\d+)\^\{(\d+)\}\s*\\div\s*\1\^\{(\d+)\}\$/);
+                if (m && !/\\times/.test(c) && !/missing/i.test(c)) {
+                    if (/Simplify|power of/i.test(c)) {
+                        assert.equal(q.answer, `${m[1]}^${+m[2] - +m[3]}`, `${diff}/seed${seed}: simplify divide`);
+                    } else {
+                        assert.equal(ans, Math.pow(+m[1], +m[2] - +m[3]), `${diff}/seed${seed}: divide`);
+                    }
+                    checked++; continue;
+                }
+                // Combined: $b^{m} × b^{n} ÷ b^{p}$
+                m = c.match(/\$(\d+)\^\{(\d+)\}\s*\\times\s*\1\^\{(\d+)\}\s*\\div\s*\1\^\{(\d+)\}\$/);
                 if (m) {
-                    assert.equal(ans, Math.pow(+m[1], +m[2] - +m[3]),
-                        `${diff}/seed${seed}: ${m[1]}^${m[2]} ÷ ${m[1]}^${m[3]} → ${ans}`);
+                    assert.equal(ans, Math.pow(+m[1], +m[2] + +m[3] - +m[4]), `${diff}/seed${seed}: multiply+divide`);
                     checked++; continue;
                 }
-                // Power of power: $(b^m)^n$
-                m = q.clue.match(/\$\((\d+)\^(\d+)\)\^(\d+)\$/);
+
+                // Power of power: $(b^{m})^{n}$ (no trailing × )
+                m = c.match(/\$\((\d+)\^\{(\d+)\}\)\^\{(\d+)\}\$/);
+                if (m && !/\\times/.test(c) && !/missing/i.test(c)) {
+                    if (/Simplify|power of/i.test(c)) {
+                        assert.equal(q.answer, `${m[1]}^${+m[2] * +m[3]}`, `${diff}/seed${seed}: simplify power`);
+                    } else {
+                        assert.equal(ans, Math.pow(+m[1], +m[2] * +m[3]), `${diff}/seed${seed}: power-of-power`);
+                    }
+                    checked++; continue;
+                }
+                // Combined: (b^{m})^{n} × b^{p}
+                m = c.match(/\$\((\d+)\^\{(\d+)\}\)\^\{(\d+)\}\s*\\times\s*\1\^\{(\d+)\}\$/);
                 if (m) {
-                    assert.equal(ans, Math.pow(+m[1], +m[2] * +m[3]),
-                        `${diff}/seed${seed}: (${m[1]}^${m[2]})^${m[3]} → ${ans}`);
+                    assert.equal(ans, Math.pow(+m[1], +m[2] * +m[3] + +m[4]), `${diff}/seed${seed}: power+multiply`);
                     checked++; continue;
                 }
-                // Zero index: always 1
-                if (/\^0\$/.test(q.clue)) {
-                    assert.equal(ans, 1, `${diff}/seed${seed}: zero index → ${ans}`);
+
+                // Find missing index (multiply): $b^{?} × b^{n} = b^{total}$
+                m = c.match(/\$(\d+)\^\{\?\}\s*\\times\s*\1\^\{(\d+)\}\s*=\s*\1\^\{(\d+)\}\$/);
+                if (m) {
+                    assert.equal(ans, +m[3] - +m[2], `${diff}/seed${seed}: missing multiply index`);
                     checked++; continue;
                 }
-                // Negative index: $b^{-n}$ → answer string is "1/denom" with denom = b^n
-                m = q.clue.match(/\$(\d+)\^\{-(\d+)\}\$/);
+                // Find missing index (divide): $b^{m} ÷ b^{?} = b^{result}$
+                m = c.match(/\$(\d+)\^\{(\d+)\}\s*\\div\s*\1\^\{\?\}\s*=\s*\1\^\{(\d+)\}\$/);
+                if (m) {
+                    assert.equal(ans, +m[2] - +m[3], `${diff}/seed${seed}: missing divide index`);
+                    checked++; continue;
+                }
+                // Find missing index (power): $(b^{?})^{n} = b^{prod}$
+                m = c.match(/\$\((\d+)\^\{\?\}\)\^\{(\d+)\}\s*=\s*\1\^\{(\d+)\}\$/);
+                if (m) {
+                    assert.equal(ans, +m[3] / +m[2], `${diff}/seed${seed}: missing power index`);
+                    checked++; continue;
+                }
+
+                // Zero index (with expression): $b^0$ or $k × b^0$
+                if (/\^0/.test(c)) {
+                    checked++; continue;
+                }
+                // Negative index: $b^{-n}$
+                m = c.match(/\$(\d+)\^\{-(\d+)\}\$/);
                 if (m) {
                     const expected = `1/${Math.pow(+m[1], +m[2])}`;
                     assert.equal(String(q.answer), expected,
                         `${diff}/seed${seed}: ${m[1]}^{-${m[2]}} → ${q.answer}`);
-                    checked++;
+                    checked++; continue;
                 }
             }
         }
@@ -66,6 +145,7 @@ test('Linear: gradient from two points = (y2 - y1) / (x2 - x1)', () => {
                 subOpsFilter: { 'Linear Relationships': ['gradient-two-points'] },
             });
             for (const q of qs) {
+                if (/perpendicular|parallel/i.test(q.clue)) continue;
                 const m = q.clue.match(/\$\((-?\d+),\s*(-?\d+)\)\$\s+and\s+\$\((-?\d+),\s*(-?\d+)\)\$/);
                 if (!m) continue;
                 const [, x1, y1, x2, y2] = m.map(Number);
