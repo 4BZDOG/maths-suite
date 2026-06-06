@@ -2443,19 +2443,40 @@ function _genAlgebraOp(rng, diff, op) {
 
     if (op === 'factorise') {
         if (diff === 'Easy') {
-            // x² + (a+b)x + ab = (x+a)(x+b), a,b ∈ [1,7] so answer fits ≤10 chars
             const a = ri(rng, 1, 7), b = ri(rng, 1, 7);
             const mid = a + b, last = a * b;
             return { clue: `Factorise:\n$x^2 + ${mid}x + ${last}$`, answer: `(x+${a})(x+${b})`, answerDisplay: `$(x + ${a})(x + ${b})$` };
         }
         if (diff === 'Medium') {
-            // Perfect square: (x+a)² = x² + 2ax + a²
-            const a = ri(rng, 2, 6);
-            return { clue: `Factorise:\n$x^2 + ${2 * a}x + ${a * a}$`, answer: `(x+${a})²`, answerDisplay: `$(x + ${a})^2$` };
+            const type = ri(rng, 0, 2);
+            if (type === 0) {
+                // Perfect square
+                const a = ri(rng, 2, 7);
+                return { clue: `Factorise:\n$x^2 + ${2 * a}x + ${a * a}$`, answer: `(x+${a})²`, answerDisplay: `$(x + ${a})^2$` };
+            }
+            if (type === 1) {
+                // Trinomial with one negative: (x+a)(x-b) = x² + (a-b)x - ab
+                const a = ri(rng, 2, 7), b = ri(rng, 1, a - 1 || 1);
+                const mid = a - b;
+                const mStr = mid > 0 ? `+ ${mid}` : mid < 0 ? `- ${Math.abs(mid)}` : '';
+                return { clue: `Factorise:\n$x^2 ${mStr}x - ${a * b}$`, answer: `(x+${a})(x-${b})`, answerDisplay: `$(x + ${a})(x - ${b})$` };
+            }
+            // Common factor: ax² + bx = x(ax + b)
+            const cf = ri(rng, 2, 5), coeff = ri(rng, 1, 6);
+            return { clue: `Factorise:\n$${cf}x^2 + ${cf * coeff}x$`, answer: `${cf}x(x+${coeff})`, answerDisplay: `$${cf}x(x + ${coeff})$` };
         }
-        // Hard: difference of two squares
-        const n = ri(rng, 2, 7);
-        return { clue: `Factorise:\n$x^2 - ${n * n}$`, answer: `(x+${n})(x-${n})`, answerDisplay: `$(x + ${n})(x - ${n})$` };
+        // Hard
+        const type = ri(rng, 0, 1);
+        if (type === 0) {
+            // Difference of two squares with larger numbers
+            const n = ri(rng, 3, 12);
+            return { clue: `Factorise:\n$x^2 - ${n * n}$`, answer: `(x+${n})(x-${n})`, answerDisplay: `$(x + ${n})(x - ${n})$` };
+        }
+        // Trinomial with two negative roots: (x-a)(x-b) = x² - (a+b)x + ab
+        const a = ri(rng, 2, 8), b = ri(rng, 1, 7);
+        if (a === b) return _genAlgebraOp(rng, diff, op);
+        const mid = a + b, last = a * b;
+        return { clue: `Factorise:\n$x^2 - ${mid}x + ${last}$`, answer: `(x-${a})(x-${b})`, answerDisplay: `$(x - ${a})(x - ${b})$` };
     }
 
     if (op === 'quadratic-solve') {
@@ -2489,22 +2510,42 @@ function _genAlgebraOp(rng, diff, op) {
     if (op === 'indices-laws') {
         const sv = rc(rng, CALC_VERBS);
         if (diff === 'Easy') {
-            const base = ri(rng, 2, 4), m = ri(rng, 1, 3), n = ri(rng, 1, 3);
-            const ans = Math.pow(base, m + n);
-            if (ans > 9999) return null;
-            return { clue: `${sv}\n$${base}^${m} \\times ${base}^${n}$`, answer: String(ans), answerDisplay: `$${ans}$` };
+            const base = ri(rng, 2, 6), m = ri(rng, 2, 4), n = ri(rng, 1, 3);
+            const sum = m + n;
+            const ans = Math.pow(base, sum);
+            if (ans > 99999) return null;
+            return { clue: `${sv}\n$${base}^{${m}} \\times ${base}^{${n}}$`, answer: String(ans), answerDisplay: `$${base}^{${sum}} = ${ans}$` };
         }
         if (diff === 'Medium') {
-            const base = ri(rng, 2, 4), n2 = ri(rng, 1, 2), extra = ri(rng, 1, 2);
-            const m2 = n2 + extra;
-            const ans = Math.pow(base, extra);
-            return { clue: `${sv}\n$${base}^${m2} \\div ${base}^${n2}$`, answer: String(ans), answerDisplay: `$${ans}$` };
+            const type = ri(rng, 0, 1);
+            if (type === 0) {
+                const base = ri(rng, 2, 6), n2 = ri(rng, 2, 4), extra = ri(rng, 2, 4);
+                const m2 = n2 + extra;
+                return {
+                    clue: `Simplify $${base}^{${m2}} \\div ${base}^{${n2}}$, writing your answer as a power of $${base}$.`,
+                    answer: `${base}^${extra}`,
+                    answerDisplay: `$${base}^{${extra}}$`,
+                };
+            }
+            const base = ri(rng, 2, 5), m = ri(rng, 2, 3), n = ri(rng, 2, 3);
+            const prod = m * n;
+            return {
+                clue: `Simplify $(${base}^{${m}})^{${n}}$, writing your answer as a power of $${base}$.`,
+                answer: `${base}^${prod}`,
+                answerDisplay: `$${base}^{${prod}}$`,
+            };
         }
-        // Hard: (a^m)^n = a^(mn)
-        const base = ri(rng, 2, 3), m3 = ri(rng, 2, 3), n3 = ri(rng, 2, 3);
-        const ans3 = Math.pow(base, m3 * n3);
-        if (ans3 > 9999) return null;
-        return { clue: `${sv}\n$(${base}^${m3})^${n3}$`, answer: String(ans3), answerDisplay: `$${ans3}$` };
+        // Hard: combined laws — a^m × a^n ÷ a^p
+        const base = ri(rng, 2, 5);
+        const m = ri(rng, 2, 5), n = ri(rng, 2, 4), p = ri(rng, 1, 3);
+        const total = m + n - p;
+        if (total < 1) return null;
+        return {
+            clue: `Simplify $${base}^{${m}} \\times ${base}^{${n}} \\div ${base}^{${p}}$, writing your answer as a power of $${base}$.`,
+            answer: `${base}^${total}`,
+            answerDisplay: `$${base}^{${total}}$`,
+            worked: `$${base}^{${m}+${n}-${p}} = ${base}^{${total}}$`,
+        };
     }
 
     if (op === 'simultaneous') {
@@ -2538,13 +2579,33 @@ function _genAlgebraOp(rng, diff, op) {
 
     if (op === 'surds-operate') {
         const sv = rc(rng, ['Simplify:', 'Evaluate:']);
-        const k1 = ri(rng, 1, 4), k2 = ri(rng, 1, 4), n = rc(rng, [2, 3, 5, 6]);
         if (diff === 'Easy') {
+            const k1 = ri(rng, 1, 5), k2 = ri(rng, 1, 5), n = rc(rng, [2, 3, 5, 6, 7]);
             const sum = k1 + k2;
             return { clue: `${sv}\n$${k1}\\sqrt{${n}} + ${k2}\\sqrt{${n}}$`, answer: `${sum}√${n}`, answerDisplay: `$${sum}\\sqrt{${n}}$` };
         }
-        const prod = k1 * k2 * n;
-        return { clue: `${sv}\n$${k1}\\sqrt{${n}} \\times ${k2}\\sqrt{${n}}$`, answer: String(prod), answerDisplay: `$${prod}$` };
+        if (diff === 'Medium') {
+            const type = ri(rng, 0, 1);
+            const k1 = ri(rng, 2, 6), k2 = ri(rng, 1, k1 - 1 || 1), n = rc(rng, [2, 3, 5, 6, 7]);
+            if (type === 0) {
+                // Subtraction
+                const diff2 = k1 - k2;
+                return { clue: `${sv}\n$${k1}\\sqrt{${n}} - ${k2}\\sqrt{${n}}$`, answer: `${diff2}√${n}`, answerDisplay: `$${diff2}\\sqrt{${n}}$` };
+            }
+            // Multiplication
+            const prod = k1 * k2 * n;
+            return { clue: `${sv}\n$${k1}\\sqrt{${n}} \\times ${k2}\\sqrt{${n}}$`, answer: String(prod), answerDisplay: `$${prod}$` };
+        }
+        // Hard: multiply surds with different radicands (simplify result)
+        const k1 = ri(rng, 1, 4), k2 = ri(rng, 1, 4);
+        const n1 = rc(rng, [2, 3, 5]), n2 = rc(rng, [2, 3, 5, 6]);
+        const prod = k1 * k2;
+        const radicand = n1 * n2;
+        const sqPart = Math.floor(Math.sqrt(radicand));
+        if (sqPart * sqPart === radicand) {
+            return { clue: `${sv}\n$${k1}\\sqrt{${n1}} \\times ${k2}\\sqrt{${n2}}$`, answer: String(prod * sqPart), answerDisplay: `$${prod * sqPart}$` };
+        }
+        return { clue: `${sv}\n$${k1}\\sqrt{${n1}} \\times ${k2}\\sqrt{${n2}}$`, answer: `${prod}√${radicand}`, answerDisplay: `$${prod}\\sqrt{${radicand}}$` };
     }
 
     return null;
