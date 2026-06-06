@@ -2434,7 +2434,7 @@ function _genAlgebraOp(rng, diff, op) {
             return { clue: `${verb}\n$(x + ${a})(x - ${b})$`, answer: `x²${midPart}${lStr}`, answerDisplay: `$x^2${midDisp}${lDisp}$` };
         }
         // Hard: (ax + b)(cx + d)
-        const a = ri(rng, 2, 3), b = ri(rng, 1, 5), c = ri(rng, 2, 3), d = ri(rng, 1, 5);
+        const a = ri(rng, 2, 4), b = ri(rng, 1, 6), c = ri(rng, 2, 4), d = ri(rng, 1, 6);
         const lead = a * c, mid2 = a * d + b * c, last2 = b * d;
         const m2Str = mid2 >= 0 ? `+${mid2}` : `${mid2}`;
         const expandVerb = rc(rng, ['Expand:', 'Expand and simplify:']);
@@ -2725,7 +2725,7 @@ function _genFinancialS5Op(rng, diff, op) {
     if (!op) op = diff === 'Hard' ? 'compound-period' : 'depreciation';
 
     if (op === 'depreciation') {
-        const P = ri(rng, 3, 20) * 1000, r = rc(rng, [5, 10, 15, 20]), t = ri(rng, 1, 3);
+        const P = ri(rng, 3, 25) * 1000, r = rc(rng, [5, 8, 10, 12, 15, 20, 25]), t = ri(rng, 1, diff === 'Hard' ? 5 : 3);
         if (diff === 'Easy') {
             // Straight-line: annual loss = P × r%
             const annualLoss = P * r / 100;
@@ -2750,7 +2750,7 @@ function _genFinancialS5Op(rng, diff, op) {
         diff === 'Medium' ? [2, 10, [2, 4, 12], 2] :
                             [5, 20, [4, 12],    3];
     const P2 = ri(rng, P2Lo, P2Hi) * 1000;
-    const rAnnual = rc(rng, [6, 8, 12]);
+    const rAnnual = rc(rng, [4, 5, 6, 8, 10, 12]);
     const nPer = rc(rng, nPerPool);
     const periodLabel = nPer === 2 ? 'half-yearly' : nPer === 4 ? 'quarterly' : 'monthly';
     const t2 = ri(rng, 1, t2Hi);
