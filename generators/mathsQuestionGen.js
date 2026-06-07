@@ -2766,6 +2766,7 @@ function _genFinancialS5Op(rng, diff, op) {
 const TRIG_TRIPLES = [
     { a: 3, b: 4, c: 5 }, { a: 5, b: 12, c: 13 }, { a: 6, b: 8, c: 10 },
     { a: 8, b: 15, c: 17 }, { a: 9, b: 12, c: 15 }, { a: 7, b: 24, c: 25 },
+    { a: 9, b: 40, c: 41 }, { a: 12, b: 35, c: 37 }, { a: 15, b: 20, c: 25 },
 ];
 
 function genTrigonometry(rng, diff, allowedOps) {
@@ -2776,18 +2777,12 @@ function genTrigonometry(rng, diff, allowedOps) {
 
     if (op === 'find-side') {
         const triple = rc(rng, TRIG_TRIPLES);
-        const scale = diff === 'Easy' ? ri(rng, 1, 2) : diff === 'Medium' ? ri(rng, 2, 5) : ri(rng, 3, 8);
-        const opp = triple.a * scale, adj = triple.b * scale, hyp = triple.c * scale;
-        const _u = _geoUnit(hyp);
-        const _angleA = round(Math.atan2(opp, adj) * 180 / Math.PI, 1);
-        // 25% chance of a "find the hypotenuse from opposite + angle" shape (Medium/Hard only)
+        const scale = diff === 'Easy' ? ri(rng, 1, 3) : diff === 'Medium' ? ri(rng, 2, 7) : ri(rng, 3, 10);
+        const angle2 = round(Math.atan2(triple.a, triple.b) * 180 / Math.PI, 1);
+        // Find-hypotenuse variant (Medium/Hard, 25%)
         if (diff !== 'Easy' && rng() < 0.25) {
-            const scale2 = ri(rng, 3, 8);
-            const opp2 = triple.a * scale2;
-            const hyp2 = triple.c * scale2;
-            const adj2 = triple.b * scale2;
+            const opp2 = triple.a * scale, hyp2 = triple.c * scale, adj2 = triple.b * scale;
             const u2 = _geoUnit(hyp2);
-            const angle2 = round(Math.atan2(triple.a, triple.b) * 180 / Math.PI, 1);
             const sinV = round(Math.sin(angle2 * Math.PI / 180), 3);
             const clue = rc(rng, [
                 `Find the *hypotenuse* of a right triangle with opposite side $${opp2}$ ${u2} and angle $${angle2}$°. Use $\\sin(${angle2}°) \\approx ${sinV}$.`,
@@ -2795,124 +2790,211 @@ function genTrigonometry(rng, diff, allowedOps) {
             ]);
             return {
                 clue, answer: String(hyp2), answerDisplay: `${hyp2} ${u2}`,
+                worked: `$\\text{hyp} = \\frac{${opp2}}{\\sin(${angle2}°)} = \\frac{${opp2}}{${sinV}} = ${hyp2}$`,
                 diagram: { type: 'right-triangle-trig', opp: opp2, adj: adj2, hyp: hyp2, angle: angle2, missing: 'hyp' },
             };
         }
-        const choice = rc(rng, diff === 'Easy' ? ['sin'] : ['sin', 'cos', 'tan']);
-        let clue, answer, answerDisplay;
+        const choice = rc(rng, diff === 'Easy' ? ['sin', 'cos'] : ['sin', 'cos', 'tan']);
         if (choice === 'sin') {
-            // sin(A) = opp/hyp → find opp given hyp and angle
-            const scale2 = ri(rng, 3, 8);
-            const hyp2 = triple.c * scale2;
-            const opp2 = triple.a * scale2;
+            const hyp2 = triple.c * scale, opp2 = triple.a * scale;
             const u2 = _geoUnit(hyp2);
-            const angle2 = round(Math.atan2(triple.a, triple.b) * 180 / Math.PI, 1);
-            clue = rc(rng, [
-                `Find the *opposite* side of a right triangle with hypotenuse $${hyp2}$ ${u2} and angle $${angle2}$°. Use $\\sin(${angle2}°) \\approx ${round(Math.sin(angle2 * Math.PI / 180), 3)}$.`,
-                `A right-angled triangle has hypotenuse $${hyp2}$ ${u2} and an angle of $${angle2}$°. Find the *opposite* side. Use $\\sin(${angle2}°) \\approx ${round(Math.sin(angle2 * Math.PI / 180), 3)}$.`,
+            const sinV = round(Math.sin(angle2 * Math.PI / 180), 3);
+            const clue = rc(rng, [
+                `Find the *opposite* side of a right triangle with hypotenuse $${hyp2}$ ${u2} and angle $${angle2}$°. Use $\\sin(${angle2}°) \\approx ${sinV}$.`,
+                `A right-angled triangle has hypotenuse $${hyp2}$ ${u2} and an angle of $${angle2}$°. Find the *opposite* side. Use $\\sin(${angle2}°) \\approx ${sinV}$.`,
             ]);
-            answer = String(opp2);
-            answerDisplay = `${opp2} ${u2}`;
-            return { clue, answer, answerDisplay, diagram: { type: 'right-triangle-trig', opp: opp2, adj: triple.b * scale2, hyp: hyp2, angle: angle2, missing: 'opp' } };
+            return {
+                clue, answer: String(opp2), answerDisplay: `${opp2} ${u2}`,
+                worked: `$\\text{opp} = ${hyp2} \\times \\sin(${angle2}°) = ${hyp2} \\times ${sinV} = ${opp2}$`,
+                diagram: { type: 'right-triangle-trig', opp: opp2, adj: triple.b * scale, hyp: hyp2, angle: angle2, missing: 'opp' },
+            };
         }
         if (choice === 'cos') {
-            const scale2 = ri(rng, 3, 8);
-            const hyp2 = triple.c * scale2;
-            const adj2 = triple.b * scale2;
+            const hyp2 = triple.c * scale, adj2 = triple.b * scale;
             const u2 = _geoUnit(hyp2);
-            const angle2 = round(Math.atan2(triple.a, triple.b) * 180 / Math.PI, 1);
-            clue = rc(rng, [
-                `Find the *adjacent* side of a right triangle with hypotenuse $${hyp2}$ ${u2} and angle $${angle2}$°. Use $\\cos(${angle2}°) \\approx ${round(Math.cos(angle2 * Math.PI / 180), 3)}$.`,
+            const cosV = round(Math.cos(angle2 * Math.PI / 180), 3);
+            const clue = rc(rng, [
+                `Find the *adjacent* side of a right triangle with hypotenuse $${hyp2}$ ${u2} and angle $${angle2}$°. Use $\\cos(${angle2}°) \\approx ${cosV}$.`,
+                `A right-angled triangle has hypotenuse $${hyp2}$ ${u2} and an angle of $${angle2}$°. Calculate the *adjacent* side. Use $\\cos(${angle2}°) \\approx ${cosV}$.`,
             ]);
-            answer = String(adj2);
-            answerDisplay = `${adj2} ${u2}`;
-            return { clue, answer, answerDisplay, diagram: { type: 'right-triangle-trig', opp: triple.a * scale2, adj: adj2, hyp: hyp2, angle: angle2, missing: 'adj' } };
+            return {
+                clue, answer: String(adj2), answerDisplay: `${adj2} ${u2}`,
+                worked: `$\\text{adj} = ${hyp2} \\times \\cos(${angle2}°) = ${hyp2} \\times ${cosV} = ${adj2}$`,
+                diagram: { type: 'right-triangle-trig', opp: triple.a * scale, adj: adj2, hyp: hyp2, angle: angle2, missing: 'adj' },
+            };
         }
-        // tan
-        const angle2 = round(Math.atan2(triple.a, triple.b) * 180 / Math.PI, 1);
-        const adj2 = adj, opp2 = opp;
+        // tan: find opp from adj, or find adj from opp
+        const opp2 = triple.a * scale, adj2 = triple.b * scale, hyp2 = triple.c * scale;
         const u2 = _geoUnit(Math.max(opp2, adj2));
-        clue = rc(rng, [
-            `Find the *opposite* side of a right triangle with adjacent $${adj2}$ ${u2} and angle $${angle2}$°. Use $\\tan(${angle2}°) \\approx ${round(Math.tan(angle2 * Math.PI / 180), 3)}$.`,
+        const tanV = round(Math.tan(angle2 * Math.PI / 180), 3);
+        if (diff !== 'Easy' && rng() < 0.4) {
+            const clue = rc(rng, [
+                `Find the *adjacent* side of a right triangle with opposite $${opp2}$ ${u2} and angle $${angle2}$°. Use $\\tan(${angle2}°) \\approx ${tanV}$.`,
+                `A right triangle has opposite side $${opp2}$ ${u2} and angle $${angle2}$°. Find the *adjacent* side. Use $\\tan(${angle2}°) \\approx ${tanV}$.`,
+            ]);
+            return {
+                clue, answer: String(adj2), answerDisplay: `${adj2} ${u2}`,
+                worked: `$\\text{adj} = \\frac{${opp2}}{\\tan(${angle2}°)} = \\frac{${opp2}}{${tanV}} = ${adj2}$`,
+                diagram: { type: 'right-triangle-trig', opp: opp2, adj: adj2, hyp: hyp2, angle: angle2, missing: 'adj' },
+            };
+        }
+        const clue = rc(rng, [
+            `Find the *opposite* side of a right triangle with adjacent $${adj2}$ ${u2} and angle $${angle2}$°. Use $\\tan(${angle2}°) \\approx ${tanV}$.`,
+            `A right triangle has adjacent side $${adj2}$ ${u2} and angle $${angle2}$°. Calculate the *opposite* side. Use $\\tan(${angle2}°) \\approx ${tanV}$.`,
         ]);
-        return { clue, answer: String(opp2), answerDisplay: `${opp2} ${u2}`, diagram: { type: 'right-triangle-trig', opp: opp2, adj: adj2, hyp: hyp, angle: angle2, missing: 'opp' } };
+        return {
+            clue, answer: String(opp2), answerDisplay: `${opp2} ${u2}`,
+            worked: `$\\text{opp} = ${adj2} \\times \\tan(${angle2}°) = ${adj2} \\times ${tanV} = ${opp2}$`,
+            diagram: { type: 'right-triangle-trig', opp: opp2, adj: adj2, hyp: hyp2, angle: angle2, missing: 'opp' },
+        };
     }
 
     if (op === 'find-angle') {
         const triple = rc(rng, TRIG_TRIPLES);
-        const scale = diff === 'Easy' ? ri(rng, 1, 2) : diff === 'Medium' ? ri(rng, 2, 4) : ri(rng, 3, 7);
+        const scale = diff === 'Easy' ? ri(rng, 1, 3) : diff === 'Medium' ? ri(rng, 2, 6) : ri(rng, 3, 9);
         const opp = triple.a * scale, adj = triple.b * scale, hyp = triple.c * scale;
         const u = _geoUnit(hyp);
-        const ratio = rc(rng, ['tan', 'sin', 'cos']);
-        let theta;
-        if (ratio === 'tan') theta = round(Math.atan2(opp, adj) * 180 / Math.PI, 1);
-        else if (ratio === 'sin') theta = round(Math.asin(opp / hyp) * 180 / Math.PI, 1);
-        else theta = round(Math.acos(adj / hyp) * 180 / Math.PI, 1);
-        const ph = rc(rng, [
-            `Find the angle $\\theta$ in a right triangle with opposite $${opp}$ ${u} and adjacent $${adj}$ ${u}.`,
-            `Calculate the angle $\\theta$ given opposite $= ${opp}$ ${u} and adjacent $= ${adj}$ ${u} in a right triangle.`,
-            `A right triangle has legs $${opp}$ ${u} and $${adj}$ ${u}. Find the smaller angle $\\theta$.`,
-        ]);
-        return { clue: ph, answer: `${theta}°`, answerDisplay: `$\\theta = ${theta}$°`, diagram: { type: 'right-triangle-trig', opp, adj, hyp, angle: theta, missing: 'angle' } };
+        const ratio = rc(rng, diff === 'Easy' ? ['tan', 'sin'] : ['tan', 'sin', 'cos']);
+        let theta, ph, ratioStr;
+        if (ratio === 'tan') {
+            theta = round(Math.atan2(opp, adj) * 180 / Math.PI, 1);
+            ratioStr = `\\frac{${opp}}{${adj}}`;
+            ph = rc(rng, [
+                `Find the angle $\\theta$ in a right triangle with opposite $${opp}$ ${u} and adjacent $${adj}$ ${u}.`,
+                `Calculate the angle $\\theta$ given opposite $= ${opp}$ ${u} and adjacent $= ${adj}$ ${u} in a right triangle.`,
+                `A right triangle has legs $${opp}$ ${u} and $${adj}$ ${u}. Find the smaller angle $\\theta$.`,
+            ]);
+        } else if (ratio === 'sin') {
+            theta = round(Math.asin(opp / hyp) * 180 / Math.PI, 1);
+            ratioStr = `\\frac{${opp}}{${hyp}}`;
+            ph = rc(rng, [
+                `Find angle $\\theta$ in a right triangle with opposite $${opp}$ ${u} and hypotenuse $${hyp}$ ${u}.`,
+                `A right triangle has opposite side $${opp}$ ${u} and hypotenuse $${hyp}$ ${u}. Calculate $\\theta$.`,
+            ]);
+        } else {
+            theta = round(Math.acos(adj / hyp) * 180 / Math.PI, 1);
+            ratioStr = `\\frac{${adj}}{${hyp}}`;
+            ph = rc(rng, [
+                `Find angle $\\theta$ in a right triangle with adjacent $${adj}$ ${u} and hypotenuse $${hyp}$ ${u}.`,
+                `A right triangle has adjacent side $${adj}$ ${u} and hypotenuse $${hyp}$ ${u}. Calculate $\\theta$.`,
+            ]);
+        }
+        return {
+            clue: ph, answer: `${theta}°`, answerDisplay: `$\\theta = ${theta}$°`,
+            worked: `$\\${ratio}(\\theta) = ${ratioStr} \\Rightarrow \\theta = ${theta}°$`,
+            diagram: { type: 'right-triangle-trig', opp, adj, hyp, angle: theta, missing: 'angle' },
+        };
     }
 
     if (op === 'applications') {
-        // Real-world right-triangle: elevation, depression, or ladder
         const triple = rc(rng, TRIG_TRIPLES);
-        const scale = diff === 'Easy' ? ri(rng, 1, 3) : diff === 'Medium' ? ri(rng, 2, 6) : ri(rng, 4, 10);
+        const scale = diff === 'Easy' ? ri(rng, 1, 4) : diff === 'Medium' ? ri(rng, 3, 8) : ri(rng, 5, 12);
         const height = triple.a * scale, dist = triple.b * scale;
         const angle = round(Math.atan2(height, dist) * 180 / Math.PI, 1);
+        // Hard: sometimes ask for a side given the angle (find the height/distance)
+        if (diff === 'Hard' && rng() < 0.35) {
+            const tanV = round(Math.tan(angle * Math.PI / 180), 3);
+            if (rng() < 0.5) {
+                const ph = rc(rng, [
+                    `From a point $${dist}$ m away from a tower, the *angle of elevation* to the top is $${angle}$°. Find the height of the tower. Use $\\tan(${angle}°) \\approx ${tanV}$.`,
+                    `A surveyor stands $${dist}$ m from a building. The *angle of elevation* to the roof is $${angle}$°. How tall is the building? Use $\\tan(${angle}°) \\approx ${tanV}$.`,
+                ]);
+                return {
+                    clue: ph, answer: String(height), answerDisplay: `${height} m`,
+                    worked: `$h = ${dist} \\times \\tan(${angle}°) = ${dist} \\times ${tanV} = ${height}$ m`,
+                };
+            }
+            const ph = `A tree is $${height}$ m tall. The *angle of elevation* from a point on the ground to the top is $${angle}$°. How far is the point from the base? Use $\\tan(${angle}°) \\approx ${tanV}$.`;
+            return {
+                clue: ph, answer: String(dist), answerDisplay: `${dist} m`,
+                worked: `$d = \\frac{${height}}{\\tan(${angle}°)} = \\frac{${height}}{${tanV}} = ${dist}$ m`,
+            };
+        }
         const ph = rc(rng, [
             `A ladder leans against a wall. The base is $${dist}$ m from the wall and the ladder reaches $${height}$ m up the wall. Find the angle the ladder makes with the ground.`,
             `From a point $${dist}$ m away from a building, the *angle of elevation* to the top is measured. If the building is $${height}$ m tall, find the angle of elevation.`,
-            // Angle of depression: from a cliff of height H, looking down at a boat D m offshore — equal to angle of elevation by alternate angles
             `From the top of a cliff $${height}$ m high, the *angle of depression* to a boat $${dist}$ m offshore is measured. Find the angle of depression.`,
             `A drone flies at a height of $${height}$ m and spots a marker $${dist}$ m away on the ground. Find the *angle of depression* from the drone to the marker.`,
-            // Roof / ramp pitch
             `A ramp rises $${height}$ m over a horizontal distance of $${dist}$ m. Find the angle the ramp makes with the ground.`,
+            `A guy wire supports a pole $${height}$ m tall. It is anchored $${dist}$ m from the base. Find the angle the wire makes with the ground.`,
         ]);
-        return { clue: ph, answer: `${angle}°`, answerDisplay: `${angle}°` };
+        return {
+            clue: ph, answer: `${angle}°`, answerDisplay: `${angle}°`,
+            worked: `$\\tan(\\theta) = \\frac{${height}}{${dist}} \\Rightarrow \\theta = ${angle}°$`,
+        };
     }
 
     if (op === 'obtuse-angles') {
-        // Sine rule: a/sin A = b/sin B
-        const A = rc(rng, [30, 45, 60]), a = ri(rng, 4, 10);
-        const B = rc(rng, [20, 35, 50, 120, 135]);
-        // A + B must be < 180 for a valid triangle (third angle C = 180 - A - B > 0)
+        const aAngles = diff === 'Easy' ? [30, 45, 60] : [25, 30, 35, 40, 45, 50, 55, 60];
+        const A = rc(rng, aAngles);
+        const aVal = diff === 'Easy' ? ri(rng, 4, 10) : diff === 'Medium' ? ri(rng, 5, 15) : ri(rng, 6, 20);
+        // Hard: sometimes use cosine rule instead of sine rule
+        if (diff === 'Hard' && rng() < 0.35) {
+            const b = ri(rng, 5, 16);
+            const C = rc(rng, [30, 45, 60, 90, 100, 110, 120]);
+            const c2 = aVal * aVal + b * b - 2 * aVal * b * Math.cos(C * Math.PI / 180);
+            if (c2 <= 0) return null;
+            const c = round(Math.sqrt(c2), 1);
+            if (c < 1 || c > 50) return null;
+            const ph = rc(rng, [
+                `In a triangle, $a = ${aVal}$ cm, $b = ${b}$ cm and the *included* angle $C = ${C}$°. Use the *cosine rule* to find side $c$.`,
+                `Using the cosine rule: $a = ${aVal}$ cm, $b = ${b}$ cm, $\\angle C = ${C}$°. Find $c$.`,
+            ]);
+            return {
+                clue: ph, answer: String(c), answerDisplay: `${c} cm`,
+                worked: `$c^2 = ${aVal}^2 + ${b}^2 - 2(${aVal})(${b})\\cos(${C}°) \\Rightarrow c = ${c}$ cm`,
+            };
+        }
+        const bAngles = diff === 'Easy' ? [20, 35, 50, 80] : [20, 25, 35, 40, 50, 55, 70, 80, 100, 110, 120, 130, 135];
+        const B = rc(rng, bAngles);
         if (A + B >= 180) return null;
-        const b = round(a * Math.sin(B * Math.PI / 180) / Math.sin(A * Math.PI / 180), 1);
-        if (b < 1 || b > 30) return null;
+        const b = round(aVal * Math.sin(B * Math.PI / 180) / Math.sin(A * Math.PI / 180), 1);
+        if (b < 1 || b > 40) return null;
         const ph = rc(rng, [
-            `In a triangle, $a = ${a}$ cm, $\\angle A = ${A}$° and $\\angle B = ${B}$°. Use the *sine rule* to find side $b$.`,
-            `Using the sine rule: $a = ${a}$ cm, $A = ${A}$°, $B = ${B}$°. Find $b$.`,
+            `In a triangle, $a = ${aVal}$ cm, $\\angle A = ${A}$° and $\\angle B = ${B}$°. Use the *sine rule* to find side $b$.`,
+            `Using the sine rule: $a = ${aVal}$ cm, $A = ${A}$°, $B = ${B}$°. Find $b$.`,
+            `A triangle has $\\angle A = ${A}$°, $\\angle B = ${B}$° and side $a = ${aVal}$ cm. Calculate $b$ using the *sine rule*.`,
         ]);
-        return { clue: ph, answer: String(b), answerDisplay: `${b} cm` };
+        return {
+            clue: ph, answer: String(b), answerDisplay: `${b} cm`,
+            worked: `$\\frac{b}{\\sin(${B}°)} = \\frac{${aVal}}{\\sin(${A}°)} \\Rightarrow b = ${b}$ cm`,
+        };
     }
 
     if (op === 'bearings') {
-        const dist = ri(rng, 2, 15) * 10;
-        const bearing = rc(rng, [30, 45, 60, 120, 150, 210, 240, 300, 315, 330]);
+        const dist = diff === 'Easy' ? ri(rng, 2, 10) * 10 : diff === 'Medium' ? ri(rng, 3, 20) * 10 : ri(rng, 5, 30) * 10;
+        const bearingPool = diff === 'Easy'
+            ? [30, 45, 60, 120, 150, 210, 240, 300, 315, 330]
+            : [20, 30, 40, 45, 55, 60, 70, 110, 120, 135, 150, 160, 200, 210, 225, 240, 250, 290, 300, 310, 315, 330, 340];
+        const bearing = rc(rng, bearingPool);
         const radians = bearing * Math.PI / 180;
         const eastward = round(dist * Math.sin(radians), 1);
         const northward = round(dist * Math.cos(radians), 1);
         const bStr = String(bearing).padStart(3, '0');
-        // Half the time ask for the east/west component, half for north/south
         if (rng() < 0.5) {
             const ph = rc(rng, [
                 `A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *east* (or west) of its starting point is it?`,
                 `From port, a vessel sails $${dist}$ km on a bearing of $${bStr}$°T. Find its *east/west* displacement.`,
+                `A hiker walks $${dist}$ km on a bearing of $${bStr}$°T. Find the *east/west* distance from the start.`,
             ]);
             const absE = Math.abs(eastward);
             const dir = eastward >= 0 ? 'east' : 'west';
-            return { clue: ph, answer: String(absE), answerDisplay: `${absE} km ${dir}` };
+            return {
+                clue: ph, answer: String(absE), answerDisplay: `${absE} km ${dir}`,
+                worked: `$\\text{E/W} = ${dist} \\times \\sin(${bearing}°) = ${absE}$ km ${dir}`,
+            };
         }
         const ph = rc(rng, [
             `A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *north* (or south) of its starting point is it?`,
             `An aircraft flies $${dist}$ km on a bearing of $${bStr}$°T. Find its *north/south* displacement.`,
+            `A cyclist rides $${dist}$ km on a bearing of $${bStr}$°T. Find the *north/south* distance from the start.`,
         ]);
         const absN = Math.abs(northward);
         const dir = northward >= 0 ? 'north' : 'south';
-        return { clue: ph, answer: String(absN), answerDisplay: `${absN} km ${dir}` };
+        return {
+            clue: ph, answer: String(absN), answerDisplay: `${absN} km ${dir}`,
+            worked: `$\\text{N/S} = ${dist} \\times \\cos(${bearing}°) = ${absN}$ km ${dir}`,
+        };
     }
 
     return null;
@@ -2926,84 +3008,177 @@ function genNonLinear(rng, diff, allowedOps) {
     const op = rc(rng, pool);
 
     if (op === 'parabola-features') {
-        // y = (x - h)² + k → vertex (h, k); avoid h = 0 to keep formatting tidy
-        const h = rc(rng, [-2, -1, 1, 2, 3, 4]);
-        const k = ri(rng, -2, 3);
+        const hPool = diff === 'Easy' ? [-3, -2, -1, 1, 2, 3, 4] : [-5, -4, -3, -2, -1, 1, 2, 3, 4, 5, 6];
+        const h = rc(rng, hPool);
+        const kRange = diff === 'Easy' ? [-3, 4] : diff === 'Medium' ? [-5, 5] : [-8, 8];
+        const k = ri(rng, kRange[0], kRange[1]);
         const xPart = `(x ${h > 0 ? `- ${h}` : `+ ${Math.abs(h)}`})`;
         const kPart = k === 0 ? '' : (k > 0 ? ` + ${k}` : ` - ${Math.abs(k)}`);
         const eq = `${xPart}^2${kPart}`;
         if (diff === 'Easy') {
+            const yInt = h * h + k;
+            // Alternate between vertex and y-intercept questions
+            if (rng() < 0.35) {
+                const ph = rc(rng, [
+                    `Find the $y$-intercept of $y = ${eq}$.`,
+                    `What is the $y$-intercept of the parabola $y = ${eq}$?`,
+                ]);
+                return {
+                    clue: ph, answer: String(yInt), answerDisplay: `$y = ${yInt}$`,
+                    worked: `$y\\text{-int: set } x = 0: y = (0 ${h > 0 ? `- ${h}` : `+ ${Math.abs(h)}`})^2${kPart} = ${h * h}${kPart} = ${yInt}$`,
+                    diagram: { type: 'parabola', h, k, a: 1 },
+                };
+            }
             const ph = rc(rng, [
                 `State the *vertex* of the parabola $y = ${eq}$.`,
                 `Find the *vertex* of $y = ${eq}$.`,
                 `What is the *turning point* of $y = ${eq}$?`,
             ]);
-            return { clue: ph, answer: `(${h},${k})`, answerDisplay: `$(${h}, ${k})$`, diagram: { type: 'parabola', h, k, a: 1 } };
+            return {
+                clue: ph, answer: `(${h},${k})`, answerDisplay: `$(${h}, ${k})$`,
+                worked: `$y = (x ${h > 0 ? `- ${h}` : `+ ${Math.abs(h)}`})^2${kPart} \\Rightarrow \\text{vertex} = (${h}, ${k})$`,
+                diagram: { type: 'parabola', h, k, a: 1 },
+            };
         }
         if (diff === 'Medium') {
-            const ph = `State the *axis of symmetry* of $y = ${eq}$.`;
-            return { clue: ph, answer: `x=${h}`, answerDisplay: `$x = ${h}$`, diagram: { type: 'parabola', h, k, a: 1 } };
+            // Alternate between axis of symmetry, y-intercept, and x-intercepts (factored form)
+            const variant = ri(rng, 0, 2);
+            if (variant === 0) {
+                const ph = rc(rng, [
+                    `State the *axis of symmetry* of $y = ${eq}$.`,
+                    `Find the *axis of symmetry* of the parabola $y = ${eq}$.`,
+                ]);
+                return {
+                    clue: ph, answer: `x=${h}`, answerDisplay: `$x = ${h}$`,
+                    worked: `$y = (x ${h > 0 ? `- ${h}` : `+ ${Math.abs(h)}`})^2${kPart} \\Rightarrow x = ${h}$`,
+                    diagram: { type: 'parabola', h, k, a: 1 },
+                };
+            }
+            if (variant === 1) {
+                const yInt = h * h + k;
+                const ph = `Find the $y$-intercept of $y = ${eq}$.`;
+                return {
+                    clue: ph, answer: String(yInt), answerDisplay: `$y = ${yInt}$`,
+                    worked: `$y\\text{-int: } y = (0 ${h > 0 ? `- ${h}` : `+ ${Math.abs(h)}`})^2${kPart} = ${yInt}$`,
+                    diagram: { type: 'parabola', h, k, a: 1 },
+                };
+            }
+            // x-intercepts from factored form y = (x-r1)(x-r2)
+            const r1 = ri(rng, -5, 5), r2 = ri(rng, -5, 5);
+            if (r1 === r2) return genNonLinear(rng, diff, allowedOps);
+            const r1Part = r1 > 0 ? `(x - ${r1})` : r1 < 0 ? `(x + ${Math.abs(r1)})` : 'x';
+            const r2Part = r2 > 0 ? `(x - ${r2})` : r2 < 0 ? `(x + ${Math.abs(r2)})` : 'x';
+            const ph = `Find the $x$-intercepts of $y = ${r1Part}${r2Part}$.`;
+            const ans = r1 < r2 ? `x=${r1},x=${r2}` : `x=${r2},x=${r1}`;
+            const disp = r1 < r2 ? `$x = ${r1}$ and $x = ${r2}$` : `$x = ${r2}$ and $x = ${r1}$`;
+            return {
+                clue: ph, answer: ans, answerDisplay: disp,
+                worked: `$\\text{Set } y = 0: ${r1Part}${r2Part} = 0 \\Rightarrow x = ${r1} \\text{ or } x = ${r2}$`,
+            };
         }
-        // Hard: expanded form → find axis of symmetry using x = -b/2a
-        const b = -2 * h, c = h * h + k;
-        const bStr = b > 0 ? `+ ${b}x` : `- ${Math.abs(b)}x`;
-        const cStr = c === 0 ? '' : (c > 0 ? ` + ${c}` : ` - ${Math.abs(c)}`);
-        const ph = `Find the *axis of symmetry* of $y = x^2 ${bStr}${cStr}$ using $x = -\\dfrac{b}{2a}$.`;
-        return { clue: ph, answer: `x=${h}`, answerDisplay: `$x = ${h}$` };
+        // Hard: expanded form → find vertex or axis using x = -b/2a
+        const a = rc(rng, [1, 1, 2, -1, -2]);
+        const bCoeff = -2 * a * h, cCoeff = a * h * h + k;
+        const aStr = a === 1 ? '' : a === -1 ? '-' : `${a}`;
+        const bStr = bCoeff > 0 ? `+ ${bCoeff}x` : bCoeff < 0 ? `- ${Math.abs(bCoeff)}x` : '';
+        const cStr = cCoeff === 0 ? '' : (cCoeff > 0 ? ` + ${cCoeff}` : ` - ${Math.abs(cCoeff)}`);
+        if (rng() < 0.5) {
+            const ph = `Find the *axis of symmetry* of $y = ${aStr}x^2 ${bStr}${cStr}$ using $x = -\\dfrac{b}{2a}$.`;
+            return {
+                clue: ph, answer: `x=${h}`, answerDisplay: `$x = ${h}$`,
+                worked: `$x = -\\frac{${bCoeff}}{2 \\times ${a}} = -\\frac{${bCoeff}}{${2 * a}} = ${h}$`,
+            };
+        }
+        const ph = `Find the *vertex* of $y = ${aStr}x^2 ${bStr}${cStr}$ using $x = -\\dfrac{b}{2a}$.`;
+        return {
+            clue: ph, answer: `(${h},${k})`, answerDisplay: `$(${h}, ${k})$`,
+            worked: `$x = -\\frac{${bCoeff}}{${2 * a}} = ${h}, \\; y = ${a === 1 ? '' : a + '\\times'}${h}^2 ${bStr.replace('x', `\\times ${h}`)}${cStr} = ${k}$`,
+        };
     }
 
     if (op === 'parabola-sketch') {
-        const aPool = diff === 'Easy' ? [1, -1] : diff === 'Medium' ? [1, -1, 2, -2] : [2, -2, 3, -3];
-        const hPool = diff === 'Easy' ? [-2, -1, 0, 1, 2] : [-4, -3, -2, -1, 0, 1, 2, 3, 4];
-        const [kLo, kHi] = diff === 'Easy' ? [-2, 4] : [-5, 5];
+        const aPool = diff === 'Easy' ? [1, -1] : diff === 'Medium' ? [1, -1, 2, -2] : [2, -2, 3, -3, 0.5, -0.5];
+        const hPool = diff === 'Easy' ? [-3, -2, -1, 0, 1, 2, 3] : [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
+        const [kLo, kHi] = diff === 'Easy' ? [-3, 5] : diff === 'Medium' ? [-6, 6] : [-8, 8];
         const a = rc(rng, aPool);
         const h2 = rc(rng, hPool);
-        // Downward parabolae should have +k so vertex and arms stay in-frame
         const k2 = a < 0 ? Math.max(0, ri(rng, kLo, kHi)) : ri(rng, kLo, kHi);
         const opens = a > 0 ? 'upward' : 'downward';
         const aStr = a === 1 ? '' : a === -1 ? '-' : `${a}`;
         const xPart = h2 === 0 ? 'x' : `(x ${h2 > 0 ? `- ${h2}` : `+ ${Math.abs(h2)}`})`;
         const kPart = k2 === 0 ? '' : (k2 > 0 ? ` + ${k2}` : ` - ${Math.abs(k2)}`);
         const eq = `${aStr}${xPart}^2${kPart}`;
-        const ph = diff === 'Hard'
-            ? rc(rng, [
+        const yIntercept = a * h2 * h2 + k2;
+        if (diff === 'Hard') {
+            const ph = rc(rng, [
                 `For $y = ${eq}$, state the vertex, direction it opens, and $y$-intercept.`,
                 `Describe the key features of $y = ${eq}$: vertex, direction, and $y$-intercept.`,
-              ])
-            : `For $y = ${eq}$, state the vertex and direction it opens.`;
-        const yIntercept = a * h2 * h2 + k2;
-        const answerDisplay = diff === 'Hard'
-            ? `Vertex $(${h2}, ${k2})$, opens ${opens}, $y$-int $= ${yIntercept}$`
-            : `Vertex $(${h2}, ${k2})$, opens ${opens}`;
-        const answer = diff === 'Hard'
-            ? `(${h2},${k2})${opens[0].toUpperCase()}y=${yIntercept}`
-            : `(${h2},${k2})${opens[0].toUpperCase()}`;
+                `For $y = ${eq}$, state the vertex, whether it has a maximum or minimum, and the $y$-intercept.`,
+            ]);
+            const maxMin = a > 0 ? 'minimum' : 'maximum';
+            const answerDisplay = `Vertex $(${h2}, ${k2})$, opens ${opens}, $y$-int $= ${yIntercept}$`;
+            const answer = `(${h2},${k2})${opens[0].toUpperCase()}y=${yIntercept}`;
+            return { clue: ph, answer, answerDisplay, diagram: { type: 'parabola', h: h2, k: k2, a },
+                worked: `$\\text{Vertex } (${h2}, ${k2}), \\text{ opens ${opens} (${maxMin})}, y\\text{-int} = ${a === 1 ? '' : a + ' \\times '}${h2}^2${kPart} = ${yIntercept}$` };
+        }
+        const ph = rc(rng, [
+            `For $y = ${eq}$, state the vertex and direction it opens.`,
+            `State the vertex and concavity of $y = ${eq}$.`,
+        ]);
+        const answerDisplay = `Vertex $(${h2}, ${k2})$, opens ${opens}`;
+        const answer = `(${h2},${k2})${opens[0].toUpperCase()}`;
         return { clue: ph, answer, answerDisplay, diagram: { type: 'parabola', h: h2, k: k2, a } };
     }
 
     if (op === 'identify-graph') {
-        const graphs = [
-            { eq: 'y = x^2', type: 'parabola' },
-            { eq: 'y = 2^x', type: 'exponential' },
-            { eq: 'xy = 4', type: 'hyperbola' },
-            { eq: 'y = -x^2', type: 'parabola' },
-            { eq: 'y = 3^x', type: 'exponential' },
-            { eq: 'y = x^2 - 4', type: 'parabola' },
-            { eq: 'y = 5^x', type: 'exponential' },
-            { eq: 'xy = -3', type: 'hyperbola' },
-            { eq: 'y = 2^{-x}', type: 'exponential' },
-            { eq: 'y = (x+1)^2', type: 'parabola' },
-            { eq: 'xy = 6', type: 'hyperbola' },
-            { eq: 'y = -2^x', type: 'exponential' },
-        ];
-        const g = rc(rng, graphs);
+        // Dynamic generation instead of static list
+        const variant = ri(rng, 0, diff === 'Easy' ? 3 : diff === 'Medium' ? 4 : 5);
+        let eq, type;
+        if (variant <= 1) {
+            // Parabola
+            const a = rc(rng, diff === 'Easy' ? [1, -1] : [1, -1, 2, -2, 3]);
+            const c = ri(rng, -5, 5);
+            const aStr = a === 1 ? '' : a === -1 ? '-' : `${a}`;
+            const cStr = c === 0 ? '' : (c > 0 ? ` + ${c}` : ` - ${Math.abs(c)}`);
+            if (rng() < 0.4 && diff !== 'Easy') {
+                const h = ri(rng, -3, 3);
+                const hPart = h > 0 ? `(x - ${h})` : h < 0 ? `(x + ${Math.abs(h)})` : 'x';
+                eq = `y = ${aStr}${hPart}^2${cStr}`;
+            } else {
+                eq = `y = ${aStr}x^2${cStr}`;
+            }
+            type = 'parabola';
+        } else if (variant === 2) {
+            // Exponential
+            const base = rc(rng, [2, 3, 4, 5, 10]);
+            const neg = rng() < 0.3;
+            const coeff = diff === 'Hard' && rng() < 0.3 ? rc(rng, [-1, 2, -2]) : null;
+            const expPart = neg ? `${base}^{-x}` : `${base}^x`;
+            eq = coeff ? `y = ${coeff === -1 ? '-' : coeff}${expPart}` : `y = ${expPart}`;
+            type = 'exponential';
+        } else if (variant === 3) {
+            // Hyperbola
+            const k = rc(rng, diff === 'Easy' ? [1, 2, 4, 6] : [-8, -5, -3, -2, 2, 3, 5, 8, 10, 12]);
+            eq = k > 0 ? `xy = ${k}` : `xy = ${k}`;
+            type = 'hyperbola';
+        } else if (variant === 4) {
+            // Cubic (Medium+)
+            const a = rc(rng, [1, -1, 2]);
+            const aStr = a === 1 ? '' : a === -1 ? '-' : `${a}`;
+            eq = `y = ${aStr}x^3`;
+            type = 'cubic';
+        } else {
+            // Square root (Hard)
+            eq = rc(rng, ['y = \\sqrt{x}', 'y = -\\sqrt{x}', 'y = \\sqrt{x + 1}']);
+            type = 'square root';
+        }
         const ph = rc(rng, [
-            `Identify the type of graph represented by $${g.eq}$.`,
-            `What type of curve does $${g.eq}$ represent?`,
-            `Name the graph: $${g.eq}$.`,
-            `Classify the relationship: $${g.eq}$.`,
+            `Identify the type of graph represented by $${eq}$.`,
+            `What type of curve does $${eq}$ represent?`,
+            `Name the graph: $${eq}$.`,
+            `Classify the relationship: $${eq}$.`,
         ]);
-        return { clue: ph, answer: g.type, answerDisplay: g.type };
+        return { clue: ph, answer: type, answerDisplay: type };
     }
 
     return null;
@@ -4444,6 +4619,7 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
         return a;
     }
     const topicPlan = [];
+    if (subtopics.length === 0) return [];
     while (topicPlan.length < count) topicPlan.push(...shuffled(subtopics));
 
     const results = [];

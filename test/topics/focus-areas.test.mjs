@@ -249,3 +249,100 @@ test('Variation: inverse y = k/x — finds k = x1·y1 then evaluates at x2', () 
     }
     assert.ok(checked > 20, `only ${checked} inverse-variation questions verified`);
 });
+
+// ---- Linear intercepts -----------------------------------------
+test('Linear intercepts: y-intercept is the constant c from y = mx + c', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+        const qs = gen({
+            topic: 'Linear Relationships', difficulty: 'Easy', count: 8, seed,
+            subOpsFilter: { 'Linear Relationships': ['intercepts'] },
+        });
+        for (const q of qs) {
+            if (!/y-intercept/i.test(q.clue)) continue;
+            const m = q.clue.match(/\$y\s*=\s*([^$]+)\$/);
+            if (!m) continue;
+            const expr = m[1];
+            // y-intercept is the constant: extract from "mx + c" or "mx - c"
+            const cm = expr.match(/([+-]\s*\d+)$/);
+            if (!cm) {
+                // y = mx (no constant) → c = 0
+                assert.equal(Number(q.answer), 0,
+                    `seed${seed}: y-intercept of "${expr}" → ${q.answer} (expected 0)`);
+                checked++; continue;
+            }
+            const c = Number(cm[1].replace(/\s/g, ''));
+            assert.equal(Number(q.answer), c,
+                `seed${seed}: y-intercept of "${expr}" → ${q.answer} (expected ${c})`);
+            checked++;
+        }
+    }
+    assert.ok(checked > 10, `only ${checked} y-intercept questions verified`);
+});
+
+test('Linear Hard midpoint: find-other-endpoint B = 2M − A', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+        const qs = gen({
+            topic: 'Linear Relationships', difficulty: 'Hard', count: 8, seed,
+            subOpsFilter: { 'Linear Relationships': ['midpoint'] },
+        });
+        for (const q of qs) {
+            if (!/midpoint/i.test(q.clue) || !/find\s+\$?B\$?/i.test(q.clue)) continue;
+            // Extract midpoint (first coord pair) and A (second coord pair)
+            const mm = q.clue.match(/\$?\((-?\d+),\s*(-?\d+)\)\$?/g);
+            if (!mm || mm.length < 2) continue;
+            const mid = mm[0].match(/-?\d+/g).map(Number);
+            const a = mm[1].match(/-?\d+/g).map(Number);
+            const bx = 2 * mid[0] - a[0], by = 2 * mid[1] - a[1];
+            assert.equal(q.answer, `(${bx},${by})`,
+                `seed${seed}: endpoint → ${q.answer} (expected (${bx},${by}))`);
+            checked++;
+        }
+    }
+    assert.ok(checked > 5, `only ${checked} find-endpoint questions verified`);
+});
+
+// ---- Variation power law ----------------------------------------
+test('Variation Hard: y ∝ x² — finds k from (x1,y1) then evaluates at x2', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 250; seed++) {
+        const qs = gen({
+            topic: 'Variation & Rates of Change', difficulty: 'Hard', count: 8, seed,
+            subOpsFilter: { 'Variation & Rates of Change': ['direct-variation'] },
+        });
+        for (const q of qs) {
+            if (!/x\^2|x\²/i.test(q.clue)) continue;
+            const m = q.clue.match(/\$x\s*=\s*(\d+)\$,\s*\$y\s*=\s*(\d+)\$.*?\$x\s*=\s*(\d+)\$/i);
+            if (!m) continue;
+            const [, x1, y1, x2] = m.map(Number);
+            const k = y1 / (x1 * x1);
+            const expected = k * x2 * x2;
+            assert.ok(approxEqual(Number(q.answer), expected),
+                `seed${seed}: y∝x², (${x1},${y1}) at x=${x2} → ${q.answer} (expected ${expected})`);
+            checked++;
+        }
+    }
+    assert.ok(checked > 5, `only ${checked} power-law questions verified`);
+});
+
+// ---- Props of Figures: quad angle sum = 360 ----------------------
+test('Props of Figures Hard: fourth angle = 360 − sum of other three', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+        const qs = gen({
+            topic: 'Properties of Geometrical Figures', difficulty: 'Hard', count: 8, seed,
+            subOpsFilter: { 'Properties of Geometrical Figures': ['quad-properties'] },
+        });
+        for (const q of qs) {
+            if (!/fourth angle/i.test(q.clue)) continue;
+            const angles = [...q.clue.matchAll(/\$(\d+)°\$/g)].map(m => +m[1]);
+            if (angles.length < 3) continue;
+            const expected = 360 - angles.reduce((a, b) => a + b, 0);
+            assert.equal(Number(q.answer), expected,
+                `seed${seed}: fourth angle → ${q.answer} (expected ${expected})`);
+            checked++;
+        }
+    }
+    assert.ok(checked > 10, `only ${checked} quad-angle questions verified`);
+});

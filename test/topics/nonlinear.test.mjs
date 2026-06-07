@@ -12,6 +12,8 @@ import { gen } from '../_helpers.mjs';
 function classify(eq) {
     if (/xy\s*=/.test(eq)) return 'hyperbola';
     if (/\^x|\^\{-x\}|\^\{?-x/.test(eq)) return 'exponential';
+    if (/x\^3/.test(eq)) return 'cubic';
+    if (/\\sqrt/.test(eq)) return 'square root';
     if (/x\^2|\(x[^)]*\)\^2/.test(eq)) return 'parabola';
     return null;
 }

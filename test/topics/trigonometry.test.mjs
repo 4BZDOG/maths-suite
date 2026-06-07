@@ -52,6 +52,7 @@ test('Trig application: angle of elevation matches atan2(height, distance)', () 
                 subOpsFilter: { Trigonometry: ['applications'] },
             });
             for (const q of qs) {
+                if (!String(q.answer).includes('°')) continue;
                 const ns = nums(q.clue);
                 if (ns.length < 2) continue;
                 const ans = Number(String(q.answer).replace('°', ''));
