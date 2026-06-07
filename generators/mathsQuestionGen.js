@@ -1352,7 +1352,21 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             const worked = `$\\frac{${pct}}{100} \\times ${whole} = ${ans}$`;
             return { clue: ph, answer: String(ans), answerDisplay: String(ans), worked };
         }
-        // typeE 1: sale-price after discount
+        // typeE 1: sale-price after discount OR price increase
+        if (rng() < 0.4) {
+            // price increase variant (adds variety)
+            const pctUp = rc(rng, [10, 20, 25, 50]);
+            const denomUp = { 10: 10, 20: 5, 25: 4, 50: 2 };
+            const wholeUp = ri(rng, 1, 20) * (denomUp[pctUp] || 10);
+            const incAns = Math.round(wholeUp * (1 + pctUp / 100));
+            const phUp = rc(rng, [
+                `A $\\$${wholeUp}$ item is marked up by $${pctUp}\\%$. Find the **new** price.`,
+                `Increase $\\$${wholeUp}$ by $${pctUp}\\%$.`,
+                `A price of $\\$${wholeUp}$ rises by $${pctUp}\\%$. What is the **new** price?`,
+            ]);
+            const incAmt = Math.round(wholeUp * pctUp / 100);
+            return { clue: phUp, answer: String(incAns), answerDisplay: `$${money(incAns)}`, worked: `$${wholeUp} + ${incAmt} = ${incAns}$` };
+        }
         const pctD = rc(rng, [10, 20, 25, 50]);
         const denomD = { 10: 10, 20: 5, 25: 4, 50: 2 };
         const wholeD = ri(rng, 1, 20) * (denomD[pctD] || 10);
@@ -1577,19 +1591,19 @@ function _genAlgebraCore(rng, diff, allowedOps) {
     }
     if (diff === 'Medium') {
         if (type === 0) {
-            const a = ri(rng, 2, 8), ans = ri(rng, 1, 15), b = ri(rng, 1, 25);
+            const a = ri(rng, 2, 9), ans = ri(rng, 2, 18), b = ri(rng, 3, 30);
             const worked = `$${a}${v} = ${a * ans + b} - ${b} = ${a * ans}$, so $${v} = ${ans}$`;
             return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${a * ans + b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked };
         }
         if (type === 1) {
-            const a = ri(rng, 2, 8), ans = ri(rng, 2, 15), b = ri(rng, 1, 15);
+            const a = ri(rng, 2, 9), ans = ri(rng, 2, 18), b = ri(rng, 3, 20);
             const worked = `$${a}${v} = ${a * ans - b} + ${b} = ${a * ans}$, so $${v} = ${ans}$`;
             return { clue: `${solveVerb}\n$${a}${v} - ${b} = ${a * ans - b}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked };
         }
         if (type === 2) {
-            // variables on both sides (simple coefficients)
-            const ans = ri(rng, 1, 8);
-            const a = ri(rng, 2, 5), c = ri(rng, 1, a - 1), b = ri(rng, 1, 15);
+            // variables on both sides (moderate coefficients)
+            const ans = ri(rng, 1, 10);
+            const a = ri(rng, 3, 7), c = ri(rng, 1, a - 1), b = ri(rng, 2, 20);
             const d = (a - c) * ans + b;
             return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${c}${v} + ${d}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked: `$${a - c}${v} = ${d} - ${b} = ${d - b}$. $${v} = ${d - b} \\div ${a - c} = ${ans}$` };
         }
