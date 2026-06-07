@@ -1542,9 +1542,9 @@ function _genAlgebraCore(rng, diff, allowedOps) {
                         `When $${a}$ is subtracted from a number, the result is $${ans - a}$. What is the number?`,
                         `A number minus $${a}$ gives $${ans - a}$. Find the number.`,
                     ]);
-                    return { clue, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+                    return { clue, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked: `$${v} = ${ans - a} + ${a} = ${ans}$` };
                 }
-                return { clue: `${solveVerb}\n$${v} - ${a} = ${ans - a}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+                return { clue: `${solveVerb}\n$${v} - ${a} = ${ans - a}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked: `$${v} = ${ans - a} + ${a} = ${ans}$` };
             }
             if (rng() < 0.35) {
                 const clue = rc(rng, [
@@ -1553,9 +1553,9 @@ function _genAlgebraCore(rng, diff, allowedOps) {
                     `A number plus $${a}$ gives $${ans + a}$. Find the number.`,
                     `Think of a number. Add $${a}$. The answer is $${ans + a}$. What is the number?`,
                 ]);
-                return { clue, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+                return { clue, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked: `$${v} = ${ans + a} - ${a} = ${ans}$` };
             }
-            return { clue: `${solveVerb}\n$${v} + ${a} = ${ans + a}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            return { clue: `${solveVerb}\n$${v} + ${a} = ${ans + a}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked: `$${v} = ${ans + a} - ${a} = ${ans}$` };
         }
         if (type === 1) {
             const a = ri(rng, 2, 12), ans = ri(rng, 2, 15);
@@ -1566,9 +1566,9 @@ function _genAlgebraCore(rng, diff, allowedOps) {
                     `$${a}$ times a number equals $${a * ans}$. Find the number.`,
                     `Think of a number. Multiply it by $${a}$. The answer is $${a * ans}$. What is the number?`,
                 ]);
-                return { clue, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+                return { clue, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked: `$${v} = ${a * ans} \\div ${a} = ${ans}$` };
             }
-            return { clue: `${solveVerb}\n$${a}${v} = ${a * ans}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            return { clue: `${solveVerb}\n$${a}${v} = ${a * ans}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked: `$${v} = ${a * ans} \\div ${a} = ${ans}$` };
         }
         // type 2: simple two-step ax + b = c
         const a2 = ri(rng, 2, 4), ans2 = ri(rng, 1, 8), b2 = ri(rng, 1, 10);
@@ -1591,7 +1591,7 @@ function _genAlgebraCore(rng, diff, allowedOps) {
             const ans = ri(rng, 1, 8);
             const a = ri(rng, 2, 5), c = ri(rng, 1, a - 1), b = ri(rng, 1, 15);
             const d = (a - c) * ans + b;
-            return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${c}${v} + ${d}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${c}${v} + ${d}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked: `$${a - c}${v} = ${d} - ${b} = ${d - b}$. $${v} = ${d - b} \\div ${a - c} = ${ans}$` };
         }
         if (type === 3) {
             // word-problem solve (linear)
@@ -1602,7 +1602,7 @@ function _genAlgebraCore(rng, diff, allowedOps) {
                 `I think of a number, multiply it by $${a3}$, then add $${b3}$. The result is $${R3}$. What is the number?`,
                 `When a number is multiplied by $${a3}$ and $${b3}$ is added, the answer is $${R3}$. Find the number.`,
             ]);
-            return { clue: wp3, answer: String(ans3), answerDisplay: `$${v} = ${ans3}$` };
+            return { clue: wp3, answer: String(ans3), answerDisplay: `$${v} = ${ans3}$`, worked: `$${a3}${v} + ${b3} = ${R3}$. $${a3}${v} = ${R3} - ${b3} = ${a3 * ans3}$. $${v} = ${a3 * ans3} \\div ${a3} = ${ans3}$` };
         }
         // type 4: substitution y = ax + b
         const [fv, iv] = rc(rng, SUBST_PAIRS);
@@ -1614,7 +1614,7 @@ function _genAlgebraCore(rng, diff, allowedOps) {
             `Substitute $${iv} = ${n4}$ into $${fv} = ${a4}${iv} + ${b4}$`,
             `Find the value of $${fv}$ if $${fv} = ${a4}${iv} + ${b4}$ and $${iv} = ${n4}$`,
         ]);
-        return { clue: subVerb, answer: String(a4 * n4 + b4) };
+        return { clue: subVerb, answer: String(a4 * n4 + b4), worked: `$${fv} = ${a4}(${n4}) + ${b4} = ${a4 * n4} + ${b4} = ${a4 * n4 + b4}$` };
     }
     // Hard
     if (type === 0) {
@@ -1625,21 +1625,21 @@ function _genAlgebraCore(rng, diff, allowedOps) {
         if (rng() < 0.3) {
             const ab = ri(rng, 1, 8);
             const db = a * ab + (a - c) * ans;
-            return { clue: `${solveVerb}\n$${a}(${v} + ${ab}) = ${c}${v} + ${db}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+            return { clue: `${solveVerb}\n$${a}(${v} + ${ab}) = ${c}${v} + ${db}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked: `$${a}${v} + ${a * ab} = ${c}${v} + ${db}$. $${a - c}${v} = ${db} - ${a * ab} = ${db - a * ab}$. $${v} = ${db - a * ab} \\div ${a - c} = ${ans}$` };
         }
-        return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${c}${v} + ${d}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$` };
+        return { clue: `${solveVerb}\n$${a}${v} + ${b} = ${c}${v} + ${d}$`, answer: String(ans), answerDisplay: `$${v} = ${ans}$`, worked: `$${a - c}${v} = ${d} - ${b} = ${d - b}$. $${v} = ${d - b} \\div ${a - c} = ${ans}$` };
     }
     if (type === 1) {
         // bracket equation: a(v + b) = c
         const a1 = ri(rng, 2, 6), ans1 = ri(rng, 1, 10), b1 = ri(rng, 1, 8);
         const rhs = a1 * (ans1 + b1);
-        return { clue: `${solveVerb}\n$${a1}(${v} + ${b1}) = ${rhs}$`, answer: String(ans1), answerDisplay: `$${v} = ${ans1}$` };
+        return { clue: `${solveVerb}\n$${a1}(${v} + ${b1}) = ${rhs}$`, answer: String(ans1), answerDisplay: `$${v} = ${ans1}$`, worked: `$${v} + ${b1} = ${rhs} \\div ${a1} = ${ans1 + b1}$. $${v} = ${ans1 + b1} - ${b1} = ${ans1}$` };
     }
     if (type === 2) {
         // negative solution: av + ab = 0
         const a2 = ri(rng, 2, 7), bMult = ri(rng, 1, 12);
         const ans2 = -bMult;
-        return { clue: `${solveVerb}\n$${a2}${v} + ${a2 * bMult} = 0$`, answer: String(ans2), answerDisplay: `$${v} = ${ans2}$` };
+        return { clue: `${solveVerb}\n$${a2}${v} + ${a2 * bMult} = 0$`, answer: String(ans2), answerDisplay: `$${v} = ${ans2}$`, worked: `$${a2}${v} = 0 - ${a2 * bMult} = -${a2 * bMult}$. $${v} = -${a2 * bMult} \\div ${a2} = ${ans2}$` };
     }
     // type 3: quadratic substitution
     const [fv, iv] = rc(rng, SUBST_PAIRS);
@@ -1651,7 +1651,7 @@ function _genAlgebraCore(rng, diff, allowedOps) {
         `Calculate $${fv}$ given $${fv} = ${coeff}${iv}^2 + ${b3}$ and $${iv} = ${n3}$`,
         `Substitute $${iv} = ${n3}$ into $${fv} = ${coeff}${iv}^2 + ${b3}$`,
     ]);
-    return { clue: subVerb, answer: String(a3 * n3 * n3 + b3) };
+    return { clue: subVerb, answer: String(a3 * n3 * n3 + b3), worked: `$${fv} = ${coeff}(${n3})^2 + ${b3} = ${a3 * n3 * n3} + ${b3} = ${a3 * n3 * n3 + b3}$` };
 }
 
 // ============================================================
@@ -1940,7 +1940,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `A product costs $\\$${price}$ before GST. Find the total price including $10\\%$ GST.`,
             ]);
             const gstTotal = round(price * 1.1, 2);
-            return { clue: ph, answer: String(gstTotal), answerDisplay: `$${money(gstTotal)}` };
+            return { clue: ph, answer: String(gstTotal), answerDisplay: `$${money(gstTotal)}`, worked: `$\\$${price} \\times 1.1 = \\$${gstTotal}$` };
         }
         // type 2: markup → selling price (easy numbers)
         const cost2 = ri(rng, 2, 10) * 10;
@@ -1951,7 +1951,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Find the selling price of a $\\$${cost2}$ item after a $${pct2}\\%$ mark-up.`,
             `A shopkeeper buys an item for $\\$${cost2}$ and adds $${pct2}\\%$ profit. What is the selling price?`,
         ]);
-        return { clue: ph2, answer: String(sell2), answerDisplay: `$${money(sell2)}` };
+        return { clue: ph2, answer: String(sell2), answerDisplay: `$${money(sell2)}`, worked: `$\\$${cost2} \\times ${1 + pct2 / 100} = \\$${sell2}$` };
     }
     if (diff === 'Medium') {
         if (type === 0) {
@@ -1964,7 +1964,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `An item costs $\\$${cost}$. Calculate the selling price after a $${pctProfit}\\%$ mark-up.`,
                 `Determine the selling price of a $\\$${cost}$ item with a $${pctProfit}\\%$ profit margin.`,
             ]);
-            return { clue: ph, answer: String(sell), answerDisplay: `$${money(sell)}` };
+            return { clue: ph, answer: String(sell), answerDisplay: `$${money(sell)}`, worked: `$\\$${cost} \\times ${1 + pctProfit / 100} = \\$${sell}$` };
         }
         if (type === 1) {
             const P = ri(rng, 2, 12) * 1000, r = rc(rng, [4, 5, 6, 8, 10]), t = ri(rng, 1, 4);
@@ -1991,7 +1991,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `An item originally priced at $\\$${orig}$ is on sale at $${pctOff}\\%$ off. What is the sale price?`,
                 `Calculate the sale price of a $\\$${orig}$ item after a $${pctOff}\\%$ discount.`,
             ]);
-            return { clue: ph, answer: String(sale), answerDisplay: `$${money(sale)}` };
+            return { clue: ph, answer: String(sale), answerDisplay: `$${money(sale)}`, worked: `$\\$${orig} \\times ${1 - pctOff / 100} = \\$${sale}$` };
         }
         // type 3: GST-exclusive — find pre-GST price
         const gstInclusive = ri(rng, 5, 30) * 11;
@@ -2002,7 +2002,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `An item costs $\\$${gstInclusive}$ including GST. What was the price *before* GST?`,
             `The GST-inclusive price is $\\$${gstInclusive}$. Calculate the pre-GST price.`,
         ]);
-        return { clue: ph3, answer: String(preGst), answerDisplay: `$${money(preGst)}` };
+        return { clue: ph3, answer: String(preGst), answerDisplay: `$${money(preGst)}`, worked: `$\\$${gstInclusive} \\div 1.1 = \\$${preGst}$` };
     }
     // Hard
     if (type === 0) {
@@ -2018,7 +2018,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `Calculate the total amount after compound interest: $\\$${P2}$ at $${r2}\\%$ p.a. for $${t2}$ year${t2 > 1 ? 's' : ''}.${pf}`,
                 `$\\$${P2}$ is invested at $${r2}\\%$ p.a. compound interest for $${t2}$ year${t2 > 1 ? 's' : ''}. Find the total amount.${pf}`,
             ]);
-            return { clue: ph, answer: String(A2), answerDisplay: `$${money(A2)}` };
+            return { clue: ph, answer: String(A2), answerDisplay: `$${money(A2)}`, worked: `$A = ${P2}(1 + ${r2 / 100})^{${t2}} = ${P2} \\times ${1 + r2 / 100}^{${t2}} = \\$${A2}$` };
         }
         const fOn = opts.showFormulas?.['compound-interest']?.[diff.toLowerCase()];
         const pf = fOn ? ' Use $A = P(1+r)^n$.' : '';
@@ -2027,7 +2027,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `$\\$${P}$ is invested at $${r}\\%$ p.a. compound interest for $${t}$ year${t > 1 ? 's' : ''}. Determine the total amount.${pf}`,
             `Find the final value of $\\$${P}$ compounded at $${r}\\%$ p.a. for $${t}$ year${t > 1 ? 's' : ''}.${pf}`,
         ]);
-        return { clue: ph, answer: String(A), answerDisplay: `$${money(A)}` };
+        return { clue: ph, answer: String(A), answerDisplay: `$${money(A)}`, worked: `$A = ${P}(1 + ${r / 100})^{${t}} = ${P} \\times ${1 + r / 100}^{${t}} = \\$${A}$` };
     }
     if (type === 1) {
         // percentage profit given cost and selling price
@@ -2039,7 +2039,7 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Find the *percentage profit*: cost $\\$${cost}$, selling price $\\$${sell}$.`,
             `Determine the *profit percentage* given a cost of $\\$${cost}$ and a selling price of $\\$${sell}$.`,
         ]);
-        return { clue: ph, answer: String(pct), answerDisplay: `${pct}%` };
+        return { clue: ph, answer: String(pct), answerDisplay: `${pct}%`, worked: `$\\text{Profit} = \\$${sell} - \\$${cost} = \\$${sell - cost}$. $\\frac{${sell - cost}}{${cost}} \\times 100 = ${pct}\\%$` };
     }
     if (type === 2) {
         // simple interest with harder numbers and a wider rate pool
@@ -2069,14 +2069,14 @@ function _genFinancialCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `An investment of $\\$${P}$ earns $\\$${I}$ *simple interest* over ${yrs}. Find the annual interest *rate*.`,
                 `$\\$${P}$ earns $\\$${I}$ in *simple interest* after ${yrs}. What is the annual *rate*?`,
             ]);
-            return { clue: ph, answer: String(r), answerDisplay: `${r}%` };
+            return { clue: ph, answer: String(r), answerDisplay: `${r}%`, worked: `$r = \\frac{${I}}{${P} \\times ${t}} \\times 100 = ${r}\\%$` };
         }
         // find the time — clue carries the rate but no "for N years" phrasing
         const ph = rc(rng, [
             `How many *years* will it take for $\\$${P}$ at $${r}\\%$ p.a. *simple interest* to earn $\\$${I}$?`,
             `$\\$${P}$ is invested at $${r}\\%$ p.a. *simple interest*. Find the *time* (in years) needed to earn $\\$${I}$.`,
         ]);
-        return { clue: ph, answer: String(t), answerDisplay: `${t} years` };
+        return { clue: ph, answer: String(t), answerDisplay: `${t} years`, worked: `$n = \\frac{${I}}{${P} \\times ${r / 100}} = \\frac{${I}}{${P * r / 100}} = ${t}$ years` };
     }
 }
 
@@ -2118,7 +2118,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                     `A parallelogram has base $${base}$ ${u} and height $${height}$ ${u}. Find its area.${pf}`,
                     `Calculate the *area* of a parallelogram: base $${base}$ ${u}, height $${height}$ ${u}.${pf}`,
                 ]);
-                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, diagram: { type: 'parallelogram', base, height, missing: 'area' } };
+                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, worked: `$A = ${base} \\times ${height} = ${ans}$ ${u}²`, diagram: { type: 'parallelogram', base, height, missing: 'area' } };
             }
             if (shapeForm === 2) {
                 const a = ri(rng, 2, 10) * 2, bTrap = ri(rng, a / 2 + 2, a + 8), height = ri(rng, 2, 10);
@@ -2132,7 +2132,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                     `Calculate the *area* of a trapezium: parallel sides $${a}$ ${u} and $${bTrap}$ ${u}, height $${height}$ ${u}.${pf}`,
                 ]);
                 const diagA = Math.min(a, bTrap), diagB = Math.max(a, bTrap);
-                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, diagram: { type: 'trapezium', a: diagA, b: diagB, height, missing: 'area' } };
+                return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, worked: `$A = \\frac{1}{2} \\times (${a} + ${bTrap}) \\times ${height} = \\frac{1}{2} \\times ${a + bTrap} \\times ${height} = ${ans}$ ${u}²`, diagram: { type: 'trapezium', a: diagA, b: diagB, height, missing: 'area' } };
             }
             const l = ri(rng, 2, 15), w = ri(rng, 2, 12);
             const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
@@ -2143,7 +2143,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its area.${pf}`,
                 `What is the *area* of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?${pf}`,
             ]);
-            return { clue: ph, answer: String(l * w), answerDisplay: `${l * w} ${u}²`, unit: `${u}²`, diagram: { type: 'rectangle', l, w, missing: 'area' } };
+            return { clue: ph, answer: String(l * w), answerDisplay: `${l * w} ${u}²`, unit: `${u}²`, worked: `$A = ${l} \\times ${w} = ${l * w}$ ${u}²`, diagram: { type: 'rectangle', l, w, missing: 'area' } };
         }
         if (type === 2) {
             const a = ri(rng, 25, 155);
@@ -2155,14 +2155,14 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                     `Angles on a straight line sum to 180°. If one angle is $${a}$°, find the other.`,
                     `What angle is supplementary to $${a}$°?`,
                 ]);
-                return { clue: ph, answer: String(x), answerDisplay: `${x}°`, unit: '°', diagram: { type: 'straight-line-angles', a } };
+                return { clue: ph, answer: String(x), answerDisplay: `${x}°`, unit: '°', worked: `$x = 180 - ${a} = ${x}$°`, diagram: { type: 'straight-line-angles', a } };
             }
             const ph = rc(rng, [
                 `Two straight lines intersect. One angle is $${a}$°. State the **vertically opposite** angle.`,
                 `Find the angle **vertically opposite** to $${a}$°.`,
                 `Two lines cross. One angle measures $${a}$°. What is the **vertically opposite** angle?`,
             ]);
-            return { clue: ph, answer: String(a), answerDisplay: `${a}°`, unit: '°', diagram: { type: 'vertically-opposite', a } };
+            return { clue: ph, answer: String(a), answerDisplay: `${a}°`, unit: '°', worked: `Vertically opposite angles are equal, so $x = ${a}$°`, diagram: { type: 'vertically-opposite', a } };
         }
         if (type === 1) {
             const l = ri(rng, 3, 15), w = ri(rng, 2, l);
@@ -2175,7 +2175,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `A rectangle has length $${l}$ ${u} and width $${w}$ ${u}. Determine its perimeter.${pf}`,
                 `What is the *perimeter* of a rectangle measuring $${l}$ ${u} by $${w}$ ${u}?${pf}`,
             ]);
-            return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} ${u}`, diagram: { type: 'rectangle', l, w, missing: 'perimeter' } };
+            return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} ${u}`, worked: `$P = 2(${l} + ${w}) = 2 \\times ${l + w} = ${2 * (l + w)}$ ${u}`, diagram: { type: 'rectangle', l, w, missing: 'perimeter' } };
         }
         // type 3: find length given area and width (no diagram)
         const w2 = ri(rng, 2, 10), l2 = ri(rng, w2 + 1, 15);
@@ -2187,7 +2187,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Find the length of a rectangle with area $${area2}$ ${u2}² and width $${w2}$ ${u2}.`,
             `A rectangle with area $${area2}$ ${u2}² has a width of $${w2}$ ${u2}. Determine its length.`,
         ]);
-        return { clue: ph2, answer: String(l2), answerDisplay: `${l2} ${u2}` };
+        return { clue: ph2, answer: String(l2), answerDisplay: `${l2} ${u2}`, worked: `$l = ${area2} \\div ${w2} = ${l2}$ ${u2}` };
     }
     if (diff === 'Medium') {
         if (type === 0) {
@@ -2202,7 +2202,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `Calculate the *area* of a triangle: base $${b}$ ${u}, height $${h}$ ${u}.${pf}`,
                 `A triangle has base $${b}$ ${u} and height $${h}$ ${u}. Determine its area.${pf}`,
             ]);
-            return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, diagram: { type: 'triangle-area', base: b, height: h } };
+            return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, worked: `$A = \\frac{1}{2} \\times ${b} \\times ${h} = ${ans}$ ${u}²`, diagram: { type: 'triangle-area', base: b, height: h } };
         }
         if (type === 1) {
             const triples = [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17], [9, 12, 15], [7, 24, 25]];
@@ -2232,7 +2232,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `Calculate the **third** angle of a triangle given angles of $${a1}$° and $${a2}$°.`,
                 `Two angles of a triangle are $${a1}$° and $${a2}$°. What is the **third** angle?`,
             ]);
-            return { clue: ph, answer: String(a3), answerDisplay: `${a3}°`, diagram: { type: 'triangle-angles', a1, a2, a3, missing: 'a3' } };
+            return { clue: ph, answer: String(a3), answerDisplay: `${a3}°`, worked: `$x = 180 - ${a1} - ${a2} = ${a3}$°`, diagram: { type: 'triangle-angles', a1, a2, a3, missing: 'a3' } };
         }
         if (type === 3) {
             const a = rc(rng, [40, 50, 55, 60, 65, 70, 80, 110, 120]);
@@ -2242,7 +2242,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `Co-interior angles between parallel lines sum to 180°. One angle is $${a}$°. Find the *other*.`,
                 `A transversal crosses two parallel lines. If one co-interior angle is $${a}$°, find the *missing* angle.`,
             ]);
-            return { clue: ph, answer: String(x), answerDisplay: `${x}°`, diagram: { type: 'parallel-transversal', a, angleType: 'co-interior' } };
+            return { clue: ph, answer: String(x), answerDisplay: `${x}°`, worked: `Co-interior angles sum to $180$°, so $x = 180 - ${a} = ${x}$°`, diagram: { type: 'parallel-transversal', a, angleType: 'co-interior' } };
         }
         if (type === 4) {
             const a = rc(rng, [40, 50, 55, 60, 65, 70, 80, 110, 120]);
@@ -2253,14 +2253,14 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                     `Corresponding angles are equal. One is $${a}$°. Find the *other* corresponding angle.`,
                     `State the *corresponding* angle to $${a}$° on a pair of parallel lines.`,
                 ]);
-                return { clue: ph, answer: String(a), answerDisplay: `${a}°`, diagram: { type: 'parallel-transversal', a, angleType: 'corresponding' } };
+                return { clue: ph, answer: String(a), answerDisplay: `${a}°`, worked: `Corresponding angles are equal, so $x = ${a}$°`, diagram: { type: 'parallel-transversal', a, angleType: 'corresponding' } };
             }
             const ph = rc(rng, [
                 `Two parallel lines are cut by a transversal. An *alternate* angle is $${a}$°. Find the equal angle.`,
                 `Alternate angles are equal. One measures $${a}$°. Find its *alternate* angle.`,
                 `State the *alternate* angle to $${a}$° on a pair of parallel lines.`,
             ]);
-            return { clue: ph, answer: String(a), answerDisplay: `${a}°`, diagram: { type: 'parallel-transversal', a, angleType: 'alternate' } };
+            return { clue: ph, answer: String(a), answerDisplay: `${a}°`, worked: `Alternate angles are equal, so $x = ${a}$°`, diagram: { type: 'parallel-transversal', a, angleType: 'alternate' } };
         }
         if (type === 5) {
             // find area of rectangle given perimeter and width (no diagram)
@@ -2273,7 +2273,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `Find the area of a rectangle with perimeter $${P3}$ ${u3} and width $${w3}$ ${u3}.`,
                 `A rectangle with perimeter $${P3}$ ${u3} has a width of $${w3}$ ${u3}. What is its area?`,
             ]);
-            return { clue: ph3, answer: String(l3 * w3), answerDisplay: `${l3 * w3} ${u3}²` };
+            return { clue: ph3, answer: String(l3 * w3), answerDisplay: `${l3 * w3} ${u3}²`, worked: `$l = ${P3} \\div 2 - ${w3} = ${l3}$. $A = ${l3} \\times ${w3} = ${l3 * w3}$ ${u3}²` };
         }
         // type 6: parallelogram — find base given area and height (inverse)
         const h6 = ri(rng, 3, 12), b6 = ri(rng, 4, 15);
@@ -2284,7 +2284,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `The area of a parallelogram is $${area6}$ ${u6}² and its height is $${h6}$ ${u6}. Calculate the base.`,
             `Find the base of a parallelogram with area $${area6}$ ${u6}² and height $${h6}$ ${u6}.`,
         ]);
-        return { clue: ph6, answer: String(b6), answerDisplay: `${b6} ${u6}` };
+        return { clue: ph6, answer: String(b6), answerDisplay: `${b6} ${u6}`, worked: `$b = ${area6} \\div ${h6} = ${b6}$ ${u6}` };
     }
     // Hard
     if (type === 0) {
@@ -2341,7 +2341,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Find the *co-interior* angle to $${a}$° when two parallel lines are cut by a transversal.`,
             `Co-interior angles sum to 180°. One angle measures $${a}$°. Find the *other*.`,
         ]);
-        return { clue: ph, answer: String(x), answerDisplay: `${x}°`, diagram: { type: 'parallel-transversal', a, angleType: 'co-interior' } };
+        return { clue: ph, answer: String(x), answerDisplay: `${x}°`, worked: `Co-interior angles sum to $180$°, so $x = 180 - ${a} = ${x}$°`, diagram: { type: 'parallel-transversal', a, angleType: 'co-interior' } };
     }
     if (type === 4) {
         const a = rc(rng, [38, 47, 53, 61, 74, 82, 119, 134]);
@@ -2352,14 +2352,14 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `State the *corresponding* angle to $${a}$° on a pair of parallel lines.`,
                 `Corresponding angles are equal. One is $${a}$°. What is the *other* corresponding angle?`,
             ]);
-            return { clue: ph, answer: String(a), answerDisplay: `${a}°`, diagram: { type: 'parallel-transversal', a, angleType: 'corresponding' } };
+            return { clue: ph, answer: String(a), answerDisplay: `${a}°`, worked: `Corresponding angles are equal, so $x = ${a}$°`, diagram: { type: 'parallel-transversal', a, angleType: 'corresponding' } };
         }
         const ph = rc(rng, [
             `Two parallel lines are cut by a transversal. An *alternate* angle is $${a}$°. Find the equal angle.`,
             `State the *alternate* angle to $${a}$° on a pair of parallel lines.`,
             `Alternate angles are equal. One measures $${a}$°. What is its *alternate* angle?`,
         ]);
-        return { clue: ph, answer: String(a), answerDisplay: `${a}°`, diagram: { type: 'parallel-transversal', a, angleType: 'alternate' } };
+        return { clue: ph, answer: String(a), answerDisplay: `${a}°`, worked: `Alternate angles are equal, so $x = ${a}$°`, diagram: { type: 'parallel-transversal', a, angleType: 'alternate' } };
     }
     if (type === 2) {
         // circumference — including from diameter
@@ -2403,7 +2403,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Determine the radius of a circle with area $${area3}$ ${u3}². Use $\\pi \\approx 3.14$.`,
             `Find the radius of a circle whose area is $${area3}$ ${u3}². Use $\\pi \\approx 3.14$.`,
         ]);
-        return { clue: ph3, answer: String(r3), answerDisplay: `${r3} ${u3}` };
+        return { clue: ph3, answer: String(r3), answerDisplay: `${r3} ${u3}`, worked: `$r^2 = ${area3} \\div 3.14 = ${r3 * r3}$, so $r = ${r3}$ ${u3}` };
     }
     if (type === 6) {
         // find triangle height given area and base
@@ -2419,7 +2419,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Find the *height* of a triangle with area $${area4}$ ${u4}² and base $${b4}$ ${u4}.${pf4}`,
             `A triangle with base $${b4}$ ${u4} has area $${area4}$ ${u4}². Determine the *perpendicular height*.${pf4}`,
         ]);
-        return { clue: ph4, answer: String(h4), answerDisplay: `${h4} ${u4}` };
+        return { clue: ph4, answer: String(h4), answerDisplay: `${h4} ${u4}`, worked: `$h = 2 \\times ${area4} \\div ${b4} = ${2 * area4} \\div ${b4} = ${h4}$ ${u4}` };
     }
     // type 7: composite shape — rectangle + triangle or two rectangles
     const compForm = ri(rng, 0, 1);
@@ -2434,7 +2434,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `Find the *area* of an L-shape made from rectangles measuring $${w1}$ ${u} × $${h1}$ ${u} and $${w2}$ ${u} × $${h2}$ ${u}.`,
             `Calculate the total *area* of a composite shape: rectangle $${w1}$ × $${h1}$ ${u} joined with rectangle $${w2}$ × $${h2}$ ${u}.`,
         ]);
-        return { clue: ph, answer: String(area), answerDisplay: `${area} ${u}²` };
+        return { clue: ph, answer: String(area), answerDisplay: `${area} ${u}²`, worked: `$A = ${w1} \\times ${h1} + ${w2} \\times ${h2} = ${w1 * h1} + ${w2 * h2} = ${area}$ ${u}²` };
     }
     // rectangle + right triangle on top
     const rW = ri(rng, 4, 10), rH = ri(rng, 3, 8);
@@ -2447,7 +2447,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         `Find the *area* of a composite figure: a $${rW}$ × $${rH}$ ${u} rectangle plus a triangle with base $${rW}$ ${u} and height $${tH}$ ${u}.`,
         `Calculate the total *area*: rectangle $${rW}$ × $${rH}$ ${u}, triangle base $${rW}$ ${u} height $${tH}$ ${u}.`,
     ]);
-    return { clue: ph, answer: String(area), answerDisplay: `${area} ${u}²` };
+    return { clue: ph, answer: String(area), answerDisplay: `${area} ${u}²`, worked: `$A = ${rW} \\times ${rH} + \\frac{1}{2} \\times ${rW} \\times ${tH} = ${rW * rH} + ${(rW * tH) / 2} = ${area}$ ${u}²` };
 }
 
 // ============================================================
@@ -2718,7 +2718,7 @@ function _genGeometryS5Op(rng, diff, op) {
                 `Calculate the *total surface area* of a rectangular box with dimensions $${l}$ ${u} × $${w}$ ${u} × $${h}$ ${u}.`,
                 `A rectangular prism has dimensions $${l}$ ${u} by $${w}$ ${u} by $${h}$ ${u}. Find its surface area.`,
             ]);
-            return { clue: ph, answer: String(sa), answerDisplay: `${sa} ${u}²` };
+            return { clue: ph, answer: String(sa), answerDisplay: `${sa} ${u}²`, worked: `$SA = 2(${l} \\times ${w} + ${l} \\times ${h} + ${w} \\times ${h}) = 2(${l*w} + ${l*h} + ${w*h}) = ${sa}$ ${u}²` };
         }
         // Cylinder: SA = 2πr² + 2πrh
         const r = ri(rng, 2, 8), h = ri(rng, 3, 12);
@@ -3167,7 +3167,7 @@ function genNonLinear(rng, diff, allowedOps) {
         ]);
         const answerDisplay = `Vertex $(${h2}, ${k2})$, opens ${opens}`;
         const answer = `(${h2},${k2})${opens[0].toUpperCase()}`;
-        return { clue: ph, answer, answerDisplay, diagram: { type: 'parabola', h: h2, k: k2, a } };
+        return { clue: ph, answer, answerDisplay, diagram: { type: 'parabola', h: h2, k: k2, a }, worked: `Vertex $= (${h2}, ${k2})$, $a ${a > 0 ? '>' : '<'} 0$ so opens ${opens}` };
     }
 
     if (op === 'identify-graph') {
@@ -3218,7 +3218,8 @@ function genNonLinear(rng, diff, allowedOps) {
             `Name the graph: $${eq}$.`,
             `Classify the relationship: $${eq}$.`,
         ]);
-        return { clue: ph, answer: type, answerDisplay: type };
+        const hints = { parabola: '$x^2$ term', exponential: '$a^x$ form', hyperbola: '$xy = k$ form', cubic: '$x^3$ term', 'square root': '$\\sqrt{x}$ form' };
+        return { clue: ph, answer: type, answerDisplay: type, worked: `${hints[type]} indicates a ${type}` };
     }
 
     return null;
@@ -4584,6 +4585,7 @@ function genPropsOfFigures(rng, diff, allowedOps) {
                 clue: `Two triangles share ${t.desc}. State the *congruence test* that applies.`,
                 answer: t.name,
                 answerDisplay: t.name,
+                worked: `${t.desc} → ${t.name}`,
             };
         }
         if (diff === 'Medium') {
@@ -4668,7 +4670,7 @@ How many pieces of information does ${t.name} require?`,
     ];
     if (diff === 'Easy') {
         const q = rc(rng, quads);
-        return { clue: `Name the quadrilateral with ${q.desc}.`, answer: q.name, answerDisplay: q.name };
+        return { clue: `Name the quadrilateral with ${q.desc}.`, answer: q.name, answerDisplay: q.name, worked: `${q.desc} → ${q.name}` };
     }
     if (diff === 'Medium') {
         const q = rc(rng, quads);
