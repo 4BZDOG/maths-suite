@@ -18,8 +18,7 @@ test('Ratios & Rates: scale-drawing answer = drawn-cm × (real-per-cm)', () => {
             subOpsFilter: { 'Ratios & Rates': ['unit-rate'] },
         });
         for (const q of qs) {
-            const m = q.clue.match(/\$1\$\s*cm\s*[=$ ]+\s*\$(\d+)\$\s*m.*?\$(\d+)\$\s*cm/i)
-                  ||  q.clue.match(/\$1\$\s*cm represents\s*\$(\d+)\$\s*m.*?\$(\d+)\$\s*cm/i);
+            const m = q.clue.match(/\$?1\$?\s*cm\s*(?:\$?\s*=\s*\$?\s*|represents\s*\$?)(\d+)\$?\s*m.*?\$?(\d+)\$?\s*cm/i);
             if (!m) continue;
             const per = +m[1], drawn = +m[2];
             assert.equal(Number(q.answer), per * drawn,
@@ -122,7 +121,7 @@ test('Ratios & Rates: speed / distance / time, simplify, equivalent answers matc
                 // --- Speed: "$d$ km in $t$ hours" → d/t
                 if (/Find its speed|Find the speed|covers|travels/i.test(c)
                     && /Find (?:its )?speed/i.test(c)) {
-                    const m = c.match(/\$(\d+)\$ km in \$(\d+)\$/);
+                    const m = c.match(/\$(\d+)\$ km in \$(\d+(?:\.\d+)?)\$/);
                     if (m) {
                         const d = +m[1], t = +m[2];
                         const exp = d / t;
@@ -131,9 +130,9 @@ test('Ratios & Rates: speed / distance / time, simplify, equivalent answers matc
                         checked++; continue;
                     }
                 }
-                // --- Distance: speed × time
-                if (/Find the distance|How far/i.test(c) && /at \$(\d+)\$.*for \$(\d+)\$|at \$(\d+)\$.*in \$(\d+)\$/i.test(c)) {
-                    const m = c.match(/at \$(\d+)\$.*?\$(\d+)\$/);
+                // --- Distance: speed × time (not combined-speed)
+                if (/Find the distance|How far/i.test(c) && !/opposite|same direction/i.test(c)) {
+                    const m = c.match(/at \$(\d+)\$.*?for \$(\d+(?:\.\d+)?)\$/);
                     if (m) {
                         const speed = +m[1], time = +m[2];
                         const exp = speed * time;
@@ -143,7 +142,7 @@ test('Ratios & Rates: speed / distance / time, simplify, equivalent answers matc
                     }
                 }
                 // --- Time: distance / speed
-                if (/How long|Find the.*time|time taken/i.test(c) && /travels?.*\$(\d+)\$ km at \$(\d+)\$/i.test(c)) {
+                if (/How long|Find the.*time|time taken/i.test(c)) {
                     const m = c.match(/\$(\d+)\$ km at \$(\d+)\$/);
                     if (m) {
                         const dist = +m[1], speed = +m[2];

@@ -3195,170 +3195,344 @@ function genProbability(rng, diff, allowedOps) {
 
     if (op === 'theoretical') {
         if (diff === 'Easy') {
-            const fav = ri(rng, 1, 4), other = ri(rng, 2, 6);
-            const total = fav + other;
-            const colour = rc(rng, ['red', 'blue', 'green', 'yellow']);
-            const other_colour = rc(rng, ['blue', 'green', 'orange'].filter(c => c !== colour));
-            const s = simplify(fav, total);
+            const variant = ri(rng, 0, 2);
+            if (variant === 0) {
+                const fav = ri(rng, 1, 5), other = ri(rng, 2, 8);
+                const total = fav + other;
+                const colour = rc(rng, ['red', 'blue', 'green', 'yellow', 'purple']);
+                const other_colour = rc(rng, ['blue', 'green', 'orange', 'white'].filter(c => c !== colour));
+                const s = simplify(fav, total);
+                const ph = rc(rng, [
+                    `A bag contains $${fav}$ ${colour} and $${other}$ ${other_colour} marbles. Find the probability of picking a ${colour} marble.`,
+                    `There are $${fav}$ ${colour} and $${other}$ ${other_colour} marbles in a bag. Find the probability of selecting a ${colour} marble.`,
+                ]);
+                return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+                    worked: `$P = \\frac{${fav}}{${total}} = \\frac{${s.n}}{${s.d}}$` };
+            }
+            if (variant === 1) {
+                const sides = rc(rng, [6, 8, 10]);
+                const target = rc(rng, ['even', 'odd', 'greater than 3', 'less than 4']);
+                let fav;
+                if (target === 'even') fav = Math.floor(sides / 2);
+                else if (target === 'odd') fav = Math.ceil(sides / 2);
+                else if (target === 'greater than 3') fav = sides - 3;
+                else fav = 3;
+                const s = simplify(fav, sides);
+                const ph = rc(rng, [
+                    `A fair $${sides}$-sided die is rolled. Find P(${target}).`,
+                    `A spinner has $${sides}$ equal sections numbered 1 to $${sides}$. Find P(${target}).`,
+                ]);
+                return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+                    worked: `$P = \\frac{${fav}}{${sides}} = \\frac{${s.n}}{${s.d}}$` };
+            }
+            // Coin / simple spinner
+            const sections = rc(rng, [4, 5, 6, 8]);
+            const chosen = ri(rng, 1, sections - 1);
+            const s = simplify(chosen, sections);
             const ph = rc(rng, [
-                `A bag contains $${fav}$ ${colour} and $${other}$ ${other_colour} marbles. Find the probability of picking a ${colour} marble.`,
-                `A bag has $${fav}$ ${colour} marbles and $${other}$ ${other_colour} marbles. What is the probability of picking a ${colour} marble?`,
-                `There are $${fav}$ ${colour} and $${other}$ ${other_colour} marbles in a bag. Find the probability of selecting a ${colour} marble.`,
+                `A spinner has $${sections}$ equal sections, $${chosen}$ of which are shaded. Find the probability of landing on a shaded section.`,
+                `A wheel is divided into $${sections}$ equal parts. $${chosen}$ are coloured red. What is the probability of spinning red?`,
             ]);
-            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+                worked: `$P = \\frac{${chosen}}{${sections}} = \\frac{${s.n}}{${s.d}}$` };
         }
         if (diff === 'Medium') {
-            const sides = rc(rng, [6, 8, 10, 12]);
-            const target = rc(rng, ['even', 'odd', 'greater than 4', 'a prime', 'less than 3', 'a multiple of 3']);
+            const variant = ri(rng, 0, 2);
+            if (variant <= 1) {
+                const sides = rc(rng, [6, 8, 10, 12, 20]);
+                const target = rc(rng, ['even', 'odd', 'greater than 4', 'a prime', 'less than 5', 'a multiple of 3', 'a multiple of 5', 'a perfect square']);
+                let fav;
+                const nums = Array.from({ length: sides }, (_, i) => i + 1);
+                if (target === 'even') fav = nums.filter(n => n % 2 === 0).length;
+                else if (target === 'odd') fav = nums.filter(n => n % 2 === 1).length;
+                else if (target === 'greater than 4') fav = sides - 4;
+                else if (target === 'a prime') fav = nums.filter(n => [2, 3, 5, 7, 11, 13, 17, 19].includes(n)).length;
+                else if (target === 'less than 5') fav = 4;
+                else if (target === 'a multiple of 3') fav = nums.filter(n => n % 3 === 0).length;
+                else if (target === 'a multiple of 5') fav = nums.filter(n => n % 5 === 0).length;
+                else fav = nums.filter(n => [1, 4, 9, 16].includes(n)).length;
+                if (fav <= 0 || fav >= sides) return genProbability(rng, diff, allowedOps);
+                const s = simplify(fav, sides);
+                const ph = rc(rng, [
+                    `A fair $${sides}$-sided die is rolled. Find P(${target}).`,
+                    `Roll a fair $${sides}$-sided die numbered 1 to $${sides}$. What is P(${target})?`,
+                    `A spinner has $${sides}$ equal sections numbered 1 to $${sides}$. Find P(${target}).`,
+                ]);
+                return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+                    worked: `$P = \\frac{${fav}}{${sides}} = \\frac{${s.n}}{${s.d}}$` };
+            }
+            // 3-colour bag
+            const c1 = ri(rng, 2, 7), c2 = ri(rng, 2, 7), c3 = ri(rng, 1, 6);
+            const total = c1 + c2 + c3;
+            const colours = ['red', 'blue', 'green', 'yellow', 'white', 'black'];
+            const col = rc(rng, colours);
+            const others = colours.filter(c => c !== col);
+            const col2 = rc(rng, others);
+            const col3 = rc(rng, others.filter(c => c !== col2));
+            const target = rc(rng, [col, `not ${col2}`, `${col} or ${col3}`]);
             let fav;
-            if (target === 'even') fav = Math.floor(sides / 2);
-            else if (target === 'odd') fav = Math.ceil(sides / 2);
-            else if (target === 'greater than 4') fav = sides - 4;
-            else if (target === 'a prime') {
-                const primes = [2, 3, 5, 7, 11].filter(p => p <= sides);
-                fav = primes.length;
-            } else if (target === 'a multiple of 3') {
-                fav = Math.floor(sides / 3);
-            } else fav = 2;
-            if (fav <= 0 || fav >= sides) return genProbability(rng, diff, allowedOps);
-            const s = simplify(fav, sides);
+            if (target === col) fav = c1;
+            else if (target === `not ${col2}`) fav = total - c2;
+            else fav = c1 + c3;
+            const s = simplify(fav, total);
             const ph = rc(rng, [
-                `A fair $${sides}$-sided die is rolled. Find P(${target}).`,
-                `Roll a fair $${sides}$-sided die numbered 1 to $${sides}$. What is P(${target})?`,
-                `A spinner has $${sides}$ equal sections numbered 1 to $${sides}$. Find P(${target}).`,
+                `A bag has $${c1}$ ${col}, $${c2}$ ${col2} and $${c3}$ ${col3} marbles. Find P(${target}).`,
+                `There are $${c1}$ ${col}, $${c2}$ ${col2} and $${c3}$ ${col3} balls in a bag. What is P(${target})?`,
             ]);
-            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+                worked: `$P = \\frac{${fav}}{${total}} = \\frac{${s.n}}{${s.d}}$` };
         }
-        // Hard: compound card conditions or multi-colour bag
-        const form = ri(rng, 0, 2);
+        // Hard
+        const form = ri(rng, 0, 3);
         if (form === 0) {
-            // Card: face card / number card / specific value
-            const cond = rc(rng, ['a face card', 'a number card (2–10)', 'a card less than 5', 'an ace or king']);
+            const cond = rc(rng, ['a face card', 'a number card (2–10)', 'a card less than 5', 'an ace or king',
+                'a red face card', 'a black number card', 'a heart', 'a card greater than 9']);
             let fav;
             if (cond === 'a face card') fav = 12;
             else if (cond === 'a number card (2–10)') fav = 36;
             else if (cond === 'a card less than 5') fav = 12;
-            else fav = 8;
+            else if (cond === 'an ace or king') fav = 8;
+            else if (cond === 'a red face card') fav = 6;
+            else if (cond === 'a black number card') fav = 18;
+            else if (cond === 'a heart') fav = 13;
+            else fav = 16;
             const total = 52;
             const s = simplify(fav, total);
             const ph = rc(rng, [
                 `A standard deck of 52 cards is shuffled. Find P(drawing ${cond}).`,
                 `One card is drawn from a standard 52-card deck. What is P(${cond})?`,
-                `What is the probability of drawing ${cond} from a shuffled 52-card deck?`,
             ]);
-            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+                worked: `$P = \\frac{${fav}}{52} = \\frac{${s.n}}{${s.d}}$` };
         }
         if (form === 1) {
-            // Multi-colour bag with 3+ colours
-            const c1 = ri(rng, 2, 6), c2 = ri(rng, 2, 6), c3 = ri(rng, 1, 5);
-            const total = c1 + c2 + c3;
-            const colours = ['red', 'blue', 'green', 'yellow', 'white'];
-            const col = rc(rng, colours);
-            const others = colours.filter(c => c !== col);
-            const col2 = rc(rng, others);
-            const col3 = rc(rng, others.filter(c => c !== col2));
-            const target = rc(rng, [col, `not ${col2}`]);
+            const c1 = ri(rng, 2, 8), c2 = ri(rng, 2, 8), c3 = ri(rng, 2, 6), c4 = ri(rng, 1, 5);
+            const total = c1 + c2 + c3 + c4;
+            const colours = ['red', 'blue', 'green', 'yellow', 'white', 'black'];
+            const col = rc(rng, colours), col2 = rc(rng, colours.filter(c => c !== col));
+            const col3 = rc(rng, colours.filter(c => c !== col && c !== col2));
+            const col4 = rc(rng, colours.filter(c => c !== col && c !== col2 && c !== col3));
+            const target = rc(rng, [`not ${col}`, `${col2} or ${col3}`]);
             let fav;
-            if (target === col) fav = c1;
-            else fav = total - c2;
+            if (target === `not ${col}`) fav = total - c1;
+            else fav = c2 + c3;
             const s = simplify(fav, total);
-            const ph = rc(rng, [
-                `A bag has $${c1}$ ${col}, $${c2}$ ${col2} and $${c3}$ ${col3} marbles. Find P(${target}).`,
-                `There are $${c1}$ ${col}, $${c2}$ ${col2} and $${c3}$ ${col3} balls in a bag. What is P(drawing ${target})?`,
-            ]);
-            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+            const ph = `A bag has $${c1}$ ${col}, $${c2}$ ${col2}, $${c3}$ ${col3} and $${c4}$ ${col4} marbles. Find P(${target}).`;
+            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+                worked: `$P = \\frac{${fav}}{${total}} = \\frac{${s.n}}{${s.d}}$` };
         }
-        // form === 2: die with compound condition
-        const sides = rc(rng, [8, 10, 12, 20]);
-        const cond = rc(rng, ['even and greater than 6', 'odd and less than 8', 'a prime greater than 5', 'a multiple of 4']);
-        let fav;
-        const nums = Array.from({ length: sides }, (_, i) => i + 1);
-        if (cond === 'even and greater than 6') fav = nums.filter(n => n % 2 === 0 && n > 6).length;
-        else if (cond === 'odd and less than 8') fav = nums.filter(n => n % 2 === 1 && n < 8).length;
-        else if (cond === 'a prime greater than 5') fav = nums.filter(n => [7, 11, 13, 17, 19].includes(n)).length;
-        else fav = nums.filter(n => n % 4 === 0).length;
-        if (fav <= 0 || fav >= sides) return genProbability(rng, diff, allowedOps);
-        const s = simplify(fav, sides);
-        const ph = rc(rng, [
-            `A fair $${sides}$-sided die is rolled. Find P(${cond}).`,
-            `A spinner has $${sides}$ equal sections numbered 1 to $${sides}$. Find P(landing on a number that is ${cond}).`,
-        ]);
-        return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+        if (form === 2) {
+            const sides = rc(rng, [8, 10, 12, 20]);
+            const cond = rc(rng, ['even and greater than 6', 'odd and less than 8', 'a prime greater than 5',
+                'a multiple of 4', 'odd or greater than 10', 'even and a multiple of 3']);
+            let fav;
+            const nums = Array.from({ length: sides }, (_, i) => i + 1);
+            if (cond === 'even and greater than 6') fav = nums.filter(n => n % 2 === 0 && n > 6).length;
+            else if (cond === 'odd and less than 8') fav = nums.filter(n => n % 2 === 1 && n < 8).length;
+            else if (cond === 'a prime greater than 5') fav = nums.filter(n => [7, 11, 13, 17, 19].includes(n)).length;
+            else if (cond === 'a multiple of 4') fav = nums.filter(n => n % 4 === 0).length;
+            else if (cond === 'odd or greater than 10') fav = nums.filter(n => n % 2 === 1 || n > 10).length;
+            else fav = nums.filter(n => n % 2 === 0 && n % 3 === 0).length;
+            if (fav <= 0 || fav >= sides) return genProbability(rng, diff, allowedOps);
+            const s = simplify(fav, sides);
+            const ph = rc(rng, [
+                `A fair $${sides}$-sided die is rolled. Find P(${cond}).`,
+                `A spinner has $${sides}$ equal sections numbered 1 to $${sides}$. Find P(${cond}).`,
+            ]);
+            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+                worked: `$P = \\frac{${fav}}{${sides}} = \\frac{${s.n}}{${s.d}}$` };
+        }
+        // form 3: frequency table
+        const outcomes = ri(rng, 3, 5);
+        const freqs = Array.from({ length: outcomes }, () => ri(rng, 3, 15));
+        const total = freqs.reduce((a, b) => a + b, 0);
+        const idx = ri(rng, 0, outcomes - 1);
+        const labels = ['A', 'B', 'C', 'D', 'E'].slice(0, outcomes);
+        const freqStr = labels.map((l, i) => `${l}: $${freqs[i]}$`).join(', ');
+        const s = simplify(freqs[idx], total);
+        const ph = `In an experiment, the outcomes and frequencies are: ${freqStr}. Find P(${labels[idx]}).`;
+        return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+            worked: `$P = \\frac{${freqs[idx]}}{${total}} = \\frac{${s.n}}{${s.d}}$` };
     }
 
     if (op === 'complementary') {
-        const denoms = diff === 'Easy' ? [4, 5, 6, 8] : diff === 'Medium' ? [5, 6, 8, 10, 12] : [10, 12, 20, 50, 100];
-        const d = rc(rng, denoms);
+        if (diff === 'Easy') {
+            const denoms = [3, 4, 5, 6, 8, 10];
+            const d = rc(rng, denoms);
+            const n = ri(rng, 1, d - 1);
+            const s = simplify(n, d);
+            const compS = simplify(d - n, d);
+            const events = ['winning', 'rain', 'rolling a 6', 'picking red'];
+            const event = rc(rng, events);
+            const ph = rc(rng, [
+                `The probability of ${event} is $\\frac{${s.n}}{${s.d}}$. Find the probability of NOT ${event}.`,
+                `If the probability of ${event} is $\\frac{${s.n}}{${s.d}}$, what is the probability that it does not happen?`,
+            ]);
+            return { clue: ph, answer: fracStr(compS.n, compS.d), answerDisplay: `$\\frac{${compS.n}}{${compS.d}}$`,
+                worked: `$P(\\text{not}) = 1 - \\frac{${s.n}}{${s.d}} = \\frac{${compS.n}}{${compS.d}}$` };
+        }
+        if (diff === 'Medium') {
+            const variant = ri(rng, 0, 2);
+            if (variant === 0) {
+                // Percentage form
+                const pct = ri(rng, 5, 19) * 5;
+                const compPct = 100 - pct;
+                const event = rc(rng, ['rain tomorrow', 'passing the test', 'a bus arriving on time', 'winning the game', 'a defective item']);
+                const ph = rc(rng, [
+                    `The probability of ${event} is $${pct}$%. What is the probability it does *not* happen?`,
+                    `P(${event}) $= ${pct}$%. Find P(not ${event}).`,
+                ]);
+                return { clue: ph, answer: `${compPct}%`, answerDisplay: `$${compPct}$%`,
+                    worked: `$P(\\text{not}) = 100\\% - ${pct}\\% = ${compPct}\\%$` };
+            }
+            if (variant === 1) {
+                // Decimal form
+                const dec = ri(rng, 1, 9) / 10;
+                const compDec = round(1 - dec, 1);
+                const event = rc(rng, ['rain', 'winning', 'selecting a blue marble', 'a defective item']);
+                const ph = rc(rng, [
+                    `P(${event}) $= ${dec}$. Find P(not ${event}).`,
+                    `The probability of ${event} is $${dec}$. What is the probability it does *not* occur?`,
+                ]);
+                return { clue: ph, answer: String(compDec), answerDisplay: `$${compDec}$`,
+                    worked: `$P(\\text{not}) = 1 - ${dec} = ${compDec}$` };
+            }
+            // Fraction form with word problem
+            const d = rc(rng, [5, 6, 8, 10, 12]);
+            const n = ri(rng, 1, d - 1);
+            const s = simplify(n, d);
+            const compS = simplify(d - n, d);
+            const ph = rc(rng, [
+                `A bag has $${d}$ marbles and $${n}$ are red. A marble is drawn at random. Find the probability it is *not* red.`,
+                `$${n}$ out of $${d}$ students passed. Find the probability a randomly selected student did *not* pass.`,
+            ]);
+            return { clue: ph, answer: fracStr(compS.n, compS.d), answerDisplay: `$\\frac{${compS.n}}{${compS.d}}$`,
+                worked: `$P(\\text{not}) = 1 - \\frac{${s.n}}{${s.d}} = \\frac{${compS.n}}{${compS.d}}$` };
+        }
+        // Hard: "at least one" using complementary method, or two-step
+        if (rng() < 0.4) {
+            // "At least one" in repeated trials
+            const n = rc(rng, [2, 3]);
+            const d = rc(rng, [4, 5, 6]);
+            const pFail = ri(rng, 1, d - 1);
+            const sFail = simplify(pFail, d);
+            const pNone = Math.pow(pFail / d, n);
+            const pAtLeast = round(1 - pNone, 4);
+            const failFrac = `\\frac{${sFail.n}}{${sFail.d}}`;
+            const ph = rc(rng, [
+                `A coin has P(heads) $= \\frac{${d - pFail}}{${d}}$. It is tossed $${n}$ times. Find P(*at least one* head). Round to 4 d.p.`,
+                `The probability of success is $\\frac{${d - pFail}}{${d}}$ per trial. In $${n}$ trials, find P(at least one success). Round to 4 d.p.`,
+            ]);
+            return { clue: ph, answer: String(pAtLeast), answerDisplay: `$${pAtLeast}$`,
+                worked: `$P(\\text{at least 1}) = 1 - (${failFrac})^{${n}} = 1 - ${round(pNone, 4)} = ${pAtLeast}$` };
+        }
+        const d = rc(rng, [10, 12, 15, 20, 25, 50, 100]);
         const n = ri(rng, 1, d - 1);
         const s = simplify(n, d);
         const compS = simplify(d - n, d);
-        const events = diff === 'Hard'
-            ? ['winning', 'rain tomorrow', 'selecting a red card', 'rolling a 6', 'passing the test', 'a bus arriving on time', 'a defective item']
-            : ['winning', 'rain tomorrow', 'selecting a red card', 'rolling a 6'];
+        const events = ['winning', 'rain tomorrow', 'passing the test', 'a bus arriving on time', 'a defective item', 'selecting a green ball', 'an event occurring'];
         const event = rc(rng, events);
-        const ph = diff === 'Easy'
-            ? rc(rng, [
-                `The probability of ${event} is $\\frac{${s.n}}{${s.d}}$. Find the probability of NOT ${event}.`,
-                `If the probability of ${event} is $\\frac{${s.n}}{${s.d}}$, what is the probability that it does not happen?`,
-              ])
-            : rc(rng, [
-                `P(${event}) $= \\frac{${s.n}}{${s.d}}$. Find P(not ${event}).`,
-                `If the probability of ${event} is $\\frac{${s.n}}{${s.d}}$, what is the probability of NOT ${event}?`,
-                `The probability of ${event} is $\\frac{${s.n}}{${s.d}}$. Find the *complementary* probability.`,
-              ]);
-        return { clue: ph, answer: fracStr(compS.n, compS.d), answerDisplay: `$\\frac{${compS.n}}{${compS.d}}$` };
+        const ph = rc(rng, [
+            `P(${event}) $= \\frac{${s.n}}{${s.d}}$. Find P(not ${event}).`,
+            `The probability of ${event} is $\\frac{${s.n}}{${s.d}}$. Find the *complementary* probability.`,
+            `If $\\frac{${s.n}}{${s.d}}$ of items are defective, what fraction are *not* defective?`,
+        ]);
+        return { clue: ph, answer: fracStr(compS.n, compS.d), answerDisplay: `$\\frac{${compS.n}}{${compS.d}}$`,
+            worked: `$P(\\text{not}) = 1 - \\frac{${s.n}}{${s.d}} = \\frac{${compS.n}}{${compS.d}}$` };
     }
 
     // op === 'multi-event'
     if (diff === 'Easy') {
-        const d = rc(rng, [6, 8, 10]);
-        const a = ri(rng, 1, 3), b = ri(rng, 1, d - a - 1);
-        const s = simplify(a + b, d);
+        const variant = ri(rng, 0, 1);
+        if (variant === 0) {
+            const d = rc(rng, [6, 8, 10, 12]);
+            const a = ri(rng, 1, 4), b = ri(rng, 1, d - a - 1);
+            if (b <= 0) return genProbability(rng, diff, allowedOps);
+            const s = simplify(a + b, d);
+            const col1 = rc(rng, ['red', 'blue', 'green']), col2 = rc(rng, ['yellow', 'white', 'purple'].filter(c => c !== col1));
+            const col3 = rc(rng, ['black', 'orange', 'pink']);
+            const ph = rc(rng, [
+                `A bag has $${a}$ ${col1}, $${b}$ ${col2} and $${d - a - b}$ ${col3} marbles. Find P(${col1} *or* ${col2}).`,
+                `A bag has $${a}$ ${col1}, $${b}$ ${col2} and $${d - a - b}$ ${col3} marbles. One marble is drawn. What is P(${col1} or ${col2})?`,
+            ]);
+            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+                worked: `$P = \\frac{${a} + ${b}}{${d}} = \\frac{${a + b}}{${d}} = \\frac{${s.n}}{${s.d}}$` };
+        }
+        // Two coin flips
         const ph = rc(rng, [
-            `A bag has $${a}$ red, $${b}$ blue and $${d - a - b}$ green marbles. Find the probability of picking a red *or* a blue marble.`,
-            `A bag has $${a}$ red, $${b}$ blue and $${d - a - b}$ green marbles. One marble is drawn. What is the probability it is red or blue?`,
+            `A fair coin is tossed twice. Find the probability of getting *two heads*.`,
+            `Two fair coins are tossed. What is the probability of getting a head on *both*?`,
         ]);
-        return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+        return { clue: ph, answer: fracStr(1, 4), answerDisplay: `$\\frac{1}{4}$`,
+            worked: `$P = \\frac{1}{2} \\times \\frac{1}{2} = \\frac{1}{4}$` };
     }
     if (diff === 'Medium') {
-        // Two independent events with replacement — small denominators
-        const d1 = rc(rng, [4, 5, 6]), d2 = rc(rng, [4, 5, 6]);
-        const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
-        const numProd = n1 * n2, denProd = d1 * d2;
-        const s = simplify(numProd, denProd);
-        const col1 = rc(rng, ['red', 'blue']), col2 = rc(rng, ['green', 'yellow']);
+        const variant = ri(rng, 0, 1);
+        if (variant === 0) {
+            const d1 = rc(rng, [4, 5, 6, 8]), d2 = rc(rng, [4, 5, 6, 8]);
+            const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
+            const numProd = n1 * n2, denProd = d1 * d2;
+            const s = simplify(numProd, denProd);
+            const col1 = rc(rng, ['red', 'blue', 'green']), col2 = rc(rng, ['yellow', 'white', 'purple']);
+            const ph = rc(rng, [
+                `A bag has $${n1}$ ${col1} out of $${d1}$ marbles and another bag has $${n2}$ ${col2} out of $${d2}$ marbles. Find P(${col1} *and* ${col2}).`,
+                `P(${col1}) $= \\frac{${n1}}{${d1}}$ and P(${col2}) $= \\frac{${n2}}{${d2}}$. These are *independent*. Find P(${col1} and ${col2}).`,
+            ]);
+            return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+                worked: `$P = \\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}} = \\frac{${numProd}}{${denProd}} = \\frac{${s.n}}{${s.d}}$` };
+        }
+        // Die + coin
+        const sides = rc(rng, [6, 8]);
+        const target = ri(rng, 1, sides);
+        const s = simplify(1, sides * 2);
         const ph = rc(rng, [
-            `A bag has $${n1}$ ${col1} out of $${d1}$ marbles and another bag has $${n2}$ ${col2} out of $${d2}$ marbles. Find P(${col1} *and* ${col2}) if one marble is drawn from each bag.`,
-            `P(${col1}) $= \\frac{${n1}}{${d1}}$ and P(${col2}) $= \\frac{${n2}}{${d2}}$. These are *independent* events. Find P(${col1} and ${col2}).`,
+            `A fair $${sides}$-sided die is rolled and a coin is tossed. Find P(rolling a $${target}$ *and* getting heads).`,
+            `A fair coin and a $${sides}$-sided die are used. What is P(heads and a $${target}$)?`,
         ]);
-        return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+        return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+            worked: `$P = \\frac{1}{${sides}} \\times \\frac{1}{2} = \\frac{1}{${sides * 2}} = \\frac{${s.n}}{${s.d}}$` };
     }
-    // Hard: three independent events or two events with larger denominators
-    const form = ri(rng, 0, 1);
+    // Hard
+    const form = ri(rng, 0, 2);
     if (form === 0) {
-        // Two events with larger denominators
-        const d1 = rc(rng, [6, 8, 10]), d2 = rc(rng, [6, 8, 10]);
+        const d1 = rc(rng, [6, 8, 10, 12]), d2 = rc(rng, [6, 8, 10, 12]);
         const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
         const numProd = n1 * n2, denProd = d1 * d2;
         const s = simplify(numProd, denProd);
         const col1 = rc(rng, ['red', 'blue', 'white']), col2 = rc(rng, ['green', 'yellow', 'black']);
         const ph = rc(rng, [
-            `A bag has $${n1}$ ${col1} out of $${d1}$ marbles and another bag has $${n2}$ ${col2} out of $${d2}$ marbles. Find P(${col1} *and* ${col2}).`,
             `P(${col1}) $= \\frac{${n1}}{${d1}}$ and P(${col2}) $= \\frac{${n2}}{${d2}}$. The events are *independent*. Find P(${col1} and ${col2}).`,
             `A spinner shows ${col1} with probability $\\frac{${n1}}{${d1}}$ and a die shows ${col2} with probability $\\frac{${n2}}{${d2}}$. Find P(both occur).`,
         ]);
-        return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+        return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+            worked: `$P = \\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}} = \\frac{${numProd}}{${denProd}} = \\frac{${s.n}}{${s.d}}$` };
+    }
+    if (form === 1) {
+        // Without replacement
+        const total = rc(rng, [8, 10, 12, 15]);
+        const fav = ri(rng, 3, total - 2);
+        const n1 = fav, d1 = total, n2 = fav - 1, d2 = total - 1;
+        const numProd = n1 * n2, denProd = d1 * d2;
+        const s = simplify(numProd, denProd);
+        const colour = rc(rng, ['red', 'blue', 'green', 'yellow']);
+        const ph = rc(rng, [
+            `A bag has $${fav}$ ${colour} marbles out of $${total}$. Two are drawn *without replacement*. Find P(both ${colour}).`,
+            `$${fav}$ of $${total}$ marbles are ${colour}. If two are drawn without replacement, find P(both ${colour}).`,
+        ]);
+        return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+            worked: `$P = \\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}} = \\frac{${numProd}}{${denProd}} = \\frac{${s.n}}{${s.d}}$` };
     }
     // Three independent events
-    const d1 = rc(rng, [4, 6]), d2 = rc(rng, [4, 6]), d3 = rc(rng, [2, 4]);
+    const d1 = rc(rng, [4, 5, 6]), d2 = rc(rng, [4, 5, 6]), d3 = rc(rng, [2, 3, 4]);
     const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1), n3 = ri(rng, 1, d3 - 1);
     const numProd = n1 * n2 * n3, denProd = d1 * d2 * d3;
     const s = simplify(numProd, denProd);
     const ph = rc(rng, [
-        `Three *independent* events have probabilities $\\frac{${n1}}{${d1}}$, $\\frac{${n2}}{${d2}}$ and $\\frac{${n3}}{${d3}}$. Find the probability that all three occur.`,
-        `P(A) $= \\frac{${n1}}{${d1}}$, P(B) $= \\frac{${n2}}{${d2}}$ and P(C) $= \\frac{${n3}}{${d3}}$. Events A, B, C are *independent*. Find P(A and B and C).`,
+        `Three *independent* events have probabilities $\\frac{${n1}}{${d1}}$, $\\frac{${n2}}{${d2}}$ and $\\frac{${n3}}{${d3}}$. Find P(all three occur).`,
+        `P(A) $= \\frac{${n1}}{${d1}}$, P(B) $= \\frac{${n2}}{${d2}}$ and P(C) $= \\frac{${n3}}{${d3}}$. Events are *independent*. Find P(A and B and C).`,
     ]);
-    return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+    return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+        worked: `$P = \\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}} \\times \\frac{${n3}}{${d3}} = \\frac{${numProd}}{${denProd}} = \\frac{${s.n}}{${s.d}}$` };
 }
 
 // ============================================================
@@ -3371,47 +3545,68 @@ function genRatiosRates(rng, diff, allowedOps) {
     const op = rc(rng, pool);
 
     if (op === 'simplify') {
-        // Hard: occasionally a three-term ratio a : b : c to reduce.
-        if (diff === 'Hard' && rng() < 0.35) {
-            const factor = ri(rng, 3, 12);
-            const a = ri(rng, 1, 9) * factor, b = ri(rng, 1, 9) * factor, c = ri(rng, 1, 9) * factor;
-            const g = gcd(gcd(a, b), c);
-            const ph = rc(rng, [
-                `Simplify the ratio $${a} : ${b} : ${c}$.`,
-                `Write $${a} : ${b} : ${c}$ in its **simplest form**.`,
-            ]);
-            return { clue: ph, answer: `${a / g} : ${b / g} : ${c / g}`, answerDisplay: `$${a / g} : ${b / g} : ${c / g}$` };
+        if (diff === 'Hard') {
+            // Three-term ratio or large two-term
+            if (rng() < 0.4) {
+                const factor = ri(rng, 4, 15);
+                const a = ri(rng, 2, 9) * factor, b = ri(rng, 2, 9) * factor, c = ri(rng, 2, 9) * factor;
+                const g = gcd(gcd(a, b), c);
+                const ph = rc(rng, [`Simplify the ratio $${a} : ${b} : ${c}$.`, `Write $${a} : ${b} : ${c}$ in its **simplest form**.`]);
+                return { clue: ph, answer: `${a / g} : ${b / g} : ${c / g}`, answerDisplay: `$${a / g} : ${b / g} : ${c / g}$`,
+                    worked: `$\\text{GCD} = ${g}, \\; ${a / g} : ${b / g} : ${c / g}$` };
+            }
+            const factor = ri(rng, 5, 18);
+            const a = ri(rng, 3, 15) * factor, b = ri(rng, 3, 15) * factor;
+            const s = simplify(a, b);
+            const ph = rc(rng, [`Simplify $${a} : ${b}$.`, `Reduce $${a} : ${b}$ to its **lowest terms**.`]);
+            return { clue: ph, answer: `${s.n} : ${s.d}`, answerDisplay: `$${s.n} : ${s.d}$`,
+                worked: `$\\div ${gcd(a, b)} \\Rightarrow ${s.n} : ${s.d}$` };
         }
-        const factor = ri(rng, 2, diff === 'Easy' ? 6 : diff === 'Medium' ? 10 : 15);
-        const a = ri(rng, 1, diff === 'Easy' ? 8 : 12) * factor, b = ri(rng, 1, diff === 'Easy' ? 8 : 12) * factor;
+        const factor = ri(rng, 2, diff === 'Easy' ? 6 : 10);
+        const aMax = diff === 'Easy' ? 8 : 12;
+        const a = ri(rng, 1, aMax) * factor, b = ri(rng, 1, aMax) * factor;
         const s = simplify(a, b);
         const ph = rc(rng, [
             `Simplify the ratio $${a} : ${b}$.`,
             `Write $${a} : ${b}$ in its **simplest form**.`,
             `Reduce $${a} : ${b}$ to its **lowest terms**.`,
         ]);
-        return { clue: ph, answer: `${s.n} : ${s.d}`, answerDisplay: `$${s.n} : ${s.d}$` };
+        return { clue: ph, answer: `${s.n} : ${s.d}`, answerDisplay: `$${s.n} : ${s.d}$`,
+            worked: `$\\div ${gcd(a, b)} \\Rightarrow ${s.n} : ${s.d}$` };
     }
 
     if (op === 'divide-ratio') {
         const total = diff === 'Easy' ? rc(rng, [24, 30, 36, 40, 48, 60])
             : diff === 'Medium' ? rc(rng, [60, 80, 90, 120, 150, 180, 240])
             : rc(rng, [200, 250, 300, 400, 500, 600, 800, 1000]);
-        const unit = diff === 'Hard' ? rc(rng, ['dollars', 'grams', 'litres']) : rc(rng, ['lollies', 'points', 'tiles', 'cm', 'marbles', 'cards']);
-        // Three-part ratio split (a : b : c) — half the time on Medium/Hard.
-        if (diff !== 'Easy' && rng() < 0.5) {
-            const a = ri(rng, 1, 5), b = ri(rng, 1, 5), c = ri(rng, 1, 5);
+        const unit = diff === 'Easy' ? rc(rng, ['lollies', 'marbles', 'cards', 'stickers'])
+            : diff === 'Medium' ? rc(rng, ['points', 'tiles', 'cm', 'mL', 'pages'])
+            : rc(rng, ['dollars', 'grams', 'litres', 'kilograms', 'metres']);
+        // Three-part ratio split — Medium 40%, Hard 60%
+        if (diff !== 'Easy' && rng() < (diff === 'Hard' ? 0.6 : 0.4)) {
+            const maxPart = diff === 'Hard' ? 8 : 5;
+            const a = ri(rng, 1, maxPart), b = ri(rng, 1, maxPart), c = ri(rng, 1, maxPart);
             const denom = a + b + c;
             if (total % denom !== 0) return genRatiosRates(rng, diff, allowedOps);
             const share = total / denom;
             const A = share * a, B = share * b, C = share * c;
+            if (diff === 'Hard' && rng() < 0.4) {
+                // Ask for just ONE share instead of all three
+                const which = rc(rng, ['first', 'second', 'third']);
+                const ansVal = which === 'first' ? A : which === 'second' ? B : C;
+                const ph = `$${total}$ ${unit} are shared in the ratio $${a} : ${b} : ${c}$. Find the *${which}* share.`;
+                return { clue: ph, answer: String(ansVal), answerDisplay: `$${ansVal}$ ${unit}`,
+                    worked: `$\\text{Total parts} = ${denom}, \\; \\text{each part} = ${share}, \\; \\text{${which}} = ${ansVal}$` };
+            }
             const ph = rc(rng, [
-                `Share $${total}$ ${unit} between three people in the ratio $${a} : ${b} : ${c}$.`,
+                `Share $${total}$ ${unit} in the ratio $${a} : ${b} : ${c}$.`,
                 `Divide $${total}$ ${unit} in the ratio $${a} : ${b} : ${c}$.`,
             ]);
-            return { clue: ph, answer: `${A} : ${B} : ${C}`, answerDisplay: `$${A} : ${B} : ${C}$` };
+            return { clue: ph, answer: `${A} : ${B} : ${C}`, answerDisplay: `$${A} : ${B} : ${C}$`,
+                worked: `$\\text{Total parts} = ${denom}, \\; \\text{each part} = ${share}$` };
         }
-        const partsA = ri(rng, 1, diff === 'Hard' ? 7 : 5), partsB = ri(rng, 1, diff === 'Hard' ? 7 : 5);
+        const partsA = ri(rng, 1, diff === 'Hard' ? 9 : diff === 'Medium' ? 6 : 4);
+        const partsB = ri(rng, 1, diff === 'Hard' ? 9 : diff === 'Medium' ? 6 : 4);
         const denomParts = partsA + partsB;
         if (total % denomParts !== 0) return genRatiosRates(rng, diff, allowedOps);
         const shareA = (total / denomParts) * partsA;
@@ -3421,62 +3616,138 @@ function genRatiosRates(rng, diff, allowedOps) {
             `Share $${total}$ ${unit} in the ratio $${partsA} : ${partsB}$.`,
             `Split $${total}$ ${unit} between two people in the ratio $${partsA} : ${partsB}$.`,
         ]);
-        return { clue: ph, answer: `${shareA} : ${shareB}`, answerDisplay: `$${shareA} : ${shareB}$` };
+        return { clue: ph, answer: `${shareA} : ${shareB}`, answerDisplay: `$${shareA} : ${shareB}$`,
+            worked: `$\\text{Total parts} = ${denomParts}, \\; ${shareA} : ${shareB}$` };
     }
 
     if (op === 'equivalent') {
-        const a = ri(rng, 1, diff === 'Easy' ? 6 : 9), b = ri(rng, 1, diff === 'Easy' ? 6 : 9);
-        const mult = ri(rng, 2, diff === 'Easy' ? 4 : diff === 'Medium' ? 8 : 12);
+        if (diff === 'Hard') {
+            // Missing value on the LEFT or fractional ratio
+            if (rng() < 0.4) {
+                const a = ri(rng, 2, 8), b = ri(rng, 2, 8);
+                const mult = ri(rng, 3, 12);
+                const ph = rc(rng, [
+                    `If $${a * mult} : ${b * mult} = ${a} : \\square$, find the missing value.`,
+                    `$${a * mult} : \\square = ${a} : ${b}$. Find the missing value.`,
+                ]);
+                return { clue: ph, answer: String(b * mult), answerDisplay: `$${b * mult}$`,
+                    worked: `$\\text{Scale factor} = ${mult}, \\; \\square = ${b} \\times ${mult} = ${b * mult}$` };
+            }
+            const a = ri(rng, 3, 12), b = ri(rng, 3, 12);
+            const mult = ri(rng, 4, 15);
+            const ph = rc(rng, [
+                `Complete: $${a} : ${b} = \\square : ${b * mult}$.`,
+                `Find $x$: $${a} : ${b} = x : ${b * mult}$.`,
+            ]);
+            return { clue: ph, answer: String(a * mult), answerDisplay: `$${a * mult}$`,
+                worked: `$\\text{Scale} = ${b * mult} \\div ${b} = ${mult}, \\; x = ${a} \\times ${mult} = ${a * mult}$` };
+        }
+        const a = ri(rng, 1, diff === 'Easy' ? 5 : 8);
+        const b = ri(rng, 1, diff === 'Easy' ? 5 : 8);
+        const mult = ri(rng, 2, diff === 'Easy' ? 5 : 9);
         const ph = rc(rng, [
-            `Find the missing value: $${a} : ${b} = ? : ${b * mult}$.`,
             `Complete the equivalent ratio: $${a} : ${b} = \\square : ${b * mult}$.`,
             `If $${a} : ${b}$ is equivalent to $\\square : ${b * mult}$, find the missing number.`,
         ]);
-        return { clue: ph, answer: String(a * mult), answerDisplay: `$${a * mult}$` };
+        return { clue: ph, answer: String(a * mult), answerDisplay: `$${a * mult}$`,
+            worked: `$\\text{Scale} = ${b * mult} \\div ${b} = ${mult}, \\; \\square = ${a} \\times ${mult} = ${a * mult}$` };
     }
 
     if (op === 'unit-rate') {
-        // 25% on Medium/Hard: scale-drawing problem (a kind of unit rate).
-        if (diff !== 'Easy' && rng() < 0.25) {
-            const scaleCm = 1, scaleReal = rc(rng, [10, 20, 25, 50, 100]); // 1 cm = N m
-            const drawCm  = ri(rng, 3, 12);
-            const real    = drawCm * scaleReal;
+        if (diff === 'Hard') {
+            // 30%: best buy with three packs or larger numbers
+            if (rng() < 0.3) {
+                const item = rc(rng, ['cereal (g)', 'shampoo (mL)', 'rice (kg)', 'detergent (mL)', 'juice (mL)']);
+                const q1 = rc(rng, [300, 500, 750, 1000, 1500]);
+                const q2 = rc(rng, [200, 400, 600, 800, 1200, 2000]);
+                const p1 = ri(rng, 3, 18), p2 = ri(rng, 4, 25);
+                const r1 = p1 / q1, r2 = p2 / q2;
+                if (r1 === r2) return genRatiosRates(rng, diff, allowedOps);
+                const cheaper = r1 < r2 ? 'Pack A' : 'Pack B';
+                const ph = `Pack A: $${q1}$ ${item} for $\\$${money(p1)}$. Pack B: $${q2}$ ${item} for $\\$${money(p2)}$. Which is the *better buy*?`;
+                return { clue: ph, answer: cheaper, answerDisplay: cheaper,
+                    worked: `$A: \\$${money(round(r1 * 1000, 2))}/\\text{kg}, B: \\$${money(round(r2 * 1000, 2))}/\\text{kg} \\Rightarrow ${cheaper}$` };
+            }
+            // 25%: scale drawing
+            if (rng() < 0.25) {
+                const scaleReal = rc(rng, [25, 50, 100, 200, 500]);
+                const drawCm = ri(rng, 3, 15);
+                const real = drawCm * scaleReal;
+                const unit = scaleReal >= 100 ? 'km' : 'm';
+                const realDisplay = scaleReal >= 100 ? real / 1000 : real;
+                const ph = rc(rng, [
+                    `A map uses the scale $1$ cm $= ${scaleReal}$ m. A road measures $${drawCm}$ cm on the map. What is the *actual* length in ${unit}?`,
+                    `On a scale drawing $1$ cm represents $${scaleReal}$ m. A river is drawn as $${drawCm}$ cm. Find the *actual* length in ${unit}.`,
+                ]);
+                return { clue: ph, answer: String(scaleReal >= 100 ? realDisplay : real), answerDisplay: `${scaleReal >= 100 ? realDisplay : real} ${unit}`,
+                    worked: `$${drawCm} \\times ${scaleReal} = ${real}$ m` };
+            }
+            // Complex unit rate
+            const HARD_CONTEXTS = [
+                { item: 'litres of petrol', price: ri(rng, 180, 250), qty: rc(rng, [15, 25, 30, 40, 50]) },
+                { item: 'kilograms of flour', price: ri(rng, 8, 30), qty: rc(rng, [2, 4, 5, 8, 10, 12]) },
+                { item: 'metres of fabric', price: ri(rng, 15, 60), qty: rc(rng, [3, 5, 6, 8, 10, 12]) },
+            ];
+            const ctx = rc(rng, HARD_CONTEXTS);
+            const unitPrice = round(ctx.price / ctx.qty, 2);
             const ph = rc(rng, [
-                `A map uses the scale $${scaleCm}$ cm $= ${scaleReal}$ m. On the map, a path measures $${drawCm}$ cm. What is the *actual* length in metres?`,
-                `On a scale drawing $${scaleCm}$ cm represents $${scaleReal}$ m. A wall is drawn as $${drawCm}$ cm long. Find the *actual* length.`,
+                `$${ctx.qty}$ ${ctx.item} cost $\\$${ctx.price}$. Find the *unit rate*.`,
+                `If $${ctx.qty}$ ${ctx.item} cost $\\$${ctx.price}$, find the cost per unit.`,
             ]);
-            return { clue: ph, answer: String(real), answerDisplay: `${real} m` };
+            return { clue: ph, answer: String(unitPrice), answerDisplay: `$\\$${money(unitPrice)}$`,
+                worked: `$\\$${ctx.price} \\div ${ctx.qty} = \\$${money(unitPrice)}$` };
         }
-        // 30% of the time (Medium/Hard): "best buy" comparison — pick the
-        // cheaper pack and state its unit rate.
-        if (diff !== 'Easy' && rng() < 0.3) {
-            const item = rc(rng, ['cereal (g)', 'shampoo (mL)', 'rice (g)', 'detergent (mL)']);
-            // Construct two packs with distinct unit prices.
-            const q1 = rc(rng, [250, 500, 750, 1000]);
-            const q2 = rc(rng, [200, 400, 600, 800, 1000, 1250]);
-            const p1 = ri(rng, 2, 12);                 // cheaper-looking
-            const p2 = ri(rng, p1 + 2, p1 + 18);
-            const r1 = p1 / q1, r2 = p2 / q2;
-            if (r1 === r2) return genRatiosRates(rng, diff, allowedOps);
-            const cheaper = r1 < r2 ? 'Pack A' : 'Pack B';
-            const ph = `Pack A: $${q1}$ ${item} for $\\$${money(p1)}$. Pack B: $${q2}$ ${item} for $\\$${money(p2)}$. Which is the *better buy*?`;
-            return { clue: ph, answer: cheaper, answerDisplay: cheaper };
+        if (diff === 'Medium') {
+            // 25%: scale drawing
+            if (rng() < 0.25) {
+                const scaleReal = rc(rng, [10, 20, 25, 50, 100]);
+                const drawCm = ri(rng, 3, 10);
+                const real = drawCm * scaleReal;
+                const ph = `A map uses the scale $1$ cm $= ${scaleReal}$ m. A path measures $${drawCm}$ cm. What is the *actual* length?`;
+                return { clue: ph, answer: String(real), answerDisplay: `${real} m`,
+                    worked: `$${drawCm} \\times ${scaleReal} = ${real}$ m` };
+            }
+            // 30%: best buy
+            if (rng() < 0.3) {
+                const item = rc(rng, ['cereal (g)', 'shampoo (mL)', 'rice (g)', 'detergent (mL)']);
+                const q1 = rc(rng, [250, 500, 750, 1000]);
+                const q2 = rc(rng, [200, 400, 600, 800]);
+                const p1 = ri(rng, 2, 10), p2 = ri(rng, p1 + 1, p1 + 12);
+                const r1 = p1 / q1, r2 = p2 / q2;
+                if (r1 === r2) return genRatiosRates(rng, diff, allowedOps);
+                const cheaper = r1 < r2 ? 'Pack A' : 'Pack B';
+                const ph = `Pack A: $${q1}$ ${item} for $\\$${money(p1)}$. Pack B: $${q2}$ ${item} for $\\$${money(p2)}$. Which is the *better buy*?`;
+                return { clue: ph, answer: cheaper, answerDisplay: cheaper };
+            }
+            const MED_CONTEXTS = [
+                { item: 'apples', price: ri(rng, 4, 12), qty: ri(rng, 3, 8) * rc(rng, [2, 3]) },
+                { item: 'litres of petrol', price: ri(rng, 100, 200), qty: rc(rng, [10, 20, 25, 40]) },
+                { item: 'bottles of water', price: ri(rng, 6, 24), qty: rc(rng, [6, 8, 12, 24]) },
+                { item: 'pencils', price: ri(rng, 3, 15), qty: rc(rng, [5, 10, 12, 20]) },
+            ];
+            const ctx = rc(rng, MED_CONTEXTS);
+            const unitPrice = round(ctx.price / ctx.qty, 2);
+            const ph = rc(rng, [
+                `$${ctx.qty}$ ${ctx.item} cost $\\$${ctx.price}$. Find the cost per item.`,
+                `If $${ctx.qty}$ ${ctx.item} cost $\\$${ctx.price}$, what is the *unit rate*?`,
+            ]);
+            return { clue: ph, answer: String(unitPrice), answerDisplay: `$\\$${money(unitPrice)}$`,
+                worked: `$\\$${ctx.price} \\div ${ctx.qty} = \\$${money(unitPrice)}$` };
         }
-        const UNIT_CONTEXTS = [
-            { item: 'apples', price: ri(rng, 2, 8), qty: ri(rng, 2, 6) * rc(rng, [2, 3, 4]) },
-            { item: 'litres of petrol', price: ri(rng, 150, 210), qty: rc(rng, [10, 20, 40, 50]) },
-            { item: 'bottles of water', price: ri(rng, 5, 20), qty: rc(rng, [6, 10, 12, 24]) },
-            { item: 'oranges', price: ri(rng, 3, 12), qty: ri(rng, 2, 6) * rc(rng, [2, 3, 5]) },
-            { item: 'pencils', price: ri(rng, 2, 10), qty: rc(rng, [5, 10, 15, 20]) },
-            { item: 'kilograms of rice', price: ri(rng, 4, 16), qty: rc(rng, [2, 4, 5, 8]) },
+        // Easy
+        const EASY_CONTEXTS = [
+            { item: 'apples', price: ri(rng, 2, 6), qty: rc(rng, [2, 4, 5, 6]) },
+            { item: 'oranges', price: ri(rng, 3, 8), qty: rc(rng, [2, 3, 4, 5]) },
+            { item: 'pencils', price: ri(rng, 2, 8), qty: rc(rng, [4, 5, 8, 10]) },
         ];
-        const ctx = rc(rng, UNIT_CONTEXTS);
+        const ctx = rc(rng, EASY_CONTEXTS);
         const unitPrice = round(ctx.price / ctx.qty, 2);
         const ph = rc(rng, [
-            `$${ctx.qty}$ ${ctx.item} cost $\\$${ctx.price}$. Find the cost per item (unit rate).`,
-            `If $${ctx.qty}$ ${ctx.item} costs $\\$${ctx.price}$, what is the *unit rate* (cost per ${ctx.item})?`,
+            `$${ctx.qty}$ ${ctx.item} cost $\\$${ctx.price}$. Find the cost per item.`,
+            `If $${ctx.qty}$ ${ctx.item} costs $\\$${ctx.price}$, what is the *unit rate*?`,
         ]);
-        return { clue: ph, answer: String(unitPrice), answerDisplay: `$\\$${money(unitPrice)}$` };
+        return { clue: ph, answer: String(unitPrice), answerDisplay: `$\\$${money(unitPrice)}$`,
+            worked: `$\\$${ctx.price} \\div ${ctx.qty} = \\$${money(unitPrice)}$` };
     }
 
     // op === 'speed'
@@ -3489,48 +3760,87 @@ function genRatiosRates(rng, diff, allowedOps) {
         { vehicle: 'runner', unit: 'km/h' },
     ];
     const ctx = rc(rng, SPEED_CONTEXTS);
-    // Hard, 30%: combined-speed multi-step (two objects, opposite/same direction).
-    if (diff === 'Hard' && rng() < 0.3) {
-        const s1 = ri(rng, 3, 11) * 10, s2 = ri(rng, 3, 11) * 10, t = ri(rng, 2, 5);
-        const opposite = rng() < 0.5;
-        if (!opposite && s1 === s2) return genRatiosRates(rng, diff, allowedOps);
-        const apart = opposite ? (s1 + s2) * t : Math.abs(s1 - s2) * t;
-        const dirText = opposite ? 'in opposite directions' : 'in the same direction';
-        const ph = rc(rng, [
-            `Two trains leave the same station ${dirText} at $${s1}$ km/h and $${s2}$ km/h. How many kilometres apart are they after $${t}$ hours?`,
-            `Two cars start together and travel ${dirText} at $${s1}$ km/h and $${s2}$ km/h. What is the separation between them after $${t}$ hours?`,
-        ]);
-        return { clue: ph, answer: String(apart), answerDisplay: `${apart} km` };
+    if (diff === 'Hard') {
+        // 35%: combined-speed multi-step
+        if (rng() < 0.35) {
+            const s1 = ri(rng, 4, 12) * 10, s2 = ri(rng, 4, 12) * 10, t = ri(rng, 2, 6);
+            const opposite = rng() < 0.5;
+            if (!opposite && s1 === s2) return genRatiosRates(rng, diff, allowedOps);
+            const apart = opposite ? (s1 + s2) * t : Math.abs(s1 - s2) * t;
+            const dirText = opposite ? 'in opposite directions' : 'in the same direction';
+            const ph = rc(rng, [
+                `Two trains leave the same station ${dirText} at $${s1}$ km/h and $${s2}$ km/h. How far apart are they after $${t}$ hours?`,
+                `Two cars start together and travel ${dirText} at $${s1}$ km/h and $${s2}$ km/h. Find the distance between them after $${t}$ hours.`,
+            ]);
+            return { clue: ph, answer: String(apart), answerDisplay: `${apart} km`,
+                worked: `$\\text{Relative speed} = ${opposite ? s1 + s2 : Math.abs(s1 - s2)}, \\; d = ${opposite ? s1 + s2 : Math.abs(s1 - s2)} \\times ${t} = ${apart}$ km` };
+        }
+        // 25%: km/h ↔ m/s
+        if (rng() < 0.25) {
+            const kmh = rc(rng, [18, 36, 54, 72, 90, 108, 126, 144]);
+            const ms = kmh / 3.6;
+            const ph = rc(rng, [
+                `Convert $${kmh}$ km/h to *m/s*. ($1$ km/h $= \\frac{1}{3.6}$ m/s.)`,
+                `A ${ctx.vehicle} travels at $${kmh}$ km/h. Express this speed in *m/s*.`,
+            ]);
+            return { clue: ph, answer: String(ms), answerDisplay: `${ms} m/s`,
+                worked: `$${kmh} \\div 3.6 = ${ms}$ m/s` };
+        }
+        const findWhat = rc(rng, ['speed', 'distance', 'time']);
+        if (findWhat === 'speed') {
+            const t = rc(rng, [2, 3, 4, 5, 6, 8]);
+            const s = ri(rng, 5, 15) * 10;
+            const d = s * t;
+            const ph = `A ${ctx.vehicle} travels $${d}$ km in $${t}$ hours. Find its speed.`;
+            return { clue: ph, answer: String(s), answerDisplay: `${s} ${ctx.unit}`,
+                worked: `$s = ${d} \\div ${t} = ${s}$ km/h` };
+        }
+        if (findWhat === 'distance') {
+            const speed = ri(rng, 5, 14) * 10, time = rc(rng, [2, 3, 4, 5, 2.5, 3.5]);
+            const dist = speed * time;
+            const ph = `A ${ctx.vehicle} travels at $${speed}$ ${ctx.unit} for $${time}$ hours. Find the distance.`;
+            return { clue: ph, answer: String(dist), answerDisplay: `${dist} km`,
+                worked: `$d = ${speed} \\times ${time} = ${dist}$ km` };
+        }
+        const speed2 = ri(rng, 5, 14) * 10, dist2 = speed2 * ri(rng, 2, 6);
+        const time2 = dist2 / speed2;
+        const ph = `A ${ctx.vehicle} travels $${dist2}$ km at $${speed2}$ ${ctx.unit}. How long does the journey take?`;
+        return { clue: ph, answer: String(time2), answerDisplay: `${time2} h`,
+            worked: `$t = ${dist2} \\div ${speed2} = ${time2}$ h` };
     }
-    // 20% on Medium/Hard: km/h ↔ m/s conversion (a fundamental rate skill).
-    if (diff !== 'Easy' && rng() < 0.2) {
-        const kmh = rc(rng, [18, 36, 54, 72, 90, 108]);  // each divisible by 3.6
-        const ms  = kmh / 3.6;
+    // Medium: km/h ↔ m/s conversion 20%
+    if (diff === 'Medium' && rng() < 0.2) {
+        const kmh = rc(rng, [18, 36, 54, 72, 90, 108]);
+        const ms = kmh / 3.6;
         const ph = rc(rng, [
             `Convert $${kmh}$ km/h to *m/s*. ($1$ km/h $= \\frac{1}{3.6}$ m/s.)`,
             `A ${ctx.vehicle} travels at $${kmh}$ km/h. Express this speed in *m/s*.`,
         ]);
-        return { clue: ph, answer: String(ms), answerDisplay: `${ms} m/s` };
+        return { clue: ph, answer: String(ms), answerDisplay: `${ms} m/s`,
+            worked: `$${kmh} \\div 3.6 = ${ms}$ m/s` };
     }
     const findWhat = rc(rng, diff === 'Easy' ? ['speed', 'distance'] : ['speed', 'distance', 'time']);
     if (findWhat === 'speed') {
-        const d = ri(rng, 2, 15) * 10, t = ri(rng, 1, 4);
+        const maxDist = diff === 'Easy' ? 10 : 15;
+        const d = ri(rng, 2, maxDist) * 10, t = ri(rng, 1, diff === 'Easy' ? 3 : 5);
         if (d % t !== 0) return genRatiosRates(rng, diff, allowedOps);
         const s = d / t;
         const ph = rc(rng, [
             `A ${ctx.vehicle} travels $${d}$ km in $${t}$ hour${t > 1 ? 's' : ''}. Find its speed.`,
             `Find the speed of a ${ctx.vehicle} that covers $${d}$ km in $${t}$ h.`,
         ]);
-        return { clue: ph, answer: String(s), answerDisplay: `${s} ${ctx.unit}` };
+        return { clue: ph, answer: String(s), answerDisplay: `${s} ${ctx.unit}`,
+            worked: `$s = ${d} \\div ${t} = ${s}$ km/h` };
     }
     if (findWhat === 'distance') {
-        const speed = ri(rng, 3, 12) * 10, time = ri(rng, 1, 4);
+        const speed = ri(rng, 3, diff === 'Easy' ? 8 : 12) * 10, time = ri(rng, 1, diff === 'Easy' ? 3 : 4);
         const dist = speed * time;
         const ph = rc(rng, [
             `A ${ctx.vehicle} travels at $${speed}$ ${ctx.unit} for $${time}$ hour${time > 1 ? 's' : ''}. Find the distance.`,
             `How far does a ${ctx.vehicle} travel at $${speed}$ ${ctx.unit} in $${time}$ h?`,
         ]);
-        return { clue: ph, answer: String(dist), answerDisplay: `${dist} km` };
+        return { clue: ph, answer: String(dist), answerDisplay: `${dist} km`,
+            worked: `$d = ${speed} \\times ${time} = ${dist}$ km` };
     }
     // findWhat === 'time'
     const speed2 = ri(rng, 4, 12) * 10, dist2 = speed2 * ri(rng, 1, 5);
@@ -3539,7 +3849,8 @@ function genRatiosRates(rng, diff, allowedOps) {
         `A ${ctx.vehicle} travels $${dist2}$ km at $${speed2}$ ${ctx.unit}. How long does the journey take?`,
         `Find the *time* taken for a ${ctx.vehicle} to travel $${dist2}$ km at $${speed2}$ ${ctx.unit}.`,
     ]);
-    return { clue: ph, answer: String(time2), answerDisplay: `${time2} h` };
+    return { clue: ph, answer: String(time2), answerDisplay: `${time2} h`,
+        worked: `$t = ${dist2} \\div ${speed2} = ${time2}$ h` };
 }
 
 // ============================================================

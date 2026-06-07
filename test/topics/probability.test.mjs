@@ -60,6 +60,7 @@ test('Probability complementary: P(not E) = 1 − P(E)', () => {
                 subOpsFilter: { Probability: ['complementary'] },
             });
             for (const q of qs) {
+                if (/at least/i.test(q.clue)) continue;
                 const m = q.clue.match(/\\frac\{(\d+)\}\{(\d+)\}/);
                 if (!m) continue;
                 const n = +m[1], d = +m[2];
