@@ -577,7 +577,9 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
 
     if (diff === 'Easy') {
         if (type === 0) {
-            const a = ri(rng, 1, 9) / 10, b = ri(rng, 1, 9) / 10;
+            const twoDigit = rng() < 0.4;
+            const a = twoDigit ? ri(rng, 11, 99) / 10 : ri(rng, 1, 9) / 10;
+            const b = twoDigit ? ri(rng, 11, 99) / 10 : ri(rng, 1, 9) / 10;
             const ans = round(a + b, 2);
             if (rng() < 0.25) {
                 const ctx = rc(rng, [
@@ -597,9 +599,11 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
             ]);
             return { clue: ph, answer: String(ans), worked: `$${a} + ${b} = ${ans}$` };
         }
-        // type 3: simple decimal subtraction (a > b, both one decimal place)
+        // type 3: decimal subtraction
         if (type === 3) {
-            const a = ri(rng, 3, 9) / 10, b = ri(rng, 1, Math.round(a * 10) - 1) / 10;
+            const twoDigit3 = rng() < 0.4;
+            const a = twoDigit3 ? ri(rng, 30, 99) / 10 : ri(rng, 3, 9) / 10;
+            const b = twoDigit3 ? ri(rng, 10, Math.round(a * 10) - 1) / 10 : ri(rng, 1, Math.round(a * 10) - 1) / 10;
             const bR = round(b, 1);
             const ans = round(a - b, 2);
             if (rng() < 0.25) {
@@ -1146,8 +1150,8 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} + \\frac{${n2}}{${d2}}$`, answer: ans, worked };
         }
         if (type === 1) {
-            const d1 = ri(rng, 2, 9), n1 = ri(rng, 1, d1 - 1);
-            const d2 = ri(rng, 2, 9), n2 = ri(rng, 1, d2 - 1);
+            const d1 = ri(rng, 2, 10), n1 = ri(rng, 1, d1 - 1);
+            const d2 = ri(rng, 2, 10), n2 = ri(rng, 1, d2 - 1);
             const ans = fracStr(n1 * n2, d1 * d2);
             const { n: _mn, d: _md } = simplify(n1 * n2, d1 * d2);
             const _inlineMul = _md === 1 ? String(_mn) : `\\frac{${_mn}}{${_md}}`;
@@ -1213,10 +1217,10 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
     // Hard
     if (type === 0) {
         // Build coprime fractions directly: pick d, then pick n from coprime candidates
-        const d1 = ri(rng, 3, 10);
+        const d1 = ri(rng, 3, 12);
         const cops1 = Array.from({ length: d1 - 1 }, (_, i) => i + 1).filter(n => gcd(n, d1) === 1);
         const n1 = rc(rng, cops1);
-        const d2 = ri(rng, 3, 10);
+        const d2 = ri(rng, 3, 12);
         const cops2 = Array.from({ length: d2 - 1 }, (_, i) => i + 1).filter(n => gcd(n, d2) === 1);
         const n2 = rc(rng, cops2);
         const ans = fracStr(n1 * d2, d1 * n2);
@@ -1233,8 +1237,8 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
     if (type === 1) {
         // ~35% mixed number subtraction
         if (rng() < 0.35) {
-            const denA = rc(rng, [3, 4, 5, 6, 8]);
-            const denB = rc(rng, [3, 4, 5, 6, 8].filter(d => d !== denA));
+            const denA = rc(rng, [3, 4, 5, 6, 7, 8, 9]);
+            const denB = rc(rng, [3, 4, 5, 6, 7, 8, 9].filter(d => d !== denA));
             const wA = ri(rng, 2, 5), nA = ri(rng, 1, denA - 1);
             const wB = ri(rng, 1, wA - 1), nB = ri(rng, 1, denB - 1);
             const l = lcm(denA, denB);
@@ -1255,7 +1259,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             const _inlineAns = _sd === 1 ? String(_sn) : `\\frac{${_sn}}{${_sd}}`;
             return { clue: `${calcVerb} $${wA}\\frac{${nA}}{${denA}} - ${wB}\\frac{${nB}}{${denB}}$`, answer: displayAns, worked: `LCD = $${l}$: $\\frac{${totalA}}{${l}} - \\frac{${totalB}}{${l}} = \\frac{${diff_num}}{${l}} = ${_inlineAns}$` };
         }
-        const dPool = [3, 4, 5, 6, 7, 8, 9];
+        const dPool = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
         const d1 = rc(rng, dPool);
         const d2 = rc(rng, dPool.filter(d => d !== d1));
         const n1 = ri(rng, 1, d1 - 1), n2 = ri(rng, 1, d2 - 1);
