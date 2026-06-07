@@ -243,7 +243,7 @@ function genIntegers(rng, diff, allowedOps) {
                 `What number goes in the box? $${expr}$`,
                 `Solve for the missing value: $${expr}$`,
             ]);
-            return { clue, answer: String(missing) };
+            return { clue, answer: String(missing), worked: `$${total} - ${b} = ${missing}$` };
         }
         // Medium/Hard: 40% chance of a negative-integer variant
         if (diff !== 'Easy' && rng() < 0.4) {
@@ -257,7 +257,7 @@ function genIntegers(rng, diff, allowedOps) {
                 `What is $${expr}$?`,
                 `Find the value of $${expr}$`,
             ]);
-            return { clue, answer: String(aa + bb) };
+            return { clue, answer: String(aa + bb), worked: `$${expr} = ${aa + bb}$` };
         }
         // Easy: 25% chance of simple negative-integer addition (e.g. −3 + 7, 5 + (−2))
         if (diff === 'Easy' && rng() < 0.25) {
@@ -270,7 +270,7 @@ function genIntegers(rng, diff, allowedOps) {
                 `What is $${expr}$?`,
                 `Find the value of $${expr}$`,
             ]);
-            return { clue, answer: String(aa + bb) };
+            return { clue, answer: String(aa + bb), worked: `$${expr} = ${aa + bb}$` };
         }
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, max);
@@ -281,7 +281,7 @@ function genIntegers(rng, diff, allowedOps) {
                 { stem: `A student scores $${a}$ points on Monday and $${b}$ points on Tuesday. What is the total score?`, ans: a + b },
                 { stem: `There are $${a}$ students in class A and $${b}$ students in class B. How many students altogether?`, ans: a + b },
             ]);
-            return { clue: ctx.stem, answer: String(ctx.ans) };
+            return { clue: ctx.stem, answer: String(ctx.ans), worked: `$${a} + ${b} = ${ctx.ans}$` };
         }
         const clue = rc(rng, [
             `${rc(rng, CALC_VERBS)} $${a} + ${b}$`,
@@ -290,7 +290,7 @@ function genIntegers(rng, diff, allowedOps) {
             `Add $${a}$ to $${b}$`,
             `${rc(rng, CALC_VERBS)} $${a} + ${b}$`,
         ]);
-        return { clue, answer: String(a + b) };
+        return { clue, answer: String(a + b), worked: `$${a} + ${b} = ${a + b}$` };
     }
     if (op === '-') {
         // ~22% chance: missing-number (inverse) variant — a − □ = result
@@ -309,7 +309,8 @@ function genIntegers(rng, diff, allowedOps) {
                 `What number goes in the box? $${expr}$`,
                 `Solve for the missing value: $${expr}$`,
             ]);
-            return { clue, answer: String(ans) };
+            const workedExpr = isMinuend ? `$${result} + ${missing} = ${ans}$` : `$${a} - ${result} = ${ans}$`;
+            return { clue, answer: String(ans), worked: workedExpr };
         }
         // Medium/Hard: 40% chance of a negative-integer variant
         if (diff !== 'Easy' && rng() < 0.4) {
@@ -323,7 +324,7 @@ function genIntegers(rng, diff, allowedOps) {
                     `What is $${a} - (-${b})$?`,
                     `Subtract $-${b}$ from $${a}$`,
                 ]);
-                return { clue, answer: String(a + b) };
+                return { clue, answer: String(a + b), worked: `$${a} - (-${b}) = ${a} + ${b} = ${a + b}$` };
             }
             // negative − positive: −a − b
             const clue = rc(rng, [
@@ -331,7 +332,7 @@ function genIntegers(rng, diff, allowedOps) {
                 `What is $-${a} - ${b}$?`,
                 `Find $-${a} - ${b}$`,
             ]);
-            return { clue, answer: String(-a - b) };
+            return { clue, answer: String(-a - b), worked: `$-${a} - ${b} = ${-a - b}$` };
         }
         // Easy: 20% chance of crossing zero (answer is negative) — introduces negatives gently
         if (diff === 'Easy' && rng() < 0.2) {
@@ -341,7 +342,7 @@ function genIntegers(rng, diff, allowedOps) {
                 `What is $${a2} - ${b2}$?`,
                 `Subtract $${b2}$ from $${a2}$`,
             ]);
-            return { clue, answer: String(a2 - b2) };
+            return { clue, answer: String(a2 - b2), worked: `$${a2} - ${b2} = ${a2 - b2}$` };
         }
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, a);
@@ -351,7 +352,7 @@ function genIntegers(rng, diff, allowedOps) {
                 { stem: `A class has $${a}$ students. $${b}$ are absent. How many are present?`, ans: a - b },
                 { stem: `A farmer has $${a}$ eggs. $${b}$ are sold. How many are left?`, ans: a - b },
             ]);
-            return { clue: ctx.stem, answer: String(ctx.ans) };
+            return { clue: ctx.stem, answer: String(ctx.ans), worked: `$${a} - ${b} = ${ctx.ans}$` };
         }
         const clue = rc(rng, [
             `${rc(rng, CALC_VERBS)} $${a} - ${b}$`,
@@ -360,7 +361,7 @@ function genIntegers(rng, diff, allowedOps) {
             `What is $${a}$ minus $${b}$?`,
             `${rc(rng, CALC_VERBS)} $${a} - ${b}$`,
         ]);
-        return { clue, answer: String(a - b) };
+        return { clue, answer: String(a - b), worked: `$${a} - ${b} = ${a - b}$` };
     }
     if (op === '×') {
         const [lo, hi] = diff === 'Easy' ? [2, 12] : diff === 'Medium' ? [3, 30] : [12, 60];
@@ -368,7 +369,7 @@ function genIntegers(rng, diff, allowedOps) {
         if (diff !== 'Easy' && rng() < 0.20) {
             const base = diff === 'Medium' ? ri(rng, 4, 18) : ri(rng, 12, 35);
             const verb = rc(rng, CALC_VERBS);
-            return { clue: `${verb}\n$${base}^2$`, answer: String(base * base) };
+            return { clue: `${verb}\n$${base}^2$`, answer: String(base * base), worked: `$${base}^2 = ${base} \\times ${base} = ${base * base}$` };
         }
         const a = ri(rng, lo, hi), b = ri(rng, lo, hi);
         // Easy: 25% word problem
@@ -378,7 +379,7 @@ function genIntegers(rng, diff, allowedOps) {
                 { stem: `Each row has $${a}$ seats and there are $${b}$ rows. How many seats in total?`, ans: a * b },
                 { stem: `A pack of pencils contains $${a}$ pencils. How many pencils in $${b}$ packs?`, ans: a * b },
             ]);
-            return { clue: ctx.stem, answer: String(ctx.ans) };
+            return { clue: ctx.stem, answer: String(ctx.ans), worked: `$${a} \\times ${b} = ${ctx.ans}$` };
         }
         // Medium/Hard: 40% chance of negative operand(s)
         if (diff !== 'Easy' && rng() < 0.4) {
@@ -389,7 +390,7 @@ function genIntegers(rng, diff, allowedOps) {
                     `Multiply $-${a}$ by $${b}$`,
                     `What is $(-${a}) \\times ${b}$?`,
                 ]);
-                return { clue, answer: String(-a * b) };
+                return { clue, answer: String(-a * b), worked: `$(-${a}) \\times ${b} = ${-a * b}$` };
             }
             if (negForm === 1) {
                 const clue = rc(rng, [
@@ -397,14 +398,14 @@ function genIntegers(rng, diff, allowedOps) {
                     `Multiply $${a}$ by $-${b}$`,
                     `What is $${a} \\times (-${b})$?`,
                 ]);
-                return { clue, answer: String(-a * b) };
+                return { clue, answer: String(-a * b), worked: `$${a} \\times (-${b}) = ${-a * b}$` };
             }
             // Hard only: negative × negative
             const clue = rc(rng, [
                 `${rc(rng, MULT_VERBS)} $(-${a}) \\times (-${b})$`,
                 `What is $(-${a}) \\times (-${b})$?`,
             ]);
-            return { clue, answer: String(a * b) };
+            return { clue, answer: String(a * b), worked: `$(-${a}) \\times (-${b}) = ${a * b}$` };
         }
         // Easy: 20% chance of negative × positive (e.g. (−3) × 4)
         if (diff === 'Easy' && rng() < 0.2) {
@@ -413,7 +414,7 @@ function genIntegers(rng, diff, allowedOps) {
                 `Multiply $-${a}$ by $${b}$`,
                 `What is $(-${a}) \\times ${b}$?`,
             ]);
-            return { clue, answer: String(-a * b) };
+            return { clue, answer: String(-a * b), worked: `$(-${a}) \\times ${b} = ${-a * b}$` };
         }
         const clue = rc(rng, [
             `${rc(rng, MULT_VERBS)} $${a} \\times ${b}$`,
@@ -421,7 +422,7 @@ function genIntegers(rng, diff, allowedOps) {
             `What is $${a}$ multiplied by $${b}$?`,
             `Find the *product* of $${a}$ and $${b}$`,
         ]);
-        return { clue, answer: String(a * b) };
+        return { clue, answer: String(a * b), worked: `$${a} \\times ${b} = ${a * b}$` };
     }
     if (op === '÷') {
         const [lo, hi] = diff === 'Easy' ? [2, 12] : diff === 'Medium' ? [3, 25] : [8, 50];
@@ -434,7 +435,7 @@ function genIntegers(rng, diff, allowedOps) {
                 { stem: `A farmer packs $${total}$ eggs into boxes of $${b}$. How many boxes are needed?` },
                 { stem: `$${total}$ students are split into $${b}$ equal groups. How many in each group?` },
             ]);
-            return { clue: ctx.stem, answer: String(ans) };
+            return { clue: ctx.stem, answer: String(ans), worked: `$${b * ans} \\div ${b} = ${ans}$` };
         }
         // Medium/Hard: 40% chance of negative dividend
         if (diff !== 'Easy' && rng() < 0.4) {
@@ -444,7 +445,7 @@ function genIntegers(rng, diff, allowedOps) {
                 `Divide $${dividend}$ by $${b}$`,
                 `What is $${dividend}$ divided by $${b}$?`,
             ]);
-            return { clue, answer: String(-ans) };
+            return { clue, answer: String(-ans), worked: `$${dividend} \\div ${b} = ${-ans}$` };
         }
         const clue = rc(rng, [
             `${rc(rng, DIV_VERBS)} $${b * ans} \\div ${b}$`,
@@ -452,7 +453,7 @@ function genIntegers(rng, diff, allowedOps) {
             `What is $${b * ans}$ divided by $${b}$?`,
             `Find the *quotient* of $${b * ans}$ and $${b}$`,
         ]);
-        return { clue, answer: String(ans) };
+        return { clue, answer: String(ans), worked: `$${b * ans} \\div ${b} = ${ans}$` };
     }
     if (op === 'bodmas') {
         const verb = rc(rng, BODMAS_VERBS);
@@ -461,30 +462,30 @@ function genIntegers(rng, diff, allowedOps) {
             const form = ri(rng, 0, 5);
             if (form === 0) {
                 const a = ri(rng, 2, 15), b = ri(rng, 2, 9), c = ri(rng, 2, 8);
-                return { clue: `${verb}\n$${a} + ${b} \\times ${c}$`, answer: String(a + b * c) };
+                return { clue: `${verb}\n$${a} + ${b} \\times ${c}$`, answer: String(a + b * c), worked: `$${a} + ${b} \\times ${c} = ${a} + ${b * c} = ${a + b * c}$` };
             }
             if (form === 1) {
                 const a = ri(rng, 2, 9), b = ri(rng, 2, 9), c = ri(rng, 2, 8);
-                return { clue: `${verb}\n$(${a} + ${b}) \\times ${c}$`, answer: String((a + b) * c) };
+                return { clue: `${verb}\n$(${a} + ${b}) \\times ${c}$`, answer: String((a + b) * c), worked: `$(${a} + ${b}) \\times ${c} = ${a + b} \\times ${c} = ${(a + b) * c}$` };
             }
             if (form === 2) {
                 const a = ri(rng, 2, 9), b = ri(rng, 2, 8), c = ri(rng, 2, 9), d = ri(rng, 2, 6);
-                return { clue: `${verb}\n$${a} \\times ${b} + ${c} \\times ${d}$`, answer: String(a * b + c * d) };
+                return { clue: `${verb}\n$${a} \\times ${b} + ${c} \\times ${d}$`, answer: String(a * b + c * d), worked: `$${a} \\times ${b} + ${c} \\times ${d} = ${a * b} + ${c * d} = ${a * b + c * d}$` };
             }
             if (form === 3) {
                 const b = ri(rng, 2, 12), c = ri(rng, 3, 10);
                 const a = ri(rng, b + 1, b + 15);
-                return { clue: `${verb}\n$(${a} - ${b}) \\times ${c}$`, answer: String((a - b) * c) };
+                return { clue: `${verb}\n$(${a} - ${b}) \\times ${c}$`, answer: String((a - b) * c), worked: `$(${a} - ${b}) \\times ${c} = ${a - b} \\times ${c} = ${(a - b) * c}$` };
             }
             if (form === 4) {
                 const a = ri(rng, 3, 20), b = ri(rng, 2, 10), c = ri(rng, 2, 8);
-                return { clue: `${verb}\n$${a} - ${b} \\times ${c}$`, answer: String(a - b * c) };
+                return { clue: `${verb}\n$${a} - ${b} \\times ${c}$`, answer: String(a - b * c), worked: `$${a} - ${b} \\times ${c} = ${a} - ${b * c} = ${a - b * c}$` };
             }
             // form 5: division with addition/subtraction
             const a = ri(rng, 2, 8), b = ri(rng, 2, 8);
             const c = a * b;
             const d = ri(rng, 2, 15);
-            return { clue: `${verb}\n$${c} \\div ${a} + ${d}$`, answer: String(b + d) };
+            return { clue: `${verb}\n$${c} \\div ${a} + ${d}$`, answer: String(b + d), worked: `$${c} \\div ${a} + ${d} = ${b} + ${d} = ${b + d}$` };
         }
         // Hard: forms 0–12 — exponents, nested brackets, larger operands, multi-step
         const form = ri(rng, 0, 12);
@@ -586,7 +587,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
                     `A plant is $${a}$ m tall and grows another $${b}$ m. What is its new height?`,
                     `Mia walks $${a}$ km, then $${b}$ km more. How far has she walked in total?`,
                 ]);
-                return { clue: ctx, answer: String(ans) };
+                return { clue: ctx, answer: String(ans), worked: `$${a} + ${b} = ${ans}$` };
             }
             const ph = rc(rng, [
                 `${rc(rng, CALC_VERBS)} $${a} + ${b}$`,
@@ -594,7 +595,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
                 `Find the sum of $${a}$ and $${b}$`,
                 `What is $${a} + ${b}$?`,
             ]);
-            return { clue: ph, answer: String(ans) };
+            return { clue: ph, answer: String(ans), worked: `$${a} + ${b} = ${ans}$` };
         }
         // type 3: simple decimal subtraction (a > b, both one decimal place)
         if (type === 3) {
@@ -607,7 +608,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
                     `A ribbon is $${a}$ m long. A piece of $${bR}$ m is cut off. What length is left?`,
                     `Sam has $\\$${a}$ and spends $\\$${bR}$. How much money is left?`,
                 ]);
-                return { clue: ctx, answer: String(ans) };
+                return { clue: ctx, answer: String(ans), worked: `$${a} - ${bR} = ${ans}$` };
             }
             const ph = rc(rng, [
                 `${rc(rng, CALC_VERBS)} $${a} - ${bR}$`,
@@ -615,7 +616,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
                 `Find the difference between $${a}$ and $${bR}$`,
                 `What is $${a} - ${bR}$?`,
             ]);
-            return { clue: ph, answer: String(ans) };
+            return { clue: ph, answer: String(ans), worked: `$${a} - ${bR} = ${ans}$` };
         }
         if (type === 1) {
             const a = ri(rng, 1, 9) / 10, b = ri(rng, 2, 9);
@@ -626,7 +627,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
                     `One ribbon is $${a}$ m long. What is the total length of $${b}$ ribbons?`,
                     `A snack costs $\\$${a}$. Find the cost of $${b}$ snacks.`,
                 ]);
-                return { clue: ctx, answer: String(ans) };
+                return { clue: ctx, answer: String(ans), worked: `$${a} \\times ${b} = ${ans}$` };
             }
             const ph = rc(rng, [
                 `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
@@ -634,7 +635,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
                 `Find the product of $${a}$ and $${b}$`,
                 `What is $${a} \\times ${b}$?`,
             ]);
-            return { clue: ph, answer: String(ans) };
+            return { clue: ph, answer: String(ans), worked: `$${a} \\times ${b} = ${ans}$` };
         }
         // type 2: simple division (whole ÷ integer → 1-dp result)
         const b2 = ri(rng, 2, 9);
@@ -646,7 +647,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
             `What is $${dividend}$ divided by $${b2}$?`,
             `Find the *quotient* of $${dividend}$ and $${b2}$`,
         ]);
-        return { clue: ph2, answer: String(ans2) };
+        return { clue: ph2, answer: String(ans2), worked: `$${dividend} \\div ${b2} = ${ans2}$` };
     }
     if (diff === 'Medium') {
         if (type === 0) {
@@ -659,7 +660,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
                     `On Monday a shop sold $${a}$ kg of cheese and on Tuesday $${b}$ kg. Find the total sales.`,
                     `Two lengths of timber measure $${a}$ m and $${b}$ m. What is their combined length?`,
                 ]);
-                return { clue: ctx, answer: String(ans) };
+                return { clue: ctx, answer: String(ans), worked: `$${a} + ${b} = ${ans}$` };
             }
             const ph = rc(rng, [
                 `${rc(rng, CALC_VERBS)} $${a} + ${b}$`,
@@ -667,7 +668,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
                 `Find the sum of $${a}$ and $${b}$`,
                 `What is $${a} + ${b}$?`,
             ]);
-            return { clue: ph, answer: String(ans) };
+            return { clue: ph, answer: String(ans), worked: `$${a} + ${b} = ${ans}$` };
         }
         if (type === 1) {
             // two-decimal-place subtraction
@@ -679,7 +680,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
                     `A plank is $${a}$ m long. A piece of $${b}$ m is cut off. What length is left?`,
                     `A bag weighs $${a}$ kg. After removing $${b}$ kg of contents, what is the new mass?`,
                 ]);
-                return { clue: ctx, answer: String(ans) };
+                return { clue: ctx, answer: String(ans), worked: `$${a} - ${b} = ${ans}$` };
             }
             const ph = rc(rng, [
                 `${rc(rng, CALC_VERBS)} $${a} - ${b}$`,
@@ -687,7 +688,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
                 `Find the difference of $${a}$ and $${b}$`,
                 `What is $${a} - ${b}$?`,
             ]);
-            return { clue: ph, answer: String(ans) };
+            return { clue: ph, answer: String(ans), worked: `$${a} - ${b} = ${ans}$` };
         }
         if (type === 2) {
             // two-decimal-place number × small integer (exact, harder than 1dp×1dp)
@@ -698,7 +699,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
                 `Find the product of $${a}$ and $${b}$`,
                 `What is $${a} \\times ${b}$?`,
             ]);
-            return { clue: ph, answer: String(round(a * b, 2)) };
+            return { clue: ph, answer: String(round(a * b, 2)), worked: `$${a} \\times ${b} = ${round(a * b, 2)}$` };
         }
         // type 3: money-context addition
         const dollars1 = ri(rng, 1, 49);
@@ -713,7 +714,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
             `Add $\\$${p1.toFixed(2)}$ and $\\$${p2.toFixed(2)}$`,
             `What is the total cost of items priced $\\$${p1.toFixed(2)}$ and $\\$${p2.toFixed(2)}$?`,
         ]);
-        return { clue: ph3, answer: String(total), answerDisplay: `$${total.toFixed(2)}` };
+        return { clue: ph3, answer: String(total), answerDisplay: `$${total.toFixed(2)}`, worked: `$${p1.toFixed(2)} + ${p2.toFixed(2)} = ${total.toFixed(2)}$` };
     }
     // Hard
     if (type === 0) {
@@ -725,7 +726,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
             `Find the sum of $${a}$, $${b}$ and $${c}$`,
             `What is $${a} + ${b} + ${c}$?`,
         ]);
-        return { clue: ph, answer: String(ans) };
+        return { clue: ph, answer: String(ans), worked: `$${a} + ${b} + ${c} = ${ans}$` };
     }
     if (type === 1) {
         // division giving a non-terminating quotient — round to 2 decimal places
@@ -736,7 +737,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
             `Divide $${a}$ by $${b}$ and round the answer to **2 decimal places**.`,
             `Find $${a} \\div ${b}$ correct to **2 decimal places**.`,
         ]);
-        return { clue: ph, answer: String(ans) };
+        return { clue: ph, answer: String(ans), worked: `$${a} \\div ${b} = ${ans}$` };
     }
     if (type === 2) {
         const a = ri(rng, 101, 999) / 100, b = ri(rng, 100, Math.floor(a * 100) - 1) / 100;
@@ -746,7 +747,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
             `Find the difference of $${a}$ and $${b}$`,
             `What is $${a} - ${b}$?`,
         ]);
-        return { clue: ph, answer: String(round(a - b, 2)) };
+        return { clue: ph, answer: String(round(a - b, 2)), worked: `$${a} - ${b} = ${round(a - b, 2)}$` };
     }
     if (type === 4) {
         // two-decimal-place number × small integer (exact, larger operands)
@@ -757,7 +758,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
             `Find the product of $${a}$ and $${b}$`,
             `What is $${a} \\times ${b}$?`,
         ]);
-        return { clue: ph, answer: String(round(a * b, 2)) };
+        return { clue: ph, answer: String(round(a * b, 2)), worked: `$${a} \\times ${b} = ${round(a * b, 2)}$` };
     }
     // type 3: measurement-cost multiply — ensure len has a decimal part
     const lenTenths = ri(rng, 11, 99);
@@ -775,7 +776,7 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
         `Calculate the cost of $${len}$ ${unit3}s of ${item3} at $\\$${rate}$ per ${unit3}.`,
         `A length of $${len}$ ${unit3}s at $\\$${rate}$ per ${unit3}. Find the *total cost*.`,
     ]);
-    return { clue: ph3h, answer: String(cost3), answerDisplay: `$${money(cost3)}` };
+    return { clue: ph3h, answer: String(cost3), answerDisplay: `$${money(cost3)}`, worked: `$${len} \\times ${rate} = ${cost3}$` };
 }
 
 // ============================================================
@@ -796,20 +797,23 @@ function genRounding(rng, diff, allowedOps) {
             const n = ri(rng, 100, 9999);
             const ans = Math.round(n / 10) * 10;
             // 30% chance real-world context
+            const d0 = n % 10;
+            const dir0 = d0 >= 5 ? '≥ 5, round up' : '< 5, round down';
+            const wk0 = `$${n} \\to ${ans}$ (ones digit ${d0} ${dir0})`;
             if (rng() < 0.3) {
                 const ctx = rc(rng, [
                     `A car park has $${n}$ spaces. Round this to the nearest $10$.`,
                     `A school has $${n}$ students. Round to the nearest $10$.`,
                     `A town has a population of $${n}$. Round to the nearest $10$.`,
                 ]);
-                return { clue: ctx, answer: String(ans) };
+                return { clue: ctx, answer: String(ans), worked: wk0 };
             }
             const ph = rc(rng, [
                 `Round $${n}$ to the nearest $10$`,
                 `Write $${n}$ rounded to the nearest $10$`,
                 `Estimate $${n}$ to the nearest $10$`,
             ]);
-            return { clue: ph, answer: String(ans) };
+            return { clue: ph, answer: String(ans), worked: wk0 };
         }
         if (type === 1) {
             // Guarantee a non-zero decimal part so the question isn't nonsensical
@@ -820,7 +824,8 @@ function genRounding(rng, diff, allowedOps) {
                 `Round $${n}$ to the nearest *whole number*`,
                 `Write $${n}$ as a whole number (rounded)`,
             ]);
-            return { clue: ph, answer: String(Math.round(n)) };
+            const dir1 = frac >= 5 ? '≥ 5, round up' : '< 5, round down';
+            return { clue: ph, answer: String(Math.round(n)), worked: `$${n} \\to ${Math.round(n)}$ (tenths digit $${frac}$ ${dir1})` };
         }
         // type 2: nearest 100
         const n2 = ri(rng, 150, 9850);
@@ -830,38 +835,46 @@ function genRounding(rng, diff, allowedOps) {
             `Write $${n2}$ rounded to the nearest $100$`,
             `Approximate $${n2}$ to the nearest $100$`,
         ]);
-        return { clue: ph2, answer: String(ans2) };
+        const d2 = Math.floor(n2 / 10) % 10;
+        const dir2 = d2 >= 5 ? '≥ 5, round up' : '< 5, round down';
+        return { clue: ph2, answer: String(ans2), worked: `$${n2} \\to ${ans2}$ (tens digit $${d2}$ ${dir2})` };
     }
     if (diff === 'Medium') {
         if (type === 0) {
             const n = ri(rng, 1000, 99999);
             const ans = Math.round(n / 100) * 100;
+            const dM0 = Math.floor(n / 10) % 10;
+            const dirM0 = dM0 >= 5 ? '≥ 5, round up' : '< 5, round down';
             const ph = rc(rng, [
                 `Round $${n}$ to the nearest $100$`,
                 `Approximate $${n}$ to the nearest $100$`,
                 `Write $${n}$ correct to the nearest $100$`,
             ]);
-            return { clue: ph, answer: String(ans) };
+            return { clue: ph, answer: String(ans), worked: `$${n} \\to ${ans}$ (tens digit $${dM0}$ ${dirM0})` };
         }
         if (type === 1) {
             const n = ri(rng, 100, 9999) / 100;
             const display = n.toFixed(2);
+            const deciding1 = Math.floor(n * 100) % 10;
+            const dir1dp = deciding1 >= 5 ? '≥ 5, round up' : '< 5, round down';
             const ph = rc(rng, [
                 `Round $${display}$ to *1 decimal place*`,
                 `Write $${display}$ correct to *1 decimal place*`,
                 `Express $${display}$ to *1 decimal place*`,
             ]);
-            return { clue: ph, answer: round(n, 1).toFixed(1) };
+            return { clue: ph, answer: round(n, 1).toFixed(1), worked: `$${display} \\to ${round(n, 1).toFixed(1)}$ (2nd d.p. digit $${deciding1}$ ${dir1dp})` };
         }
         if (type === 2) {
             const n = ri(rng, 1000, 99999) / 1000;
             const display = n.toFixed(3);
+            const deciding2 = Math.floor(n * 1000) % 10;
+            const dir2dp = deciding2 >= 5 ? '≥ 5, round up' : '< 5, round down';
             const ph = rc(rng, [
                 `Round $${display}$ to *2 decimal places*`,
                 `Write $${display}$ correct to *2 decimal places*`,
                 `Express $${display}$ to 2 d.p.`,
             ]);
-            return { clue: ph, answer: round(n, 2).toFixed(2) };
+            return { clue: ph, answer: round(n, 2).toFixed(2), worked: `$${display} \\to ${round(n, 2).toFixed(2)}$ (3rd d.p. digit $${deciding2}$ ${dir2dp})` };
         }
         if (type === 4) {
             // Estimation by rounding each factor to the nearest 10, then multiplying.
@@ -886,7 +899,7 @@ function genRounding(rng, diff, allowedOps) {
                 `Write $${n}$ correct to the nearest $${factor}$`,
                 `Approximate $${n}$ to the nearest $${factor}$`,
             ]);
-            return { clue: ph, answer: String(ans) };
+            return { clue: ph, answer: String(ans), worked: `$${n} \\to ${ans}$ (nearest $${factor}$)` };
         }
         if (type === 6) {
             // Round to 1 significant figure — bridges to the 2-3 s.f. work at Hard.
@@ -900,7 +913,9 @@ function genRounding(rng, diff, allowedOps) {
                 `Write $${n}$ correct to *1 significant figure*${edgeNote}`,
                 `Express $${n}$ to 1 s.f.${edgeNote}`,
             ]);
-            return { clue: ph, answer: String(ans) };
+            const d6 = Math.floor(n / (factor / 10)) % 10;
+            const dir6 = d6 >= 5 ? '≥ 5, round up' : '< 5, round down';
+            return { clue: ph, answer: String(ans), worked: `$${n} \\to ${ans}$ (2nd digit $${d6}$ ${dir6})` };
         }
         // type 3: nearest 5
         const n3 = ri(rng, 12, 295);
@@ -910,18 +925,20 @@ function genRounding(rng, diff, allowedOps) {
             `Write $${n3}$ rounded to the nearest $5$`,
             `A crowd of $${n3}$ is reported to the nearest $5$. State the figure.`,
         ]);
-        return { clue: ph3, answer: String(ans3) };
+        return { clue: ph3, answer: String(ans3), worked: `$${n3} \\to ${ans3}$ (nearest $5$)` };
     }
     // Hard
     if (type === 0) {
         const n = ri(rng, 10000, 999999);
         const ans = Math.round(n / 1000) * 1000;
+        const dH0 = Math.floor(n / 100) % 10;
+        const dirH0 = dH0 >= 5 ? '≥ 5, round up' : '< 5, round down';
         const ph = rc(rng, [
             `Round $${n}$ to the nearest $1000$`,
             `Write $${n}$ correct to the nearest $1000$`,
             `Approximate $${n}$ to the nearest $1000$`,
         ]);
-        return { clue: ph, answer: String(ans) };
+        return { clue: ph, answer: String(ans), worked: `$${n} \\to ${ans}$ (hundreds digit $${dH0}$ ${dirH0})` };
     }
     if (type === 1) {
         // round to 3 or 4 decimal places (the source value carries one extra place)
@@ -929,12 +946,14 @@ function genRounding(rng, diff, allowedOps) {
         const denom = Math.pow(10, dp + 1);
         const n = ri(rng, denom, denom * 100 - 1) / denom;
         const display = n.toFixed(dp + 1);
+        const decidingDp = Math.floor(n * denom) % 10;
+        const dirDp = decidingDp >= 5 ? '≥ 5, round up' : '< 5, round down';
         const ph = rc(rng, [
             `Round $${display}$ to ${dp} decimal places`,
             `Express $${display}$ correct to ${dp} decimal places`,
             `Write $${display}$ to ${dp} d.p.`,
         ]);
-        return { clue: ph, answer: round(n, dp).toFixed(dp) };
+        return { clue: ph, answer: round(n, dp).toFixed(dp), worked: `$${display} \\to ${round(n, dp).toFixed(dp)}$ (${dp + 1}th d.p. $${decidingDp}$ ${dirDp})` };
     }
     if (type === 2) {
         const sigFigs = rc(rng, [1, 2]);
@@ -944,12 +963,14 @@ function genRounding(rng, diff, allowedOps) {
         const sfLabel = `${sigFigs} significant figure${sigFigs > 1 ? 's' : ''}`;
         const orderAbove = Math.pow(10, Math.floor(Math.log10(n)) + 1);
         const edgeNote = ans >= orderAbove ? ' *Note: trailing zeros are not significant.*' : '';
+        const decidingSf = Math.floor(n / (factor / 10)) % 10;
+        const dirSf = decidingSf >= 5 ? '≥ 5, round up' : '< 5, round down';
         const ph = rc(rng, [
             `Round $${n}$ to ${sfLabel}${edgeNote}`,
             `Write $${n}$ correct to ${sfLabel}${edgeNote}`,
             `Express $${n}$ to ${sfLabel}${edgeNote}`,
         ]);
-        return { clue: ph, answer: String(ans) };
+        return { clue: ph, answer: String(ans), worked: `$${n} \\to ${ans}$ (next digit $${decidingSf}$ ${dirSf})` };
     }
     if (type === 4) {
         // Estimation: round each number to the nearest 100, then add or multiply.
@@ -996,12 +1017,14 @@ function genRounding(rng, diff, allowedOps) {
     const n3sf = ri(rng, 10000, 999999);
     const f3   = Math.pow(10, Math.floor(Math.log10(n3sf)) - 2);
     const ans3sf = Math.round(n3sf / f3) * f3;
+    const deciding3sf = Math.floor(n3sf / (f3 / 10)) % 10;
+    const dir3sf = deciding3sf >= 5 ? '≥ 5, round up' : '< 5, round down';
     const ph3sf = rc(rng, [
         `Round $${n3sf}$ to *3 significant figures*`,
         `Write $${n3sf}$ correct to *3 significant figures*`,
         `Express $${n3sf}$ to 3 s.f.`,
     ]);
-    return { clue: ph3sf, answer: String(ans3sf) };
+    return { clue: ph3sf, answer: String(ans3sf), worked: `$${n3sf} \\to ${ans3sf}$ (4th s.f. $${deciding3sf}$ ${dir3sf})` };
 }
 
 // ============================================================
@@ -1034,7 +1057,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
                     { c: `There are $${whole}$ lollies in a bag. Tom eats $\\frac{${num}}{${den}}$ of them. How many lollies did Tom eat?`, n: 'lollies' },
                     { c: `A farm has $${whole}$ animals. $\\frac{${num}}{${den}}$ are cows. How many cows are there?`, n: 'cows' },
                 ]);
-                return { clue: wp.c, answer: String(ans), answerDisplay: `${ans} ${wp.n}`, unit: wp.n };
+                return { clue: wp.c, answer: String(ans), answerDisplay: `${ans} ${wp.n}`, unit: wp.n, worked: `$\\frac{${num}}{${den}} \\times ${whole} = ${ans}$` };
             }
             const ph = rc(rng, [
                 `Find $\\frac{${num}}{${den}}$ of $${whole}$`,
@@ -1042,7 +1065,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
                 `Determine $\\frac{${num}}{${den}}$ of $${whole}$`,
                 `What is $\\frac{${num}}{${den}}$ of $${whole}$?`,
             ]);
-            return { clue: ph, answer: String(ans) };
+            return { clue: ph, answer: String(ans), worked: `$\\frac{${num}}{${den}} \\times ${whole} = ${ans}$` };
         }
         if (type === 1) {
             // ~40% unlike-denominator pairs where one divides the other
@@ -1083,7 +1106,9 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
                 `Express $\\frac{${num}}{${den}}$ in **lowest terms**`,
                 `Reduce $\\frac{${num}}{${den}}$ to its *simplest form*`,
             ]);
-            return { clue: ph, answer: ans };
+            const g = gcd(num, den);
+            const inlineSimp = (den/g) === 1 ? String(num/g) : `\\frac{${num/g}}{${den/g}}`;
+            return { clue: ph, answer: ans, worked: `$\\frac{${num}}{${den}} = \\frac{${num}\\div${g}}{${den}\\div${g}} = ${inlineSimp}$` };
         }
         // type 3: fraction-of with real-world context
         const den3 = rc(rng, [2, 3, 4, 5, 6, 8, 10]);
@@ -1095,7 +1120,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             `A pizza has $${whole3}$ slices. $\\frac{${num3}}{${den3}}$ of the pizza is eaten. How many slices is that?`,
             `There are $${whole3}$ marbles in a bag. $\\frac{${num3}}{${den3}}$ are red. How many red marbles are there?`,
         ]);
-        return { clue: ctx3, answer: String(ans3) };
+        return { clue: ctx3, answer: String(ans3), worked: `$\\frac{${num3}}{${den3}} \\times ${whole3} = ${ans3}$` };
     }
 
     if (diff === 'Medium') {
@@ -1124,13 +1149,15 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             const d1 = ri(rng, 2, 9), n1 = ri(rng, 1, d1 - 1);
             const d2 = ri(rng, 2, 9), n2 = ri(rng, 1, d2 - 1);
             const ans = fracStr(n1 * n2, d1 * d2);
+            const { n: _mn, d: _md } = simplify(n1 * n2, d1 * d2);
+            const _inlineMul = _md === 1 ? String(_mn) : `\\frac{${_mn}}{${_md}}`;
             const ph = rc(rng, [
                 `${calcVerb} $\\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}}$`,
                 `Multiply $\\frac{${n1}}{${d1}}$ by $\\frac{${n2}}{${d2}}$`,
                 `Find the product of $\\frac{${n1}}{${d1}}$ and $\\frac{${n2}}{${d2}}$`,
                 `What is $\\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}}$?`,
             ]);
-            return { clue: ph, answer: ans };
+            return { clue: ph, answer: ans, worked: `$\\frac{${n1} \\times ${n2}}{${d1} \\times ${d2}} = \\frac{${n1*n2}}{${d1*d2}} = ${_inlineMul}$` };
         }
         if (type === 2) {
             // ~35% mixed number → improper fraction variant
@@ -1144,7 +1171,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
                     `Write $${wholeC}\\frac{${numC}}{${denC}}$ as an *improper fraction*`,
                     `Express $${wholeC}\\frac{${numC}}{${denC}}$ as an *improper fraction*`,
                 ]);
-                return { clue: ph, answer: `$\\frac{${improperAns}}{${denC}}$` };
+                return { clue: ph, answer: `$\\frac{${improperAns}}{${denC}}$`, worked: `$${wholeC} \\times ${denC} + ${numC} = ${improperAns}$` };
             }
             const den = rc(rng, [2, 4, 5, 8, 10, 20, 25]);
             const num = ri(rng, 1, den - 1);
@@ -1154,7 +1181,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
                 `Express $\\frac{${num}}{${den}}$ as a *decimal*`,
                 `Write $\\frac{${num}}{${den}}$ as a *decimal number*`,
             ]);
-            return { clue: ph, answer: String(ans) };
+            return { clue: ph, answer: String(ans), worked: `$${num} \\div ${den} = ${ans}$` };
         }
         if (type === 4) {
             // fraction → percentage (denominators that divide 100 → clean %)
@@ -1166,7 +1193,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
                 `Express $\\frac{${num}}{${den}}$ as a *percentage*`,
                 `Write $\\frac{${num}}{${den}}$ as a *percentage*`,
             ]);
-            return { clue: ph, answer: String(pct), answerDisplay: `${pct}%` };
+            return { clue: ph, answer: String(pct), answerDisplay: `${pct}%`, worked: `$\\frac{${num}}{${den}} \\times 100 = ${pct}\\%$` };
         }
         // type 3: improper fraction → mixed number
         const denM = rc(rng, [2, 3, 4, 5, 6, 7, 8, 10]);
@@ -1180,7 +1207,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             `Convert $\\frac{${improper}}{${denM}}$ to a *mixed number*`,
             `Express $\\frac{${improper}}{${denM}}$ as a *mixed number*`,
         ]);
-        return { clue: ph3, answer: mixedAns };
+        return { clue: ph3, answer: mixedAns, worked: `$${improper} \\div ${denM} = ${wholeM}$ remainder $${numRem}$` };
     }
 
     // Hard
@@ -1193,13 +1220,15 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         const cops2 = Array.from({ length: d2 - 1 }, (_, i) => i + 1).filter(n => gcd(n, d2) === 1);
         const n2 = rc(rng, cops2);
         const ans = fracStr(n1 * d2, d1 * n2);
+        const { n: _dn, d: _dd } = simplify(n1 * d2, d1 * n2);
+        const _inlineDiv = _dd === 1 ? String(_dn) : `\\frac{${_dn}}{${_dd}}`;
         const ph = rc(rng, [
             `${calcVerb} $\\frac{${n1}}{${d1}} \\div \\frac{${n2}}{${d2}}$`,
             `Divide $\\frac{${n1}}{${d1}}$ by $\\frac{${n2}}{${d2}}$`,
             `Find the quotient of $\\frac{${n1}}{${d1}}$ and $\\frac{${n2}}{${d2}}$`,
             `What is $\\frac{${n1}}{${d1}} \\div \\frac{${n2}}{${d2}}$?`,
         ]);
-        return { clue: ph, answer: ans };
+        return { clue: ph, answer: ans, worked: `$\\frac{${n1}}{${d1}} \\times \\frac{${d2}}{${n2}} = \\frac{${n1*d2}}{${d1*n2}} = ${_inlineDiv}$` };
     }
     if (type === 1) {
         // ~35% mixed number subtraction
@@ -1222,7 +1251,9 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
                 const { n: rn, d: rd } = simplify(remRes, l);
                 displayAns = `$${wholeRes}\\frac{${rn}}{${rd}}$`;
             }
-            return { clue: `${calcVerb} $${wA}\\frac{${nA}}{${denA}} - ${wB}\\frac{${nB}}{${denB}}$`, answer: displayAns };
+            const { n: _sn, d: _sd } = simplify(diff_num, l);
+            const _inlineAns = _sd === 1 ? String(_sn) : `\\frac{${_sn}}{${_sd}}`;
+            return { clue: `${calcVerb} $${wA}\\frac{${nA}}{${denA}} - ${wB}\\frac{${nB}}{${denB}}$`, answer: displayAns, worked: `LCD = $${l}$: $\\frac{${totalA}}{${l}} - \\frac{${totalB}}{${l}} = \\frac{${diff_num}}{${l}} = ${_inlineAns}$` };
         }
         const dPool = [3, 4, 5, 6, 7, 8, 9];
         const d1 = rc(rng, dPool);
@@ -1234,7 +1265,9 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         const numResult = Math.abs(a - b);
         if (numResult === 0) return genFractions(rng, diff, allowedOps, _depth + 1);
         const ans = fracStr(numResult, l);
-        return { clue: `${calcVerb} $\\frac{${bigN}}{${bigD}} - \\frac{${smN}}{${smD}}$`, answer: ans };
+        const { n: _un, d: _ud } = simplify(numResult, l);
+        const _inlineUnlike = _ud === 1 ? String(_un) : `\\frac{${_un}}{${_ud}}`;
+        return { clue: `${calcVerb} $\\frac{${bigN}}{${bigD}} - \\frac{${smN}}{${smD}}$`, answer: ans, worked: `LCD = $${l}$: $\\frac{${Math.max(a,b)}}{${l}} - \\frac{${Math.min(a,b)}}{${l}} = \\frac{${numResult}}{${l}} = ${_inlineUnlike}$` };
     }
     // type 2: simplify-convert — fraction→percentage (40%), recurring decimal (25%), clean decimal (35%)
     const convRoll = rng();
@@ -1247,7 +1280,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             `Express $\\frac{${num}}{${den}}$ as a *percentage*`,
             `Write $\\frac{${num}}{${den}}$ as a *percentage*`,
         ]);
-        return { clue: ph, answer: String(pct), answerDisplay: `${pct}%` };
+        return { clue: ph, answer: String(pct), answerDisplay: `${pct}%`, worked: `$\\frac{${num}}{${den}} \\times 100 = ${pct}\\%$` };
     }
     if (convRoll < 0.65) {
         // recurring decimal: denominators that don't divide powers of 10
@@ -1260,7 +1293,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             `Express $\\frac{${num}}{${den}}$ as a *decimal* (4 decimal places)`,
             `Write $\\frac{${num}}{${den}}$ as a *decimal*, rounding to 4 d.p.`,
         ]);
-        return { clue: ph, answer: String(ans) };
+        return { clue: ph, answer: String(ans), worked: `$${num} \\div ${den} = ${ans}$` };
     }
     const denH = rc(rng, [2, 4, 5, 8, 10, 16, 20, 25, 40]);
     const numH = ri(rng, 1, denH - 1);
@@ -1270,7 +1303,7 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         `Express $\\frac{${numH}}{${denH}}$ as a *decimal*`,
         `Write $\\frac{${numH}}{${denH}}$ as a *decimal number*`,
     ]);
-    return { clue: phH, answer: String(ansH) };
+    return { clue: phH, answer: String(ansH), worked: `$${numH} \\div ${denH} = ${ansH}$` };
 }
 
 // ============================================================
@@ -1329,7 +1362,8 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             `Calculate the price after a $${pctD}\\%$ discount on $\\$${wholeD}$.`,
             `A discount of $${pctD}\\%$ is applied to $\\$${wholeD}$. What is the *final price*?`,
         ]);
-        return { clue: phD, answer: String(saleAns), answerDisplay: `$${money(saleAns)}` };
+        const discAmtE = Math.round(wholeD * pctD / 100);
+        return { clue: phD, answer: String(saleAns), answerDisplay: `$${money(saleAns)}`, worked: `$${wholeD} - ${discAmtE} = ${saleAns}$` };
     }
     if (diff === 'Medium') {
         const type = _pickType(rng, filtered, 3);
@@ -1381,7 +1415,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
                 `$${a}$ out of $${b}$ — calculate the percentage`,
                 `What percentage is $${a}$ of $${b}$?`,
             ]);
-            return { clue: ph, answer: String(ans), answerDisplay: `${ans}%` };
+            return { clue: ph, answer: String(ans), answerDisplay: `${ans}%`, worked: `$\\frac{${a}}{${b}} \\times 100 = ${ans}\\%$` };
         }
         // type 3: decrease/discount — multiples of 20 guarantee integer results
         const origDec = ri(rng, 1, 20) * 20;
@@ -1394,7 +1428,8 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             `A $\\$${origDec}$ item is discounted by $${pctDec}\\%$. Find the *sale price*.`,
             `Calculate the result of decreasing $${origDec}$ by $${pctDec}\\%$`,
         ]);
-        return { clue: phDec, answer: String(ansDec) };
+        const multDec = 1 - pctDec / 100;
+        return { clue: phDec, answer: String(ansDec), worked: `$${origDec} \\times ${multDec} = ${ansDec}$` };
     }
     // Hard
     const type = _pickType(rng, filtered, 4);
@@ -1409,7 +1444,8 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             `A quantity increases by $${pct}\\%$ to become $${final}$. Determine the **original** value.`,
             `The result after a $${pct}\\%$ increase is $${final}$. Calculate the **original** amount.`,
         ]);
-        return { clue: ph, answer: String(orig) };
+        const multRev = 1 + pct / 100;
+        return { clue: ph, answer: String(orig), worked: `$${final} \\div ${multRev} = ${orig}$` };
     }
     if (type === 1) {
         // percentage change given before and after (increase or decrease)
@@ -1427,7 +1463,8 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
                 `A price falls from $\\$${orig}$ to $\\$${newVal}$. What is the *percentage decrease*?`,
                 `Calculate the *percentage decrease* from $\\$${orig}$ to $\\$${newVal}$.`,
               ]);
-        return { clue: ph, answer: String(pct), answerDisplay: `${pct}%` };
+        const change = Math.abs(newVal - orig);
+        return { clue: ph, answer: String(pct), answerDisplay: `${pct}%`, worked: `$\\frac{${change}}{${orig}} \\times 100 = ${pct}\\%$` };
     }
     if (type === 2) {
         // find an awkward percentage of a larger number (genuinely harder mental work)
@@ -1442,7 +1479,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
                     `Calculate $${pct}\\%$ of $${whole}$`,
                     `Determine $${pct}\\%$ of $${whole}$`,
                 ]);
-                return { clue: ph, answer: String(ans) };
+                return { clue: ph, answer: String(ans), worked: `$\\frac{${pct}}{100} \\times ${whole} = ${ans}$` };
             }
         }
         return genPercentages(rng, diff, allowedOps, _depth + 1);
@@ -1461,7 +1498,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             `A value of $${orig}$ is ${dir1} by $${p1}\\%$, then ${dir2} by $${p2}\\%$. Find the **final** value.`,
             `Starting at $${orig}$, a quantity is ${dir1} by $${p1}\\%$ and then ${dir2} by $${p2}\\%$. What is the final amount?`,
         ]);
-        return { clue: ph, answer: String(final) };
+        return { clue: ph, answer: String(final), worked: `$${orig} \\to ${afterFirst} \\to ${final}$` };
     }
     // type 4: percentage of a percentage (cascading)
     const pct1 = rc(rng, [10, 20, 25, 50]);
@@ -1475,7 +1512,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
         `Calculate $${pct2}\\%$ of $${pct1}\\%$ of $${whole}$`,
         `Determine $${pct2}\\%$ of $${pct1}\\%$ of $${whole}$`,
     ]);
-    return { clue: ph, answer: String(ans2) };
+    return { clue: ph, answer: String(ans2), worked: `$${pct1}\\% \\text{ of } ${whole} = ${partial}$, then $${pct2}\\% \\text{ of } ${partial} = ${ans2}$` };
 }
 
 // ============================================================
@@ -1650,7 +1687,8 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
                 `What is the *mean* of $${data.join(', ')}$?${pf}`,
                 `The ${ctx} recorded are $${data.join(', ')}$. Find the *mean*.${pf}`,
             ]);
-            return { clue: ph, answer: String(meanV) };
+            const sum = data.reduce((a, b) => a + b, 0);
+            return { clue: ph, answer: String(meanV), worked: `$\\text{mean} = (${sum}) \\div ${n} = ${meanV}$` };
         }
         if (type === 1) {
             const n = (ri(rng, 2, 4) * 2) - 1;
@@ -1662,7 +1700,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
                 `What is the *median* of $${data.join(', ')}$?`,
                 `The ${ctx} are $${data.join(', ')}$. Find the *median*.`,
             ]);
-            return { clue: ph, answer: String(data[Math.floor(n / 2)]) };
+            return { clue: ph, answer: String(data[Math.floor(n / 2)]), worked: `$\\text{median: middle of } ${n} \\text{ values} = ${data[Math.floor(n / 2)]}$` };
         }
         if (type === 2) {
             const mode = ri(rng, 1, 10);
@@ -1679,7 +1717,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
                 `What is the *mode* of $${data.join(', ')}$?`,
                 `The ${ctx} are $${data.join(', ')}$. Find the *mode*.`,
             ]);
-            return { clue: ph, answer: String(mode) };
+            return { clue: ph, answer: String(mode), worked: `$\\text{mode} = ${mode} \\text{ (appears most often)}$` };
         }
         // type 3: range — small integer dataset
         const n3 = ri(rng, 4, 6);
@@ -1691,7 +1729,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             `What is the *range* of $${data3.join(', ')}$?`,
             `The ${ctx} are $${data3.join(', ')}$. Find the *range*.`,
         ]);
-        return { clue: ph3, answer: String(range3) };
+        return { clue: ph3, answer: String(range3), worked: `$\\text{range} = ${Math.max(...data3)} - ${Math.min(...data3)} = ${range3}$` };
     }
     if (diff === 'Medium') {
         if (type === 0) {
@@ -1704,7 +1742,8 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
                 `What is the *range* of $${data.join(', ')}$?`,
                 `The ${ctx} are $${data.join(', ')}$. Find the *range*.`,
             ]);
-            return { clue: ph, answer: String(Math.max(...data) - Math.min(...data)) };
+            const range = Math.max(...data) - Math.min(...data);
+            return { clue: ph, answer: String(range), worked: `$\\text{range} = ${Math.max(...data)} - ${Math.min(...data)} = ${range}$` };
         }
         if (type === 1) {
             const mode = ri(rng, 1, 20);
@@ -1722,7 +1761,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
                 `What is the *mode* of $${data.join(', ')}$?`,
                 `The ${ctx} are $${data.join(', ')}$. Find the *mode*.`,
             ]);
-            return { clue: ph, answer: String(mode) };
+            return { clue: ph, answer: String(mode), worked: `$\\text{mode} = ${mode} \\text{ (appears most often)}$` };
         }
         if (type === 2) {
             const n = ri(rng, 5, 8);
@@ -1740,7 +1779,8 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
                 `Determine the *mean* of: $${data.join(', ')}$${pf2}`,
                 `The ${ctx} are $${data.join(', ')}$. Calculate the *mean*.${pf2}`,
             ]);
-            return { clue: ph, answer: String(meanV) };
+            const sum = data.reduce((a, b) => a + b, 0);
+            return { clue: ph, answer: String(meanV), worked: `$\\text{mean} = (${sum}) \\div ${n} = ${meanV}$` };
         }
         if (type === 3) {
             // find missing value given mean
@@ -1760,7 +1800,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
                 `Find the missing number if the *mean* of $${display3}$ is $${mean3}$.${pf3}`,
                 `The *mean* of these values is $${mean3}$: $${display3}$. What is the missing value?${pf3}`,
             ]);
-            return { clue: ph3, answer: String(missing3) };
+            return { clue: ph3, answer: String(missing3), worked: `$\\text{missing} = ${mean3} \\times ${n3} - (${known3.join(' + ')}) = ${missing3}$` };
         }
         // type 4: median of even-count dataset (requires averaging middle two)
         const n4 = rc(rng, [6, 8]);
@@ -1772,7 +1812,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             `Determine the *median* of: $${data4.join(', ')}$`,
             `The ${ctx} are $${data4.join(', ')}$. Find the *median*.`,
         ]);
-        return { clue: ph4, answer: String(med4) };
+        return { clue: ph4, answer: String(med4), worked: `$\\text{median} = (${data4[n4/2-1]} + ${data4[n4/2]}) \\div 2 = ${med4}$` };
     }
     // Hard
     if (type === 0) {
@@ -1791,7 +1831,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             `Determine the *interquartile range* of: $${data.join(', ')}$`,
             `The ${ctx} are $${data.join(', ')}$. Find the *IQR*.`,
         ]);
-        return { clue: ph, answer: String(iqr) };
+        return { clue: ph, answer: String(iqr), worked: `$Q_1 = ${q1}, Q_3 = ${q3}, \\text{IQR} = ${q3} - ${q1} = ${iqr}$` };
     }
     if (type === 1) {
         const n = rc(rng, [8, 10]);
@@ -1803,7 +1843,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             `Determine the *median* of: $${data.join(', ')}$`,
             `The ${ctx} are $${data.join(', ')}$. Find the *median*.`,
         ]);
-        return { clue: ph, answer: String(med) };
+        return { clue: ph, answer: String(med), worked: `$\\text{median} = (${data[n/2-1]} + ${data[n/2]}) \\div 2 = ${med}$` };
     }
     if (type === 2) {
         // find missing value given mean (harder dataset)
@@ -1821,7 +1861,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             `The *mean* of these ${ctx} is $${mean2}$: $${display2}$. What is the missing value?`,
             `Determine the missing value given that the *mean* of $${display2}$ is $${mean2}$.`,
         ]);
-        return { clue: ph2, answer: String(missing2) };
+        return { clue: ph2, answer: String(missing2), worked: `$\\text{missing} = ${mean2} \\times ${n2} - (${known2.join(' + ')}) = ${missing2}$` };
     }
     if (type === 3) {
         // effect on mean: "a value is added, find the new mean"
@@ -1841,7 +1881,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             `Given the data $${data.join(', ')}$, a value of $${extra}$ is added. Calculate the new *mean*.`,
             `The *mean* of $${data.join(', ')}$ changes when $${extra}$ is included. Find the new *mean*.`,
         ]);
-        return { clue: ph3, answer: String(newMean) };
+        return { clue: ph3, answer: String(newMean), worked: `$\\text{new sum} = ${newSum}, \\text{new mean} = ${newSum} \\div ${n3+1} = ${newMean}$` };
     }
     // type 4: mode with larger dataset
     const mode4 = ri(rng, 5, 30);
@@ -1858,7 +1898,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
         `What is the *mode* of $${data4.join(', ')}$?`,
         `The ${ctx} are $${data4.join(', ')}$. Find the *mode*.`,
     ]);
-    return { clue: ph4, answer: String(mode4) };
+    return { clue: ph4, answer: String(mode4), worked: `$\\text{mode} = ${mode4} \\text{ (appears most often)}$` };
 }
 
 // ============================================================
@@ -4663,76 +4703,165 @@ function genVariation(rng, diff, allowedOps) {
 
     if (op === 'direct-variation') {
         if (diff === 'Easy') {
-            const k = ri(rng, 2, 6);
-            const x1 = ri(rng, 2, 5), y1 = k * x1;
-            const x2 = ri(rng, 2, 8);
-            const y2 = k * x2;
-            return {
-                clue: rc(rng, [
-                    `$y$ is **directly proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
-                    `$y$ varies **directly** with $x$. Given that $x = ${x1}$ when $y = ${y1}$, find $y$ when $x = ${x2}$.`,
-                ]),
-                answer: String(y2),
-                answerDisplay: `$y = ${y2}$`,
-                worked: `$k = \\frac{${y1}}{${x1}} = ${k}$. $y = ${k} \\times ${x2} = ${y2}$`,
-            };
-        }
-        if (diff === 'Medium') {
-            const type = ri(rng, 0, 1);
+            const type = ri(rng, 0, 2);
             if (type === 0) {
-                // Find k then evaluate — wider ranges
-                const k = ri(rng, 3, 10);
-                const x1 = ri(rng, 2, 8), y1 = k * x1;
-                const x2 = ri(rng, 3, 12);
+                const k = ri(rng, 2, 6);
+                const x1 = ri(rng, 2, 5), y1 = k * x1;
+                const x2 = ri(rng, 2, 8);
                 const y2 = k * x2;
                 return {
-                    clue: `$y$ is **directly proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                    clue: rc(rng, [
+                        `$y$ is **directly proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                        `$y$ varies **directly** with $x$. Given that $x = ${x1}$ when $y = ${y1}$, find $y$ when $x = ${x2}$.`,
+                        `If $y \\propto x$ and $y = ${y1}$ when $x = ${x1}$, find $y$ when $x = ${x2}$.`,
+                    ]),
                     answer: String(y2),
                     answerDisplay: `$y = ${y2}$`,
                     worked: `$k = \\frac{${y1}}{${x1}} = ${k}$. $y = ${k} \\times ${x2} = ${y2}$`,
                 };
             }
-            // Real-world context
-            const k = ri(rng, 3, 8);
-            const x1 = ri(rng, 2, 6), y1 = k * x1;
-            const x2 = ri(rng, 3, 10);
-            const y2 = k * x2;
+            if (type === 1) {
+                const k = ri(rng, 2, 6);
+                const x1 = ri(rng, 2, 6), y1 = k * x1;
+                const x2f = ri(rng, 2, 8);
+                const y2 = k * x2f;
+                return {
+                    clue: rc(rng, [
+                        `$y$ is **directly proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $x$ when $y = ${y2}$.`,
+                        `$y \\propto x$. If $y = ${y1}$ when $x = ${x1}$, what is $x$ when $y = ${y2}$?`,
+                    ]),
+                    answer: String(x2f),
+                    answerDisplay: `$x = ${x2f}$`,
+                    worked: `$k = \\frac{${y1}}{${x1}} = ${k}$. $x = \\frac{${y2}}{${k}} = ${x2f}$`,
+                };
+            }
+            const rate = ri(rng, 5, 12);
+            const litres = ri(rng, 2, 8);
+            const dist = rate * litres;
             return {
-                clue: `The cost $C$ varies directly with the number of items $n$. $${x1}$ items cost $\\$${y1}$. Find the cost of $${x2}$ items.`,
-                answer: String(y2),
-                answerDisplay: `$\\$${y2}$`,
-                worked: `$k = \\frac{${y1}}{${x1}} = ${k}$. Cost $= ${k} \\times ${x2} = \\$${y2}$`,
+                clue: `A car uses fuel at a constant rate. It travels $${rate}$ km per litre. How far can it travel on $${litres}$ litres?`,
+                answer: String(dist),
+                answerDisplay: `$${dist}$ km`,
+                worked: `$\\text{distance} = ${rate} \\times ${litres} = ${dist}$ km`,
             };
         }
-        // Hard: y = kx² (power law)
-        const type = ri(rng, 0, 1);
+        if (diff === 'Medium') {
+            const type = ri(rng, 0, 3);
+            if (type === 0) {
+                const k = ri(rng, 3, 10);
+                const x1 = ri(rng, 2, 8), y1 = k * x1;
+                const x2 = ri(rng, 3, 12);
+                const y2 = k * x2;
+                return {
+                    clue: rc(rng, [
+                        `$y$ is **directly proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                        `$y \\propto x$. Given $y = ${y1}$ when $x = ${x1}$, calculate $y$ when $x = ${x2}$.`,
+                    ]),
+                    answer: String(y2),
+                    answerDisplay: `$y = ${y2}$`,
+                    worked: `$k = \\frac{${y1}}{${x1}} = ${k}$. $y = ${k} \\times ${x2} = ${y2}$`,
+                };
+            }
+            if (type === 1) {
+                const k = ri(rng, 3, 8);
+                const x1 = ri(rng, 2, 6), y1 = k * x1;
+                const x2 = ri(rng, 3, 10);
+                const y2 = k * x2;
+                return {
+                    clue: `The cost $C$ varies directly with the number of items $n$. $${x1}$ items cost $\\$${y1}$. Find the cost of $${x2}$ items.`,
+                    answer: String(y2),
+                    answerDisplay: `$\\$${y2}$`,
+                    worked: `$k = \\frac{${y1}}{${x1}} = ${k}$. Cost $= ${k} \\times ${x2} = \\$${y2}$`,
+                };
+            }
+            if (type === 2) {
+                const k = ri(rng, 2, 5);
+                const w1 = ri(rng, 3, 8), ext1 = k * w1;
+                const w2 = ri(rng, 4, 12);
+                const ext2 = k * w2;
+                return {
+                    clue: `A spring stretches in **direct proportion** to the weight applied. A $${w1}$ kg weight stretches it $${ext1}$ cm. How far does a $${w2}$ kg weight stretch it?`,
+                    answer: String(ext2),
+                    answerDisplay: `$${ext2}$ cm`,
+                    worked: `$k = \\frac{${ext1}}{${w1}} = ${k}$. Extension $= ${k} \\times ${w2} = ${ext2}$ cm`,
+                };
+            }
+            const k = ri(rng, 3, 10);
+            const x1 = ri(rng, 2, 6), y1 = k * x1;
+            const x2f = ri(rng, 3, 10);
+            const y2 = k * x2f;
+            return {
+                clue: `$y$ is **directly proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $x$ when $y = ${y2}$.`,
+                answer: String(x2f),
+                answerDisplay: `$x = ${x2f}$`,
+                worked: `$k = \\frac{${y1}}{${x1}} = ${k}$. $x = \\frac{${y2}}{${k}} = ${x2f}$`,
+            };
+        }
+        // Hard
+        const type = ri(rng, 0, 3);
         if (type === 0) {
             const k = ri(rng, 2, 8);
             const x1 = ri(rng, 2, 5), y1 = k * x1 * x1;
             const x2 = ri(rng, 2, 6);
             const y2 = k * x2 * x2;
             return {
-                clue: `$y$ is **directly proportional** to $x^2$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                clue: rc(rng, [
+                    `$y$ is **directly proportional** to $x^2$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                    `$y \\propto x^2$. Given $y = ${y1}$ when $x = ${x1}$, find $y$ when $x = ${x2}$.`,
+                ]),
                 answer: String(y2),
                 answerDisplay: `$y = ${y2}$`,
                 worked: `$y = kx^2$. $k = \\frac{${y1}}{${x1}^2} = \\frac{${y1}}{${x1 * x1}} = ${k}$. $y = ${k} \\times ${x2}^2 = ${k} \\times ${x2 * x2} = ${y2}$`,
             };
         }
-        // Find k given two data points, then evaluate
-        const k = ri(rng, 4, 15);
-        const x1 = ri(rng, 2, 6), y1 = k * x1;
-        const x2 = ri(rng, 3, 10);
-        const y2 = k * x2;
+        if (type === 1) {
+            const k = ri(rng, 4, 15);
+            const x1 = ri(rng, 2, 6), y1 = k * x1;
+            const x2 = ri(rng, 3, 10);
+            const y2 = k * x2;
+            return {
+                clue: `$y \\propto x$. When $x = ${x1}$, $y = ${y1}$. Find the *constant of proportionality* $k$, then find $y$ when $x = ${x2}$.`,
+                answer: String(y2),
+                answerDisplay: `$k = ${k},\\ y = ${y2}$`,
+                worked: `$k = \\frac{${y1}}{${x1}} = ${k}$. $y = ${k} \\times ${x2} = ${y2}$`,
+            };
+        }
+        if (type === 2) {
+            const k = ri(rng, 1, 4);
+            const x1 = ri(rng, 2, 4), y1 = k * x1 * x1 * x1;
+            const x2 = ri(rng, 2, 5);
+            const y2 = k * x2 * x2 * x2;
+            return {
+                clue: rc(rng, [
+                    `$y$ is **directly proportional** to $x^3$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                    `$y \\propto x^3$. Given $y = ${y1}$ when $x = ${x1}$, find $y$ when $x = ${x2}$.`,
+                ]),
+                answer: String(y2),
+                answerDisplay: `$y = ${y2}$`,
+                worked: `$y = kx^3$. $k = \\frac{${y1}}{${x1}^3} = \\frac{${y1}}{${x1 * x1 * x1}} = ${k}$. $y = ${k} \\times ${x2}^3 = ${k} \\times ${x2 * x2 * x2} = ${y2}$`,
+            };
+        }
+        // type 3: y ∝ √x
+        const k = rc(rng, [1, 4, 9, 16, 25]);
+        const bases = [4, 9, 16, 25, 36, 49];
+        const x1 = rc(rng, bases), y1 = k * Math.sqrt(x1);
+        const x2 = rc(rng, bases.filter(b => b !== x1));
+        const y2 = k * Math.sqrt(x2);
+        if (!Number.isInteger(y1) || !Number.isInteger(y2)) return genVariation(rng, diff, allowedOps);
         return {
-            clue: `$y \\propto x$. When $x = ${x1}$, $y = ${y1}$. Find the *constant of proportionality* $k$, then find $y$ when $x = ${x2}$.`,
+            clue: rc(rng, [
+                `$y$ is **directly proportional** to $\\sqrt{x}$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                `$y \\propto \\sqrt{x}$. Given $y = ${y1}$ when $x = ${x1}$, find $y$ when $x = ${x2}$.`,
+            ]),
             answer: String(y2),
-            answerDisplay: `$k = ${k},\\ y = ${y2}$`,
-            worked: `$k = \\frac{${y1}}{${x1}} = ${k}$. $y = ${k} \\times ${x2} = ${y2}$`,
+            answerDisplay: `$y = ${y2}$`,
+            worked: `$y = k\\sqrt{x}$. $k = \\frac{${y1}}{\\sqrt{${x1}}} = \\frac{${y1}}{${Math.sqrt(x1)}} = ${k}$. $y = ${k} \\times \\sqrt{${x2}} = ${k} \\times ${Math.sqrt(x2)} = ${y2}$`,
         };
     }
 
     // inverse-variation
     if (diff === 'Easy') {
+        const type = ri(rng, 0, 1);
         const x1 = ri(rng, 2, 6), y1 = ri(rng, 2, 6);
         const k = x1 * y1;
         const divisors = [];
@@ -4740,52 +4869,139 @@ function genVariation(rng, diff, allowedOps) {
         if (divisors.length === 0) return genVariation(rng, diff, allowedOps);
         const x2 = rc(rng, divisors);
         const y2 = k / x2;
-        return {
-            clue: rc(rng, [
-                `$y$ is **inversely proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
-                `$y$ varies **inversely** with $x$. Given that $x = ${x1}$ when $y = ${y1}$, find $y$ when $x = ${x2}$.`,
-            ]),
-            answer: String(y2),
-            answerDisplay: `$y = ${y2}$`,
-            worked: `$k = ${x1} \\times ${y1} = ${k}$. $y = \\frac{${k}}{${x2}} = ${y2}$`,
-        };
-    }
-    if (diff === 'Medium') {
-        const type = ri(rng, 0, 1);
-        const x1 = ri(rng, 2, 8), y1 = ri(rng, 2, 8);
-        const k = x1 * y1;
-        const divisors = [];
-        for (let d = 2; d <= k; d++) if (k % d === 0 && d !== x1) divisors.push(d);
-        if (divisors.length === 0) return genVariation(rng, diff, allowedOps);
-        const x2 = rc(rng, divisors);
-        const y2 = k / x2;
         if (type === 0) {
             return {
-                clue: `$y$ is **inversely proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                clue: rc(rng, [
+                    `$y$ is **inversely proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                    `$y$ varies **inversely** with $x$. Given that $x = ${x1}$ when $y = ${y1}$, find $y$ when $x = ${x2}$.`,
+                    `If $y \\propto \\frac{1}{x}$ and $y = ${y1}$ when $x = ${x1}$, find $y$ when $x = ${x2}$.`,
+                ]),
                 answer: String(y2),
                 answerDisplay: `$y = ${y2}$`,
                 worked: `$k = ${x1} \\times ${y1} = ${k}$. $y = \\frac{${k}}{${x2}} = ${y2}$`,
             };
         }
-        // Real-world context
+        const speed = ri(rng, 40, 80);
+        const time = ri(rng, 2, 6);
+        const dist = speed * time;
+        const speed2Arr = [50, 60, 70, 80, 100].filter(s => s !== speed && dist % s === 0);
+        if (speed2Arr.length === 0) return genVariation(rng, diff, allowedOps);
+        const speed2 = rc(rng, speed2Arr);
+        const time2 = dist / speed2;
         return {
-            clue: `$${x1}$ workers can complete a job in $${y1}$ days. How many days would $${x2}$ workers take?`,
-            answer: String(y2),
-            answerDisplay: `${y2} days`,
-            worked: `$k = ${x1} \\times ${y1} = ${k}$. Days $= \\frac{${k}}{${x2}} = ${y2}$`,
+            clue: `A car travelling at $${speed}$ km/h takes $${time}$ hours for a journey. How long would the journey take at $${speed2}$ km/h?`,
+            answer: String(time2),
+            answerDisplay: `$${time2}$ hours`,
+            worked: `$\\text{distance} = ${speed} \\times ${time} = ${dist}$ km. $\\text{time} = \\frac{${dist}}{${speed2}} = ${time2}$ hours`,
         };
     }
-    // Hard: find k, then find x given y
-    const x1 = ri(rng, 2, 10), y1 = ri(rng, 2, 10);
-    const k = x1 * y1;
-    const y2 = ri(rng, 2, 8);
-    if (k % y2 !== 0) return genVariation(rng, diff, allowedOps);
-    const x2 = k / y2;
+    if (diff === 'Medium') {
+        const type = ri(rng, 0, 3);
+        if (type <= 1) {
+            const x1 = ri(rng, 2, 8), y1 = ri(rng, 2, 8);
+            const k = x1 * y1;
+            const divisors = [];
+            for (let d = 2; d <= k; d++) if (k % d === 0 && d !== x1) divisors.push(d);
+            if (divisors.length === 0) return genVariation(rng, diff, allowedOps);
+            const x2 = rc(rng, divisors);
+            const y2 = k / x2;
+            if (type === 0) {
+                return {
+                    clue: rc(rng, [
+                        `$y$ is **inversely proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+                        `$y \\propto \\frac{1}{x}$. Given $y = ${y1}$ when $x = ${x1}$, calculate $y$ when $x = ${x2}$.`,
+                    ]),
+                    answer: String(y2),
+                    answerDisplay: `$y = ${y2}$`,
+                    worked: `$k = ${x1} \\times ${y1} = ${k}$. $y = \\frac{${k}}{${x2}} = ${y2}$`,
+                };
+            }
+            return {
+                clue: `$${x1}$ workers can complete a job in $${y1}$ days. How many days would $${x2}$ workers take?`,
+                answer: String(y2),
+                answerDisplay: `${y2} days`,
+                worked: `$k = ${x1} \\times ${y1} = ${k}$. Days $= \\frac{${k}}{${x2}} = ${y2}$`,
+            };
+        }
+        if (type === 2) {
+            const speed1 = rc(rng, [40, 50, 60, 70, 80]);
+            const time1 = ri(rng, 3, 8);
+            const dist = speed1 * time1;
+            const speed2Arr = [40, 50, 60, 80, 100, 120].filter(s => s !== speed1 && dist % s === 0);
+            if (speed2Arr.length === 0) return genVariation(rng, diff, allowedOps);
+            const speed2 = rc(rng, speed2Arr);
+            const time2 = dist / speed2;
+            return {
+                clue: `A train travelling at $${speed1}$ km/h takes $${time1}$ hours. If the train travels at $${speed2}$ km/h instead, how long would the journey take?`,
+                answer: String(time2),
+                answerDisplay: `$${time2}$ hours`,
+                worked: `$\\text{distance} = ${speed1} \\times ${time1} = ${dist}$ km. $\\text{time} = \\frac{${dist}}{${speed2}} = ${time2}$ hours`,
+            };
+        }
+        // type 3: find x given y
+        const x1 = ri(rng, 2, 8), y1 = ri(rng, 2, 8);
+        const k = x1 * y1;
+        const y2 = ri(rng, 2, 8);
+        if (k % y2 !== 0 || y2 === y1) return genVariation(rng, diff, allowedOps);
+        const x2 = k / y2;
+        return {
+            clue: `$y$ is **inversely proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $x$ when $y = ${y2}$.`,
+            answer: String(x2),
+            answerDisplay: `$x = ${x2}$`,
+            worked: `$k = ${x1} \\times ${y1} = ${k}$. $x = \\frac{${k}}{${y2}} = ${x2}$`,
+        };
+    }
+    // Hard
+    const hType = ri(rng, 0, 2);
+    if (hType === 0) {
+        const x1 = ri(rng, 2, 10), y1 = ri(rng, 2, 10);
+        const k = x1 * y1;
+        const y2 = ri(rng, 2, 8);
+        if (k % y2 !== 0) return genVariation(rng, diff, allowedOps);
+        const x2 = k / y2;
+        return {
+            clue: rc(rng, [
+                `$y$ is **inversely proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $x$ when $y = ${y2}$.`,
+                `$y \\propto \\frac{1}{x}$. Given $y = ${y1}$ when $x = ${x1}$, find $x$ when $y = ${y2}$.`,
+            ]),
+            answer: String(x2),
+            answerDisplay: `$x = ${x2}$`,
+            worked: `$k = ${x1} \\times ${y1} = ${k}$. $x = \\frac{${k}}{${y2}} = ${x2}$`,
+        };
+    }
+    if (hType === 1) {
+        const k = ri(rng, 2, 6);
+        const x1 = ri(rng, 2, 5), y1 = k * x1 * x1;
+        const x2v = ri(rng, 2, 6);
+        const y2 = k * x2v * x2v;
+        return {
+            clue: rc(rng, [
+                `$y$ is **directly proportional** to $x^2$. When $x = ${x1}$, $y = ${y1}$. Find $x$ when $y = ${y2}$.`,
+                `$y \\propto x^2$. Given $y = ${y1}$ when $x = ${x1}$, find $x$ when $y = ${y2}$.`,
+            ]),
+            answer: String(x2v),
+            answerDisplay: `$x = ${x2v}$`,
+            worked: `$k = \\frac{${y1}}{${x1}^2} = ${k}$. $x^2 = \\frac{${y2}}{${k}} = ${x2v * x2v}$. $x = \\sqrt{${x2v * x2v}} = ${x2v}$`,
+        };
+    }
+    // hType 2: y ∝ 1/x²
+    const k = ri(rng, 10, 50);
+    const x1Arr = [2, 3, 4, 5].filter(x => Number.isInteger(k / (x * x)));
+    if (x1Arr.length === 0) return genVariation(rng, diff, allowedOps);
+    const x1 = rc(rng, x1Arr);
+    const y1 = k / (x1 * x1);
+    const x2Arr = [2, 3, 4, 5, 6].filter(x => x !== x1 && Number.isInteger(k / (x * x)));
+    if (x2Arr.length === 0) return genVariation(rng, diff, allowedOps);
+    const x2 = rc(rng, x2Arr);
+    const y2 = k / (x2 * x2);
     return {
-        clue: `$y$ is **inversely proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $x$ when $y = ${y2}$.`,
-        answer: String(x2),
-        answerDisplay: `$x = ${x2}$`,
-        worked: `$k = ${x1} \\times ${y1} = ${k}$. $x = \\frac{${k}}{${y2}} = ${x2}$`,
+        clue: rc(rng, [
+            `$y$ is **inversely proportional** to $x^2$. When $x = ${x1}$, $y = ${y1}$. Find $y$ when $x = ${x2}$.`,
+            `$y \\propto \\frac{1}{x^2}$. Given $y = ${y1}$ when $x = ${x1}$, find $y$ when $x = ${x2}$.`,
+        ]),
+        answer: String(y2),
+        answerDisplay: `$y = ${y2}$`,
+        worked: `$y = \\frac{k}{x^2}$. $k = ${y1} \\times ${x1}^2 = ${y1} \\times ${x1 * x1} = ${k}$. $y = \\frac{${k}}{${x2}^2} = \\frac{${k}}{${x2 * x2}} = ${y2}$`,
     };
 }
 
