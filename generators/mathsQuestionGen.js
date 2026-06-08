@@ -274,12 +274,17 @@ function genIntegers(rng, diff, allowedOps) {
         }
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, max);
-        // Easy: 30% chance of a real-world context
-        if (diff === 'Easy' && rng() < 0.3) {
-            const ctx = rc(rng, [
+        // 25-30% chance of a real-world context
+        const wpChance = diff === 'Easy' ? 0.3 : 0.25;
+        if (rng() < wpChance) {
+            const ctx = diff === 'Easy' ? rc(rng, [
                 { stem: `A shop has $${a}$ apples and receives $${b}$ more. How many apples are there in total?`, ans: a + b },
                 { stem: `A student scores $${a}$ points on Monday and $${b}$ points on Tuesday. What is the total score?`, ans: a + b },
                 { stem: `There are $${a}$ students in class A and $${b}$ students in class B. How many students altogether?`, ans: a + b },
+            ]) : rc(rng, [
+                { stem: `A school raised $\\$${a}$ in Term 1 and $\\$${b}$ in Term 2. Find the total amount raised.`, ans: a + b },
+                { stem: `A factory produces $${a}$ items on Monday and $${b}$ on Tuesday. What is the total production?`, ans: a + b },
+                { stem: `Two towns have populations of $${a}$ and $${b}$. What is the combined population?`, ans: a + b },
             ]);
             return { clue: ctx.stem, answer: String(ctx.ans), worked: `$${a} + ${b} = ${ctx.ans}$` };
         }
@@ -346,11 +351,15 @@ function genIntegers(rng, diff, allowedOps) {
         }
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, a);
-        if (diff === 'Easy' && rng() < 0.25) {
-            const ctx = rc(rng, [
+        if (rng() < 0.25) {
+            const ctx = diff === 'Easy' ? rc(rng, [
                 { stem: `A baker has $${a}$ buns and sells $${b}$. How many buns remain?`, ans: a - b },
                 { stem: `A class has $${a}$ students. $${b}$ are absent. How many are present?`, ans: a - b },
                 { stem: `A farmer has $${a}$ eggs. $${b}$ are sold. How many are left?`, ans: a - b },
+            ]) : rc(rng, [
+                { stem: `A warehouse has $${a}$ items. $${b}$ are shipped. How many remain?`, ans: a - b },
+                { stem: `A school has $${a}$ students. $${b}$ leave during the year. How many are left?`, ans: a - b },
+                { stem: `A concert venue seats $${a}$. $${b}$ tickets are unsold. How many are sold?`, ans: a - b },
             ]);
             return { clue: ctx.stem, answer: String(ctx.ans), worked: `$${a} - ${b} = ${ctx.ans}$` };
         }
@@ -378,6 +387,15 @@ function genIntegers(rng, diff, allowedOps) {
                 { stem: `A box contains $${a}$ items. There are $${b}$ boxes. How many items altogether?`, ans: a * b },
                 { stem: `Each row has $${a}$ seats and there are $${b}$ rows. How many seats in total?`, ans: a * b },
                 { stem: `A pack of pencils contains $${a}$ pencils. How many pencils in $${b}$ packs?`, ans: a * b },
+            ]);
+            return { clue: ctx.stem, answer: String(ctx.ans), worked: `$${a} \\times ${b} = ${ctx.ans}$` };
+        }
+        // Medium/Hard: 20% word problem
+        if (diff !== 'Easy' && rng() < 0.2) {
+            const ctx = rc(rng, [
+                { stem: `A hall has $${a}$ rows of $${b}$ chairs. How many chairs in total?`, ans: a * b },
+                { stem: `A factory makes $${a}$ widgets per hour. How many in $${b}$ hours?`, ans: a * b },
+                { stem: `Each crate holds $${a}$ bottles. How many bottles in $${b}$ crates?`, ans: a * b },
             ]);
             return { clue: ctx.stem, answer: String(ctx.ans), worked: `$${a} \\times ${b} = ${ctx.ans}$` };
         }
@@ -436,6 +454,16 @@ function genIntegers(rng, diff, allowedOps) {
                 { stem: `$${total}$ students are split into $${b}$ equal groups. How many in each group?` },
             ]);
             return { clue: ctx.stem, answer: String(ans), worked: `$${b * ans} \\div ${b} = ${ans}$` };
+        }
+        // Medium/Hard: 20% word problem
+        if (diff !== 'Easy' && rng() < 0.2) {
+            const total = b * ans;
+            const ctx = rc(rng, [
+                { stem: `$${total}$ books are packed into $${b}$ boxes. How many books per box?` },
+                { stem: `A $${total}$ km journey is split into $${b}$ equal stages. How long is each stage?` },
+                { stem: `$${total}$ students are divided into $${b}$ equal teams. How many per team?` },
+            ]);
+            return { clue: ctx.stem, answer: String(ans), worked: `$${total} \\div ${b} = ${ans}$` };
         }
         // Medium/Hard: 40% chance of negative dividend
         if (diff !== 'Easy' && rng() < 0.4) {
@@ -697,13 +725,22 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
         if (type === 2) {
             // two-decimal-place number × small integer (exact, harder than 1dp×1dp)
             const a = ri(rng, 105, 999) / 100, b = ri(rng, 3, 12);
+            const ansM = round(a * b, 2);
+            if (rng() < 0.25) {
+                const ctx = rc(rng, [
+                    `A piece of fabric costs $\\$${a}$ per metre. Find the cost of $${b}$ metres.`,
+                    `Each bag weighs $${a}$ kg. What is the total mass of $${b}$ bags?`,
+                    `A car uses $${a}$ L of fuel per trip. How much fuel is used in $${b}$ trips?`,
+                ]);
+                return { clue: ctx, answer: String(ansM), worked: `$${a} \\times ${b} = ${ansM}$` };
+            }
             const ph = rc(rng, [
                 `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
                 `Multiply $${a}$ by $${b}$`,
                 `Find the product of $${a}$ and $${b}$`,
                 `What is $${a} \\times ${b}$?`,
             ]);
-            return { clue: ph, answer: String(round(a * b, 2)), worked: `$${a} \\times ${b} = ${round(a * b, 2)}$` };
+            return { clue: ph, answer: String(ansM), worked: `$${a} \\times ${b} = ${ansM}$` };
         }
         // type 3: money-context addition
         const dollars1 = ri(rng, 1, 49);
@@ -725,6 +762,14 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
         // three-number two-decimal-place addition (single span → harder mental arithmetic)
         const a = ri(rng, 105, 999) / 100, b = ri(rng, 105, 999) / 100, c = ri(rng, 105, 999) / 100;
         const ans = round(a + b + c, 2);
+        if (rng() < 0.25) {
+            const ctx = rc(rng, [
+                `Three parcels weigh $${a}$ kg, $${b}$ kg and $${c}$ kg. Find the total mass.`,
+                `A painter buys $${a}$ L, $${b}$ L and $${c}$ L of paint. How much paint in total?`,
+                `Three runners complete times of $${a}$ s, $${b}$ s and $${c}$ s. Find the combined time.`,
+            ]);
+            return { clue: ctx, answer: String(ans), worked: `$${a} + ${b} + ${c} = ${ans}$` };
+        }
         const ph = rc(rng, [
             `${rc(rng, CALC_VERBS)} $${a} + ${b} + ${c}$`,
             `Find the sum of $${a}$, $${b}$ and $${c}$`,
@@ -736,6 +781,14 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
         // division giving a non-terminating quotient — round to 2 decimal places
         const a = ri(rng, 25, 99) / 10, b = ri(rng, 12, 39) / 10;
         const ans = round(a / b, 2);
+        if (rng() < 0.25) {
+            const ctx = rc(rng, [
+                `A $${a}$ m length of wire is divided into $${b}$ m sections. How many sections? Round to **2 d.p.**`,
+                `$${a}$ kg of flour is shared among $${b}$ recipes. How much per recipe? Round to **2 d.p.**`,
+                `A journey of $${a}$ km takes $${b}$ hours. Find the speed in km/h, correct to **2 d.p.**`,
+            ]);
+            return { clue: ctx, answer: String(ans), worked: `$${a} \\div ${b} = ${ans}$` };
+        }
         const ph = rc(rng, [
             `Calculate $${a} \\div ${b}$, giving your answer to **2 decimal places**.`,
             `Divide $${a}$ by $${b}$ and round the answer to **2 decimal places**.`,
@@ -745,24 +798,42 @@ function genDecimals(rng, diff, allowedOps, _depth = 0) {
     }
     if (type === 2) {
         const a = ri(rng, 101, 999) / 100, b = ri(rng, 100, Math.floor(a * 100) - 1) / 100;
+        const ansH2 = round(a - b, 2);
+        if (rng() < 0.25) {
+            const ctx = rc(rng, [
+                `A container holds $${a}$ L. After pouring out $${b}$ L, how much is left?`,
+                `A rod is $${a}$ m long. A section of $${b}$ m is removed. What length remains?`,
+                `An account has $\\$${a}$. After spending $\\$${b}$, what is the balance?`,
+            ]);
+            return { clue: ctx, answer: String(ansH2), worked: `$${a} - ${b} = ${ansH2}$` };
+        }
         const ph = rc(rng, [
             `${rc(rng, CALC_VERBS)} $${a} - ${b}$`,
             `Subtract $${b}$ from $${a}$`,
             `Find the difference of $${a}$ and $${b}$`,
             `What is $${a} - ${b}$?`,
         ]);
-        return { clue: ph, answer: String(round(a - b, 2)), worked: `$${a} - ${b} = ${round(a - b, 2)}$` };
+        return { clue: ph, answer: String(ansH2), worked: `$${a} - ${b} = ${ansH2}$` };
     }
     if (type === 4) {
         // two-decimal-place number × small integer (exact, larger operands)
         const a = ri(rng, 105, 999) / 100, b = ri(rng, 4, 15);
+        const ansH4 = round(a * b, 2);
+        if (rng() < 0.25) {
+            const ctx = rc(rng, [
+                `A plumber charges $\\$${a}$ per minute. Find the cost for $${b}$ minutes of work.`,
+                `Each tile is $${a}$ m wide. What is the total width of $${b}$ tiles?`,
+                `A jogger runs $${a}$ km each lap. How far in $${b}$ laps?`,
+            ]);
+            return { clue: ctx, answer: String(ansH4), worked: `$${a} \\times ${b} = ${ansH4}$` };
+        }
         const ph = rc(rng, [
             `${rc(rng, CALC_VERBS)} $${a} \\times ${b}$`,
             `Multiply $${a}$ by $${b}$`,
             `Find the product of $${a}$ and $${b}$`,
             `What is $${a} \\times ${b}$?`,
         ]);
-        return { clue: ph, answer: String(round(a * b, 2)), worked: `$${a} \\times ${b} = ${round(a * b, 2)}$` };
+        return { clue: ph, answer: String(ansH4), worked: `$${a} \\times ${b} = ${ansH4}$` };
     }
     // type 3: measurement-cost multiply — ensure len has a decimal part
     const lenTenths = ri(rng, 11, 99);
@@ -824,23 +895,39 @@ function genRounding(rng, diff, allowedOps) {
             const whole = ri(rng, 1, 99);
             const frac = ri(rng, 1, 9);
             const n = whole + frac / 10;   // e.g. 7.3, 42.8 — always has .1–.9
+            const dir1 = frac >= 5 ? '≥ 5, round up' : '< 5, round down';
+            if (rng() < 0.3) {
+                const ctx = rc(rng, [
+                    `A bag of flour weighs $${n}$ kg. Round this to the nearest *whole number*.`,
+                    `A runner completes a lap in $${n}$ seconds. Round to the nearest *whole number*.`,
+                    `A plank is $${n}$ m long. Round the length to the nearest *whole number*.`,
+                ]);
+                return { clue: ctx, answer: String(Math.round(n)), worked: `$${n} \\to ${Math.round(n)}$ (tenths digit $${frac}$ ${dir1})` };
+            }
             const ph = rc(rng, [
                 `Round $${n}$ to the nearest *whole number*`,
                 `Write $${n}$ as a whole number (rounded)`,
             ]);
-            const dir1 = frac >= 5 ? '≥ 5, round up' : '< 5, round down';
             return { clue: ph, answer: String(Math.round(n)), worked: `$${n} \\to ${Math.round(n)}$ (tenths digit $${frac}$ ${dir1})` };
         }
         // type 2: nearest 100
         const n2 = ri(rng, 150, 9850);
         const ans2 = Math.round(n2 / 100) * 100;
+        const d2 = Math.floor(n2 / 10) % 10;
+        const dir2 = d2 >= 5 ? '≥ 5, round up' : '< 5, round down';
+        if (rng() < 0.3) {
+            const ctx = rc(rng, [
+                `A stadium holds $${n2}$ people. Round the capacity to the nearest $100$.`,
+                `A school raised $\\$${n2}$. Estimate to the nearest $100$.`,
+                `A farm has $${n2}$ trees. Round to the nearest $100$.`,
+            ]);
+            return { clue: ctx, answer: String(ans2), worked: `$${n2} \\to ${ans2}$ (tens digit $${d2}$ ${dir2})` };
+        }
         const ph2 = rc(rng, [
             `Round $${n2}$ to the nearest $100$`,
             `Write $${n2}$ rounded to the nearest $100$`,
             `Approximate $${n2}$ to the nearest $100$`,
         ]);
-        const d2 = Math.floor(n2 / 10) % 10;
-        const dir2 = d2 >= 5 ? '≥ 5, round up' : '< 5, round down';
         return { clue: ph2, answer: String(ans2), worked: `$${n2} \\to ${ans2}$ (tens digit $${d2}$ ${dir2})` };
     }
     if (diff === 'Medium') {
@@ -885,6 +972,14 @@ function genRounding(rng, diff, allowedOps) {
             const a = ri(rng, 11, 89), b = ri(rng, 11, 89);
             const ra = Math.round(a / 10) * 10, rb = Math.round(b / 10) * 10;
             const ans = ra * rb;
+            if (rng() < 0.3) {
+                const ctx = rc(rng, [
+                    `A class of $${a}$ students each donates $\\$${b}$. Estimate the total by rounding to the nearest $10$.`,
+                    `A garden has $${a}$ rows of $${b}$ plants. Estimate the total by rounding each to the nearest $10$.`,
+                    `Tickets cost $\\$${b}$ each and $${a}$ are sold. Estimate the revenue by rounding to the nearest $10$.`,
+                ]);
+                return { clue: ctx, answer: String(ans), worked: `$${a} \\times ${b} \\approx ${ra} \\times ${rb} = ${ans}$` };
+            }
             const ph = rc(rng, [
                 `*Estimate* $${a} \\times ${b}$ by rounding each number to the nearest $10$`,
                 `By rounding each number to the nearest $10$, estimate $${a} \\times ${b}$`,
@@ -1141,12 +1236,28 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
                 const ans = sd2 === 1 ? String(sn2) : `$\\frac{${sn2}}{${sd2}}$`;
                 const inlineAns2 = sd2 === 1 ? String(sn2) : `\\frac{${sn2}}{${sd2}}`;
                 const worked = `LCD $= ${l}$: $\\frac{${bigE}}{${l}} - \\frac{${smE}}{${l}} = \\frac{${bigE-smE}}{${l}} = ${inlineAns2}$`;
+                if (rng() < 0.25) {
+                    const wp = rc(rng, [
+                        `A tank is $\\frac{${bigN}}{${bigD}}$ full. $\\frac{${smN}}{${smD}}$ is drained. What fraction remains?`,
+                        `A ribbon is $\\frac{${bigN}}{${bigD}}$ m long. $\\frac{${smN}}{${smD}}$ m is cut off. What length is left?`,
+                        `Jake eats $\\frac{${smN}}{${smD}}$ of a cake that was $\\frac{${bigN}}{${bigD}}$ left. How much cake remains?`,
+                    ]);
+                    return { clue: wp, answer: ans, worked };
+                }
                 return { clue: `${calcVerb} $\\frac{${bigN}}{${bigD}} - \\frac{${smN}}{${smD}}$`, answer: ans, worked };
             }
             const { n: sn2, d: sd2 } = simplify(e1 + e2, l);
             const ans = sd2 === 1 ? String(sn2) : `$\\frac{${sn2}}{${sd2}}$`;
             const inlineAns2 = sd2 === 1 ? String(sn2) : `\\frac{${sn2}}{${sd2}}`;
             const worked = `LCD $= ${l}$: $\\frac{${e1}}{${l}} + \\frac{${e2}}{${l}} = \\frac{${e1+e2}}{${l}} = ${inlineAns2}$`;
+            if (rng() < 0.25) {
+                const wp = rc(rng, [
+                    `A recipe uses $\\frac{${n1}}{${d1}}$ cup of sugar and $\\frac{${n2}}{${d2}}$ cup of flour. How much is used in total?`,
+                    `Sam walks $\\frac{${n1}}{${d1}}$ km then another $\\frac{${n2}}{${d2}}$ km. What is the total distance?`,
+                    `A container is $\\frac{${n1}}{${d1}}$ full. Another $\\frac{${n2}}{${d2}}$ is added. What fraction is now full?`,
+                ]);
+                return { clue: wp, answer: ans, worked };
+            }
             return { clue: `${calcVerb} $\\frac{${n1}}{${d1}} + \\frac{${n2}}{${d2}}$`, answer: ans, worked };
         }
         if (type === 1) {
@@ -1155,6 +1266,14 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             const ans = fracStr(n1 * n2, d1 * d2);
             const { n: _mn, d: _md } = simplify(n1 * n2, d1 * d2);
             const _inlineMul = _md === 1 ? String(_mn) : `\\frac{${_mn}}{${_md}}`;
+            if (rng() < 0.25) {
+                const wp = rc(rng, [
+                    `A garden bed is $\\frac{${n1}}{${d1}}$ m wide and $\\frac{${n2}}{${d2}}$ m long. What is its area?`,
+                    `A recipe needs $\\frac{${n1}}{${d1}}$ of a cup. You are making $\\frac{${n2}}{${d2}}$ of the recipe. How much do you need?`,
+                    `$\\frac{${n1}}{${d1}}$ of the students are girls. $\\frac{${n2}}{${d2}}$ of them play sport. What fraction play sport?`,
+                ]);
+                return { clue: wp, answer: ans, worked: `$\\frac{${n1} \\times ${n2}}{${d1} \\times ${d2}} = \\frac{${n1*n2}}{${d1*d2}} = ${_inlineMul}$` };
+            }
             const ph = rc(rng, [
                 `${calcVerb} $\\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}}$`,
                 `Multiply $\\frac{${n1}}{${d1}}$ by $\\frac{${n2}}{${d2}}$`,
@@ -1226,6 +1345,14 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         const ans = fracStr(n1 * d2, d1 * n2);
         const { n: _dn, d: _dd } = simplify(n1 * d2, d1 * n2);
         const _inlineDiv = _dd === 1 ? String(_dn) : `\\frac{${_dn}}{${_dd}}`;
+        if (rng() < 0.2) {
+            const wp = rc(rng, [
+                `A rope $\\frac{${n1}}{${d1}}$ m long is cut into pieces of $\\frac{${n2}}{${d2}}$ m. How many pieces?`,
+                `How many $\\frac{${n2}}{${d2}}$ L servings can be poured from $\\frac{${n1}}{${d1}}$ L?`,
+                `A shelf $\\frac{${n1}}{${d1}}$ m wide holds books $\\frac{${n2}}{${d2}}$ m thick. How many books fit?`,
+            ]);
+            return { clue: wp, answer: ans, worked: `$\\frac{${n1}}{${d1}} \\times \\frac{${d2}}{${n2}} = \\frac{${n1*d2}}{${d1*n2}} = ${_inlineDiv}$` };
+        }
         const ph = rc(rng, [
             `${calcVerb} $\\frac{${n1}}{${d1}} \\div \\frac{${n2}}{${d2}}$`,
             `Divide $\\frac{${n1}}{${d1}}$ by $\\frac{${n2}}{${d2}}$`,
@@ -1687,6 +1814,30 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
     if (type === -1) return null;
 
     const ctx = rc(rng, DATA_CONTEXTS);
+    // Real-world narrative wrappers (30% chance per question)
+    const STAT_STORIES = {
+        mean: [
+            (data, ctx) => `A teacher records ${ctx} of $${data.join(', ')}$. Find the *mean*.`,
+            (data, ctx) => `The ${ctx} for a week are $${data.join(', ')}$. Calculate the *mean*.`,
+            (data, ctx) => `A scientist measures ${ctx} of $${data.join(', ')}$. What is the *mean*?`,
+            (data, ctx) => `In a class survey, the ${ctx} collected were $${data.join(', ')}$. Find the *mean*.`,
+        ],
+        median: [
+            (data, ctx) => `A coach records ${ctx} of $${data.join(', ')}$. Find the *median*.`,
+            (data, ctx) => `During a week, the ${ctx} were $${data.join(', ')}$. What is the *median*?`,
+            (data, ctx) => `The ${ctx} measured in a study are $${data.join(', ')}$. Find the *median*.`,
+        ],
+        mode: [
+            (data, ctx) => `Customers rated a product with ${ctx} of $${data.join(', ')}$. Find the *mode*.`,
+            (data, ctx) => `A survey collected ${ctx} of $${data.join(', ')}$. What is the *mode*?`,
+            (data, ctx) => `Students recorded ${ctx} of $${data.join(', ')}$. Identify the *mode*.`,
+        ],
+        range: [
+            (data, ctx) => `The ${ctx} recorded over several days are $${data.join(', ')}$. Find the *range*.`,
+            (data, ctx) => `A nurse measures ${ctx} of $${data.join(', ')}$. Calculate the *range*.`,
+            (data, ctx) => `During an experiment the ${ctx} were $${data.join(', ')}$. What is the *range*?`,
+        ],
+    };
     if (diff === 'Easy') {
         if (type === 0) {
             const n = ri(rng, 3, 5);
@@ -1698,26 +1849,30 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             const data = [...others, last].sort((a, b) => a - b);
             const fOn = opts.showFormulas?.['mean-median']?.[diff.toLowerCase()];
             const pf = fOn ? ' Use $\\overline{x} = \\text{sum} \\div n$.' : '';
-            const ph = rc(rng, [
-                `Find the *mean* of: $${data.join(', ')}$${pf}`,
-                `Calculate the *mean* of these ${ctx}: $${data.join(', ')}$${pf}`,
-                `Determine the *mean* of: $${data.join(', ')}$${pf}`,
-                `What is the *mean* of $${data.join(', ')}$?${pf}`,
-                `The ${ctx} recorded are $${data.join(', ')}$. Find the *mean*.${pf}`,
-            ]);
+            const ph = rng() < 0.3
+                ? rc(rng, STAT_STORIES.mean).call(null, data, ctx) + pf
+                : rc(rng, [
+                    `Find the *mean* of: $${data.join(', ')}$${pf}`,
+                    `Calculate the *mean* of these ${ctx}: $${data.join(', ')}$${pf}`,
+                    `Determine the *mean* of: $${data.join(', ')}$${pf}`,
+                    `What is the *mean* of $${data.join(', ')}$?${pf}`,
+                    `The ${ctx} recorded are $${data.join(', ')}$. Find the *mean*.${pf}`,
+                ]);
             const sum = data.reduce((a, b) => a + b, 0);
             return { clue: ph, answer: String(meanV), worked: `$\\text{mean} = (${sum}) \\div ${n} = ${meanV}$` };
         }
         if (type === 1) {
             const n = (ri(rng, 2, 4) * 2) - 1;
             const data = Array.from({ length: n }, () => ri(rng, 1, 30)).sort((a, b) => a - b);
-            const ph = rc(rng, [
-                `Find the *median* of: $${data.join(', ')}$`,
-                `State the *median* of these ${ctx}: $${data.join(', ')}$`,
-                `Determine the *median* of: $${data.join(', ')}$`,
-                `What is the *median* of $${data.join(', ')}$?`,
-                `The ${ctx} are $${data.join(', ')}$. Find the *median*.`,
-            ]);
+            const ph = rng() < 0.3
+                ? rc(rng, STAT_STORIES.median).call(null, data, ctx)
+                : rc(rng, [
+                    `Find the *median* of: $${data.join(', ')}$`,
+                    `State the *median* of these ${ctx}: $${data.join(', ')}$`,
+                    `Determine the *median* of: $${data.join(', ')}$`,
+                    `What is the *median* of $${data.join(', ')}$?`,
+                    `The ${ctx} are $${data.join(', ')}$. Find the *median*.`,
+                ]);
             return { clue: ph, answer: String(data[Math.floor(n / 2)]), worked: `$\\text{median: middle of } ${n} \\text{ values} = ${data[Math.floor(n / 2)]}$` };
         }
         if (type === 2) {
@@ -1728,39 +1883,45 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
                 if (v !== mode && !others.includes(v)) others.push(v);
             }
             const data = [...others, mode, mode].sort((a, b) => a - b);
-            const ph = rc(rng, [
-                `Find the *mode* of: $${data.join(', ')}$`,
-                `State the *mode* of these ${ctx}: $${data.join(', ')}$`,
-                `Identify the *mode* of: $${data.join(', ')}$`,
-                `What is the *mode* of $${data.join(', ')}$?`,
-                `The ${ctx} are $${data.join(', ')}$. Find the *mode*.`,
-            ]);
+            const ph = rng() < 0.3
+                ? rc(rng, STAT_STORIES.mode).call(null, data, ctx)
+                : rc(rng, [
+                    `Find the *mode* of: $${data.join(', ')}$`,
+                    `State the *mode* of these ${ctx}: $${data.join(', ')}$`,
+                    `Identify the *mode* of: $${data.join(', ')}$`,
+                    `What is the *mode* of $${data.join(', ')}$?`,
+                    `The ${ctx} are $${data.join(', ')}$. Find the *mode*.`,
+                ]);
             return { clue: ph, answer: String(mode), worked: `$\\text{mode} = ${mode} \\text{ (appears most often)}$` };
         }
         // type 3: range — small integer dataset
         const n3 = ri(rng, 4, 6);
         const data3 = Array.from({ length: n3 }, () => ri(rng, 1, 20));
         const range3 = Math.max(...data3) - Math.min(...data3);
-        const ph3 = rc(rng, [
-            `Find the *range* of: $${data3.join(', ')}$`,
-            `Calculate the *range* of these ${ctx}: $${data3.join(', ')}$`,
-            `What is the *range* of $${data3.join(', ')}$?`,
-            `The ${ctx} are $${data3.join(', ')}$. Find the *range*.`,
-        ]);
+        const ph3 = rng() < 0.3
+            ? rc(rng, STAT_STORIES.range).call(null, data3, ctx)
+            : rc(rng, [
+                `Find the *range* of: $${data3.join(', ')}$`,
+                `Calculate the *range* of these ${ctx}: $${data3.join(', ')}$`,
+                `What is the *range* of $${data3.join(', ')}$?`,
+                `The ${ctx} are $${data3.join(', ')}$. Find the *range*.`,
+            ]);
         return { clue: ph3, answer: String(range3), worked: `$\\text{range} = ${Math.max(...data3)} - ${Math.min(...data3)} = ${range3}$` };
     }
     if (diff === 'Medium') {
         if (type === 0) {
             const n = ri(rng, 5, 8);
             const data = Array.from({ length: n }, () => ri(rng, 1, 50));
-            const ph = rc(rng, [
-                `Find the *range* of: $${data.join(', ')}$`,
-                `Calculate the *range* of these ${ctx}: $${data.join(', ')}$`,
-                `Determine the *range* of: $${data.join(', ')}$`,
-                `What is the *range* of $${data.join(', ')}$?`,
-                `The ${ctx} are $${data.join(', ')}$. Find the *range*.`,
-            ]);
             const range = Math.max(...data) - Math.min(...data);
+            const ph = rng() < 0.3
+                ? rc(rng, STAT_STORIES.range).call(null, data, ctx)
+                : rc(rng, [
+                    `Find the *range* of: $${data.join(', ')}$`,
+                    `Calculate the *range* of these ${ctx}: $${data.join(', ')}$`,
+                    `Determine the *range* of: $${data.join(', ')}$`,
+                    `What is the *range* of $${data.join(', ')}$?`,
+                    `The ${ctx} are $${data.join(', ')}$. Find the *range*.`,
+                ]);
             return { clue: ph, answer: String(range), worked: `$\\text{range} = ${Math.max(...data)} - ${Math.min(...data)} = ${range}$` };
         }
         if (type === 1) {
@@ -1772,13 +1933,15 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             });
             const reps = ri(rng, 2, 3);
             const data = [...others, ...Array(reps).fill(mode)].sort((a, b) => a - b);
-            const ph = rc(rng, [
-                `Identify the *mode* of: $${data.join(', ')}$`,
-                `State the *mode* of these ${ctx}: $${data.join(', ')}$`,
-                `Find the *mode* of: $${data.join(', ')}$`,
-                `What is the *mode* of $${data.join(', ')}$?`,
-                `The ${ctx} are $${data.join(', ')}$. Find the *mode*.`,
-            ]);
+            const ph = rng() < 0.3
+                ? rc(rng, STAT_STORIES.mode).call(null, data, ctx)
+                : rc(rng, [
+                    `Identify the *mode* of: $${data.join(', ')}$`,
+                    `State the *mode* of these ${ctx}: $${data.join(', ')}$`,
+                    `Find the *mode* of: $${data.join(', ')}$`,
+                    `What is the *mode* of $${data.join(', ')}$?`,
+                    `The ${ctx} are $${data.join(', ')}$. Find the *mode*.`,
+                ]);
             return { clue: ph, answer: String(mode), worked: `$\\text{mode} = ${mode} \\text{ (appears most often)}$` };
         }
         if (type === 2) {
@@ -1791,12 +1954,14 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             const data = [...others, last].sort((a, b) => a - b);
             const fOn2 = opts.showFormulas?.['mean-median']?.[diff.toLowerCase()];
             const pf2 = fOn2 ? ' Use $\\overline{x} = \\text{sum} \\div n$.' : '';
-            const ph = rc(rng, [
-                `Calculate the *mean* of: $${data.join(', ')}$${pf2}`,
-                `Find the *mean* of these ${ctx}: $${data.join(', ')}$${pf2}`,
-                `Determine the *mean* of: $${data.join(', ')}$${pf2}`,
-                `The ${ctx} are $${data.join(', ')}$. Calculate the *mean*.${pf2}`,
-            ]);
+            const ph = rng() < 0.3
+                ? rc(rng, STAT_STORIES.mean).call(null, data, ctx) + pf2
+                : rc(rng, [
+                    `Calculate the *mean* of: $${data.join(', ')}$${pf2}`,
+                    `Find the *mean* of these ${ctx}: $${data.join(', ')}$${pf2}`,
+                    `Determine the *mean* of: $${data.join(', ')}$${pf2}`,
+                    `The ${ctx} are $${data.join(', ')}$. Calculate the *mean*.${pf2}`,
+                ]);
             const sum = data.reduce((a, b) => a + b, 0);
             return { clue: ph, answer: String(meanV), worked: `$\\text{mean} = (${sum}) \\div ${n} = ${meanV}$` };
         }
@@ -1812,22 +1977,29 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             const display3 = [...known3, '?'].join(', ');
             const fOn3 = opts.showFormulas?.['mean-median']?.[diff.toLowerCase()];
             const pf3 = fOn3 ? ' Use $\\overline{x} = \\text{sum} \\div n$.' : '';
-            const ph3 = rc(rng, [
-                `The *mean* of $${display3}$ is $${mean3}$. Find the missing value.${pf3}`,
-                `${n3} ${ctx} have a *mean* of $${mean3}$. ${n3 - 1} are $${known3.join(', ')}$. Find the missing value.${pf3}`,
-                `Find the missing number if the *mean* of $${display3}$ is $${mean3}$.${pf3}`,
-                `The *mean* of these values is $${mean3}$: $${display3}$. What is the missing value?${pf3}`,
-            ]);
+            const ph3 = rng() < 0.3
+                ? rc(rng, [
+                    `A student scores ${ctx} of $${known3.join(', ')}$ and one unknown mark. The *mean* is $${mean3}$. Find the missing score.${pf3}`,
+                    `In ${n3} tests, ${n3 - 1} ${ctx} are $${known3.join(', ')}$. The *mean* is $${mean3}$. What is the missing result?${pf3}`,
+                ])
+                : rc(rng, [
+                    `The *mean* of $${display3}$ is $${mean3}$. Find the missing value.${pf3}`,
+                    `${n3} ${ctx} have a *mean* of $${mean3}$. ${n3 - 1} are $${known3.join(', ')}$. Find the missing value.${pf3}`,
+                    `Find the missing number if the *mean* of $${display3}$ is $${mean3}$.${pf3}`,
+                    `The *mean* of these values is $${mean3}$: $${display3}$. What is the missing value?${pf3}`,
+                ]);
             return { clue: ph3, answer: String(missing3), worked: `$\\text{missing} = ${mean3} \\times ${n3} - (${known3.join(' + ')}) = ${missing3}$` };
         }
         // type 4: median of even-count dataset (requires averaging middle two)
         const n4 = rc(rng, [6, 8]);
         const data4 = Array.from({ length: n4 }, () => ri(rng, 1, 20) * 2).sort((a, b) => a - b);
         const med4 = (data4[n4 / 2 - 1] + data4[n4 / 2]) / 2;
-        const ph4 = rc(rng, [
-            `Find the *median* of: $${data4.join(', ')}$`,
-            `Calculate the *median* of these ${ctx}: $${data4.join(', ')}$`,
-            `Determine the *median* of: $${data4.join(', ')}$`,
+        const ph4 = rng() < 0.3
+            ? rc(rng, STAT_STORIES.median).call(null, data4, ctx)
+            : rc(rng, [
+                `Find the *median* of: $${data4.join(', ')}$`,
+                `Calculate the *median* of these ${ctx}: $${data4.join(', ')}$`,
+                `Determine the *median* of: $${data4.join(', ')}$`,
             `The ${ctx} are $${data4.join(', ')}$. Find the *median*.`,
         ]);
         return { clue: ph4, answer: String(med4), worked: `$\\text{median} = (${data4[n4/2-1]} + ${data4[n4/2]}) \\div 2 = ${med4}$` };
@@ -1843,24 +2015,31 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
         const q3 = upper.length % 2 ? upper[Math.floor(upper.length / 2)] : (upper[upper.length / 2 - 1] + upper[upper.length / 2]) / 2;
         const iqr = q3 - q1;
         if (iqr <= 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
-        const ph = rc(rng, [
-            `Find the *interquartile range* of: $${data.join(', ')}$`,
-            `Calculate the *IQR* of these ${ctx}: $${data.join(', ')}$`,
-            `Determine the *interquartile range* of: $${data.join(', ')}$`,
-            `The ${ctx} are $${data.join(', ')}$. Find the *IQR*.`,
-        ]);
+        const ph = rng() < 0.3
+            ? rc(rng, [
+                `A class of ${n0} students recorded ${ctx} of $${data.join(', ')}$. Find the *interquartile range*.`,
+                `In a study, the ${ctx} were $${data.join(', ')}$. Calculate the *IQR*.`,
+            ])
+            : rc(rng, [
+                `Find the *interquartile range* of: $${data.join(', ')}$`,
+                `Calculate the *IQR* of these ${ctx}: $${data.join(', ')}$`,
+                `Determine the *interquartile range* of: $${data.join(', ')}$`,
+                `The ${ctx} are $${data.join(', ')}$. Find the *IQR*.`,
+            ]);
         return { clue: ph, answer: String(iqr), worked: `$Q_1 = ${q1}, Q_3 = ${q3}, \\text{IQR} = ${q3} - ${q1} = ${iqr}$` };
     }
     if (type === 1) {
         const n = rc(rng, [8, 10]);
         const data = Array.from({ length: n }, () => ri(rng, 1, 25) * 2).sort((a, b) => a - b);
         const med = (data[n / 2 - 1] + data[n / 2]) / 2;
-        const ph = rc(rng, [
-            `Find the *median* of: $${data.join(', ')}$`,
-            `Calculate the *median* of these ${ctx}: $${data.join(', ')}$`,
-            `Determine the *median* of: $${data.join(', ')}$`,
-            `The ${ctx} are $${data.join(', ')}$. Find the *median*.`,
-        ]);
+        const ph = rng() < 0.3
+            ? rc(rng, STAT_STORIES.median).call(null, data, ctx)
+            : rc(rng, [
+                `Find the *median* of: $${data.join(', ')}$`,
+                `Calculate the *median* of these ${ctx}: $${data.join(', ')}$`,
+                `Determine the *median* of: $${data.join(', ')}$`,
+                `The ${ctx} are $${data.join(', ')}$. Find the *median*.`,
+            ]);
         return { clue: ph, answer: String(med), worked: `$\\text{median} = (${data[n/2-1]} + ${data[n/2]}) \\div 2 = ${med}$` };
     }
     if (type === 2) {
@@ -1873,12 +2052,17 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
         const missing2 = target2 - known2.reduce((a, b) => a + b, 0);
         if (missing2 < 1 || missing2 > 80) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
         const display2 = [...known2, '?'].join(', ');
-        const ph2 = rc(rng, [
-            `The *mean* of $${display2}$ is $${mean2}$. Find the missing value.`,
-            `Find the missing value if the *mean* of $${display2}$ is $${mean2}$.`,
-            `The *mean* of these ${ctx} is $${mean2}$: $${display2}$. What is the missing value?`,
-            `Determine the missing value given that the *mean* of $${display2}$ is $${mean2}$.`,
-        ]);
+        const ph2 = rng() < 0.3
+            ? rc(rng, [
+                `A team records ${ctx} of $${known2.join(', ')}$ and one missing result. The *mean* is $${mean2}$. Find the missing value.`,
+                `In ${n2} experiments, ${n2 - 1} ${ctx} are $${known2.join(', ')}$. The *mean* is $${mean2}$. Find the missing value.`,
+            ])
+            : rc(rng, [
+                `The *mean* of $${display2}$ is $${mean2}$. Find the missing value.`,
+                `Find the missing value if the *mean* of $${display2}$ is $${mean2}$.`,
+                `The *mean* of these ${ctx} is $${mean2}$: $${display2}$. What is the missing value?`,
+                `Determine the missing value given that the *mean* of $${display2}$ is $${mean2}$.`,
+            ]);
         return { clue: ph2, answer: String(missing2), worked: `$\\text{missing} = ${mean2} \\times ${n2} - (${known2.join(' + ')}) = ${missing2}$` };
     }
     if (type === 3) {
@@ -3077,21 +3261,25 @@ function genNonLinear(rng, diff, allowedOps) {
             const yInt = h * h + k;
             // Alternate between vertex and y-intercept questions
             if (rng() < 0.35) {
-                const ph = rc(rng, [
-                    `Find the $y$-intercept of $y = ${eq}$.`,
-                    `What is the $y$-intercept of the parabola $y = ${eq}$?`,
-                ]);
+                const ph = rng() < 0.3
+                    ? `The height of a ball is modelled by $h = ${eq}$ where $x$ is the horizontal distance. Find the $y$-intercept.`
+                    : rc(rng, [
+                        `Find the $y$-intercept of $y = ${eq}$.`,
+                        `What is the $y$-intercept of the parabola $y = ${eq}$?`,
+                    ]);
                 return {
                     clue: ph, answer: String(yInt), answerDisplay: `$y = ${yInt}$`,
                     worked: `$y\\text{-int: set } x = 0: y = (0 ${h > 0 ? `- ${h}` : `+ ${Math.abs(h)}`})^2${kPart} = ${h * h}${kPart} = ${yInt}$`,
                     diagram: { type: 'parabola', h, k, a: 1 },
                 };
             }
-            const ph = rc(rng, [
-                `State the *vertex* of the parabola $y = ${eq}$.`,
-                `Find the *vertex* of $y = ${eq}$.`,
-                `What is the *turning point* of $y = ${eq}$?`,
-            ]);
+            const ph = rng() < 0.3
+                ? `A projectile follows the path $y = ${eq}$. What is the *turning point*?`
+                : rc(rng, [
+                    `State the *vertex* of the parabola $y = ${eq}$.`,
+                    `Find the *vertex* of $y = ${eq}$.`,
+                    `What is the *turning point* of $y = ${eq}$?`,
+                ]);
             return {
                 clue: ph, answer: `(${h},${k})`, answerDisplay: `$(${h}, ${k})$`,
                 worked: `$y = (x ${h > 0 ? `- ${h}` : `+ ${Math.abs(h)}`})^2${kPart} \\Rightarrow \\text{vertex} = (${h}, ${k})$`,
@@ -3230,12 +3418,18 @@ function genNonLinear(rng, diff, allowedOps) {
             eq = rc(rng, ['y = \\sqrt{x}', 'y = -\\sqrt{x}', 'y = \\sqrt{x + 1}']);
             type = 'square root';
         }
-        const ph = rc(rng, [
-            `Identify the type of graph represented by $${eq}$.`,
-            `What type of curve does $${eq}$ represent?`,
-            `Name the graph: $${eq}$.`,
-            `Classify the relationship: $${eq}$.`,
-        ]);
+        const ph = rng() < 0.25
+            ? rc(rng, [
+                `A scientist models data with $${eq}$. What type of relationship is this?`,
+                `An engineer uses $${eq}$ to model a system. Classify the graph type.`,
+                `The equation $${eq}$ describes a pattern. What type of curve is it?`,
+            ])
+            : rc(rng, [
+                `Identify the type of graph represented by $${eq}$.`,
+                `What type of curve does $${eq}$ represent?`,
+                `Name the graph: $${eq}$.`,
+                `Classify the relationship: $${eq}$.`,
+            ]);
         const hints = { parabola: '$x^2$ term', exponential: '$a^x$ form', hyperbola: '$xy = k$ form', cubic: '$x^3$ term', 'square root': '$\\sqrt{x}$ form' };
         return { clue: ph, answer: type, answerDisplay: type, worked: `${hints[type]} indicates a ${type}` };
     }
