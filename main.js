@@ -1,7 +1,8 @@
 // =============================================================
 // main.js — Application entry point (Maths Question Sets Edition)
 // =============================================================
-import { state, ALL_SUBTOPICS, SUB_OPS, setGeneratedSets, setActivePage, applyStateToDOM, syncSettingsFromDOM } from './core/state.js';
+import { state, ALL_SUBTOPICS, SUB_OPS, setGeneratedSets, setActivePage, applyStateToDOM, syncSettingsFromDOM, topicSlug, sanitizeImportedState } from './core/state.js';
+import { esc } from './renderers/htmlUtils.js';
 import { getOutcomesForTopics, getTopicsForOutcomeCodes, getTopicsForStage, STAGE_OUTCOMES, STRANDS, TOPIC_STRAND_MAP } from './core/outcomes.js';
 import { pushHistory, undo, redo } from './core/history.js';
 import { saveState, loadRawState, hardReset } from './core/storage.js';
@@ -604,7 +605,7 @@ function toggleTopic(topicName) {
     // When toggling the parent checkbox, set ALL sub-ops to match
     const ops = SUB_OPS[topicName];
     if (ops) {
-        const topicId = topicName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const topicId = topicSlug(topicName);
         ops.forEach(op => {
             const el = document.getElementById('subop-' + topicId + '-' + op.key);
             if (el) el.checked = newVal;
@@ -630,7 +631,7 @@ function setTopicsAll(enabled) {
     const stageTopics = getTopicsForStage(state.stage);
     stageTopics.forEach(t => {
         state.selectedTopics[t] = enabled;
-        const id = 'topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const id = 'topic-' + topicSlug(t);
         const el = document.getElementById(id);
         if (el) { el.checked = enabled; el.indeterminate = false; }
         const ops = SUB_OPS[t];
@@ -688,7 +689,7 @@ function _updateGenerateButtonState(active) {
 function renderOutcomes() {
     // Clear all existing outcome containers
     ALL_SUBTOPICS.forEach(t => {
-        const topicId = t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const topicId = topicSlug(t);
         const container = document.getElementById('outcomes-for-' + topicId);
         if (container) container.innerHTML = '';
     });
@@ -713,7 +714,7 @@ function renderOutcomes() {
     const activeFilterCodes = Object.keys(state.selectedOutcomes).filter(c => state.selectedOutcomes[c]);
     if (activeFilterCodes.length > 0) {
         const pillsHtml = activeFilterCodes.map(c =>
-            `<span style="background:rgba(99,102,241,0.12);color:#6366f1;border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;">${c}</span>`
+            `<span style="background:rgba(99,102,241,0.12);color:#6366f1;border:1px solid rgba(99,102,241,0.3);border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;white-space:nowrap;">${esc(c)}</span>`
         ).join(' ');
         noticeContainer.innerHTML = `<div class="outcome-filter-notice" style="margin-top:8px; flex-wrap:wrap; gap:4px;">
             <i class="fas fa-filter" style="font-size:10px; flex-shrink:0;"></i>
@@ -728,7 +729,7 @@ function renderOutcomes() {
 
     // Render per-topic outcomes
     activeTopics.forEach(t => {
-        const topicId = t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const topicId = topicSlug(t);
         const container = document.getElementById('outcomes-for-' + topicId);
         if (!container) return;
         
@@ -741,22 +742,25 @@ function renderOutcomes() {
         html += outcomes.map(o => {
             const isSelected = !!state.selectedOutcomes[o.code];
             const cls = o.appliesAll ? 'outcome-row outcome-wm' : 'outcome-row';
+            // Outcome data is static (core/outcomes.js) but escape anyway so
+            // this renderer stays safe if outcomes ever become configurable.
+            const code = esc(o.code);
             const chkHtml = o.appliesAll ? '<span class="outcome-filter-spacer"></span>' : `<input
                 type="checkbox"
                 class="outcome-filter-chk"
                 title="Filter generation to this outcome"
                 ${isSelected ? 'checked' : ''}
-                onchange="toggleOutcomeFilter('${o.code}', this.checked)">`;
+                onchange="toggleOutcomeFilter('${code}', this.checked)">`;
             const focusBtn = o.appliesAll ? '' : `<button
                 class="outcome-focus-btn"
-                title="Focus: enable only topics for ${o.code}"
-                onclick="focusOutcome('${o.code}')"><i class="fas fa-crosshairs"></i></button>`;
+                title="Focus: enable only topics for ${code}"
+                onclick="focusOutcome('${code}')"><i class="fas fa-crosshairs"></i></button>`;
             return `<div class="${cls}">
                 ${chkHtml}
-                <span class="outcome-code-pill">${o.code}</span>
+                <span class="outcome-code-pill">${code}</span>
                 <div class="outcome-text">
-                    <div class="outcome-content-label">${o.contentLabel}</div>
-                    <div class="outcome-statement">${o.statement}</div>
+                    <div class="outcome-content-label">${esc(o.contentLabel)}</div>
+                    <div class="outcome-statement">${esc(o.statement)}</div>
                 </div>
                 ${focusBtn}
             </div>`;
@@ -787,7 +791,7 @@ function focusOutcome(code) {
     // Enable matching topics, disable all others
     ALL_SUBTOPICS.forEach(t => {
         state.selectedTopics[t] = matchingTopics.includes(t);
-        const el = document.getElementById('topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, ''));
+        const el = document.getElementById('topic-' + topicSlug(t));
         if (el) el.checked = state.selectedTopics[t];
     });
     // Clear outcome filter so the focus is purely topic-driven
@@ -818,7 +822,7 @@ function toggleSubOp(topic, opKey) {
 }
 
 function toggleTopicExpand(topicName) {
-    const panel = document.getElementById('subs-' + topicName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, ''));
+    const panel = document.getElementById('subs-' + topicSlug(topicName));
     if (!panel) return;
     const isOpen = panel.style.display !== 'none';
     // Accordion: close all others
@@ -838,12 +842,12 @@ function _updateParentCheckbox(topicName) {
         (!op.stages || op.stages.includes(state.stage)) &&
         (op.pathway !== 'path' || state.includePath)
     );
-    const id = 'topic-' + topicName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+    const id = 'topic-' + topicSlug(topicName);
     const parentEl = document.getElementById(id);
     if (!parentEl) return;
     let checked = 0;
     ops.forEach(op => {
-        const el = document.getElementById('subop-' + topicName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '') + '-' + op.key);
+        const el = document.getElementById('subop-' + topicSlug(topicName) + '-' + op.key);
         if (el && el.checked) checked++;
     });
     parentEl.checked = checked > 0;
@@ -858,7 +862,7 @@ function _updateAllParentCheckboxes() {
 function _updateSubOpBadge(topicName) {
     const allOps = SUB_OPS[topicName];
     if (!allOps) return;
-    const topicId = topicName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+    const topicId = topicSlug(topicName);
     const badgeEl = document.getElementById('sub-badge-' + topicId);
     if (!badgeEl) return;
     const ops = allOps.filter(op =>
@@ -890,7 +894,7 @@ function _updateTopicWarnings(sets) {
     });
     const stageTopics = getTopicsForStage(state.stage);
     stageTopics.forEach(t => {
-        const topicId = t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const topicId = topicSlug(t);
         const subsEl = document.getElementById('subs-' + topicId);
         const groupEl = subsEl?.closest('.topic-group');
         if (!groupEl) return;
@@ -919,7 +923,7 @@ function _buildSubOpsPanels() {
             (!op.stages || op.stages.includes(state.stage)) &&
             (op.pathway !== 'path' || state.includePath)
         );
-        const topicId = t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+        const topicId = topicSlug(t);
         const container = document.getElementById('subs-' + topicId);
         if (!container) return;
 
@@ -960,7 +964,7 @@ function renderTopicTogglesByStrand() {
 
         topicsInStrand.forEach(t => {
             const meta    = TOPIC_META[t] || { label: t, icon: 'fas fa-circle' };
-            const topicId = t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+            const topicId = topicSlug(t);
             const checked = state.selectedTopics[t] ? 'checked' : '';
 
             // Primary non-WM outcome code for chip label. Suppressed when
@@ -1171,13 +1175,11 @@ function loadConfigFromFile(input) {
     const r = new FileReader();
     r.onload = e => {
         try {
-            const parsed = JSON.parse(e.target.result);
-            if (parsed.settings)        Object.assign(state.settings, parsed.settings);
-            if (parsed.selectedTopics)  Object.assign(state.selectedTopics, parsed.selectedTopics);
-            if (parsed.selectedSubOps)  Object.assign(state.selectedSubOps, parsed.selectedSubOps);
-            if (parsed.questionsPerSet) state.questionsPerSet = parsed.questionsPerSet;
-            if (parsed.watermarkSrc)    state.watermarkSrc = parsed.watermarkSrc;
-            applyStateToDOM(state);
+            const parsed = sanitizeImportedState(JSON.parse(e.target.result));
+            if (!parsed) throw new Error('not a config object');
+            // applyStateToDOM handles the merge (settings, topics, sub-ops,
+            // stage, watermark) — same path as the drag-and-drop import.
+            applyStateToDOM(parsed);
             updateUI();
             updateTopicCount();
             renderOutcomes();
@@ -1438,7 +1440,8 @@ window.addEventListener('load', async () => {
             const r = new FileReader();
             r.onload = e => {
                 try {
-                    const parsed = JSON.parse(e.target.result);
+                    const parsed = sanitizeImportedState(JSON.parse(e.target.result));
+                    if (!parsed) throw new Error('not a config object');
                     applyStateToDOM(parsed);
                     updateUI();
                     updateTopicCount();

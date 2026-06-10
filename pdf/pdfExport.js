@@ -1647,6 +1647,9 @@ export async function exportPDF() {
                 const ok = await loadFontForPDF(doc, fontName, 400);
                 if (ok) { await loadFontForPDF(doc, fontName, 700); pdfFont = fontName; }
             } catch (e) { console.warn('Unexpected font load error:', e); }
+            if (pdfFont === 'helvetica') {
+                showToast(`Couldn't load the "${fontName}" font — exporting with the standard PDF font instead.`, 'warning');
+            }
         }
         ctx = buildCtx(doc, pdfFont, wmImg, scale, { PAGE_WIDTH, PAGE_HEIGHT, MARGIN }, cfg);
 

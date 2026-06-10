@@ -2,6 +2,14 @@
 
 _Last updated: 2026-03-15_
 
+> **Status note (2026-06):** this strategy was written for the predecessor
+> vocabulary-puzzle product (word search / crossword / scramble, BYOK AI).
+> The product has since pivoted to the NESA maths worksheet generator. The
+> tier principles, pricing thinking, and **AI-generation plans remain the
+> intended direction** — feature flags for AI generation are kept in
+> `payments/config.js` — but puzzle-type specifics below no longer apply.
+> This document is internal and is not deployed to the public site.
+
 ---
 
 ## Current State
