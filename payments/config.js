@@ -117,7 +117,7 @@ export const FEATURE_META = Object.freeze({
     [FEATURE.BULK_EXPORT]:       { label: 'Bulk Export',       desc: 'Export multiple unique copies in one go',   category: 'PDF / Export' },
     [FEATURE.UNLIMITED_EXPORTS]: { label: 'Unlimited Exports', desc: 'No monthly PDF export cap',                 category: 'PDF / Export' },
     [FEATURE.REMOVE_WATERMARK]:  { label: 'Remove Watermark',  desc: 'Hide branding watermark on exported PDFs',  category: 'PDF / Export' },
-    [FEATURE.ALL_TOPICS]:        { label: 'All Topics',        desc: 'Access all 9 maths topic categories',       category: 'Content'      },
+    [FEATURE.ALL_TOPICS]:        { label: 'All Topics',        desc: 'Access all maths topic categories',         category: 'Content'      },
     [FEATURE.AI_GENERATION]:     { label: 'AI Generation',     desc: 'AI-assisted question and word generation',  category: 'Content'      },
     [FEATURE.CUSTOM_FONT]:       { label: 'Custom Font',       desc: 'Choose custom fonts for PDF exports',       category: 'Content'      },
     [FEATURE.EXPORT_CONFIG]:     { label: 'Export Config',     desc: 'Save and load JSON configuration files',    category: 'Config'       },

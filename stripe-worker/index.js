@@ -399,9 +399,18 @@ async function verifyWebhookSignature(payload, header, secret) {
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
 
-    if (computed !== expected) return null;
+    if (!timingSafeEqual(computed, expected)) return null;
 
     try { return JSON.parse(payload); } catch { return null; }
+}
+
+// Constant-time string comparison — prevents timing side-channels on the
+// webhook signature check (compare every char regardless of mismatches).
+function timingSafeEqual(a, b) {
+    if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    return diff === 0;
 }
 
 // ---- JWT helpers (HMAC-SHA-256) -----------------------------

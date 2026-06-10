@@ -16,18 +16,20 @@ python3 -m http.server 8082
 
 ```bash
 bash build.sh
-# Bundles all JS via esbuild → bundle.js (minified)
+# Bundles all JS via esbuild → bundle.js (minified), stamps Subresource
+# Integrity hashes for CDN resources, and stamps a fresh content-hash into
+# the <script src="bundle.js?v=…"> tag — no manual cache-bust bump needed.
+
+# Offline? Skip the SRI step (dev only — never deploy an unstamped build):
+SKIP_SRI=1 bash build.sh
 ```
 
-After rebuilding, bump the cache-bust query param in `puzzle-suite.html`
-(the `python3 -m http.server` dev server caches aggressively):
-
-```html
-<script src="bundle.js?v=N"></script>
-```
+`bundle.js` is a build output and is not committed — run `bash build.sh`
+once after cloning before serving locally.
 
 > CI does **not** require a local build before pushing — GitHub Actions runs
-> `bash build.sh` automatically on every push to `main` and deploys to Pages.
+> `bash build.sh` automatically on every push to `main` and deploys only the
+> runtime files (HTML, CSS, bundle) to Pages.
 
 ## Pages
 

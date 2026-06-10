@@ -19,6 +19,12 @@ export const FONT_SELECT_MAP = {
     "'Inter', sans-serif":   'Inter',
 };
 
+// Replaced with the real sha384 hash by tools/stamp-sri.mjs during the build
+// (the sandbox/CI computes it from the live CDN bytes). When the sentinel is
+// still in place (e.g. SKIP_SRI=1 local build), the script loads without SRI.
+const JSPDF_SRI = '__JSPDF_SRI__';
+const JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+
 /**
  * Lazy-load jsPDF from CDN.
  * Returns the jspdf module (window.jspdf).
@@ -27,7 +33,11 @@ export async function loadJSPDF() {
     if (window.jspdf) return window.jspdf;
     return new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        s.src = JSPDF_URL;
+        if (!JSPDF_SRI.startsWith('__')) {
+            s.integrity   = JSPDF_SRI;
+            s.crossOrigin = 'anonymous';
+        }
         s.onload  = () => resolve(window.jspdf);
         s.onerror = () => {
             reject(new Error('PDF engine failed to load'));
@@ -56,6 +66,10 @@ export async function loadFontForPDF(doc, jsPDFFontName, weight) {
     const fontId = PDF_FONT_CDN[jsPDFFontName];
     if (!fontId) return false;
 
+    // @latest is deliberate-but-imperfect: fontsource package versions differ
+    // per font and break URLs when pinned stale. The TTF signature check below
+    // rejects anything that isn't a real font file, and a failed load falls
+    // back to helvetica rather than breaking the export.
     const url = `https://cdn.jsdelivr.net/fontsource/fonts/${fontId}@latest/latin-${weight}-normal.ttf`;
 
     try {

@@ -71,13 +71,18 @@ jobs:
       - name: Run esbuild
         run: bash build.sh
 
-      - name: Remove node_modules before packaging
-        run: rm -rf node_modules   # not needed at runtime; keeps artifact small
+      # Publish ONLY the runtime files. Deploying the repo root would expose
+      # internal docs (CLAUDE.md, monetisation.md, …), unbundled source, and
+      # the stripe-worker implementation as public URLs on the Pages site.
+      - name: Stage deployable files
+        run: |
+          mkdir dist
+          cp puzzle-suite.html index.html puzzle-suite.css bundle.js .nojekyll dist/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'          # serve the whole repo root as-is
+          path: 'dist'
 
   # ── 3. Deploy ───────────────────────────────────────────────────────────────
   deploy:

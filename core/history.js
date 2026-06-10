@@ -1,5 +1,5 @@
 // core/history.js — Undo / Redo for topic selection + questionsPerSet
-import { state, ALL_SUBTOPICS, SUB_OPS } from './state.js';
+import { state, ALL_SUBTOPICS, SUB_OPS, topicSlug, subOpDomId } from './state.js';
 
 const MAX_HISTORY = 50;
 let history      = [];
@@ -23,8 +23,7 @@ export function pushHistory() {
 
 function _applySnapToDOM(snap) {
     ALL_SUBTOPICS.forEach(t => {
-        const id = 'topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
-        const el = document.getElementById(id);
+        const el = document.getElementById('topic-' + topicSlug(t));
         if (el) el.checked = snap.selectedTopics[t] !== false;
 
         // Restore sub-op checkboxes
@@ -32,7 +31,7 @@ function _applySnapToDOM(snap) {
         if (!ops) return;
         const enabledOps = snap.selectedSubOps?.[t];
         ops.forEach(op => {
-            const subEl = document.getElementById('subop-' + t.replace(/\s+/g, '-') + '-' + op.key);
+            const subEl = document.getElementById(subOpDomId(t, op.key));
             if (subEl) subEl.checked = enabledOps ? enabledOps.includes(op.key) : true;
         });
     });

@@ -9,6 +9,21 @@ export { ALL_SUBTOPICS, SUB_OPS };
 import { STAGE_OUTCOMES } from './outcomes.js';
 export { STAGE_OUTCOMES };
 
+// Canonical topic → DOM-id slug. Every element id derived from a topic name
+// ('topic-…', 'subop-…', 'subs-…', 'outcomes-for-…') MUST go through this —
+// a divergent copy of the regex silently breaks state restore and undo/redo
+// for topics with punctuation (e.g. 'Ratios & Rates').
+export function topicSlug(t) {
+    return t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+}
+export function subOpDomId(t, opKey) {
+    return 'subop-' + topicSlug(t) + '-' + opKey;
+}
+
+// Formula-sheet group ids — single source for syncSettingsFromDOM and
+// applyStateToDOM (the two previously held separate copies that had to match).
+export const FORMULA_GROUPS = ['area-perimeter', 'pythagoras', 'circles', 'simple-interest', 'compound-interest', 'mean-median'];
+
 export const state = {
     // Which subtopics are enabled for generation (includes Stage 5-only topics, defaulting true)
     selectedTopics: {
@@ -153,8 +168,7 @@ export function syncSettingsFromDOM() {
     };
 
     // Sync formulas
-    const formulaGroups = ['area-perimeter', 'pythagoras', 'circles', 'simple-interest', 'compound-interest', 'mean-median'];
-    formulaGroups.forEach(g => {
+    FORMULA_GROUPS.forEach(g => {
         if (!s.showFormulas[g]) s.showFormulas[g] = {};
         s.showFormulas[g].easy   = getChk(`form-${g}-easy`,   s.showFormulas[g].easy);
         s.showFormulas[g].medium = getChk(`form-${g}-medium`, s.showFormulas[g].medium);
@@ -173,7 +187,7 @@ export function syncSettingsFromDOM() {
 
     // Sync selectedTopics from checkboxes
     ALL_SUBTOPICS.forEach(t => {
-        const el = document.getElementById('topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, ''));
+        const el = document.getElementById('topic-' + topicSlug(t));
         if (el) state.selectedTopics[t] = el.checked;
     });
 
@@ -183,8 +197,7 @@ export function syncSettingsFromDOM() {
         if (!ops) return;
         const enabled = [];
         ops.forEach(op => {
-            const id = 'subop-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '') + '-' + op.key;
-            const el = document.getElementById(id);
+            const el = document.getElementById(subOpDomId(t, op.key));
             if (el && el.checked) enabled.push(op.key);
         });
         // Only store if user has unchecked some ops (saves space)
@@ -223,8 +236,7 @@ export function applyStateToDOM(s) {
     if (s.selectedTopics) {
         Object.assign(state.selectedTopics, s.selectedTopics);
         ALL_SUBTOPICS.forEach(t => {
-            const id = 'topic-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
-            const el = document.getElementById(id);
+            const el = document.getElementById('topic-' + topicSlug(t));
             if (el) el.checked = state.selectedTopics[t] !== false;
         });
     }
@@ -237,8 +249,7 @@ export function applyStateToDOM(s) {
             if (!ops) return;
             const enabledOps = state.selectedSubOps[t];
             ops.forEach(op => {
-                const id = 'subop-' + t.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '') + '-' + op.key;
-                const el = document.getElementById(id);
+                const el = document.getElementById(subOpDomId(t, op.key));
                 if (el) el.checked = enabledOps ? enabledOps.includes(op.key) : true;
             });
         });
@@ -307,8 +318,7 @@ export function applyStateToDOM(s) {
     setChk('showExportId',  cfg.showExportId);
 
     if (cfg.showFormulas) {
-        const formulaGroups = ['area-perimeter', 'pythagoras', 'circles', 'simple-interest', 'compound-interest', 'mean-median'];
-        formulaGroups.forEach(g => {
+        FORMULA_GROUPS.forEach(g => {
             if (cfg.showFormulas[g]) {
                 setChk(`form-${g}-easy`,   cfg.showFormulas[g].easy);
                 setChk(`form-${g}-medium`, cfg.showFormulas[g].medium);
@@ -369,4 +379,56 @@ export function applyStateToDOM(s) {
             p.style.transform = `scale(${state.currentZoom})`;
         });
     }
+}
+
+// ---- Imported-config sanitisation ----------------------------
+// Imported .json files are the one untrusted input path into state (shared
+// between teachers, drag-dropped). applyStateToDOM() merges whatever it gets,
+// so unknown keys must be stripped BEFORE the merge, and the watermark must
+// be an image data URL. Pure function (no DOM) so it is unit-testable.
+
+const IMPORT_TOP_KEYS = [
+    'settings', 'selectedTopics', 'selectedSubOps', 'selectedOutcomes',
+    'stage', 'includePath', 'questionsPerSet', 'watermarkSrc', 'zoom',
+];
+// showDiagrams/zoom are written by handlers rather than seeded in defaults,
+// so they aren't in Object.keys(state.settings) and need listing explicitly.
+const IMPORT_SETTINGS_EXTRA_KEYS = ['showDiagrams', 'zoom', 'watermarkSrc'];
+
+function _isSafeWatermark(v) {
+    return typeof v === 'string' && (v === '' || v.startsWith('data:image/'));
+}
+
+/**
+ * Returns a copy of an imported config containing only known keys, with the
+ * watermark validated. Returns null when the input is not a plain object.
+ * Legacy flat configs (settings keys at the top level, pre-`settings` nesting)
+ * are normalised into { settings: {...} } so applyStateToDOM's flat-merge
+ * branch never runs on unfiltered input.
+ */
+export function sanitizeImportedState(parsed) {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+
+    const knownSettings = new Set([...Object.keys(state.settings), ...IMPORT_SETTINGS_EXTRA_KEYS]);
+    const pickSettings = (src) => {
+        const clean = {};
+        for (const [k, v] of Object.entries(src)) {
+            if (knownSettings.has(k)) clean[k] = v;
+        }
+        return clean;
+    };
+
+    const out = {};
+    for (const k of IMPORT_TOP_KEYS) {
+        if (parsed[k] !== undefined) out[k] = parsed[k];
+    }
+    out.settings = (out.settings && typeof out.settings === 'object' && !Array.isArray(out.settings))
+        ? pickSettings(out.settings)
+        : pickSettings(parsed); // legacy flat config
+
+    if (out.watermarkSrc !== undefined && !_isSafeWatermark(out.watermarkSrc)) delete out.watermarkSrc;
+    if (out.settings.watermarkSrc !== undefined && !_isSafeWatermark(out.settings.watermarkSrc)) {
+        delete out.settings.watermarkSrc;
+    }
+    return out;
 }

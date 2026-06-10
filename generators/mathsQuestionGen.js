@@ -5366,6 +5366,10 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
     const results = [];
     const seenClues = new Set();
     const shapeCount = {};
+    // Variety floor: at most 3 questions per "shape" (clue with digits
+    // wildcarded) per set, so one template can't dominate a page. 3 balances
+    // variety against generation failures for topics whose enabled sub-ops
+    // produce few distinct templates.
     const MAX_SAME_SHAPE = 3;
     let attempts = 0;
     let planIdx = 0;

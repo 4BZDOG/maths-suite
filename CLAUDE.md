@@ -4,12 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Run
 ```bash
-bash build.sh                  # esbuild bundles main.js → bundle.js
+bash build.sh                  # esbuild bundle + SRI stamp + cache-bust stamp
+SKIP_SRI=1 bash build.sh       # offline build (skips SRI stamping — dev only)
 npm run start                  # python3 -m http.server 8082
 # open http://localhost:8082/puzzle-suite.html
 npm test                       # node --test — generator correctness harness (test/*.mjs)
+npm run lint                   # eslint (CI runs with --max-warnings 0)
 ```
-After any JS change just rerun `bash build.sh` — it stamps a fresh content-hash into the `<script src="bundle.js?v=…">` tag automatically, so browsers always pick up the new bundle. No manual bump needed.
+After any JS change just rerun `bash build.sh` — it runs `tools/stamp-sri.mjs`
+(computes Subresource Integrity hashes for every CDN tag and the jsPDF sentinel
+in the bundle; needs network) and stamps a fresh content-hash into the
+`<script src="bundle.js?v=…">` tag automatically. No manual bump needed.
+`bundle.js` is **not committed** — build it locally after cloning.
 
 > CI does **not** require a local build before pushing — GitHub Actions runs `bash build.sh` automatically on every push to `main`.
 
@@ -25,13 +31,16 @@ After any JS change just rerun `bash build.sh` — it stamps a fresh content-has
 
 ```
 maths-suite/
-├── main.js                    # Entry point, orchestration, window API (~1376 lines)
-├── puzzle-suite.html          # App shell, UI markup (~527 lines)
+├── main.js                    # Entry point, orchestration, window API (~1470 lines)
+├── puzzle-suite.html          # App shell, UI markup
 ├── puzzle-suite.css           # All styles, cascade layer architecture (~3950 lines / ~90 KB)
 ├── index.html                 # Redirect from / → puzzle-suite.html (GitHub Pages root)
-├── bundle.js                  # esbuild output (do not edit)
-├── build.sh                   # esbuild build script
-├── package.json               # version 1.0.0, devDep: esbuild
+├── bundle.js                  # esbuild output (gitignored — run build.sh to create)
+├── build.sh                   # build: esbuild → SRI stamp → cache-bust stamp
+├── package.json               # version 1.0.0, devDeps: esbuild, eslint, globals
+│
+├── tools/
+│   └── stamp-sri.mjs          # Build step: stamps SRI hashes into HTML + bundle
 │
 ├── core/
 │   ├── state.js               # Single source of truth for all app state (~366 lines)
@@ -80,12 +89,14 @@ maths-suite/
 │   ├── README.md              # Worker setup (KV, secrets, webhook registration)
 │   └── package.json
 │
-├── test/                      # node --test correctness harness (~36 tests)
+├── test/                      # node --test correctness harness (60+ tests)
 │   ├── _helpers.mjs           # Shared utilities (gen, evaluator, structural checks)
 │   ├── generator.test.mjs     # Core Number topics + cross-topic invariants
-│   └── topics/*.test.mjs      # Per-topic verifiers (algebra, statistics, geometry, etc.)
+│   ├── pdf-latex.test.mjs     # latexToText PDF text conversion
+│   ├── state-import.test.mjs  # topicSlug + sanitizeImportedState (config imports)
+│   └── topics/*.test.mjs      # Per-topic verifiers (algebra, statistics, geometry, focus areas, etc.)
 │
-└── .github/workflows/deploy.yml  # GitHub Actions: test → build → deploy to Pages
+└── .github/workflows/deploy.yml  # GitHub Actions: lint+test → build → deploy dist/ to Pages
 ```
 
 ## Architecture
@@ -96,6 +107,14 @@ maths-suite/
 - `applyStateToDOM()` — restores saved state to DOM controls (called once at init)
 - `saveState()` — debounced 500 ms → `saveStateNow()` → `syncSettingsFromDOM()` → localStorage
 - **Pattern**: when an `oninput` handler needs the current value immediately, call `syncSettingsFromDOM()` first
+- `topicSlug(t)` / `subOpDomId(t, key)` — the ONLY way to derive DOM ids from
+  topic names (`topic-…`, `subop-…`, `subs-…`, `outcomes-for-…`). Never inline
+  the regex; a divergent copy once broke undo for "Ratios & Rates".
+- `sanitizeImportedState(parsed)` — key-allowlist + watermark-MIME validation
+  for imported `.json` configs. Both import paths (file input + drop zone) MUST
+  pass parsed JSON through it before `applyStateToDOM()`. Unit-tested in
+  `test/state-import.test.mjs`.
+- `FORMULA_GROUPS` — the formula-sheet group ids (used by both sync functions)
 
 **Top-level state keys** (outside `settings`): `selectedTopics`, `selectedSubOps`,
 `stage` (`'Stage 4'`/`'Stage 5'`), `includePath` (5.3 Path), `selectedOutcomes`
@@ -255,11 +274,20 @@ Key client functions in `payments/stripe.js`:
 
 To deploy the worker: `cd stripe-worker && npm install && wrangler deploy`, then set secrets via `wrangler secret put STRIPE_SECRET_KEY` etc.
 
-### AI Word Generation (`ai/aiGenerate.js`) — DEAD CODE
-This BYOK module (Gemini/Groq/OpenAI/Anthropic/OpenRouter) is a leftover from the
-vocabulary-puzzle product. It is **not imported** by any live entry point and is
-slated for removal. Do not extend it; if AI question generation is wanted, design
-it fresh against the maths generator.
+### AI Question Generation — PLANNED (not yet implemented)
+The legacy BYOK module from the vocabulary-puzzle product has been removed. AI
+question generation remains on the roadmap (see `monetisation.md`); the
+`FEATURE.AI_GENERATION` flag in `payments/config.js` is kept for it. When built,
+design it fresh against the maths generator's question shape.
+
+### CDN dependencies & SRI
+All CDN resources (KaTeX, Font Awesome in `puzzle-suite.html`; jsPDF lazily in
+`pdf/pdfFonts.js`) are version-pinned and carry Subresource Integrity hashes
+stamped by `tools/stamp-sri.mjs` during `bash build.sh`. When bumping a CDN
+version, just change the URL — the next build recomputes the hash. Google Fonts
+CSS is UA-dependent and intentionally has no SRI. PDF TTFs from fontsource use
+`@latest` deliberately (per-font versions break when pinned stale); a TTF
+signature check in `pdfFonts.js` guards what gets registered.
 
 ## Common Pitfalls
 - **Bundle caching**: `http.server` caches aggressively. `build.sh` stamps a fresh content-hash into `<script src="bundle.js?v=…">` automatically — no manual bump needed.
@@ -291,26 +319,29 @@ optional formula sheet. To add another:
 
 ## Deployment
 GitHub Actions (`.github/workflows/deploy.yml`) auto-deploys on every push to `main`:
-1. `npm ci` → `bash build.sh` → upload artifact → deploy to GitHub Pages
-2. Approx. 90s end-to-end
-3. `index.html` at the repo root redirects `/` → `puzzle-suite.html` for a clean entry URL
+1. lint + `node --test` → `bash build.sh` → stage `dist/` → deploy to GitHub Pages
+2. **Only runtime files are published** (`puzzle-suite.html`, `index.html`,
+   `puzzle-suite.css`, `bundle.js`, `.nojekyll`). Internal docs, source modules,
+   tests, and `stripe-worker/` are deliberately NOT deployed — when adding a new
+   runtime asset, add it to the "Stage deployable files" step in `deploy.yml`.
+3. `index.html` redirects `/` → `puzzle-suite.html` for a clean entry URL
 
 The Cloudflare Worker (`stripe-worker/`) is **not** deployed by GitHub Actions — deploy it manually with `wrangler`. See `stripe-worker/README.md` for the full setup (KV namespace, secrets, webhook registration).
 
 ## Roadmap / Known Tech Debt
-These are recommended follow-ups, not yet done. See
-`/root/.claude/plans/review-this-project-and-streamed-donut.md` for the full review.
+Recommended follow-ups from the 2026-06 technical audit, not yet done:
 
-- **Generator correctness tests** (~36 tests, `npm test`): structural sweep across
-  all 13 topics; deep arithmetic checks for the core Number topics; per-topic
-  verifiers in `test/topics/*.test.mjs` for Algebra (solve + substitution),
-  Statistics (mean/median/mode/range/IQR/missing-value), Geometry (areas /
-  perimeters / Pythagoras / angle sums / parallel-line angles), Financial Maths
-  (SI / GST / markup / discount / compound), Ratios & Rates (simplify / speed
-  triangle / equivalent), Probability (theoretical / complementary),
-  Trigonometry (find-angle / applications), and Non-linear (identify-graph /
-  parabola features). Plus `worked`-field consistency, missing-number equation
-  solver, fraction↔percentage conversion checks, sub-op-filter leak guard, and
-  a per-topic distinct-shape variety floor.
-- **ESLint**: add a lint step to the CI `test` job so style/correctness lint
-  also gates deploy.
+- **PDF layout tests**: `drawQuestionPage()` (`pdf/pdfExport.js`, ~370 lines) is
+  the largest untested function. Extract the per-set drawing loop so it can run
+  DOM-free under Node jsPDF, then golden-test page counts for fixed seeds.
+- **Decompose `drawQuestionPage()`** into header/measure/placement/meta-row
+  helpers once the tests above exist.
+- **Answer-recomputation gaps**: Rounding significant-figures, Fractions Hard
+  multiply-divide, and Percentages increase-decrease are structure-tested only.
+- **Undo/redo scope**: history snapshots only topics/sub-ops/questionsPerSet —
+  outcome-filter and stage changes are not undoable (`core/history.js`).
+- **Stripe pre-launch hardening** (before any live key is configured): bind
+  `/api/checkout` userId to a server-issued identity instead of trusting client
+  input (`stripe-worker/index.js` handleCheckout/handleVerify), and enforce
+  `FREE_LIMITS.MONTHLY_EXPORTS` server-side. Webhook signature comparison is
+  already constant-time.
