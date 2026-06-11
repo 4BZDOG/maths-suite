@@ -89,10 +89,11 @@ maths-suite/
 │   ├── README.md              # Worker setup (KV, secrets, webhook registration)
 │   └── package.json
 │
-├── test/                      # node --test correctness harness (60+ tests)
+├── test/                      # node --test correctness harness (70+ tests)
 │   ├── _helpers.mjs           # Shared utilities (gen, evaluator, structural checks)
 │   ├── generator.test.mjs     # Core Number topics + cross-topic invariants
 │   ├── pdf-latex.test.mjs     # latexToText PDF text conversion
+│   ├── pdf-layout.test.mjs    # drawQuestionPage golden page counts (Node jsPDF 2.5.1)
 │   ├── state-import.test.mjs  # topicSlug + sanitizeImportedState (config imports)
 │   └── topics/*.test.mjs      # Per-topic verifiers (algebra, statistics, geometry, focus areas, etc.)
 │
@@ -179,6 +180,14 @@ CSS custom properties used throughout:
 5. Loops over sets (bulk export, clamped by `getBulkExportLimit()`), then page types in `cfg.pageOrder`
 6. Each page: `drawHeader(ctx, title, sub, instruction, isKey, setIndicator, pScale)` → returns Y where content starts
 7. Passes layout `{ x, y, w, h }` to each `drawXxx()` function
+
+`drawQuestionPage()` (the layout engine) is exported and golden-tested in
+`test/pdf-layout.test.mjs` under Node jsPDF (devDep pinned to 2.5.1 — the
+exact version the browser lazy-loads, so metrics match). It reads cfg from
+`state` and must stay DOM-free. Its per-item concerns live in helpers:
+`_drawOutcomesStripPDF`, `_measureQuestionItem`, `_drawAnswerTrackPDF`,
+`_drawMetaRowPDF`. If a deliberate layout change shifts the golden page
+counts, re-pin them AFTER eyeballing an exported PDF.
 
 ### Emoji in PDF
 PDF fonts (helvetica + custom loaded fonts) don't support emoji. The canvas fallback in `pdf/pdfHelpers.js`:
@@ -329,16 +338,14 @@ GitHub Actions (`.github/workflows/deploy.yml`) auto-deploys on every push to `m
 The Cloudflare Worker (`stripe-worker/`) is **not** deployed by GitHub Actions — deploy it manually with `wrangler`. See `stripe-worker/README.md` for the full setup (KV namespace, secrets, webhook registration).
 
 ## Roadmap / Known Tech Debt
-Recommended follow-ups from the 2026-06 technical audit, not yet done:
+Remaining follow-ups from the 2026-06 technical audit (layout tests,
+`drawQuestionPage` decomposition, recompute-gap tests, undo/redo scope, and
+worker identity hardening are all done):
 
-- **PDF layout tests**: `drawQuestionPage()` (`pdf/pdfExport.js`, ~370 lines) is
-  the largest untested function. Extract the per-set drawing loop so it can run
-  DOM-free under Node jsPDF, then golden-test page counts for fixed seeds.
-- **Decompose `drawQuestionPage()`** into header/measure/placement/meta-row
-  helpers once the tests above exist.
-- **Undo/redo scope**: history snapshots only topics/sub-ops/questionsPerSet —
-  outcome-filter and stage changes are not undoable (`core/history.js`).
 - **Stripe go-live**: the worker-side hardening is done (server-issued checkout
   identity, constant-time webhook compare); what remains is configuration —
   see the Launch Checklist in `monetisation.md`. `FREE_LIMITS.MONTHLY_EXPORTS`
   stays client-side by decision (friction, not locks).
+- **Exact-layout goldens**: pdf-layout tests pin page counts/overflow, not
+  pixel positions. If finer regressions matter later, snapshot jsPDF's
+  internal command stream for one fixed page.

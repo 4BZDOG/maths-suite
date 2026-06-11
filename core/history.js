@@ -1,4 +1,5 @@
-// core/history.js — Undo / Redo for topic selection + questionsPerSet
+// core/history.js — Undo / Redo for generation-shaping state: topic and
+// sub-op selection, questionsPerSet, the outcome filter, and stage/Path.
 import { state, ALL_SUBTOPICS, SUB_OPS, topicSlug, subOpDomId } from './state.js';
 
 const MAX_HISTORY = 50;
@@ -7,9 +8,12 @@ let historyIndex = -1;
 
 function snapshot() {
     return {
-        selectedTopics: JSON.parse(JSON.stringify(state.selectedTopics)),
-        selectedSubOps: JSON.parse(JSON.stringify(state.selectedSubOps)),
-        questionsPerSet: state.questionsPerSet,
+        selectedTopics:   JSON.parse(JSON.stringify(state.selectedTopics)),
+        selectedSubOps:   JSON.parse(JSON.stringify(state.selectedSubOps)),
+        selectedOutcomes: JSON.parse(JSON.stringify(state.selectedOutcomes)),
+        stage:            state.stage,
+        includePath:      state.includePath,
+        questionsPerSet:  state.questionsPerSet,
     };
 }
 
@@ -37,15 +41,35 @@ function _applySnapToDOM(snap) {
     });
     const qps = document.getElementById('questionsPerSet');
     if (qps) qps.value = snap.questionsPerSet;
+
+    // Stage selector + Path toggle. The stage-dependent topic list itself is
+    // rebuilt by the caller's onComplete (renderTopicTogglesByStrand in
+    // main.js) — history.js only owns the simple controls.
+    if (snap.stage) {
+        const radio = document.querySelector(`input[name="stage-selector"][value="${snap.stage}"]`);
+        if (radio) radio.checked = true;
+        const wrapper = document.getElementById('path-toggle-wrapper');
+        if (wrapper) wrapper.style.display = snap.stage === 'Stage 5' ? 'block' : 'none';
+    }
+    const pathChk = document.getElementById('include-path-toggle');
+    if (pathChk) pathChk.checked = !!snap.includePath;
+}
+
+function _restoreState(snap) {
+    Object.assign(state.selectedTopics, snap.selectedTopics);
+    state.selectedSubOps = JSON.parse(JSON.stringify(snap.selectedSubOps ?? {}));
+    // Replace (don't merge) so codes selected after the snapshot don't linger.
+    state.selectedOutcomes = JSON.parse(JSON.stringify(snap.selectedOutcomes ?? {}));
+    if (snap.stage) state.stage = snap.stage;
+    state.includePath = !!snap.includePath;
+    state.questionsPerSet = snap.questionsPerSet;
 }
 
 export function undo(onComplete) {
     if (historyIndex <= 0) return;
     historyIndex--;
     const snap = history[historyIndex];
-    Object.assign(state.selectedTopics, snap.selectedTopics);
-    state.selectedSubOps = JSON.parse(JSON.stringify(snap.selectedSubOps ?? {}));
-    state.questionsPerSet = snap.questionsPerSet;
+    _restoreState(snap);
     _applySnapToDOM(snap);
     _updateButtons();
     if (onComplete) onComplete();
@@ -55,9 +79,7 @@ export function redo(onComplete) {
     if (historyIndex >= history.length - 1) return;
     historyIndex++;
     const snap = history[historyIndex];
-    Object.assign(state.selectedTopics, snap.selectedTopics);
-    state.selectedSubOps = JSON.parse(JSON.stringify(snap.selectedSubOps ?? {}));
-    state.questionsPerSet = snap.questionsPerSet;
+    _restoreState(snap);
     _applySnapToDOM(snap);
     _updateButtons();
     if (onComplete) onComplete();

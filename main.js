@@ -771,6 +771,7 @@ function renderOutcomes() {
 }
 
 function toggleOutcomeFilter(code, checked) {
+    pushHistory();
     state.selectedOutcomes[code] = checked;
     renderOutcomes();
     updateTopicCount();
@@ -788,6 +789,7 @@ function focusOutcome(code) {
         showToast(`No topics found for ${code} at ${state.stage}`, 'warning');
         return;
     }
+    pushHistory();
     // Enable matching topics, disable all others
     ALL_SUBTOPICS.forEach(t => {
         state.selectedTopics[t] = matchingTopics.includes(t);
@@ -805,6 +807,9 @@ function focusOutcome(code) {
 }
 
 function clearOutcomeFilter() {
+    // No-op when nothing is filtered — don't pollute the undo stack.
+    if (!Object.values(state.selectedOutcomes).some(Boolean)) return;
+    pushHistory();
     Object.keys(state.selectedOutcomes).forEach(k => { state.selectedOutcomes[k] = false; });
     renderOutcomes();
     updateTopicCount();
@@ -949,6 +954,17 @@ function _buildSubOpsPanels() {
     _updateAllSubOpBadges();
 }
 
+// Shared onComplete for undo/redo: snapshots can change stage and the
+// outcome filter, so the stage-dependent topic UI must be rebuilt — not just
+// re-checked. renderTopicTogglesByStrand() re-renders toggles + sub-op
+// panels + outcomes + topic count from the restored state.
+function _afterHistoryRestore() {
+    renderTopicTogglesByStrand();
+    _updateAllSubOpBadges();
+    saveState();
+    generateAll();
+}
+
 function renderTopicTogglesByStrand() {
     const stageTopics = getTopicsForStage(state.stage);
     const container   = document.getElementById('topic-toggles');
@@ -1007,6 +1023,7 @@ function renderTopicTogglesByStrand() {
 
 function setStage(newStage) {
     if (newStage === state.stage) return;
+    pushHistory();
     const newTopics = new Set(getTopicsForStage(newStage));
 
     // Drop topics not available in new stage and toast for each selected one
@@ -1064,6 +1081,7 @@ function setNesaMode(on) {
 }
 
 function setIncludePath(checked) {
+    pushHistory();
     if (!checked) {
         // Remove any currently selected path-only ops
         const stageTopics = getTopicsForStage(state.stage);
@@ -1323,8 +1341,8 @@ window._puzzleApp = {
     focusOutcome,
     clearOutcomeFilter,
     hardReset: () => hardReset(),
-    undo: () => undo(() => { _updateAllParentCheckboxes(); _updateAllSubOpBadges(); updateTopicCount(); saveState(); generateAll(); }),
-    redo: () => redo(() => { _updateAllParentCheckboxes(); _updateAllSubOpBadges(); updateTopicCount(); saveState(); generateAll(); }),
+    undo: () => undo(_afterHistoryRestore),
+    redo: () => redo(_afterHistoryRestore),
     debouncedGenerate,
     renderActivePage,
     debouncedUpdateUI,
@@ -1456,8 +1474,8 @@ window.addEventListener('load', async () => {
 
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') closeModal();
-            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }); }
-            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }); }
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(_afterHistoryRestore); }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(_afterHistoryRestore); }
             if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 's') { e.preventDefault(); downloadConfig(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); generateAll(); }
         });

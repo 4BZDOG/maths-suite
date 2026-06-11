@@ -966,11 +966,231 @@ function createQuestionSets(cfg, seed) {
     };
 }
 
+// ── drawQuestionPage helpers ─────────────────────────────────────────────────
+// Extracted from the (formerly ~370-line) layout engine so each concern can
+// be read in isolation. Behaviour is pinned by test/pdf-layout.test.mjs —
+// page counts and overflow for fixed seeds must not change.
+
+// Outcomes header strip across the top of the page. Returns the Y where
+// content should continue (unchanged when there are no outcomes to show).
+function _drawOutcomesStripPDF(doc, pdfFont, MARGIN, availW, cy, pScale, stage) {
+    const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
+    const outcomes = getOutcomesForTopics(activeTopics, stage);
+    if (outcomes.length === 0) return cy;
+
+    const hdr_y = cy;
+    const hdr_h = 6 * pScale;
+    const hdr_pad = 2 * pScale;
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(MARGIN, hdr_y, availW, hdr_h, 1.5, 1.5, 'FD');
+    // Label
+    doc.setFont(pdfFont, 'bold');
+    doc.setFontSize(5.5 * pScale);
+    doc.setTextColor(148, 163, 184);
+    doc.text('OUTCOMES', MARGIN + hdr_pad, hdr_y + hdr_h / 2 + 1.8 * pScale);
+    // Outcome code pills
+    let px = MARGIN + hdr_pad + doc.getTextWidth('OUTCOMES') + 3 * pScale;
+    outcomes.forEach(o => {
+        const pillColor = o.appliesAll ? [99, 102, 241] : [16, 185, 129];
+        doc.setFont(pdfFont, 'bold');
+        doc.setFontSize(5.5 * pScale);
+        const codeW = doc.getTextWidth(o.code) + 3 * pScale;
+        if (px + codeW > MARGIN + availW - hdr_pad) return;
+        doc.setFillColor(...pillColor.map(c => Math.round(c * 0.15 + 255 * 0.85)));
+        doc.setDrawColor(...pillColor.map(c => Math.round(c * 0.3 + 255 * 0.7)));
+        doc.roundedRect(px, hdr_y + 1.2 * pScale, codeW, hdr_h - 2.4 * pScale, 1, 1, 'FD');
+        doc.setTextColor(...pillColor);
+        doc.text(o.code, px + 1.5 * pScale, hdr_y + hdr_h / 2 + 1.8 * pScale);
+        px += codeW + 2 * pScale;
+    });
+    return hdr_y + hdr_h + 3 * pScale;
+}
+
+// Pre-calculate an item's total height (and the derived flags the drawing
+// pass needs) so the column/page-break logic can decide placement BEFORE
+// anything is drawn.
+function _measureQuestionItem(doc, item, m) {
+    const { pdfFont, pScale, colW, chipFontPt } = m;
+
+    // Fraction clues need 3 line-heights (numerator + bar + denominator),
+    // but ONLY when the clue is short enough to sit on one line.
+    // Long narrative clues that happen to contain \frac (e.g. probability
+    // questions) must be word-wrapped normally to avoid column overflow.
+    // Reset clue font before splitTextToSize — prior iterations change doc
+    // font state, which would cause width calculation to use wrong metrics.
+    doc.setFont(pdfFont, 'normal');
+    doc.setFontSize(9 * pScale);
+    const clueText   = latexToText(item.clue || '');
+    const clueLines  = doc.splitTextToSize(clueText, colW - 14);
+    const isFraction = hasFraction(item.clue) && clueLines.length === 1;
+    const clueBlockH = isFraction
+        ? 3 * 4.5 * pScale
+        : clueLines.length * 4.5 * pScale;
+
+    const workingCount = item.difficulty === 'Hard' ? 3 : item.difficulty === 'Medium' ? 2 : 1;
+    // Use item.notes (specific sub-topic key) for outcome lookup — item.topic is broad category
+    const itemCodes = m.showOutcomeChips && item.notes ? getTopicOutcomeCodes(item.notes, m.stage) : [];
+    // Estimate height for the combined meta row (topic pill + outcome chips on one centered line)
+    const hasMeta = (m.showTopic && item.topic) || itemCodes.length > 0;
+    let metaH = 0;
+    if (hasMeta) {
+        const chipH  = 3.5 * pScale;
+        const maxMetaW = colW - 4;
+        let lineW = 0, metaRows = 1;
+        if (m.showTopic && item.topic) {
+            doc.setFont(pdfFont, 'normal');
+            doc.setFontSize(6 * pScale);
+            lineW += doc.getTextWidth(item.topic.toUpperCase()) + 6;
+        }
+        if (itemCodes.length > 0) {
+            doc.setFont(pdfFont, 'bold');
+            doc.setFontSize(chipFontPt);
+            itemCodes.forEach(code => {
+                const cw = doc.getTextWidth(code) + 6;
+                if (lineW + cw > maxMetaW && lineW > 0) { metaRows++; lineW = cw; }
+                else lineW += cw;
+            });
+        }
+        metaH = 4 * pScale + metaRows * (chipH + 1);
+    }
+    const hasDiagram = m.showDiagrams && !!item.diagram;
+    const itemH = clueBlockH
+        + (hasDiagram ? m.DIAG_H + m.SECTION_PAD : 0)
+        + (workingCount > 0 ? m.SECTION_PAD + workingCount * m.workingLineSpacing + m.SECTION_PAD : 0)
+        + m.answerLineSpacing + m.SECTION_PAD + 6 * pScale
+        + metaH + m.itemGap;
+
+    return { itemH, isFraction, hasDiagram, hasMeta, itemCodes, workingCount };
+}
+
+// Right-aligned dashed marking track ("Answer: ______ unit").
+// Returns the Y where the next section starts.
+function _drawAnswerTrackPDF(doc, item, itemX, nextY, m) {
+    const { pdfFont, pScale, colW } = m;
+    const lineY = nextY + m.answerLineSpacing;
+    doc.setFont(pdfFont, 'normal');
+    doc.setFontSize(8 * pScale);
+    doc.setTextColor(100, 116, 139);
+    // item.unit is only populated for Easy measurement questions in
+    // the generator; printing it as a hint after the answer line tells
+    // students whether to write cm² / m / ° / etc.
+    const unitText  = item.unit ? ` ${latexToText(item.unit)}` : '';
+    const unitW     = unitText ? doc.getTextWidth(unitText) + 1 : 0;
+    // Right edge of the line is the column edge; label sits to the
+    // left of a fixed-length track so teachers can scan answers in a
+    // consistent vertical "rail" down the page.
+    const rightEdge   = itemX + colW - 4 - unitW;
+    const trackLength = Math.min(46 * pScale, colW - 26 - unitW);
+    const trackStart  = rightEdge - trackLength;
+    doc.text('Answer:', trackStart - 2, lineY, { align: 'right' });
+    doc.setDrawColor(150, 160, 180);
+    doc.setLineWidth(0.4);
+    doc.setLineDashPattern([0.8, 1.2], 0);
+    doc.line(trackStart, lineY, rightEdge, lineY);
+    doc.setLineDashPattern([], 0);
+    if (unitText) {
+        doc.setFont(pdfFont, 'bold');
+        doc.setFontSize(8 * pScale);
+        doc.setTextColor(100, 116, 139);
+        doc.text(unitText.trim(), rightEdge + 1.5, lineY);
+    }
+    return lineY + m.SECTION_PAD;
+}
+
+// Topic pill + outcome chips, wrapped into rows and centered in the column.
+// Muted styling — these chips are administrative metadata and should not
+// compete with the question text. Returns the Y below the last row.
+function _drawMetaRowPDF(doc, item, itemCodes, itemX, nextY, m) {
+    const { pdfFont, pScale, colW, chipFontPt } = m;
+    nextY += 2 * pScale;
+    const chipH = 3.5 * pScale;
+    const gap   = 2;
+    // Build ordered pill list: topic first, then outcome chips
+    const pills = [];
+    if (m.showTopic && item.topic) {
+        const topicRgb = TOPIC_COLOURS_RGB[item.topic] || [100, 116, 139];
+        doc.setFont(pdfFont, 'normal');
+        doc.setFontSize(6 * pScale);
+        const tw = doc.getTextWidth(item.topic.toUpperCase()) + 4;
+        pills.push({ text: item.topic.toUpperCase(), w: tw, rgb: topicRgb, style: 'topic' });
+    }
+    if (itemCodes.length > 0) {
+        doc.setFont(pdfFont, 'bold');
+        doc.setFontSize(chipFontPt);
+        itemCodes.forEach(code => {
+            pills.push({ text: code, w: doc.getTextWidth(code) + 4, style: 'chip' });
+        });
+    }
+    // Wrap pills into rows, then center each row in the column
+    const colCenterX = itemX + colW / 2;
+    const maxRowW    = colW - 4;
+    const pillRows = [];
+    let curRow = [], curRowW = 0;
+    for (const p of pills) {
+        const needed = curRowW > 0 ? gap + p.w : p.w;
+        if (curRowW > 0 && curRowW + gap + p.w > maxRowW) {
+            pillRows.push(curRow);
+            curRow  = [p];
+            curRowW = p.w;
+        } else {
+            curRow.push(p);
+            curRowW += needed;
+        }
+    }
+    if (curRow.length > 0) pillRows.push(curRow);
+    // Draw each row centered
+    for (const r of pillRows) {
+        const totalW = r.reduce((s, p) => s + p.w, 0) + gap * (r.length - 1);
+        let px = colCenterX - totalW / 2;
+        for (const p of r) {
+            const pillTop = nextY - 2.5 * pScale;
+            if (p.style === 'topic') {
+                doc.setFont(pdfFont, 'normal');
+                doc.setFontSize(6 * pScale);
+                doc.setFillColor(
+                    Math.round(255 * 0.88 + p.rgb[0] * 0.12),
+                    Math.round(255 * 0.88 + p.rgb[1] * 0.12),
+                    Math.round(255 * 0.88 + p.rgb[2] * 0.12)
+                );
+                doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'F');
+                doc.setDrawColor(...p.rgb);
+                doc.setLineWidth(0.2);
+                doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'S');
+                doc.setTextColor(...p.rgb);
+                doc.text(p.text, px + 2, nextY);
+            } else {
+                // Outcome code chip — neutral slate so it reads as
+                // metadata, not a coloured callout.
+                doc.setFont(pdfFont, 'normal');
+                doc.setFontSize(chipFontPt);
+                doc.setFillColor(243, 245, 250);
+                doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'F');
+                doc.setDrawColor(210, 218, 230);
+                doc.setLineWidth(0.15);
+                doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'S');
+                doc.setTextColor(120, 130, 150);
+                doc.text(p.text, px + 2, nextY);
+            }
+            px += p.w + gap;
+        }
+        nextY += chipH + 1;
+    }
+    return nextY - 1;  // remove trailing inter-row gap
+}
+
 /**
  * Draw a question page (Easy / Medium / Hard) in PDF.
  * Returns the number of questions that did NOT fit (overflow count).
+ *
+ * Exported for the Node layout-regression harness (test/pdf-layout.test.mjs):
+ * given a Node jsPDF doc + buildCtx and a fixed seed, page counts and
+ * overflow are deterministic and golden-tested. Keep this function free of
+ * DOM access — config comes from `state` (Node-safe) and everything else
+ * from `ctx`/arguments.
  */
-function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1) {
+export function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1) {
     if (!questions || !questions.length) return 0;
     const { doc, PAGE_WIDTH, PAGE_HEIGHT, MARGIN, scale, pdfFont, drawWatermark } = ctx;
     pScale = pScale || scale;
@@ -996,6 +1216,12 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
     // question, working area and answer track distinct visual zones.
     const SECTION_PAD        = 4.2 * pScale;
 
+    // Shared measurement/drawing parameters for the per-item helpers.
+    const metrics = {
+        pdfFont, pScale, colW, stage, showTopic, showOutcomeChips, showDiagrams,
+        DIAG_H, workingLineSpacing, answerLineSpacing, itemGap, SECTION_PAD, chipFontPt,
+    };
+
     let cy          = startY, col = 0;
     // Per-column Y trackers for shortest-column placement (2-column mode).
     // Items are dropped into whichever column is currently shorter, which
@@ -1004,39 +1230,8 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
 
     // Optional outcomes header strip
     if (showOutcomesHeader) {
-        const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
-        const outcomes = getOutcomesForTopics(activeTopics, stage);
-        if (outcomes.length > 0) {
-            const hdr_y = cy;
-            const hdr_h = 6 * pScale;
-            const hdr_pad = 2 * pScale;
-            doc.setFillColor(248, 250, 252);
-            doc.setDrawColor(226, 232, 240);
-            doc.setLineWidth(0.3);
-            doc.roundedRect(MARGIN, hdr_y, availW, hdr_h, 1.5, 1.5, 'FD');
-            // Label
-            doc.setFont(pdfFont, 'bold');
-            doc.setFontSize(5.5 * pScale);
-            doc.setTextColor(148, 163, 184);
-            doc.text('OUTCOMES', MARGIN + hdr_pad, hdr_y + hdr_h / 2 + 1.8 * pScale);
-            // Outcome code pills
-            let px = MARGIN + hdr_pad + doc.getTextWidth('OUTCOMES') + 3 * pScale;
-            outcomes.forEach(o => {
-                const pillColor = o.appliesAll ? [99, 102, 241] : [16, 185, 129];
-                doc.setFont(pdfFont, 'bold');
-                doc.setFontSize(5.5 * pScale);
-                const codeW = doc.getTextWidth(o.code) + 3 * pScale;
-                if (px + codeW > MARGIN + availW - hdr_pad) return;
-                doc.setFillColor(...pillColor.map(c => Math.round(c * 0.15 + 255 * 0.85)));
-                doc.setDrawColor(...pillColor.map(c => Math.round(c * 0.3 + 255 * 0.7)));
-                doc.roundedRect(px, hdr_y + 1.2 * pScale, codeW, hdr_h - 2.4 * pScale, 1, 1, 'FD');
-                doc.setTextColor(...pillColor);
-                doc.text(o.code, px + 1.5 * pScale, hdr_y + hdr_h / 2 + 1.8 * pScale);
-                px += codeW + 2 * pScale;
-            });
-            cy += hdr_h + 3 * pScale;
-            colY = [cy, cy];   // header consumed space; reset both column trackers
-        }
+        cy   = _drawOutcomesStripPDF(doc, pdfFont, MARGIN, availW, cy, pScale, stage);
+        colY = [cy, cy];   // header consumed space; reset both column trackers
     }
     let _rowMaxH     = 0;
     let overflowCount = 0;
@@ -1049,54 +1244,8 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
     for (let i = 0; i < questions.length; i++) {
         const item = questions[i];
 
-        // Pre-calculate item height to decide whether it fits.
-        // Fraction clues need 3 line-heights (numerator + bar + denominator),
-        // but ONLY when the clue is short enough to sit on one line.
-        // Long narrative clues that happen to contain \frac (e.g. probability
-        // questions) must be word-wrapped normally to avoid column overflow.
-        // Reset clue font before splitTextToSize — prior iterations change doc
-        // font state, which would cause width calculation to use wrong metrics.
-        doc.setFont(pdfFont, 'normal');
-        doc.setFontSize(9 * pScale);
-        const clueText   = latexToText(item.clue || '');
-        const clueLines  = doc.splitTextToSize(clueText, colW - 14);
-        const isFraction = hasFraction(item.clue) && clueLines.length === 1;
-        const clueBlockH = isFraction
-            ? 3 * 4.5 * pScale
-            : clueLines.length * 4.5 * pScale;
-
-        const workingCount = item.difficulty === 'Hard' ? 3 : item.difficulty === 'Medium' ? 2 : 1;
-        // Use item.notes (specific sub-topic key) for outcome lookup — item.topic is broad category
-        const itemCodes = showOutcomeChips && item.notes ? getTopicOutcomeCodes(item.notes, stage) : [];
-        // Estimate height for the combined meta row (topic pill + outcome chips on one centered line)
-        const hasMeta = (showTopic && item.topic) || itemCodes.length > 0;
-        let metaH = 0;
-        if (hasMeta) {
-            const chipH  = 3.5 * pScale;
-            const maxMetaW = colW - 4;
-            let lineW = 0, metaRows = 1;
-            if (showTopic && item.topic) {
-                doc.setFont(pdfFont, 'normal');
-                doc.setFontSize(6 * pScale);
-                lineW += doc.getTextWidth(item.topic.toUpperCase()) + 6;
-            }
-            if (itemCodes.length > 0) {
-                doc.setFont(pdfFont, 'bold');
-                doc.setFontSize(chipFontPt);
-                itemCodes.forEach(code => {
-                    const cw = doc.getTextWidth(code) + 6;
-                    if (lineW + cw > maxMetaW && lineW > 0) { metaRows++; lineW = cw; }
-                    else lineW += cw;
-                });
-            }
-            metaH = 4 * pScale + metaRows * (chipH + 1);
-        }
-        const hasDiagram = showDiagrams && !!item.diagram;
-        const itemH = clueBlockH
-            + (hasDiagram ? DIAG_H + SECTION_PAD : 0)
-            + (workingCount > 0 ? SECTION_PAD + workingCount * workingLineSpacing + SECTION_PAD : 0)
-            + answerLineSpacing + SECTION_PAD + 6 * pScale
-            + metaH + itemGap;
+        const { itemH, isFraction, hasDiagram, hasMeta, itemCodes, workingCount } =
+            _measureQuestionItem(doc, item, metrics);
 
         // COLUMN-MAJOR fill (newspaper style): stack items down the current
         // column until one won't fit, then move to the next column; when the
@@ -1197,113 +1346,11 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
         }
 
         // ── Answer line: right-aligned marking track ─────────────────
-        const lineY = nextY + answerLineSpacing;
-        doc.setFont(pdfFont, 'normal');
-        doc.setFontSize(8 * pScale);
-        doc.setTextColor(100, 116, 139);
-        // item.unit is only populated for Easy measurement questions in
-        // the generator; printing it as a hint after the answer line tells
-        // students whether to write cm² / m / ° / etc.
-        const unitText  = item.unit ? ` ${latexToText(item.unit)}` : '';
-        const unitW     = unitText ? doc.getTextWidth(unitText) + 1 : 0;
-        // Right edge of the line is the column edge; label sits to the
-        // left of a fixed-length track so teachers can scan answers in a
-        // consistent vertical "rail" down the page.
-        const rightEdge   = itemX + colW - 4 - unitW;
-        const trackLength = Math.min(46 * pScale, colW - 26 - unitW);
-        const trackStart  = rightEdge - trackLength;
-        doc.text('Answer:', trackStart - 2, lineY, { align: 'right' });
-        doc.setDrawColor(150, 160, 180);
-        doc.setLineWidth(0.4);
-        doc.setLineDashPattern([0.8, 1.2], 0);
-        doc.line(trackStart, lineY, rightEdge, lineY);
-        doc.setLineDashPattern([], 0);
-        if (unitText) {
-            doc.setFont(pdfFont, 'bold');
-            doc.setFontSize(8 * pScale);
-            doc.setTextColor(100, 116, 139);
-            doc.text(unitText.trim(), rightEdge + 1.5, lineY);
-        }
-        nextY = lineY + SECTION_PAD;
+        nextY = _drawAnswerTrackPDF(doc, item, itemX, nextY, metrics);
 
         // ── Meta row: topic pill + outcome chips, centered in column ──
-        // Muted styling — these chips are administrative metadata and
-        // should not compete with the question text.
         if (hasMeta) {
-            nextY += 2 * pScale;
-            const chipH = 3.5 * pScale;
-            const gap   = 2;
-            // Build ordered pill list: topic first, then outcome chips
-            const pills = [];
-            if (showTopic && item.topic) {
-                const topicRgb = TOPIC_COLOURS_RGB[item.topic] || [100, 116, 139];
-                doc.setFont(pdfFont, 'normal');
-                doc.setFontSize(6 * pScale);
-                const tw = doc.getTextWidth(item.topic.toUpperCase()) + 4;
-                pills.push({ text: item.topic.toUpperCase(), w: tw, rgb: topicRgb, style: 'topic' });
-            }
-            if (itemCodes.length > 0) {
-                doc.setFont(pdfFont, 'bold');
-                doc.setFontSize(chipFontPt);
-                itemCodes.forEach(code => {
-                    pills.push({ text: code, w: doc.getTextWidth(code) + 4, style: 'chip' });
-                });
-            }
-            // Wrap pills into rows, then center each row in the column
-            const colCenterX = itemX + colW / 2;
-            const maxRowW    = colW - 4;
-            const pillRows = [];
-            let curRow = [], curRowW = 0;
-            for (const p of pills) {
-                const needed = curRowW > 0 ? gap + p.w : p.w;
-                if (curRowW > 0 && curRowW + gap + p.w > maxRowW) {
-                    pillRows.push(curRow);
-                    curRow  = [p];
-                    curRowW = p.w;
-                } else {
-                    curRow.push(p);
-                    curRowW += needed;
-                }
-            }
-            if (curRow.length > 0) pillRows.push(curRow);
-            // Draw each row centered
-            for (const r of pillRows) {
-                const totalW = r.reduce((s, p) => s + p.w, 0) + gap * (r.length - 1);
-                let px = colCenterX - totalW / 2;
-                for (const p of r) {
-                    const pillTop = nextY - 2.5 * pScale;
-                    if (p.style === 'topic') {
-                        doc.setFont(pdfFont, 'normal');
-                        doc.setFontSize(6 * pScale);
-                        doc.setFillColor(
-                            Math.round(255 * 0.88 + p.rgb[0] * 0.12),
-                            Math.round(255 * 0.88 + p.rgb[1] * 0.12),
-                            Math.round(255 * 0.88 + p.rgb[2] * 0.12)
-                        );
-                        doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'F');
-                        doc.setDrawColor(...p.rgb);
-                        doc.setLineWidth(0.2);
-                        doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'S');
-                        doc.setTextColor(...p.rgb);
-                        doc.text(p.text, px + 2, nextY);
-                    } else {
-                        // Outcome code chip — neutral slate so it reads as
-                        // metadata, not a coloured callout.
-                        doc.setFont(pdfFont, 'normal');
-                        doc.setFontSize(chipFontPt);
-                        doc.setFillColor(243, 245, 250);
-                        doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'F');
-                        doc.setDrawColor(210, 218, 230);
-                        doc.setLineWidth(0.15);
-                        doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'S');
-                        doc.setTextColor(120, 130, 150);
-                        doc.text(p.text, px + 2, nextY);
-                    }
-                    px += p.w + gap;
-                }
-                nextY += chipH + 1;
-            }
-            nextY -= 1;  // remove trailing inter-row gap
+            nextY = _drawMetaRowPDF(doc, item, itemCodes, itemX, nextY, metrics);
         }
 
         const actualItemH = nextY - drawY + itemGap;

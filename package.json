@@ -13,6 +13,7 @@
   "devDependencies": {
     "esbuild": "^0.25.0",
     "eslint": "^10.4.1",
-    "globals": "^17.6.0"
+    "globals": "^17.6.0",
+    "jspdf": "2.5.1"
   }
 }
