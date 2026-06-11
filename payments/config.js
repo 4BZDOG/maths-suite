@@ -65,13 +65,17 @@ export const TIER_FEATURES = Object.freeze({
 });
 
 // ---- Free-tier usage limits ---------------------------------
-// Hard limits enforced client-side; backend should also enforce.
-// BULK_EXPORT_MAX is the hard ceiling enforced for ALL tiers (free + pro). 50
-// copies × 4 pages × 30 questions ≈ 6000 PDF questions, which is already a
-// long generation; raising this requires testing PDF memory pressure first.
+// Limits are enforced client-side only — deliberate "friction, not locks"
+// (see monetisation.md): the worksheet features all run locally anyway, so
+// the paid boundary that matters is verified server-side via the Stripe
+// worker, not here.
+// BULK_EXPORT_MAX applies to tiers WITHOUT the BULK_EXPORT feature; tiers
+// with it are uncapped (access.js getBulkExportLimit returns Infinity).
+// 50 copies × 4 pages × 30 questions ≈ 6000 PDF questions is already a long
+// generation — test PDF memory pressure before raising it.
 export const FREE_LIMITS = Object.freeze({
     BULK_EXPORT_MAX: 50,
-    MONTHLY_EXPORTS: 10,     // max PDF exports per month (future: tracked server-side)
+    MONTHLY_EXPORTS: 10,     // max PDF exports per month (client-side friction only)
 });
 
 // ---- Pricing display (for upgrade prompts) ------------------

@@ -1,148 +1,130 @@
-# Puzzle Suite — Monetisation Strategy
+# Maths Suite — Monetisation Strategy
 
-_Last updated: 2026-03-15_
+_Last updated: 2026-06-11_
 
-> **Status note (2026-06):** this strategy was written for the predecessor
-> vocabulary-puzzle product (word search / crossword / scramble, BYOK AI).
-> The product has since pivoted to the NESA maths worksheet generator. The
-> tier principles, pricing thinking, and **AI-generation plans remain the
-> intended direction** — feature flags for AI generation are kept in
-> `payments/config.js` — but puzzle-type specifics below no longer apply.
-> This document is internal and is not deployed to the public site.
+> Internal document — deliberately **not** deployed to the public site (the
+> Pages workflow publishes an allowlist of runtime files only).
+> Supersedes the 2026-03 Puzzle Suite strategy after the pivot to the NESA
+> maths worksheet generator; the principles and AI-generation plans carry
+> forward, the puzzle-type specifics do not.
 
 ---
 
 ## Current State
 
-Puzzle Suite is a fully client-side, free tool with no server costs and no user accounts.
-Revenue is currently zero. All features — including AI word generation — are available without restriction.
+Maths Suite is a fully client-side, free tool: seeded question generation,
+13+ NESA-aligned topics, PDF export. No server costs, no accounts, zero
+revenue.
 
-The AI feature uses a **Bring Your Own Key (BYOK)** model: users supply an API key from Google, Groq, OpenAI, Anthropic, or OpenRouter. This is zero-cost to us but creates friction (obtaining, managing, and paying for API keys is a barrier for non-technical users, especially teachers).
+The monetisation **plumbing is already built and inert**:
+
+- Tier / feature-gate system (`payments/config.js`, `payments/access.js`) —
+  free / pro / admin tiers, 9 feature flags, named group presets (incl. a
+  School License preset), admin override panel.
+- Stripe scaffolding (`payments/stripe.js` + `stripe-worker/`) — checkout,
+  verify-to-JWT, customer portal, webhook lifecycle, KV subscription store.
+  Inactive until `STRIPE_CONFIG` is filled and the worker is deployed.
+- AI generation is **not built yet** — `FEATURE.AI_GENERATION` is reserved
+  for it (see "AI Question Generation" below). The legacy BYOK module from
+  the puzzle product was removed; the managed-AI plan replaces it.
 
 ---
 
-## Guiding Principles
+## Guiding Principles (carried forward)
 
-1. **Free tier stays genuinely useful.** The core puzzle generation (notes, word search, crossword, scramble, PDF export) should remain free. Paywalling fundamentals alienates educators who are the core audience.
-2. **AI is the natural upgrade trigger.** It's the most novel feature, requires real cost (tokens), and users understand paying for "AI credits."
-3. **Friction, not locks.** Paid tiers reduce friction (no setup, more generous limits) rather than locking out essential functionality.
-4. **Privacy-preserving by design.** The BYOK architecture already signals that we take privacy seriously. Managed AI must uphold this — no storing puzzle content beyond request processing.
+1. **Free tier stays genuinely useful.** Core worksheet generation — all
+   topics, all difficulties, PDF export, answer keys — stays free.
+   Paywalling fundamentals alienates the teachers who are the audience.
+2. **AI is the natural upgrade trigger.** It is the most novel feature,
+   carries real per-use cost (tokens), and "paying for AI credits" is a
+   model teachers already understand.
+3. **Friction, not locks.** Paid tiers remove friction (bulk size, no
+   watermark, two-page sets) rather than locking essential functionality.
+   Corollary: client-side limits are acceptable as friction — the paid
+   boundary that matters (subscription status) is verified server-side by
+   the Stripe worker.
+4. **Privacy-preserving by design.** Generation is local; managed AI must
+   not store question content beyond request processing.
 
 ---
 
-## Proposed Tiers
+## Tiers (as wired in `payments/config.js` today)
 
 ### Free — *always free*
-Everything currently available:
-- All 5 puzzle types + PDF export
-- Up to 30 words per set
-- Bulk export up to 3 unique sets
-- AI word generation via **BYOK** (user manages their own API key)
-- Local save/load (.json config files)
-- All fonts, paper sizes, watermark
+- All topics, all difficulties, all sub-operations (`ALL_TOPICS`)
+- PDF export with answer key; save/load `.json` configs (`EXPORT_CONFIG`)
+- Bulk export up to **50** unique sets (`FREE_LIMITS.BULK_EXPORT_MAX`)
+- Built-in watermark on exports
 
-### Pro — *~$5/month or $45/year*
-Targets individual teachers and tutors who want AI without the hassle:
-- **Managed AI credits** — ~500 AI generations/month (≈ 10,000 words), no API key needed
-- **Choice of AI quality tier** — Fast (Gemini Flash / Llama 3.1) or Premium (GPT-4o / Claude Sonnet)
-- Bulk export up to **25 unique sets** (vs. 3 on Free)
-- Up to **50 words** per set (vs. 30)
-- **Cloud save** — puzzles sync across devices, shareable links
-- Priority support
+### Pro — *$9.99/month or $79.99/year* (`PRICING`)
+- **AI question generation** (when built — the anchor feature)
+- Watermark removal (`REMOVE_WATERMARK`)
+- Uncapped bulk export (`BULK_EXPORT` → no 50-set ceiling)
+- Two pages per difficulty band (`TWO_PAGE_MODE`)
+- Custom PDF fonts (`CUSTOM_FONT`)
+- Unlimited monthly exports (`UNLIMITED_EXPORTS`)
 
-### School — *~$49/month per school (unlimited teachers)*
-Targets department heads and school IT purchasers:
-- Everything in Pro
-- **2,500 AI generations/month** pooled across all teachers
-- **Admin dashboard** — usage per teacher, billing in one place
-- **Custom branding** — school logo as watermark default, custom title templates
-- **Roster import** — CSV upload to auto-generate differentiated sets per student name
-- LMS export helpers (Google Classroom, Canvas-ready PDF naming)
-- Dedicated support SLA
+### School License — *future; preset exists in `GROUPS.school`*
+- Pro for all teachers in a department (no watermark removal — school
+  branding stays); pooled AI quota; admin/usage visibility.
+- Don't build until ≥ a handful of individual Pro conversions prove demand.
+
+Pricing notes: USD pricing inherited from the previous strategy. **Open
+question before launch:** AUD pricing/display for the NSW-teacher audience
+(Stripe supports multi-currency prices; revisit when filling
+`STRIPE_CONFIG.prices`).
 
 ---
 
-## AI Feature — Monetisation Detail
+## AI Question Generation — the Pro anchor (planned)
 
-### Why BYOK is the right free-tier model
-- Zero cost to us; advanced users (those comfortable with API keys) get full power free
-- Positions us as trustworthy: "your key, your data"
-- Five provider choices (Gemini, Groq, OpenAI, Anthropic, OpenRouter) including free-tier providers, so even BYOK users can use AI at no cost to themselves
+Design fresh against the maths generator's question shape
+(`{topic, difficulty, clue, answer, answerDisplay, worked, diagram?}`) —
+do not port the old BYOK module.
 
-### Managed AI (Pro/School) implementation approach
-- Proxy server (Cloudflare Worker or Vercel Edge Function) holds our provider API keys
-- Strips and discards request content after forwarding — no logging of puzzle topics or words
-- Credit accounting: deduct 1 credit per generation request (regardless of word count), reset monthly
-- Provider mix: route to cheapest capable model by default; Premium toggle routes to GPT-4o or Claude Sonnet and costs 2 credits per generation
-
-### Positioning in the UI
-- AI modal shows a **"Use My Key"** tab and a **"Use Puzzle Suite AI"** tab side-by-side
-- "Use Puzzle Suite AI" tab shows remaining monthly credits for logged-in Pro users
-- Free users on the managed tab see a credit counter of 0 with a clear "Upgrade to Pro" CTA — not a hard error
-- BYOK tab remains fully functional for all users regardless of tier
-
----
-
-## Additional Revenue Vectors
-
-### One-time purchases (no subscription needed)
-| Item | Price | Notes |
-|------|-------|-------|
-| Extra AI credit pack (250 generations) | $3 | Top-up for Pro users who need more in a month |
-| Lifetime Pro for individuals | $99 | Appeals to teachers who distrust subscriptions; ~2-year payback |
-
-### Marketplace (future, post-PMF)
-- Teachers upload and sell curated word sets (topic + clues) — e.g. "AP Biology Unit 3," "SAT Vocab 500"
-- Platform takes 30%; seller keeps 70%
-- Low marginal cost to us; generates organic word-of-mouth from seller-teachers
-
-### Affiliate / partnership
-- Each BYOK provider link is already present in the UI (`aistudio.google.com`, `console.groq.com`, etc.)
-- Apply to affiliate/referral programs where offered (OpenRouter has one)
-- Low effort, low yield, but non-zero
+- **Managed only, no BYOK this time.** BYOK added friction without revenue
+  and the audience (teachers) is exactly who BYOK loses.
+- **Proxy via the existing Cloudflare Worker** (or a sibling worker):
+  provider keys live in worker secrets; request content is forwarded and
+  discarded, never logged.
+- **Credit accounting in KV/D1** keyed by the JWT userId the Stripe flow
+  already issues — the identity rail is in place; quota enforcement is
+  server-side from day one.
+- Use cases ranked by classroom value: word-problem variants of generated
+  questions → topic-targeted question batches → worked-solution elaboration.
+- UI: credits counter for Pro; free users see the feature with a 0-credit
+  counter and an upgrade CTA — visible, not hidden (friction, not locks).
 
 ---
 
-## Growth Model
+## Launch Checklist (technical)
 
-```
-Free (BYOK AI)  →  hits generation limit or API key friction
-        ↓
-    Pro ($5/mo) — individual teacher, frictionless AI
-        ↓
-    School ($49/mo) — department buys in, admin wants visibility
-        ↓
-    Marketplace — power users monetise their own content
-```
+Security/hardening status from the 2026-06 audit:
 
-Key conversion bets:
-- The BYOK flow creates friction that Pro directly resolves → natural upgrade moment
-- Bulk export cap (3 on Free vs. 25 on Pro) catches teachers generating end-of-unit sets
-- Cloud save catches the "I made this on my laptop, now I'm at school" moment
+- [x] Webhook signature verification, constant-time compare, replay window
+- [x] Checkout identity is server-issued (JWT-verified or minted `anon:` id;
+      client-supplied userIds are ignored — impersonation vector closed)
+- [x] Price-ID allowlist; redirect-URL origin validation; verify idempotency
+- [x] CORS pinned to `APP_URL`
+- [ ] Stripe account: create products/prices, fill `STRIPE_CONFIG`
+      (publishable key, worker URL, price IDs)
+- [ ] Deploy worker: KV namespace, secrets, webhook registration
+      (`stripe-worker/README.md` walkthrough)
+- [ ] End-to-end test-mode run: checkout → verify → portal → cancel →
+      webhook downgrade
+- [ ] Decide AUD vs USD pricing display
+- [~] `MONTHLY_EXPORTS` stays client-side **by decision** (friction, not
+      locks — exports run locally; server enforcement would buy nothing
+      until exports depend on a server feature like AI)
 
----
+## What to Build Next (effort-to-revenue order)
 
-## What to Build First
-
-Ranked by effort-to-revenue ratio:
-
-1. **Auth layer** (accounts, sessions) — prerequisite for everything else; use a managed provider (Clerk, Supabase Auth) to ship fast
-2. **Managed AI proxy** (Cloudflare Worker + credit accounting in D1/KV) — directly unlocks Pro tier
-3. **Stripe integration** — subscription billing, Pro/School plans, top-up packs
-4. **Usage dashboard in UI** — credit counter, upgrade prompts, account page
-5. **Cloud save** (Supabase or R2 + signed URLs) — Pro differentiator, high retention value
-6. **School admin dashboard** — unlocks the higher-value School tier
-
-Items 1–4 alone fully enable the Free → Pro conversion funnel.
-
----
-
-## Pricing Rationale
-
-- $5/month is below the "think twice" threshold for individual educators spending personal money
-- $45/year (= $3.75/mo effective) incentivises annual commits and reduces churn
-- $49/month/school is well below what a single teacher subscription would cost at scale (most schools have 5–50 teachers), making the per-teacher cost $1–10/month — easy to justify to a department head
-- Managed AI cost at scale: ~500 generations × avg 0.5¢/generation = ~$2.50 COGS per Pro user per month, leaving comfortable margin at $5
+1. **Go-live config** (checklist above) — everything else is already coded.
+2. **Upgrade UI surface** — pricing modal already exists; verify the
+   post-checkout tier reflects in UI on first render (`handleCheckoutReturn`
+   runs before state restore by design).
+3. **Managed AI proxy + credits** — unlocks the Pro anchor feature.
+4. **School tier** — only after individual Pro demand is proven.
 
 ---
 

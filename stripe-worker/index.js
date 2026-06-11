@@ -77,18 +77,28 @@ export default {
 };
 
 // ---- POST /api/checkout -------------------------------------
-// Body: { priceId, userId?, successUrl, cancelUrl }
+// Body: { priceId, successUrl, cancelUrl }
+// Optional: Authorization: Bearer <JWT> — links the checkout to an existing
+// verified identity (e.g. a returning subscriber upgrading or renewing).
 // Returns: { url } — Stripe-hosted Checkout URL
 
 async function handleCheckout(request, env) {
     const body = await request.json().catch(() => null);
     if (!body) return json({ error: 'Invalid JSON body' }, 400, env, request);
 
-    const { priceId, userId, successUrl, cancelUrl } = body;
+    const { priceId, successUrl, cancelUrl } = body;
 
     if (!priceId || !successUrl || !cancelUrl) {
         return json({ error: 'Missing required fields: priceId, successUrl, cancelUrl' }, 400, env, request);
     }
+
+    // Identity: NEVER trust a client-supplied userId (a forged id could attach
+    // checkouts to another user's Stripe customer or overwrite their KV tier
+    // record). Use the verified JWT's userId when one is presented; otherwise
+    // mint a fresh anonymous id. The id rides through Stripe metadata and
+    // comes back to /api/verify inside Stripe's signed session object.
+    const auth   = await _authPayload(request, env);
+    const userId = auth?.userId || `anon:${crypto.randomUUID()}`;
 
     // Validate priceId against known prices — prevents clients from submitting
     // an arbitrary price ID for a different product or lower-cost plan.
@@ -113,14 +123,13 @@ async function handleCheckout(request, env) {
 
     // Write userId into both the session and subscription metadata so
     // handleVerify can read it from either object after checkout completes.
-    if (userId) {
-        params.set('metadata[userId]', userId);
-        params.set('subscription_data[metadata][userId]', userId);
-    }
+    params.set('metadata[userId]', userId);
+    params.set('subscription_data[metadata][userId]', userId);
 
-    // If we already have a Stripe customer for this userId, reuse it so the
-    // customer doesn't need to re-enter their card details.
-    if (userId) {
+    // If we already have a Stripe customer for this verified userId, reuse it
+    // so the customer doesn't need to re-enter their card details. Anonymous
+    // ids are freshly minted and never have a customer record.
+    if (auth?.userId) {
         const userRecord = await kvGet(env.SUBSCRIPTIONS, `user:${userId}`);
         if (userRecord?.customerId) {
             params.set('customer', userRecord.customerId);
@@ -497,6 +506,14 @@ function json(data, status = 200, env, request) {
 function _extractBearer(request) {
     const auth = request.headers.get('Authorization') ?? '';
     return auth.startsWith('Bearer ') ? auth.slice(7) : null;
+}
+
+// Returns the verified JWT payload for the request's Bearer token, or null
+// when no token is present or verification fails.
+async function _authPayload(request, env) {
+    const token = _extractBearer(request);
+    if (!token) return null;
+    return verifyJwt(token, env.JWT_SECRET);
 }
 
 // Returns 'pro' for active, trialing, and past_due subscriptions.

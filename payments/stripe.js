@@ -47,17 +47,17 @@ export async function initiateCheckout(tier = TIER.PRO, interval = 'monthly') {
     // cancelUrl: strip any existing query params so the user returns cleanly.
     const cancelUrl  = base;
 
-    const session = getSession();
+    // Identity is established server-side: the worker uses the verified JWT's
+    // userId when we have one, and mints an anonymous id otherwise. Sending a
+    // userId in the body is ignored (and was an impersonation vector).
+    const { token } = getSession();
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const resp = await fetch(`${STRIPE_CONFIG.workerUrl}/api/checkout`, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-            priceId,
-            tier,
-            userId:     session.userId ?? null,
-            successUrl,
-            cancelUrl,
-        }),
+        headers,
+        body:    JSON.stringify({ priceId, successUrl, cancelUrl }),
     });
 
     if (!resp.ok) {

@@ -336,12 +336,9 @@ Recommended follow-ups from the 2026-06 technical audit, not yet done:
   DOM-free under Node jsPDF, then golden-test page counts for fixed seeds.
 - **Decompose `drawQuestionPage()`** into header/measure/placement/meta-row
   helpers once the tests above exist.
-- **Answer-recomputation gaps**: Rounding significant-figures, Fractions Hard
-  multiply-divide, and Percentages increase-decrease are structure-tested only.
 - **Undo/redo scope**: history snapshots only topics/sub-ops/questionsPerSet —
   outcome-filter and stage changes are not undoable (`core/history.js`).
-- **Stripe pre-launch hardening** (before any live key is configured): bind
-  `/api/checkout` userId to a server-issued identity instead of trusting client
-  input (`stripe-worker/index.js` handleCheckout/handleVerify), and enforce
-  `FREE_LIMITS.MONTHLY_EXPORTS` server-side. Webhook signature comparison is
-  already constant-time.
+- **Stripe go-live**: the worker-side hardening is done (server-issued checkout
+  identity, constant-time webhook compare); what remains is configuration —
+  see the Launch Checklist in `monetisation.md`. `FREE_LIMITS.MONTHLY_EXPORTS`
+  stays client-side by decision (friction, not locks).
