@@ -25,6 +25,7 @@ import { downloadConfig } from './import-export/exportConfig.js';
 import { hasFeature, FEATURE, PRICING, TIER, GROUPS, FREE_LIMITS, isAdmin, enableAdminMode, disableAdminMode, getActiveGroupId, getBulkExportLimit } from './payments/access.js';
 import { pruneExpiredSession } from './payments/session.js';
 import { handleCheckoutReturn, initiateCheckout, openCustomerPortal, isStripeConfigured, refreshSession } from './payments/stripe.js';
+import { getUsageStatus } from './payments/usage.js';
 import {
     openAccessPanel, closeAccessPanel,
     applyGroupPreset, acpFeatureChange,
@@ -502,6 +503,26 @@ function renderExportPreview() {
     if (!isPro) {
         html += `<hr class="ep-divider">
         <div class="ep-note"><i class="fas fa-tint" style="color:#6366f1; margin-right:3px;"></i> Free plan: watermark on every page</div>`;
+    }
+
+    // Monthly page-usage meter — only shown when a finite quota applies.
+    const totalExportPages = pageCount * copies;
+    const usage = getUsageStatus(totalExportPages);
+    if (!usage.unlimited) {
+        const pct       = usage.quota > 0 ? Math.min(100, Math.round((usage.used / usage.quota) * 100)) : 100;
+        const over      = !usage.allowed;
+        const barColor  = over ? '#ef4444' : (pct >= 80 ? '#f59e0b' : '#10b981');
+        html += `<hr class="ep-divider">
+        <div class="ep-row" style="font-weight:600;">
+            <span><i class="fas fa-gauge-high" style="color:${barColor}; margin-right:5px; font-size:10px;"></i>This month</span>
+            <span style="opacity:.8;">${usage.used} / ${usage.quota} pages</span>
+        </div>
+        <div class="usage-meter" style="height:6px; border-radius:3px; background:rgba(100,116,139,.2); overflow:hidden; margin:4px 0;">
+            <div style="height:100%; width:${pct}%; background:${barColor};"></div>
+        </div>`;
+        if (over) {
+            html += `<div class="ep-note" style="color:#ef4444;"><i class="fas fa-exclamation-triangle" style="margin-right:3px;"></i> This export (${totalExportPages} pages) exceeds your free monthly allowance. <a href="#" onclick="_handleUpgradeClick(this); return false;" style="color:#8b5cf6; font-weight:600;">Upgrade to Pro</a> for unlimited pages.</div>`;
+        }
     }
 
     body.innerHTML = html;

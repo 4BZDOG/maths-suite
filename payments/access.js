@@ -13,10 +13,10 @@
 //       return;
 //   }
 // =============================================================
-import { TIER, FEATURE, TIER_FEATURES, FREE_LIMITS, PRICING, GROUPS } from './config.js';
+import { TIER, FEATURE, TIER_FEATURES, FREE_LIMITS, TIER_PAGE_QUOTAS, PRICING, GROUPS } from './config.js';
 import { getSession, setSession, clearSession, setAdminSession } from './session.js';
 
-export { TIER, FEATURE, FREE_LIMITS, PRICING, GROUPS };
+export { TIER, FEATURE, FREE_LIMITS, TIER_PAGE_QUOTAS, PRICING, GROUPS };
 
 // ---- Core access functions ----------------------------------
 
@@ -125,6 +125,18 @@ export function getBulkExportLimit() {
 export function clampBulkExportCount(requested) {
     const limit = getBulkExportLimit();
     return Math.min(requested, limit);
+}
+
+/**
+ * Returns the current tier's monthly PDF page allowance.
+ * Tiers with UNLIMITED_EXPORTS (or an Infinity quota) get no cap — this keeps
+ * admin overrides and the access panel working without a parallel toggle.
+ * @returns {number} page count, or Infinity for unlimited tiers
+ */
+export function getMonthlyPageQuota() {
+    if (hasFeature(FEATURE.UNLIMITED_EXPORTS)) return Infinity;
+    const tier = getCurrentTier();
+    return TIER_PAGE_QUOTAS[tier] ?? FREE_LIMITS.MONTHLY_PAGES;
 }
 
 // ---- Admin helpers -----------------------------------------

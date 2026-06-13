@@ -78,8 +78,10 @@ maths-suite/
 │   └── exportConfig.js        # downloadConfig() — saves state as .json
 │
 ├── payments/
-│   ├── access.js              # hasFeature(), tier API, feature override management
-│   ├── config.js              # TIER, FEATURE flags, TIER_FEATURES, GROUPS, FREE_LIMITS, STRIPE_CONFIG
+│   ├── access.js              # hasFeature(), tier API, feature override management, getMonthlyPageQuota()
+│   ├── config.js              # TIER, FEATURE flags, TIER_FEATURES, GROUPS, FREE_LIMITS, TIER_PAGE_QUOTAS, STRIPE_CONFIG
+│   ├── pageQuota.js           # Pure page-metering helpers (estimateExportPages, quotaStatus, monthKey)
+│   ├── usage.js               # Monthly PDF page-usage tracker (localStorage); client mirror of server quota
 │   ├── session.js             # Session/auth stub (get/set/clearSession)
 │   └── stripe.js              # Client-side Stripe flow: initiateCheckout, handleCheckoutReturn, refreshSession
 │
@@ -243,7 +245,8 @@ Key constants in `payments/config.js`:
 - `TIER` — `{ FREE, PRO, ADMIN }`
 - `FEATURE` — enum of all feature keys (e.g. `BULK_EXPORT`, `AI_GENERATION`, `TWO_PAGE_MODE`)
 - `TIER_FEATURES` — maps each tier to a `Set` of enabled features
-- `FREE_LIMITS` — `{ BULK_EXPORT_MAX: 50, MONTHLY_EXPORTS: 10 }`
+- `FREE_LIMITS` — `{ BULK_EXPORT_MAX: 50, MONTHLY_PAGES: 30, MONTHLY_EXPORTS: 10 }` (`MONTHLY_EXPORTS` is legacy, superseded by page metering)
+- `TIER_PAGE_QUOTAS` — per-tier monthly PDF **page** allowance (free 30, pro/admin Infinity); single source of truth, tune freely
 - `GROUPS` — named feature bundles for the access panel (free, teacher_trial, school, pro, admin)
 
 Key functions in `payments/access.js`:
@@ -252,6 +255,23 @@ Key functions in `payments/access.js`:
 - `setFeatureOverrides(map)` / `clearFeatureOverrides()` — admin override management
 - `getEffectiveFeatureMap()` — full map with source (`'tier'` or `'override'`) per feature
 - `getBulkExportLimit()` — returns the active bulk export ceiling for the current session
+- `getMonthlyPageQuota()` — current tier's monthly PDF page allowance (Infinity = unlimited)
+
+### PDF Page Metering (`payments/pageQuota.js` + `payments/usage.js`)
+The monetisation primitive is the **PDF page**, not the export click. Free tier
+gets a monthly page allowance; paid tiers are unlimited.
+- `pageQuota.js` (pure, unit-tested in `test/usage.test.mjs`): `monthKey()` (UTC
+  `YYYY-MM` bucket), `estimateExportPages({opts, showFormulaSheet, pagesPerDiff, count})`,
+  `quotaStatus(used, quota, requested)`.
+- `usage.js` (localStorage, `puzzleSuiteUsage_v1`): `getPagesUsed()`,
+  `recordPages(n)`, `getUsageStatus(requested)`. Rolls over each month; best-effort
+  (never throws if storage is blocked).
+- Enforcement: `pdf/pdfExport.js` estimates pages before export and blocks with an
+  upgrade toast if over quota (unlimited tiers always pass), then records the
+  exact `doc.getNumberOfPages()` after a successful export. The Export Preview
+  panel (`renderExportPreview()` in `main.js`) shows a used/quota meter.
+- **Client-enforced only** today — server-side `/api/usage` enforcement is the
+  documented follow-up (see `monetisation.md`).
 
 ### Admin Access Panel (`ui/accessPanel.js`)
 `openAccessPanel(onApply)` opens a modal letting an admin switch between group presets or toggle individual features. Changes are applied via `setFeatureOverrides()` and persist across reloads in the session. Functions exported to `window`:

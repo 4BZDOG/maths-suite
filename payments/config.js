@@ -71,7 +71,21 @@ export const TIER_FEATURES = Object.freeze({
 // long generation; raising this requires testing PDF memory pressure first.
 export const FREE_LIMITS = Object.freeze({
     BULK_EXPORT_MAX: 50,
-    MONTHLY_EXPORTS: 10,     // max PDF exports per month (future: tracked server-side)
+    MONTHLY_PAGES:   30,     // free monthly PDF page allowance — the metering primitive
+    MONTHLY_EXPORTS: 10,     // legacy export-count cap — superseded by MONTHLY_PAGES
+});
+
+// ---- Monthly PDF page quotas (per tier) ---------------------
+// PDF generation is metered by PAGE, not by export click: a 50-copy bulk run
+// of a 4-page worksheet is 200 pages, a single one-pager is 1 page. This map is
+// the single source of truth for the allowance each tier gets per calendar
+// month. Numbers below are PLACEHOLDERS — tune freely. Infinity = no cap.
+// Enforcement is client-side today (payments/usage.js); when the worker grows a
+// /api/usage endpoint it should mirror this map and the server response wins.
+export const TIER_PAGE_QUOTAS = Object.freeze({
+    [TIER.FREE]:  FREE_LIMITS.MONTHLY_PAGES,
+    [TIER.PRO]:   Infinity,
+    [TIER.ADMIN]: Infinity,
 });
 
 // ---- Pricing display (for upgrade prompts) ------------------

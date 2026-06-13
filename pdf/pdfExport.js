@@ -9,6 +9,8 @@ import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, ha
 import { detectVerb, detectMidVerb, autoBoldVerb } from '../renderers/htmlUtils.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
+import { estimateExportPages } from '../payments/pageQuota.js';
+import { getUsageStatus, recordPages } from '../payments/usage.js';
 import { getOutcomesForTopics, getTopicOutcomeCodes } from '../core/outcomes.js';
 import { drawFormulaSheet } from './pdfDrawFormulas.js';
 
@@ -1602,6 +1604,26 @@ export async function exportPDF() {
     const filename = (() => { const el = document.getElementById('exportFilename'); return el ? el.value : 'MathsQuiz'; })()
         .replace(/[^a-z0-9-_]/gi, '_');
 
+    // Monthly page quota gate. Estimate the page count up front and block the
+    // export with an upgrade prompt if it would exceed the free allowance.
+    // Unlimited tiers always pass; the actual count is recorded after export.
+    const estimatedPages = estimateExportPages({
+        opts:            selections,
+        showFormulaSheet: cfg.showFormulaSheet,
+        pagesPerDiff:    state.questionsPerSet || 1,
+        count,
+    });
+    const usage = getUsageStatus(estimatedPages);
+    if (!usage.allowed) {
+        showToast(
+            `Monthly free limit reached — ${usage.used}/${usage.quota} pages used, this export needs ${estimatedPages} more. Upgrade to Pro for unlimited pages.`,
+            'warning'
+        );
+        isExporting = false;
+        if (exportBtn) { exportBtn.disabled = false; exportBtn.innerHTML = exportBtnOrigHTML; }
+        return;
+    }
+
     if (L) { L.style.display = 'flex'; L.style.opacity = '1'; }
     if (T) T.innerText = 'Starting Export...';
     if (B) B.style.width = '0%';
@@ -1772,10 +1794,10 @@ export async function exportPDF() {
 
         doc.save(filename + '.pdf');
 
-        const pagesPerDiff = state.questionsPerSet || 1;
-        const diffPagesPerCopy = ['easy', 'medium', 'hard'].filter(t => selectedPages.includes(t)).length * pagesPerDiff;
-        const keyPagesPerCopy = selectedPages.includes('key') ? 1 : 0;
-        const totalPages = count * (diffPagesPerCopy + keyPagesPerCopy);
+        // Record the exact page count against the monthly quota (includes any
+        // formula-sheet pages the estimate may have approximated).
+        const totalPages = doc.getNumberOfPages();
+        recordPages(totalPages);
         const copyMsg = count === 1 ? '1 copy' : `${count} copies`;
         const pageMsg = totalPages === 1 ? '1 page' : `${totalPages} pages`;
         showToast(`Exported ${copyMsg} · ${pageMsg}`, 'success');
