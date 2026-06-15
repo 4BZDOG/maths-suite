@@ -307,81 +307,96 @@ function _rightTriangleTrig({ opp, adj, hyp, angle, missing }) {
 
 // ─── Parabola y = a(x−h)² + k ────────────────────────────────────────────────
 // diagram: { type:'parabola', h, k, a }
+// "Nice" tick step (1, 2, 5, x10^n) giving roughly `target` ticks across span.
+function _niceStep(span, target = 6) {
+    const raw = Math.max(span, 1e-6) / target;
+    const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+    for (const c of [1, 2, 5, 10]) if (c * pow >= raw) return c * pow;
+    return 10 * pow;
+}
+
+// The viewing window auto-frames the vertex so the curve is always drawn fully
+// inside the plot, no matter how far the vertex (h, k) sits from the origin.
 function _parabola({ h, k, a }) {
-    const VW = 190, VH = 142;
-    const ox = 68, oy = 84;   // SVG-pixel origin of the coordinate system
-    const scaleX = 25, scaleY = 22;
+    a = a || 1;
+    const VW = 196, VH = 150;
+    const pl = 20, pr = VW - 10, pt = 12, pb = VH - 20;   // plot rectangle
+    const aAbs = Math.abs(a);
 
-    // Build curve points, clipped to viewBox interior
-    const xMin = -2.3, xMax = 2.3, numPts = 48;
+    // x half-width chosen so the arms reach a fixed vertical extent V - keeps
+    // every parabola well-proportioned whatever the value of a.
+    const V = 7;
+    const xHalf = Math.min(6, Math.sqrt(V / aAbs));
+    const arm = aAbs * xHalf * xHalf;                     // ~ V
+
+    // Window centred on the vertex, padded slightly on every side.
+    const padX = xHalf * 0.14;
+    const xMin = h - xHalf - padX, xMax = h + xHalf + padX;
+    const padY = arm * 0.14 + 0.6;
+    const yMin = a > 0 ? k - padY : k - arm - padY;
+    const yMax = a > 0 ? k + arm + padY : k + padY;
+
+    const mapX = x => pl + ((x - xMin) / (xMax - xMin)) * (pr - pl);
+    const mapY = y => pb - ((y - yMin) / (yMax - yMin)) * (pb - pt);
+
+    // Curve - sample across the window, keeping only on-screen points (a single
+    // contiguous run for a parabola, so no gaps appear).
+    const N = 72;
     const pts = [];
-    for (let i = 0; i <= numPts; i++) {
-        const xc = xMin + (xMax - xMin) * (i / numPts);
+    for (let i = 0; i <= N; i++) {
+        const xc = xMin + (xMax - xMin) * (i / N);
         const yc = a * (xc - h) * (xc - h) + k;
-        const px = ox + xc * scaleX;
-        const py = oy - yc * scaleY;
-        if (px > 4 && px < VW - 4 && py > 4 && py < VH - 4)
-            pts.push(`${px.toFixed(1)},${py.toFixed(1)}`);
+        if (yc < yMin || yc > yMax) continue;
+        pts.push(`${mapX(xc).toFixed(1)},${mapY(yc).toFixed(1)}`);
     }
 
-    const axL = 6, axR = VW - 10, axT = 6, axB = VH - 8;
+    // Subtle frame so the graph reads as contained even when an axis is off-window.
+    let grid = `<rect x="${pl}" y="${pt}" width="${pr - pl}" height="${pb - pt}" ` +
+        `fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.18"/>`;
 
-    // Vertex in SVG coordinates
-    const vx = ox + h * scaleX;
-    const vy = oy - k * scaleY;
-    const vertexVisible = vx > 10 && vx < VW - 10 && vy > 10 && vy < VH - 10;
-
-    // Axis tick marks and labels at integers −2 … 2
-    let ticks = '';
-    for (let i = -2; i <= 2; i++) {
-        // X-axis ticks
-        const tx = ox + i * scaleX;
-        if (tx > axL + 4 && tx < axR - 4) {
-            ticks +=
-                `<line x1="${tx}" y1="${oy - 3}" x2="${tx}" y2="${oy + 3}" ` +
-                `stroke="currentColor" stroke-width="0.9" opacity="0.55"/>`;
-            if (i !== 0)
-                ticks += _t(tx, oy + 12, String(i), { size: 8, opacity: 0.6 });
-        }
-        // Y-axis ticks
-        const ty = oy - i * scaleY;
-        if (i !== 0 && ty > axT + 4 && ty < axB - 4) {
-            ticks +=
-                `<line x1="${ox - 3}" y1="${ty}" x2="${ox + 3}" y2="${ty}" ` +
-                `stroke="currentColor" stroke-width="0.9" opacity="0.55"/>`;
-            ticks += _t(ox - 5, ty + 3, String(i), { anchor: 'end', size: 8, opacity: 0.6 });
-        }
+    // Gridlines + numeric labels on the bottom (x) and left (y) edges.
+    const xStep = _niceStep(xMax - xMin), yStep = _niceStep(yMax - yMin);
+    for (let xv = Math.ceil(xMin / xStep) * xStep; xv <= xMax; xv += xStep) {
+        const gx = mapX(xv);
+        if (gx < pl + 4 || gx > pr - 2) continue;
+        grid += `<line x1="${gx.toFixed(1)}" y1="${pt}" x2="${gx.toFixed(1)}" y2="${pb}" stroke="currentColor" stroke-width="0.5" opacity="0.12"/>`;
+        grid += _t(gx, pb + 10, String(Math.round(xv)), { size: 7.5, opacity: 0.6 });
     }
-    // Origin label
-    ticks += _t(ox - 5, oy + 12, '0', { anchor: 'end', size: 8, opacity: 0.6 });
+    for (let yv = Math.ceil(yMin / yStep) * yStep; yv <= yMax; yv += yStep) {
+        const gy = mapY(yv);
+        if (gy < pt + 2 || gy > pb - 2) continue;
+        grid += `<line x1="${pl}" y1="${gy.toFixed(1)}" x2="${pr}" y2="${gy.toFixed(1)}" stroke="currentColor" stroke-width="0.5" opacity="0.12"/>`;
+        grid += _t(pl - 4, gy + 2.6, String(Math.round(yv)), { anchor: 'end', size: 7.5, opacity: 0.6 });
+    }
+
+    // Axes drawn (emphasised) only where the origin falls inside the window.
+    let axes = '';
+    if (xMin < 0 && xMax > 0) {
+        const ax0 = mapX(0);
+        axes += `<line x1="${ax0.toFixed(1)}" y1="${pt}" x2="${ax0.toFixed(1)}" y2="${pb}" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>`;
+    }
+    if (yMin < 0 && yMax > 0) {
+        const ay0 = mapY(0);
+        axes += `<line x1="${pl}" y1="${ay0.toFixed(1)}" x2="${pr}" y2="${ay0.toFixed(1)}" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>`;
+    }
+
+    // Vertex dot + coordinate label, kept inside the plot.
+    const vx = mapX(h), vy = mapY(k);
+    const labelRight = vx < pr - 44;
+    const vLabel =
+        `<circle cx="${vx.toFixed(1)}" cy="${vy.toFixed(1)}" r="3.6" fill="${MC}"/>` +
+        _t(labelRight ? vx + 8 : vx - 8, a > 0 ? vy + 12 : vy - 7,
+            `(${h}, ${k})`, { anchor: labelRight ? 'start' : 'end', missing: true, size: 9 });
 
     const inner =
-        // X-axis
-        `<line x1="${axL}" y1="${oy}" x2="${axR}" y2="${oy}" ` +
-        `stroke="currentColor" stroke-width="1.3" opacity="0.45"/>` +
-        // X-axis arrowhead
-        `<polygon points="${axR},${oy} ${axR - 5},${oy - 3} ${axR - 5},${oy + 3}" ` +
-        `fill="currentColor" opacity="0.45"/>` +
-        // Y-axis
-        `<line x1="${ox}" y1="${axB}" x2="${ox}" y2="${axT}" ` +
-        `stroke="currentColor" stroke-width="1.3" opacity="0.45"/>` +
-        // Y-axis arrowhead
-        `<polygon points="${ox},${axT} ${ox - 3},${axT + 5} ${ox + 3},${axT + 5}" ` +
-        `fill="currentColor" opacity="0.45"/>` +
-        // Axis labels
-        _t(axR - 4, oy - 7, 'x', { anchor: 'end', size: 10, opacity: 0.7 }) +
-        _t(ox + 7, axT + 9,  'y', { anchor: 'start', size: 10, opacity: 0.7 }) +
-        // Tick marks and number labels
-        ticks +
-        // Parabola curve
+        grid + axes +
+        // Axis titles
+        _t(pr - 2, pb - 3, 'x', { anchor: 'end', size: 9, opacity: 0.7 }) +
+        _t(pl + 3, pt + 8, 'y', { anchor: 'start', size: 9, opacity: 0.7 }) +
         (pts.length > 1
             ? `<polyline points="${pts.join(' ')}" fill="none" stroke="${GC}" stroke-width="2.2" stroke-linejoin="round"/>`
             : '') +
-        // Vertex: dot + coordinate label
-        (vertexVisible
-            ? `<circle cx="${vx.toFixed(1)}" cy="${vy.toFixed(1)}" r="3.8" fill="${MC}"/>` +
-              _t(vx + 10, vy - 5, `(${h}, ${k})`, { anchor: 'start', missing: true, size: 9 })
-            : '');
+        vLabel;
 
     return _svg(VW, VH, inner);
 }

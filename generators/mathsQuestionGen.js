@@ -2413,6 +2413,22 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             const u = _geoUnit(c * scale);
             const fOn = opts.showFormulas?.['pythagoras']?.[diff.toLowerCase()];
             const pf = fOn ? ' Use $a^2 + b^2 = c^2$.' : '';
+            const A = a * scale, B = b * scale, C = c * scale;
+            // ~40% chance: a real-world problem-solving context (find the
+            // hypotenuse-length without naming "right triangle"/"hypotenuse").
+            if (rng() < 0.4) {
+                const ctx = rc(rng, [
+                    { ph: `A ladder reaches $${B}$ m up a wall, with its foot $${A}$ m from the base of the wall. How long is the ladder?`, cu: 'm' },
+                    { ph: `A rectangular screen is $${A}$ cm wide and $${B}$ cm tall. Find the length of its diagonal.`, cu: 'cm' },
+                    { ph: `A rectangular park measures $${A}$ m by $${B}$ m. Find the distance walked diagonally from one corner to the opposite corner.`, cu: 'm' },
+                    { ph: `A support wire runs from the top of a $${B}$ m pole to a point $${A}$ m from its base on the ground. Find the length of the wire.`, cu: 'm' },
+                ]);
+                return {
+                    clue: ctx.ph, answer: String(C), answerDisplay: `${C} ${ctx.cu}`,
+                    worked: `$c = \\sqrt{${A}^2 + ${B}^2} = \\sqrt{${A * A} + ${B * B}} = \\sqrt{${A * A + B * B}} = ${C}$ ${ctx.cu}`,
+                    diagram: { type: 'right-triangle', a: A, b: B, c: C, missing: 'c' },
+                };
+            }
             const ph = rc(rng, [
                 `A right-angled triangle has legs $${a * scale}$ ${u} and $${b * scale}$ ${u}. Find the *hypotenuse*.${pf}`,
                 `Calculate the *hypotenuse* of a right triangle with legs $${a * scale}$ ${u} and $${b * scale}$ ${u}.${pf}`,
@@ -2527,6 +2543,21 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
         const u = _geoUnit(c * scale);
         const fOn = opts.showFormulas?.['pythagoras']?.[diff.toLowerCase()];
         const pf = fOn ? ' Use $a^2 + b^2 = c^2$.' : '';
+        const C = c * scale, A = a * scale, B = b * scale;
+        // ~40% chance: real-world problem solving (find a leg given the
+        // hypotenuse-length and one leg, without naming the triangle parts).
+        if (rng() < 0.4) {
+            const ctx = rc(rng, [
+                { ph: `A $${C}$ m ladder leans against a wall with its foot $${A}$ m from the base of the wall. How far up the wall does it reach?`, cu: 'm' },
+                { ph: `A $${C}$ m support wire is anchored $${A}$ m from the base of a pole and reaches the top. How tall is the pole?`, cu: 'm' },
+                { ph: `A television screen has a diagonal of $${C}$ cm and a width of $${A}$ cm. Find its height.`, cu: 'cm' },
+            ]);
+            return {
+                clue: ctx.ph, answer: String(B), answerDisplay: `${B} ${ctx.cu}`,
+                worked: `$b = \\sqrt{${C}^2 - ${A}^2} = \\sqrt{${C * C} - ${A * A}} = \\sqrt{${C * C - A * A}} = ${B}$ ${ctx.cu}`,
+                diagram: { type: 'right-triangle', a: A, b: B, c: C, missing: 'b' },
+            };
+        }
         const ph = rc(rng, [
             `A right triangle has hypotenuse $${c * scale}$ ${u} and one leg $${a * scale}$ ${u}. Find the other leg.${pf}`,
             `Calculate the **missing** leg: hypotenuse $${c * scale}$ ${u}, known leg $${a * scale}$ ${u}.${pf}`,

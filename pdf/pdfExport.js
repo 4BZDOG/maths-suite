@@ -559,62 +559,80 @@ function _drawRightTriangleTrigPDF(doc, { opp, adj, hyp, angle, missing }, x0, y
     doc.text(`${font === 'helvetica' ? 'theta' : 'θ'}=${lbl('angle', angle, '°')}`, Bx - arcR - 7 * ps, By - arcR * 0.5, { align: 'right' });
 }
 
+// "Nice" tick step (1, 2, 5, ×10ⁿ) for ~`target` ticks across span.
+function _niceStepPDF(span, target = 5) {
+    const raw = Math.max(span, 1e-6) / target;
+    const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+    for (const c of [1, 2, 5, 10]) if (c * pow >= raw) return c * pow;
+    return 10 * pow;
+}
+
 function _drawParabolaPDF(doc, { h: ph, k, a }, x0, y0, w, h, ps, font) {
-    const ox = x0 + w * 0.38, oy = y0 + h * 0.58;
-    const scX = w * 0.115, scY = h * 0.135;
-    const axL = x0 + 3, axR = x0 + w - 3;
-    const axT = y0 + 3, axB = y0 + h - 3;
+    a = a || 1;
+    // Plot rectangle inside the cell (leave room for edge labels).
+    const pL = x0 + 6, pR = x0 + w - 1, pT = y0 + 1.5, pB = y0 + h - 4;
+    const aAbs = Math.abs(a);
 
-    // Axes
-    doc.setDrawColor(115, 115, 115);
-    doc.setFillColor(115, 115, 115);
-    doc.setLineWidth(0.35);
-    doc.line(axL, oy, axR, oy);
-    doc.line(ox, axB, ox, axT);
-    // Arrowheads
-    doc.triangle(axR, oy, axR - 2.5, oy - 1.2, axR - 2.5, oy + 1.2, 'F');
-    doc.triangle(ox, axT, ox - 1.2, axT + 2.5, ox + 1.2, axT + 2.5, 'F');
+    // Auto-frame the vertex (same logic as the on-screen SVG) so the curve is
+    // always fully drawn regardless of how far (h, k) sits from the origin.
+    const V = 7;
+    const xHalf = Math.min(6, Math.sqrt(V / aAbs));
+    const arm = aAbs * xHalf * xHalf;
+    const padX = xHalf * 0.14;
+    const xMin = ph - xHalf - padX, xMax = ph + xHalf + padX;
+    const padY = arm * 0.14 + 0.6;
+    const yMin = a > 0 ? k - padY : k - arm - padY;
+    const yMax = a > 0 ? k + arm + padY : k + padY;
 
-    // Axis labels — italic only for helvetica (custom fonts ship normal+bold only)
-    doc.setFontSize(7 * ps);
-    doc.setFont(font, font === 'helvetica' ? 'italic' : 'normal');
-    doc.setTextColor(110, 110, 110);
-    doc.text('x', axR - 1, oy - 2, { align: 'right' });
-    doc.text('y', ox + 2, axT + 4, { align: 'left' });
+    const mapX = x => pL + ((x - xMin) / (xMax - xMin)) * (pR - pL);
+    const mapY = y => pB - ((y - yMin) / (yMax - yMin)) * (pB - pT);
 
-    // Tick marks
+    // Frame
+    doc.setDrawColor(205, 210, 220);
+    doc.setLineWidth(0.2);
+    doc.rect(pL, pT, pR - pL, pB - pT, 'S');
+
+    // Gridlines + numeric labels on the bottom (x) and left (y) edges
+    doc.setFontSize(5 * ps);
     doc.setFont(font, 'normal');
-    doc.setFontSize(5.5 * ps);
-    for (let i = -2; i <= 2; i++) {
-        if (i === 0) continue;
-        const tx = ox + i * scX;
-        if (tx > axL + 2 && tx < axR - 2) {
-            doc.setDrawColor(135, 135, 135);
-            doc.setLineWidth(0.25);
-            doc.line(tx, oy - 1.2, tx, oy + 1.2);
-            doc.setTextColor(120, 120, 120);
-            doc.text(String(i), tx, oy + 3.5, { align: 'center' });
-        }
-        const ty = oy - i * scY;
-        if (ty > axT + 2 && ty < axB - 2) {
-            doc.setDrawColor(135, 135, 135);
-            doc.setLineWidth(0.25);
-            doc.line(ox - 1.2, ty, ox + 1.2, ty);
-            doc.setTextColor(120, 120, 120);
-            doc.text(String(i), ox - 1.8, ty + 1.8, { align: 'right' });
-        }
+    const xStep = _niceStepPDF(xMax - xMin), yStep = _niceStepPDF(yMax - yMin);
+    for (let xv = Math.ceil(xMin / xStep) * xStep; xv <= xMax; xv += xStep) {
+        const gx = mapX(xv);
+        if (gx < pL + 1.5 || gx > pR - 0.5) continue;
+        doc.setDrawColor(225, 228, 235); doc.setLineWidth(0.12);
+        doc.line(gx, pT, gx, pB);
+        doc.setTextColor(120, 128, 140);
+        doc.text(String(Math.round(xv)), gx, pB + 3, { align: 'center' });
+    }
+    for (let yv = Math.ceil(yMin / yStep) * yStep; yv <= yMax; yv += yStep) {
+        const gy = mapY(yv);
+        if (gy < pT + 1 || gy > pB - 0.5) continue;
+        doc.setDrawColor(225, 228, 235); doc.setLineWidth(0.12);
+        doc.line(pL, gy, pR, gy);
+        doc.setTextColor(120, 128, 140);
+        doc.text(String(Math.round(yv)), pL - 1, gy + 0.8, { align: 'right' });
     }
 
-    // Parabola curve (polyline, 40 segments)
-    const xMin = -2.6, xMax = 2.6, nPts = 40;
+    // Axes (emphasised) where the origin falls inside the window
+    doc.setDrawColor(120, 128, 140); doc.setLineWidth(0.3);
+    if (xMin < 0 && xMax > 0) { const ax0 = mapX(0); doc.line(ax0, pT, ax0, pB); }
+    if (yMin < 0 && yMax > 0) { const ay0 = mapY(0); doc.line(pL, ay0, pR, ay0); }
+
+    // Axis titles
+    doc.setFontSize(6 * ps);
+    doc.setFont(font, font === 'helvetica' ? 'italic' : 'normal');
+    doc.setTextColor(110, 116, 128);
+    doc.text('x', pR - 0.8, pB - 0.8, { align: 'right' });
+    doc.text('y', pL + 1, pT + 2.6, { align: 'left' });
+
+    // Curve
+    const nPts = 56;
     const pts = [];
     for (let i = 0; i <= nPts; i++) {
         const xc = xMin + (xMax - xMin) * (i / nPts);
         const yc = a * (xc - ph) * (xc - ph) + k;
-        const px = ox + xc * scX;
-        const py = oy - yc * scY;
-        if (px > axL && px < axR && py > axT && py < axB)
-            pts.push({ x: px, y: py });
+        if (yc < yMin || yc > yMax) continue;
+        pts.push({ x: mapX(xc), y: mapY(yc) });
     }
     if (pts.length > 1) {
         doc.setDrawColor(..._GC);
@@ -624,15 +642,15 @@ function _drawParabolaPDF(doc, { h: ph, k, a }, x0, y0, w, h, ps, font) {
     }
 
     // Vertex dot + label
-    const vx = ox + ph * scX, vy = oy - k * scY;
-    if (vx > axL + 2 && vx < axR - 2 && vy > axT + 2 && vy < axB - 2) {
-        doc.setFillColor(..._MC);
-        doc.circle(vx, vy, 1.1, 'F');
-        doc.setFontSize(6.5 * ps);
-        doc.setFont(font, 'bold');
-        doc.setTextColor(..._MC);
-        doc.text(`(${ph}, ${k})`, vx + 2.5, vy - 1.5, { align: 'left' });
-    }
+    const vx = mapX(ph), vy = mapY(k);
+    doc.setFillColor(..._MC);
+    doc.circle(vx, vy, 1.1, 'F');
+    doc.setFontSize(6 * ps);
+    doc.setFont(font, 'bold');
+    doc.setTextColor(..._MC);
+    const labelLeft = vx > pR - 14;
+    doc.text(`(${ph}, ${k})`, labelLeft ? vx - 2 : vx + 2, a > 0 ? vy + 3.2 : vy - 1.6,
+        { align: labelLeft ? 'right' : 'left' });
 }
 
 /**
