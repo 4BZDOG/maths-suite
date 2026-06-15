@@ -36,6 +36,9 @@ const SAMPLES = [
     ['parallel (alternate)',      { type: 'parallel-transversal', a: 65, angleType: 'alternate' }],
     ['straight-line-angles',      { type: 'straight-line-angles', a: 130 }],
     ['vertically-opposite',       { type: 'vertically-opposite', a: 50 }],
+    ['number-plane (gradient)',   { type: 'number-plane', pts: [[1, 2], [4, 8]], line: true }],
+    ['number-plane (midpoint)',   { type: 'number-plane', pts: [[-6, -4], [4, 8]], line: true, mid: true }],
+    ['number-plane (distance)',   { type: 'number-plane', pts: [[-3, -2], [4, 22]], line: true }],
 ];
 
 const card = (label, diagram) => `

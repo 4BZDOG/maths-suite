@@ -205,11 +205,20 @@ Dispatch lives in the `switch` near the bottom of the file. Supported types:
 - `triangle-angles` — two known angles, third as `?`
 - `triangle-area` — dashed height line and right-angle mark
 - `circle` — radius line with missing area or circumference label
-- `parabola` — non-linear relationships plot
+- `parabola` — non-linear plot; the viewing window **auto-frames the vertex**
+  (vertex can be far from the origin) with gridlines + axes drawn where in view
+- `number-plane` — two plotted points + segment for coordinate geometry
+  (gradient / midpoint / distance); auto-frames the points at equal x/y scale
 - `parallel-transversal`, `straight-line-angles`, `vertically-opposite` — angle configurations
 
 Shape outlines use `#10b981` (emerald, `GC`); missing values use `#ef4444` (red,
 `MC`). Labels use `currentColor` so they adapt to light/dark mode automatically.
+The auto-framing graph diagrams (`parabola`, `number-plane`) share a `_niceStep`
+tick helper (one copy in `diagramSVG.js`, one `_niceStepPDF` in `pdfExport.js`).
+
+A dev-only gallery (`node tools/diagram-gallery.mjs` → gitignored
+`tools/diagram-gallery.html`) renders every diagram type across light/dark
+themes for visual QA.
 
 ### Question Generation (`generators/mathsQuestionGen.js`)
 - **Seeded PRNG**: Mulberry32 — deterministic and reproducible

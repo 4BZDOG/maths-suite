@@ -665,6 +665,88 @@ function _verticallyOpposite({ a }) {
     return _svg(VW, VH, inner);
 }
 
+// ─── Number plane (two plotted points + segment) ─────────────────────────────
+// diagram: { type:'number-plane', pts:[[x1,y1],[x2,y2]], line:true, mid:false }
+// Used for coordinate-geometry questions (gradient / midpoint / distance). The
+// window auto-frames the points (axes drawn only where the origin is in view),
+// with an equal x/y scale so the plane reads true to shape.
+function _numberPlane({ pts, line, mid }) {
+    const VW = 178, VH = 150;
+    const m = 16;                                  // outer margin for labels
+    const availW = VW - 2 * m, availH = VH - 2 * m;
+
+    let xMin = Math.min(...pts.map(p => p[0]));
+    let xMax = Math.max(...pts.map(p => p[0]));
+    let yMin = Math.min(...pts.map(p => p[1]));
+    let yMax = Math.max(...pts.map(p => p[1]));
+    // Pad ~12% of span (min 1 unit) so dots and labels never touch the frame.
+    const padX = Math.max(1, (xMax - xMin) * 0.18);
+    const padY = Math.max(1, (yMax - yMin) * 0.18);
+    xMin -= padX; xMax += padX; yMin -= padY; yMax += padY;
+
+    // Equal scale so the plane is undistorted; centre the plot in the canvas.
+    const unit = Math.min(availW / (xMax - xMin), availH / (yMax - yMin));
+    const drawW = (xMax - xMin) * unit, drawH = (yMax - yMin) * unit;
+    const plL = m + (availW - drawW) / 2, plT = m + (availH - drawH) / 2;
+    const plR = plL + drawW, plB = plT + drawH;
+    const mapX = x => plL + (x - xMin) * unit;
+    const mapY = y => plB - (y - yMin) * unit;
+
+    // Frame + gridlines + numeric labels on the bottom (x) and left (y) edges.
+    let grid = `<rect x="${plL.toFixed(1)}" y="${plT.toFixed(1)}" width="${drawW.toFixed(1)}" height="${drawH.toFixed(1)}" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.18"/>`;
+    const xStep = _niceStep(xMax - xMin), yStep = _niceStep(yMax - yMin);
+    for (let xv = Math.ceil(xMin / xStep) * xStep; xv <= xMax; xv += xStep) {
+        const gx = mapX(xv);
+        if (gx < plL + 3 || gx > plR - 1) continue;
+        grid += `<line x1="${gx.toFixed(1)}" y1="${plT.toFixed(1)}" x2="${gx.toFixed(1)}" y2="${plB.toFixed(1)}" stroke="currentColor" stroke-width="0.5" opacity="0.1"/>`;
+        if (Math.round(xv) !== 0) grid += _t(gx, plB + 10, String(Math.round(xv)), { size: 7, opacity: 0.6 });
+    }
+    for (let yv = Math.ceil(yMin / yStep) * yStep; yv <= yMax; yv += yStep) {
+        const gy = mapY(yv);
+        if (gy < plT + 1 || gy > plB - 3) continue;
+        grid += `<line x1="${plL.toFixed(1)}" y1="${gy.toFixed(1)}" x2="${plR.toFixed(1)}" y2="${gy.toFixed(1)}" stroke="currentColor" stroke-width="0.5" opacity="0.1"/>`;
+        if (Math.round(yv) !== 0) grid += _t(plL - 4, gy + 2.4, String(Math.round(yv)), { anchor: 'end', size: 7, opacity: 0.6 });
+    }
+
+    // Axes (emphasised) where the origin falls inside the window.
+    let axes = '';
+    if (xMin < 0 && xMax > 0) { const ax = mapX(0); axes += `<line x1="${ax.toFixed(1)}" y1="${plT.toFixed(1)}" x2="${ax.toFixed(1)}" y2="${plB.toFixed(1)}" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>`; }
+    if (yMin < 0 && yMax > 0) { const ay = mapY(0); axes += `<line x1="${plL.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${plR.toFixed(1)}" y2="${ay.toFixed(1)}" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>`; }
+
+    // Connecting segment between the two points.
+    let seg = '';
+    if (line && pts.length >= 2) {
+        seg = `<line x1="${mapX(pts[0][0]).toFixed(1)}" y1="${mapY(pts[0][1]).toFixed(1)}" x2="${mapX(pts[1][0]).toFixed(1)}" y2="${mapY(pts[1][1]).toFixed(1)}" stroke="${GC}" stroke-width="2"/>`;
+    }
+
+    // Optional midpoint marker (hollow dot).
+    let midMark = '';
+    if (mid && pts.length >= 2) {
+        const cmx = mapX((pts[0][0] + pts[1][0]) / 2), cmy = mapY((pts[0][1] + pts[1][1]) / 2);
+        midMark = `<circle cx="${cmx.toFixed(1)}" cy="${cmy.toFixed(1)}" r="3" fill="white" stroke="${GC}" stroke-width="1.6"/>`;
+    }
+
+    // Points: red dots + coordinate labels, nudged to stay inside the frame.
+    let dots = '';
+    for (const [px, py] of pts) {
+        const dx = mapX(px), dy = mapY(py);
+        const right = dx < plR - 40;
+        const above = dy > plT + 14;
+        dots +=
+            `<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="3.4" fill="${MC}"/>` +
+            _t(right ? dx + 6 : dx - 6, above ? dy - 6 : dy + 12,
+                `(${px}, ${py})`, { anchor: right ? 'start' : 'end', missing: true, size: 9 });
+    }
+
+    const inner =
+        grid + axes +
+        _t(plR - 2, plB - 3, 'x', { anchor: 'end', size: 9, opacity: 0.7 }) +
+        _t(plL + 3, plT + 8, 'y', { anchor: 'start', size: 9, opacity: 0.7 }) +
+        seg + midMark + dots;
+
+    return _svg(VW, VH, inner);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 export function renderDiagramSVG(diagram) {
     if (!diagram) return '';
@@ -681,6 +763,7 @@ export function renderDiagramSVG(diagram) {
         case 'parallel-transversal':    return _parallelTransversal(diagram);
         case 'straight-line-angles':    return _straightLineAngles(diagram);
         case 'vertically-opposite':     return _verticallyOpposite(diagram);
+        case 'number-plane':            return _numberPlane(diagram);
         default: return '';
     }
 }

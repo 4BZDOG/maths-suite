@@ -4653,6 +4653,7 @@ function genLinear(rng, diff, allowedOps) {
                 answer: String(m),
                 answerDisplay: `$m = ${m}$`,
                 worked: `$m = \\frac{${y2} - ${y1}}{${x2} - ${x1}} = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
+                diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true },
             };
         }
         if (diff === 'Medium') {
@@ -4668,6 +4669,7 @@ function genLinear(rng, diff, allowedOps) {
                         answer: String(m),
                         answerDisplay: `$m = ${m}$`,
                         worked: `$m = \\frac{${y2} - ${y1}}{${x2} - ${x1}} = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
+                        diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true },
                     };
                 }
                 // Parallel: what gradient is parallel?
@@ -4736,6 +4738,7 @@ function genLinear(rng, diff, allowedOps) {
                 answer: `(${mx},${my})`,
                 answerDisplay: `$(${mx}, ${my})$`,
                 worked: `$M = \\left(\\frac{${x1} + ${x2}}{2}, \\frac{${y1} + ${y2}}{2}\\right) = (${mx}, ${my})$`,
+                diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true, mid: true },
             };
         }
         if (diff === 'Medium') {
@@ -4748,6 +4751,7 @@ function genLinear(rng, diff, allowedOps) {
                 answer: `(${mx},${my})`,
                 answerDisplay: `$(${mx}, ${my})$`,
                 worked: `$M = \\left(\\frac{${x1} + ${x2}}{2}, \\frac{${y1} + ${y2}}{2}\\right) = (${mx}, ${my})$`,
+                diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true, mid: true },
             };
         }
         // Hard: find the other endpoint given midpoint and one endpoint
@@ -4814,6 +4818,7 @@ function genLinear(rng, diff, allowedOps) {
             answer: String(c),
             answerDisplay: `$d = ${c}$ units`,
             worked: `$d = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} = ${c}$`,
+            diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true },
         };
     }
 

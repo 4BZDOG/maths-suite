@@ -653,6 +653,74 @@ function _drawParabolaPDF(doc, { h: ph, k, a }, x0, y0, w, h, ps, font) {
         { align: labelLeft ? 'right' : 'left' });
 }
 
+function _drawNumberPlanePDF(doc, { pts, line, mid }, x0, y0, w, h, ps, font) {
+    const padBox = 5;
+    const pL0 = x0 + padBox + 2, pR0 = x0 + w - padBox;
+    const pT0 = y0 + padBox - 2, pB0 = y0 + h - padBox;
+    const availW = pR0 - pL0, availH = pB0 - pT0;
+
+    let xMin = Math.min(...pts.map(p => p[0])), xMax = Math.max(...pts.map(p => p[0]));
+    let yMin = Math.min(...pts.map(p => p[1])), yMax = Math.max(...pts.map(p => p[1]));
+    const padX = Math.max(1, (xMax - xMin) * 0.18), padY = Math.max(1, (yMax - yMin) * 0.18);
+    xMin -= padX; xMax += padX; yMin -= padY; yMax += padY;
+
+    const unit = Math.min(availW / (xMax - xMin), availH / (yMax - yMin));
+    const drawW = (xMax - xMin) * unit, drawH = (yMax - yMin) * unit;
+    const plL = pL0 + (availW - drawW) / 2, plT = pT0 + (availH - drawH) / 2;
+    const plR = plL + drawW, plB = plT + drawH;
+    const mapX = x => plL + (x - xMin) * unit;
+    const mapY = y => plB - (y - yMin) * unit;
+
+    // Frame
+    doc.setDrawColor(205, 210, 220); doc.setLineWidth(0.2);
+    doc.rect(plL, plT, drawW, drawH, 'S');
+
+    // Gridlines + edge labels
+    doc.setFontSize(5 * ps); doc.setFont(font, 'normal');
+    const xStep = _niceStepPDF(xMax - xMin), yStep = _niceStepPDF(yMax - yMin);
+    for (let xv = Math.ceil(xMin / xStep) * xStep; xv <= xMax; xv += xStep) {
+        const gx = mapX(xv);
+        if (gx < plL + 1.5 || gx > plR - 0.5) continue;
+        doc.setDrawColor(228, 231, 238); doc.setLineWidth(0.12);
+        doc.line(gx, plT, gx, plB);
+        if (Math.round(xv) !== 0) { doc.setTextColor(120, 128, 140); doc.text(String(Math.round(xv)), gx, plB + 3, { align: 'center' }); }
+    }
+    for (let yv = Math.ceil(yMin / yStep) * yStep; yv <= yMax; yv += yStep) {
+        const gy = mapY(yv);
+        if (gy < plT + 1 || gy > plB - 0.5) continue;
+        doc.setDrawColor(228, 231, 238); doc.setLineWidth(0.12);
+        doc.line(plL, gy, plR, gy);
+        if (Math.round(yv) !== 0) { doc.setTextColor(120, 128, 140); doc.text(String(Math.round(yv)), plL - 1, gy + 0.8, { align: 'right' }); }
+    }
+
+    // Axes where the origin is in-window
+    doc.setDrawColor(120, 128, 140); doc.setLineWidth(0.3);
+    if (xMin < 0 && xMax > 0) { const ax = mapX(0); doc.line(ax, plT, ax, plB); }
+    if (yMin < 0 && yMax > 0) { const ay = mapY(0); doc.line(plL, ay, plR, ay); }
+
+    // Segment
+    if (line && pts.length >= 2) {
+        doc.setDrawColor(..._GC); doc.setLineWidth(0.7);
+        doc.line(mapX(pts[0][0]), mapY(pts[0][1]), mapX(pts[1][0]), mapY(pts[1][1]));
+    }
+    // Midpoint marker
+    if (mid && pts.length >= 2) {
+        doc.setDrawColor(..._GC); doc.setFillColor(255, 255, 255); doc.setLineWidth(0.4);
+        doc.circle(mapX((pts[0][0] + pts[1][0]) / 2), mapY((pts[0][1] + pts[1][1]) / 2), 1.1, 'FD');
+    }
+
+    // Points + coordinate labels
+    doc.setFontSize(6 * ps); doc.setFont(font, 'bold');
+    for (const [px, py] of pts) {
+        const dx = mapX(px), dy = mapY(py);
+        doc.setFillColor(..._MC); doc.circle(dx, dy, 1.1, 'F');
+        doc.setTextColor(..._MC);
+        const right = dx < plR - 12;
+        doc.text(`(${px}, ${py})`, right ? dx + 1.6 : dx - 1.6, dy > plT + 5 ? dy - 1.4 : dy + 3,
+            { align: right ? 'left' : 'right' });
+    }
+}
+
 /**
  * Draw a geometry diagram into a bounding box.
  * @param {jsPDF} doc
@@ -684,6 +752,7 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
         case 'parallel-transversal':  _drawParallelTransversalPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'right-triangle-trig':   _drawRightTriangleTrigPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'parabola':              _drawParabolaPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'number-plane':          _drawNumberPlanePDF(doc, diagram, x0, y0, w, h, ps, font); break;
     }
     // Restore defaults
     doc.setLineDashPattern([], 0);
