@@ -3327,12 +3327,16 @@ table.mode-cw td.cell.empty {
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
+    /* The whole worksheet (header title/subtitle + Name/Class/Date strip
+       included) uses the selected font, matching the PDF export. KaTeX math
+       keeps its own fonts via the .katex selectors. */
+    font-family: var(--user-font);
 }
 
 .page-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: stretch;
     margin-bottom: 8px;
     padding-bottom: 8px;
     border-bottom: 2px solid var(--border, #e5e7eb);
@@ -3368,11 +3372,16 @@ table.mode-cw td.cell.empty {
 .page-header-right {
     display: flex;
     flex-direction: column;
+    /* space-between pushes Name to the top and Class/Date to the bottom so the
+       strip balances with the title (top) and subtitle (bottom) of the left
+       block, which stretches it to full header height. */
+    justify-content: space-between;
     gap: 7px;
     align-items: stretch;
     width: 240px;
     max-width: 46%;
     flex-shrink: 0;
+    padding: 1px 0;
 }
 .page-header-right > div {
     font-size: 11px;
