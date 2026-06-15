@@ -2871,9 +2871,9 @@ function _genStatisticsS5Op(rng, diff, op) {
         const iqr = q3 - q1;
         if (iqr <= 0) return null;
         const choices = diff === 'Easy'
-            ? ['Q1', 'Q3', 'median']
+            ? ['Q1', 'Q3', 'median', 'min', 'max', 'range']
             : diff === 'Medium'
-            ? ['Q1', 'Q3', 'median', 'IQR']
+            ? ['Q1', 'Q3', 'median', 'IQR', 'min', 'max', 'range']
             : ['IQR', 'Q1', 'Q3', 'min', 'max', 'range'];
         const choice = rc(rng, choices);
         let ans, clueQ;
@@ -2888,19 +2888,44 @@ function _genStatisticsS5Op(rng, diff, op) {
     }
 
     if (op === 'bivariate') {
-        // Given a line of best fit, predict a value — operand ranges scale with difficulty
+        // Line of best fit questions — operand ranges scale with difficulty.
         const [mHi, cLo, cHi, xHi] = diff === 'Easy'   ? [3, 0,   8,  6]
                                     : diff === 'Medium'  ? [5, -5, 12, 12]
                                     :                      [8, -10, 20, 20];
         const m = ri(rng, 1, mHi), c = ri(rng, cLo, cHi), x = ri(rng, 2, xHi);
         const y = m * x + c;
         const cStr = c === 0 ? '' : (c > 0 ? ` + ${c}` : ` - ${Math.abs(c)}`);
+
+        // Easy: predict y only. Medium/Hard also draw from reverse-prediction
+        // and gradient/intercept interpretation for variety.
+        const variant = diff === 'Easy' ? 0 : ri(rng, 0, 2);
+
+        if (variant === 1) {
+            // Reverse: given y, find x. x is an integer by construction.
+            const ph = rc(rng, [
+                `A line of best fit is $y = ${m}x${cStr}$. Find $x$ when $y = ${y}$.`,
+                `Using the line of best fit $y = ${m}x${cStr}$, find $x$ when $y = ${y}$.`,
+                `For the line of best fit $y = ${m}x${cStr}$, what value of $x$ gives $y = ${y}$?`,
+            ]);
+            return { clue: ph, answer: String(x), answerDisplay: `$x = ${x}$`,
+                worked: `$${y} = ${m}x${cStr}$, so $x = \\frac{${y - c}}{${m}} = ${x}$` };
+        }
+        if (variant === 2) {
+            // Interpret the gradient as a rate of change.
+            const ph = rc(rng, [
+                `A line of best fit is $y = ${m}x${cStr}$. By how much does $y$ change for each $1$-unit increase in $x$?`,
+                `The line of best fit is $y = ${m}x${cStr}$. State the gradient (the increase in $y$ per unit of $x$).`,
+            ]);
+            return { clue: ph, answer: String(m), answerDisplay: `$${m}$`,
+                worked: `The gradient is $${m}$: $y$ increases by $${m}$ for each $1$-unit increase in $x$.` };
+        }
         const ph = rc(rng, [
             `A line of best fit is $y = ${m}x${cStr}$. Predict $y$ when $x = ${x}$.`,
             `The equation of the line of best fit is $y = ${m}x${cStr}$. Find $y$ when $x = ${x}$.`,
             `Using $y = ${m}x${cStr}$, calculate the predicted value of $y$ for $x = ${x}$.`,
         ]);
-        return { clue: ph, answer: String(y), answerDisplay: `$y = ${y}$` };
+        return { clue: ph, answer: String(y), answerDisplay: `$y = ${y}$`,
+            worked: `$y = ${m}(${x})${cStr} = ${y}$` };
     }
     return null;
 }

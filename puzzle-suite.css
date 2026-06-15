@@ -2531,11 +2531,31 @@ table.mode-cw td.cell.empty {
     color: var(--text-main);   /* SVG uses currentColor for fills/labels */
 }
 .geo-diagram-svg {
-    max-width: min(100%, 168px);
+    max-width: min(100%, 190px);
     height: auto;
     display: block;
 }
+/* Rounded joins/caps make every shape outline and dashed guide read as one
+   consistent, polished set rather than sharp mitred corners. */
+.geo-diagram-svg polygon,
+.geo-diagram-svg rect,
+.geo-diagram-svg path,
+.geo-diagram-svg polyline,
+.geo-diagram-svg line {
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+/* Legibility halo: paint a panel-coloured outline behind every label so
+   numbers/letters stay crisp where they sit over outlines, arcs or grid
+   lines. paint-order:stroke keeps the halo behind the glyph fill. */
+.geo-diagram-svg text {
+    paint-order: stroke;
+    stroke: var(--bg-panel, #fff);
+    stroke-width: 2.4px;
+    stroke-linejoin: round;
+}
 [data-theme="dark"] .problem-diagram { color: var(--text-main, #f1f5f9); }
+[data-theme="dark"] .geo-diagram-svg text { stroke: var(--bg-panel, #1e293b); }
 
 /* Topic + outcome chips on one centered line below the answer box */
 .problem-meta-row {

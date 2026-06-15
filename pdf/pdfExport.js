@@ -230,10 +230,18 @@ function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
 
     // Missing label — to the right of the circle with consistent clearance
     const missText = missing === 'area' ? 'A = ?' : 'C = ?';
+    const labelX   = cx + rPx + _LBL_OFFSET + 2 * ps;
     doc.setFont(font, 'bold');
     doc.setFontSize(9.5 * ps);
     doc.setTextColor(..._MC);
-    doc.text(missText, cx + rPx + _LBL_OFFSET + 2 * ps, cy + 1.5 * ps, { align: 'left' });
+    doc.text(missText, labelX, cy + 1.5 * ps, { align: 'left' });
+
+    // Formula hint below the missing label (parity with the on-screen SVG)
+    const hintText = missing === 'area' ? 'A = πr²' : 'C = 2πr';
+    doc.setFont(font, 'normal');
+    doc.setFontSize(6.5 * ps);
+    doc.setTextColor(150, 160, 175);
+    doc.text(hintText, labelX, cy + 1.5 * ps + 4.5 * ps, { align: 'left' });
 }
 
 function _drawParallelogramDiagramPDF(doc, { base, height, missing }, x0, y0, w, h, ps, font) {
@@ -640,8 +648,11 @@ function _drawParabolaPDF(doc, { h: ph, k, a }, x0, y0, w, h, ps, font) {
  */
 function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
     if (!diagram) return;
-    // Reset dash + line state before drawing
+    // Reset dash + line state before drawing. Rounded joins/caps mirror the
+    // on-screen SVG diagrams so the two render as one consistent set.
     doc.setLineDashPattern([], 0);
+    if (doc.setLineJoin) doc.setLineJoin('round');
+    if (doc.setLineCap)  doc.setLineCap('round');
     switch (diagram.type) {
         case 'rectangle':            _drawRectDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'right-triangle':       _drawRightTriDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
@@ -658,6 +669,8 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
     }
     // Restore defaults
     doc.setLineDashPattern([], 0);
+    if (doc.setLineJoin) doc.setLineJoin('miter');
+    if (doc.setLineCap)  doc.setLineCap('butt');
     doc.setTextColor(15, 23, 42);
     doc.setDrawColor(100, 116, 139);
     doc.setFillColor(255, 255, 255);
