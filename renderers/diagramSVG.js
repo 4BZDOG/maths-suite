@@ -694,7 +694,10 @@ function _numberPlane({ pts, line, mid }) {
 
     // Frame + gridlines + numeric labels on the bottom (x) and left (y) edges.
     let grid = `<rect x="${plL.toFixed(1)}" y="${plT.toFixed(1)}" width="${drawW.toFixed(1)}" height="${drawH.toFixed(1)}" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.18"/>`;
-    const xStep = _niceStep(xMax - xMin), yStep = _niceStep(yMax - yMin);
+    // Coordinates are integers, so force a whole-number tick step (a fractional
+    // step would round two gridlines to the same integer label).
+    const xStep = Math.max(1, Math.round(_niceStep(xMax - xMin)));
+    const yStep = Math.max(1, Math.round(_niceStep(yMax - yMin)));
     for (let xv = Math.ceil(xMin / xStep) * xStep; xv <= xMax; xv += xStep) {
         const gx = mapX(xv);
         if (gx < plL + 3 || gx > plR - 1) continue;

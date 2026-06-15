@@ -677,7 +677,10 @@ function _drawNumberPlanePDF(doc, { pts, line, mid }, x0, y0, w, h, ps, font) {
 
     // Gridlines + edge labels
     doc.setFontSize(5 * ps); doc.setFont(font, 'normal');
-    const xStep = _niceStepPDF(xMax - xMin), yStep = _niceStepPDF(yMax - yMin);
+    // Whole-number tick step — coordinates are integers (a fractional step would
+    // round two gridlines to the same integer label).
+    const xStep = Math.max(1, Math.round(_niceStepPDF(xMax - xMin)));
+    const yStep = Math.max(1, Math.round(_niceStepPDF(yMax - yMin)));
     for (let xv = Math.ceil(xMin / xStep) * xStep; xv <= xMax; xv += xStep) {
         const gx = mapX(xv);
         if (gx < plL + 1.5 || gx > plR - 0.5) continue;
