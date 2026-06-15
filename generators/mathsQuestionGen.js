@@ -2971,6 +2971,15 @@ function _genGeometryS5Op(rng, diff, op) {
             const l = ri(rng, 2, lHi), w = ri(rng, 2, wHi), h = ri(rng, 2, hHi);
             const u = _geoUnit(Math.max(l, w, h));
             const sa = 2 * (l * w + l * h + w * h);
+            const saWorked = `$SA = 2(${l} \\times ${w} + ${l} \\times ${h} + ${w} \\times ${h}) = 2(${l*w} + ${l*h} + ${w*h}) = ${sa}$ ${u}²`;
+            // ~35% chance: an applied "how much material to cover it" problem.
+            if (rng() < 0.35) {
+                const ctx = rc(rng, [
+                    `A gift box measures $${l}$ ${u} by $${w}$ ${u} by $${h}$ ${u}. How much wrapping paper (in ${u}²) is needed to cover it exactly, ignoring overlap?`,
+                    `A closed box is made from sheet cardboard with dimensions $${l}$ ${u} × $${w}$ ${u} × $${h}$ ${u}. What area of cardboard (${u}²) is required?`,
+                ]);
+                return { clue: ctx, answer: String(sa), answerDisplay: `${sa} ${u}²`, worked: saWorked };
+            }
             const ph = rc(rng, [
                 `Find the *surface area* of a rectangular prism: length $${l}$ ${u}, width $${w}$ ${u}, height $${h}$ ${u}.`,
                 `Calculate the *total surface area* of a rectangular box with dimensions $${l}$ ${u} × $${w}$ ${u} × $${h}$ ${u}.`,
@@ -2996,11 +3005,28 @@ function _genGeometryS5Op(rng, diff, op) {
         const l2 = ri(rng, 2, l1), w2 = ri(rng, 2, w1), h2 = ri(rng, 2, Math.max(2, h1 - 1));
         const _u = 'm';
         const v = l1 * w1 * h1 + l2 * w2 * h2;
+        const vWorked = `$V = ${l1} \\times ${w1} \\times ${h1} + ${l2} \\times ${w2} \\times ${h2} = ${l1*w1*h1} + ${l2*w2*h2} = ${v}$ m³`;
+        // ~35% chance: a two-step "volume then cost" applied problem.
+        if (rng() < 0.35) {
+            const cost = rc(rng, [40, 50, 60, 75, 80, 100]);
+            const total = v * cost;
+            const ph2 = `A garden bed is built from two rectangular sections, $${l1}$ m × $${w1}$ m × $${h1}$ m and $${l2}$ m × $${w2}$ m × $${h2}$ m. Soil costs $\\$${cost}$ per cubic metre. Find the *total cost* to fill it.`;
+            return { clue: ph2, answer: String(total), answerDisplay: `$${money(total)}`,
+                worked: `${vWorked.replace('$ m³', '$ m³,')} cost $= ${v} \\times ${cost} = \\$${money(total)}$` };
+        }
+        // ~40% chance: an applied real-world volume context.
+        if (rng() < 0.4) {
+            const ph3 = rc(rng, [
+                `A concrete step is formed from two rectangular blocks, $${l1}$ m × $${w1}$ m × $${h1}$ m and $${l2}$ m × $${w2}$ m × $${h2}$ m. Find the *volume of concrete* needed.`,
+                `A raised garden bed has two rectangular sections, $${l1}$ m × $${w1}$ m × $${h1}$ m and $${l2}$ m × $${w2}$ m × $${h2}$ m. How many cubic metres of soil are needed to fill it?`,
+            ]);
+            return { clue: ph3, answer: String(v), answerDisplay: `${v} m³`, worked: vWorked };
+        }
         const ph = rc(rng, [
             `A composite solid consists of two rectangular prisms. Prism A: $${l1}$ m × $${w1}$ m × $${h1}$ m. Prism B: $${l2}$ m × $${w2}$ m × $${h2}$ m. Find the *total volume*.`,
             `Find the *combined volume* of two rectangular prisms: Prism 1 has dimensions $${l1}\\times${w1}\\times${h1}$ m and Prism 2 has dimensions $${l2}\\times${w2}\\times${h2}$ m.`,
         ]);
-        return { clue: ph, answer: String(v), answerDisplay: `${v} m³` };
+        return { clue: ph, answer: String(v), answerDisplay: `${v} m³`, worked: vWorked };
     }
 
     if (op === 'similar-triangles') {
@@ -4803,6 +4829,7 @@ function genLinear(rng, diff, allowedOps) {
             answer: String(area),
             answerDisplay: `$${area}$ square units`,
             worked: `x-intercept $= ${xInt}$, y-intercept $= ${yInt}$. Area $= \\frac{1}{2} \\times |${xInt}| \\times |${yInt}| = ${area}$`,
+            diagram: { type: 'number-plane', pts: [[xInt, 0], [0, yInt]], line: true, tri: true },
         };
     }
 

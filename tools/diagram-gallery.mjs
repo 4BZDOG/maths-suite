@@ -39,6 +39,7 @@ const SAMPLES = [
     ['number-plane (gradient)',   { type: 'number-plane', pts: [[1, 2], [4, 8]], line: true }],
     ['number-plane (midpoint)',   { type: 'number-plane', pts: [[-6, -4], [4, 8]], line: true, mid: true }],
     ['number-plane (distance)',   { type: 'number-plane', pts: [[-3, -2], [4, 22]], line: true }],
+    ['number-plane (axes triangle)', { type: 'number-plane', pts: [[4, 0], [0, 8]], line: true, tri: true }],
 ];
 
 const card = (label, diagram) => `

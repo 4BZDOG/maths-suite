@@ -3343,10 +3343,15 @@ table.mode-cw td.cell.empty {
    every page; now lives here so the four .page blocks stay readable. */
 .page .disp-title {
     font-size: calc(1.5rem * var(--title-scale));
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
 }
 .page .disp-sub {
     font-size: calc(1rem * var(--title-scale));
     color: var(--text-muted);
+    font-weight: 500;
+    margin-top: 2px;
 }
 
 /* Difficulty band tint on the instruction strip icon. The icon colour
@@ -3356,13 +3361,17 @@ table.mode-cw td.cell.empty {
 #p2-instruction .fa-bolt     { color: #f59e0b; margin-right: 6px; }
 #p3-instruction .fa-fire     { color: #ef4444; margin-right: 6px; }
 
+/* Name / Class / Date strip. Rows are LEFT-aligned inside the block so the
+   "Name:" / "Class:" labels line up in a column (matching the PDF header),
+   while the underlines flex out to the block's right edge. The block itself
+   is pushed to the right of the header by .page-header's space-between. */
 .page-header-right {
-    text-align: right;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    align-items: flex-end;
-    min-width: 180px;
+    gap: 7px;
+    align-items: stretch;
+    width: 240px;
+    max-width: 46%;
     flex-shrink: 0;
 }
 .page-header-right > div {
@@ -3374,18 +3383,17 @@ table.mode-cw td.cell.empty {
     white-space: nowrap;
     display: flex;
     align-items: baseline;
-    gap: 5px;
+    gap: 6px;
 }
+.hdr-label { flex: 0 0 auto; }
 .hdr-line {
-    display: inline-block;
-    border-bottom: 1px solid currentColor;
-    width: 70px;
+    flex: 1 1 auto;
+    min-width: 28px;
+    border-bottom: 1.5px solid currentColor;
     height: 0;
-    opacity: .55;
+    opacity: .5;
 }
-.hdr-line--wide { width: 140px; }
-
-.hdr-date-label { margin-left: 10px; }
+.hdr-date-label { margin-left: 8px; }
 
 .p-area {
     flex: 1;

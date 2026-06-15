@@ -653,7 +653,7 @@ function _drawParabolaPDF(doc, { h: ph, k, a }, x0, y0, w, h, ps, font) {
         { align: labelLeft ? 'right' : 'left' });
 }
 
-function _drawNumberPlanePDF(doc, { pts, line, mid }, x0, y0, w, h, ps, font) {
+function _drawNumberPlanePDF(doc, { pts, line, mid, tri }, x0, y0, w, h, ps, font) {
     const padBox = 5;
     const pL0 = x0 + padBox + 2, pR0 = x0 + w - padBox;
     const pT0 = y0 + padBox - 2, pB0 = y0 + h - padBox;
@@ -701,6 +701,11 @@ function _drawNumberPlanePDF(doc, { pts, line, mid }, x0, y0, w, h, ps, font) {
     if (xMin < 0 && xMax > 0) { const ax = mapX(0); doc.line(ax, plT, ax, plB); }
     if (yMin < 0 && yMax > 0) { const ay = mapY(0); doc.line(plL, ay, plR, ay); }
 
+    // Shaded triangle formed with the axes (origin + the two points)
+    if (tri && pts.length >= 2) {
+        doc.setFillColor(..._GCF);
+        doc.triangle(mapX(0), mapY(0), mapX(pts[0][0]), mapY(pts[0][1]), mapX(pts[1][0]), mapY(pts[1][1]), 'F');
+    }
     // Segment
     if (line && pts.length >= 2) {
         doc.setDrawColor(..._GC); doc.setLineWidth(0.7);

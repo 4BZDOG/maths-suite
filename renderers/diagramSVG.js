@@ -670,7 +670,7 @@ function _verticallyOpposite({ a }) {
 // Used for coordinate-geometry questions (gradient / midpoint / distance). The
 // window auto-frames the points (axes drawn only where the origin is in view),
 // with an equal x/y scale so the plane reads true to shape.
-function _numberPlane({ pts, line, mid }) {
+function _numberPlane({ pts, line, mid, tri }) {
     const VW = 178, VH = 150;
     const m = 16;                                  // outer margin for labels
     const availW = VW - 2 * m, availH = VH - 2 * m;
@@ -716,6 +716,16 @@ function _numberPlane({ pts, line, mid }) {
     if (xMin < 0 && xMax > 0) { const ax = mapX(0); axes += `<line x1="${ax.toFixed(1)}" y1="${plT.toFixed(1)}" x2="${ax.toFixed(1)}" y2="${plB.toFixed(1)}" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>`; }
     if (yMin < 0 && yMax > 0) { const ay = mapY(0); axes += `<line x1="${plL.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${plR.toFixed(1)}" y2="${ay.toFixed(1)}" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>`; }
 
+    // Optional shaded triangle formed with the axes (origin + the two points).
+    // Used by the "line forms a triangle with the axes" intercepts question.
+    let triFill = '';
+    if (tri && pts.length >= 2) {
+        const o = `${mapX(0).toFixed(1)},${mapY(0).toFixed(1)}`;
+        const a = `${mapX(pts[0][0]).toFixed(1)},${mapY(pts[0][1]).toFixed(1)}`;
+        const b = `${mapX(pts[1][0]).toFixed(1)},${mapY(pts[1][1]).toFixed(1)}`;
+        triFill = `<polygon points="${o} ${a} ${b}" fill="${GC}" fill-opacity="0.12" stroke="none"/>`;
+    }
+
     // Connecting segment between the two points.
     let seg = '';
     if (line && pts.length >= 2) {
@@ -742,7 +752,7 @@ function _numberPlane({ pts, line, mid }) {
     }
 
     const inner =
-        grid + axes +
+        grid + triFill + axes +
         _t(plR - 2, plB - 3, 'x', { anchor: 'end', size: 9, opacity: 0.7 }) +
         _t(plL + 3, plT + 8, 'y', { anchor: 'start', size: 9, opacity: 0.7 }) +
         seg + midMark + dots;
