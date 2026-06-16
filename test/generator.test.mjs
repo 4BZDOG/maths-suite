@@ -210,7 +210,7 @@ const VARIETY_FLOOR = {
     // Starter topics added in the 2022-syllabus alignment pass — lower
     // floors initially because each ships with a small handful of sub-ops.
     // Raise as content is fleshed out.
-    'Indices': 8, 'Linear Relationships': 7,
+    'Indices': 8, 'Algebraic Indices': 8, 'Linear Relationships': 7,
     'Properties of Geometrical Figures': 5, 'Variation & Rates of Change': 10,
 };
 

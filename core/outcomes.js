@@ -29,6 +29,7 @@ export const TOPIC_STRAND_MAP = {
     'Ratios & Rates':           'Number & Algebra',
     'Algebra':                  'Number & Algebra',
     'Indices':                  'Number & Algebra',
+    'Algebraic Indices':        'Number & Algebra',
     'Linear Relationships':     'Number & Algebra',
     'Financial Maths':          'Number & Algebra',
     'Non-linear Relationships': 'Number & Algebra',
@@ -44,12 +45,14 @@ export const TOPIC_STRAND_MAP = {
 export const STAGE_TOPICS = {
     'Stage 4': [
         'Integers', 'Decimals', 'Rounding', 'Fractions', 'Percentages',
-        'Ratios & Rates', 'Algebra', 'Indices', 'Linear Relationships',
+        'Ratios & Rates', 'Algebra', 'Indices', 'Algebraic Indices',
+        'Linear Relationships',
         'Geometry', 'Statistics', 'Probability', 'Financial Maths',
     ],
     'Stage 5': [
         'Integers', 'Decimals', 'Rounding', 'Fractions', 'Percentages',
-        'Ratios & Rates', 'Algebra', 'Indices', 'Linear Relationships',
+        'Ratios & Rates', 'Algebra', 'Indices', 'Algebraic Indices',
+        'Linear Relationships',
         'Variation & Rates of Change',
         'Geometry', 'Properties of Geometrical Figures',
         'Statistics', 'Probability', 'Financial Maths',
@@ -345,6 +348,16 @@ export const TOPIC_OUTCOME_MAP = {
     'Indices': {
         displayName: 'Indices',
         outcomes: {
+            'Stage 4': ['MA4-IND-C-01'],
+            'Stage 5': ['MA5-IND-C-01'],
+        },
+    },
+    'Algebraic Indices': {
+        displayName: 'Algebraic Indices',
+        outcomes: {
+            // Index laws applied to algebraic (pronumeral) bases. Shares the
+            // Indices outcome codes — MA4 establishes the laws, MA5 extends to
+            // integer/zero indices and algebraic simplification.
             'Stage 4': ['MA4-IND-C-01'],
             'Stage 5': ['MA5-IND-C-01'],
         },

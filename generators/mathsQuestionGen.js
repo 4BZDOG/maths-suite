@@ -180,6 +180,14 @@ export const SUB_OPS = {
         { key: 'indices-zero',     label: 'Zero index',  stages: ['Stage 5'] },
         { key: 'indices-negative', label: 'Negative index', stages: ['Stage 5'] },
     ],
+    'Algebraic Indices': [
+        { key: 'alg-multiply',     label: 'Multiply (same base)' },
+        { key: 'alg-divide',       label: 'Divide (same base)' },
+        { key: 'alg-power',        label: 'Power of a power' },
+        { key: 'alg-coefficients', label: 'With coefficients' },
+        { key: 'alg-zero',         label: 'Zero index',     stages: ['Stage 5'] },
+        { key: 'alg-negative',     label: 'Negative index', stages: ['Stage 5'] },
+    ],
     'Linear Relationships': [
         { key: 'plot-line',         label: 'Plot points on y = mx + c' },
         { key: 'gradient-two-points', label: 'Gradient from two points' },
@@ -4587,6 +4595,222 @@ function genIndices(rng, diff, allowedOps) {
 }
 
 // ============================================================
+// ALGEBRAIC INDICES — index laws applied to variable bases
+// (x^3 × x^4 = x^7, (2m^3)^2 = 4m^6, a^0 = 1, x^-2 = 1/x^2 …)
+// Core laws (multiply / divide / power / coefficients) are Stage 4 + 5;
+// zero and negative indices are gated to Stage 5 in SUB_OPS.
+// ============================================================
+function genAlgebraicIndices(rng, diff, allowedOps) {
+    const ALL = ['alg-multiply', 'alg-divide', 'alg-power',
+                 'alg-coefficients', 'alg-zero', 'alg-negative'];
+    const pool = ALL.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+    const VARS = ['a', 'b', 'd', 'k', 'm', 'n', 'p', 'x', 'y'];
+    const v = rc(rng, VARS);
+    const simp = rc(rng, ['Simplify:', 'Simplify the expression:', 'Simplify:']);
+
+    // base^e formatter — e=1 collapses to the bare base, e=0 to "1".
+    const P = (b, e) => e === 0 ? '1' : e === 1 ? b : `${b}^{${e}}`;
+    // a second variable distinct from v (for two-pronumeral questions)
+    const other = () => { let w = rc(rng, VARS); while (w === v) w = rc(rng, VARS); return w; };
+
+    // -------- multiply: x^m × x^n = x^(m+n) --------
+    if (op === 'alg-multiply') {
+        if (diff === 'Easy') {
+            const m = ri(rng, 2, 5), n = ri(rng, 2, 5), s = m + n;
+            return {
+                clue: `${simp}\n$${P(v, m)} \\times ${P(v, n)}$`,
+                answer: `${v}^${s}`,
+                answerDisplay: `$${P(v, s)}$`,
+                worked: `$${P(v, m)} \\times ${P(v, n)} = ${v}^{${m}+${n}} = ${P(v, s)}$`,
+            };
+        }
+        if (diff === 'Medium') {
+            const a = ri(rng, 2, 4), b = ri(rng, 2, 4), c = ri(rng, 2, 4), s = a + b + c;
+            return {
+                clue: `${simp}\n$${P(v, a)} \\times ${P(v, b)} \\times ${P(v, c)}$`,
+                answer: `${v}^${s}`,
+                answerDisplay: `$${P(v, s)}$`,
+                worked: `$${v}^{${a}+${b}+${c}} = ${P(v, s)}$`,
+            };
+        }
+        // Hard: two different pronumerals
+        const w = other();
+        const a1 = ri(rng, 2, 4), b1 = ri(rng, 2, 3), a2 = ri(rng, 2, 3), b2 = ri(rng, 2, 4);
+        const sv = a1 + a2, sw = b1 + b2;
+        return {
+            clue: `${simp}\n$${P(v, a1)}${P(w, b1)} \\times ${P(v, a2)}${P(w, b2)}$`,
+            answer: `${v}^${sv}${w}^${sw}`,
+            answerDisplay: `$${P(v, sv)}${P(w, sw)}$`,
+            worked: `$${P(v, a1)}${P(w, b1)} \\times ${P(v, a2)}${P(w, b2)} = ${P(v, sv)}${P(w, sw)}$`,
+        };
+    }
+
+    // -------- divide: x^m ÷ x^n = x^(m-n) --------
+    if (op === 'alg-divide') {
+        if (diff === 'Easy') {
+            const n = ri(rng, 2, 4), d = ri(rng, 2, 4), m = n + d; // m > n keeps result positive
+            return {
+                clue: `${simp}\n$${P(v, m)} \\div ${P(v, n)}$`,
+                answer: `${v}^${d}`,
+                answerDisplay: `$${P(v, d)}$`,
+                worked: `$${P(v, m)} \\div ${P(v, n)} = ${v}^{${m}-${n}} = ${P(v, d)}$`,
+            };
+        }
+        if (diff === 'Medium') {
+            const n = ri(rng, 2, 5), d = ri(rng, 1, 4), m = n + d;
+            return {
+                clue: `${simp}\n$\\dfrac{${P(v, m)}}{${P(v, n)}}$`,
+                answer: `${v}^${d}`,
+                answerDisplay: `$${P(v, d)}$`,
+                worked: `$\\frac{${P(v, m)}}{${P(v, n)}} = ${v}^{${m}-${n}} = ${P(v, d)}$`,
+            };
+        }
+        // Hard: coefficients that divide evenly
+        const c2 = ri(rng, 2, 5), q = ri(rng, 2, 6), c1 = c2 * q;
+        const n = ri(rng, 1, 4), d = ri(rng, 1, 4), m = n + d;
+        return {
+            clue: `${simp}\n$\\dfrac{${c1}${P(v, m)}}{${c2}${P(v, n)}}$`,
+            answer: `${q}${v}^${d}`,
+            answerDisplay: `$${q}${P(v, d)}$`,
+            worked: `$\\frac{${c1}}{${c2}} = ${q}$, $${v}^{${m}-${n}} = ${P(v, d)}$, so $${q}${P(v, d)}$`,
+        };
+    }
+
+    // -------- power of a power: (x^m)^n = x^(mn) --------
+    if (op === 'alg-power') {
+        if (diff === 'Easy') {
+            const m = ri(rng, 2, 4), n = ri(rng, 2, 3), p = m * n;
+            return {
+                clue: `${simp}\n$(${P(v, m)})^{${n}}$`,
+                answer: `${v}^${p}`,
+                answerDisplay: `$${P(v, p)}$`,
+                worked: `$(${P(v, m)})^{${n}} = ${v}^{${m} \\times ${n}} = ${P(v, p)}$`,
+            };
+        }
+        if (diff === 'Medium') {
+            // two pronumerals inside the bracket
+            const w = other();
+            const a = ri(rng, 2, 3), b = ri(rng, 2, 3), n = ri(rng, 2, 3);
+            return {
+                clue: `${simp}\n$(${P(v, a)}${P(w, b)})^{${n}}$`,
+                answer: `${v}^${a * n}${w}^${b * n}`,
+                answerDisplay: `$${P(v, a * n)}${P(w, b * n)}$`,
+                worked: `$(${P(v, a)}${P(w, b)})^{${n}} = ${P(v, a * n)}${P(w, b * n)}$`,
+            };
+        }
+        // Hard: product of two raised powers
+        const a = ri(rng, 2, 4), na = ri(rng, 2, 3), b = ri(rng, 2, 4), nb = ri(rng, 2, 3);
+        const tot = a * na + b * nb;
+        return {
+            clue: `${simp}\n$(${P(v, a)})^{${na}} \\times (${P(v, b)})^{${nb}}$`,
+            answer: `${v}^${tot}`,
+            answerDisplay: `$${P(v, tot)}$`,
+            worked: `$${v}^{${a * na}} \\times ${v}^{${b * nb}} = ${P(v, tot)}$`,
+        };
+    }
+
+    // -------- coefficients combined with the index laws --------
+    if (op === 'alg-coefficients') {
+        if (diff === 'Easy') {
+            // c1·x^m × c2·x^n = (c1·c2)·x^(m+n)
+            const c1 = ri(rng, 2, 5), c2 = ri(rng, 2, 5);
+            const m = ri(rng, 2, 4), n = ri(rng, 1, 3), s = m + n, c = c1 * c2;
+            return {
+                clue: `${simp}\n$${c1}${P(v, m)} \\times ${c2}${P(v, n)}$`,
+                answer: `${c}${v}^${s}`,
+                answerDisplay: `$${c}${P(v, s)}$`,
+                worked: `$${c1} \\times ${c2} = ${c}$, $${P(v, m)} \\times ${P(v, n)} = ${P(v, s)}$, so $${c}${P(v, s)}$`,
+            };
+        }
+        if (diff === 'Medium') {
+            // (c·x^m)^n = c^n·x^(mn)
+            const c = ri(rng, 2, 5), m = ri(rng, 2, 3), n = ri(rng, 2, 3);
+            const cp = Math.pow(c, n), p = m * n;
+            return {
+                clue: `${simp}\n$(${c}${P(v, m)})^{${n}}$`,
+                answer: `${cp}${v}^${p}`,
+                answerDisplay: `$${cp}${P(v, p)}$`,
+                worked: `$(${c}${P(v, m)})^{${n}} = ${c}^{${n}}${v}^{${m} \\times ${n}} = ${cp}${P(v, p)}$`,
+            };
+        }
+        // Hard: (c·x^m)^n × x^p
+        const c = ri(rng, 2, 4), m = ri(rng, 2, 3), n = ri(rng, 2, 3), p = ri(rng, 1, 4);
+        const cp = Math.pow(c, n), tot = m * n + p;
+        return {
+            clue: `${simp}\n$(${c}${P(v, m)})^{${n}} \\times ${P(v, p)}$`,
+            answer: `${cp}${v}^${tot}`,
+            answerDisplay: `$${cp}${P(v, tot)}$`,
+            worked: `$(${c}${P(v, m)})^{${n}} = ${cp}${P(v, m * n)}$, then $\\times ${P(v, p)} = ${cp}${P(v, tot)}$`,
+        };
+    }
+
+    // -------- zero index (Stage 5): x^0 = 1 --------
+    if (op === 'alg-zero') {
+        if (diff === 'Easy') {
+            return {
+                clue: `${simp}\n$${v}^{0}$`,
+                answer: '1',
+                answerDisplay: '$1$',
+                worked: `Any non-zero base to the power $0$ equals $1$, so $${v}^0 = 1$.`,
+            };
+        }
+        if (diff === 'Medium') {
+            // c·x^0 = c
+            const c = ri(rng, 2, 9);
+            return {
+                clue: `${simp}\n$${c}${v}^{0}$`,
+                answer: String(c),
+                answerDisplay: `$${c}$`,
+                worked: `$${v}^0 = 1$, so $${c}${v}^0 = ${c} \\times 1 = ${c}$.`,
+            };
+        }
+        // Hard: (c·x^m)^0 + k = 1 + k
+        const k = ri(rng, 1, 8), c = ri(rng, 2, 6), m = ri(rng, 2, 4);
+        return {
+            clue: `${simp}\n$(${c}${P(v, m)})^{0} + ${k}$`,
+            answer: String(1 + k),
+            answerDisplay: `$${1 + k}$`,
+            worked: `$(${c}${P(v, m)})^0 = 1$, so $1 + ${k} = ${1 + k}$.`,
+        };
+    }
+
+    // -------- negative index (Stage 5): x^-n = 1/x^n --------
+    if (op === 'alg-negative') {
+        if (diff === 'Easy') {
+            const n = ri(rng, 2, 4);
+            return {
+                clue: `Express $${v}^{-${n}}$ with a positive index.`,
+                answer: `1/${v}^${n}`,
+                answerDisplay: `$\\dfrac{1}{${P(v, n)}}$`,
+                worked: `$${v}^{-${n}} = \\frac{1}{${P(v, n)}}$`,
+            };
+        }
+        if (diff === 'Medium') {
+            // c·x^-n = c / x^n
+            const c = ri(rng, 2, 6), n = ri(rng, 2, 4);
+            return {
+                clue: `Write $${c}${v}^{-${n}}$ with a positive index.`,
+                answer: `${c}/${v}^${n}`,
+                answerDisplay: `$\\dfrac{${c}}{${P(v, n)}}$`,
+                worked: `$${c}${v}^{-${n}} = \\frac{${c}}{${P(v, n)}}$`,
+            };
+        }
+        // Hard: x^m ÷ x^n with m < n → negative index → unit fraction
+        const m = ri(rng, 1, 3), extra = ri(rng, 2, 4), n = m + extra;
+        return {
+            clue: `${simp}\n$${P(v, m)} \\div ${P(v, n)}$`,
+            answer: `1/${v}^${extra}`,
+            answerDisplay: `$\\dfrac{1}{${P(v, extra)}}$`,
+            worked: `$${v}^{${m}-${n}} = ${v}^{-${extra}} = \\frac{1}{${P(v, extra)}}$`,
+        };
+    }
+
+    return null;
+}
+
+// ============================================================
 // LINEAR RELATIONSHIPS (Cartesian-plane work)
 // ============================================================
 function _linEqStr(m, c) {
@@ -5373,6 +5597,7 @@ const GENERATORS = {
     'Ratios & Rates':           genRatiosRates,
     // 2022-syllabus focus areas (additive — see comment near SUB_OPS)
     'Indices':                          genIndices,
+    'Algebraic Indices':                genAlgebraicIndices,
     'Linear Relationships':             genLinear,
     'Properties of Geometrical Figures': genPropsOfFigures,
     'Variation & Rates of Change':      genVariation,
@@ -5394,6 +5619,7 @@ const TOPIC_MAP = {
     'Probability':              'Probability',
     'Ratios & Rates':           'Number',
     'Indices':                          'Algebra',
+    'Algebraic Indices':                'Algebra',
     'Linear Relationships':             'Algebra',
     'Properties of Geometrical Figures': 'Geometry',
     'Variation & Rates of Change':      'Algebra',
