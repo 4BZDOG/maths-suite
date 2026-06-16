@@ -188,6 +188,14 @@ export const SUB_OPS = {
         { key: 'alg-zero',         label: 'Zero index',     stages: ['Stage 5'] },
         { key: 'alg-negative',     label: 'Negative index', stages: ['Stage 5'] },
     ],
+    'Equations': [
+        { key: 'one-step',     label: 'One-step' },
+        { key: 'two-step',     label: 'Two-step' },
+        { key: 'both-sides',   label: 'Variables on both sides' },
+        { key: 'brackets',     label: 'With brackets' },
+        { key: 'substitution', label: 'With substitution' },
+        { key: 'fractions',    label: 'With fractions', stages: ['Stage 5'] },
+    ],
     'Linear Relationships': [
         { key: 'plot-line',         label: 'Plot points on y = mx + c' },
         { key: 'gradient-two-points', label: 'Gradient from two points' },
@@ -1805,6 +1813,204 @@ function _genAlgebraCore(rng, diff, allowedOps) {
         `Substitute $${iv} = ${n3}$ into $${fv} = ${coeff}${iv}^2 + ${b3}$`,
     ]);
     return { clue: subVerb, answer: String(a3 * n3 * n3 + b3), worked: `$${fv} = ${coeff}(${n3})^2 + ${b3} = ${a3 * n3 * n3} + ${b3} = ${a3 * n3 * n3 + b3}$` };
+}
+
+// ============================================================
+// EQUATIONS — granular linear-equation types (NESA Equations
+// focus area: MA4-EQU-C-01 / MA5-EQU-C-01). Breaks the broad
+// "solve" skill into one-step / two-step / both-sides / brackets,
+// adds fraction equations (Stage 5), and a "substitution" type
+// where known values are substituted into a formula or
+// relationship and the remaining unknown is then solved for.
+// ============================================================
+function genEquations(rng, diff, allowedOps) {
+    const ALL = ['one-step', 'two-step', 'both-sides', 'brackets', 'substitution', 'fractions'];
+    const pool = ALL.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+    const v = rc(rng, ALGEBRA_VARS);
+    const sv = rc(rng, _solveVerbsFor(v));
+    // render "+ n" / "- |n|" so a negative constant never prints as "+ -5"
+    const pm = (n) => n < 0 ? `- ${-n}` : `+ ${n}`;
+
+    // -------- one-step:  x + a = b,  ax = b,  x/a = b --------
+    if (op === 'one-step') {
+        if (diff === 'Easy') {
+            const ans = ri(rng, 1, 20), a = ri(rng, 1, 15);
+            if (rng() < 0.5) {
+                return { clue: `${sv}\n$${v} + ${a} = ${ans + a}$`, answer: String(ans),
+                    answerDisplay: `$${v} = ${ans}$`, worked: `$${v} = ${ans + a} - ${a} = ${ans}$` };
+            }
+            return { clue: `${sv}\n$${v} - ${a} = ${ans - a}$`, answer: String(ans),
+                answerDisplay: `$${v} = ${ans}$`, worked: `$${v} = ${ans - a} + ${a} = ${ans}$` };
+        }
+        if (diff === 'Medium') {
+            const ans = ri(rng, 2, 12), a = ri(rng, 2, 9);
+            if (rng() < 0.5) {
+                return { clue: `${sv}\n$${a}${v} = ${a * ans}$`, answer: String(ans),
+                    answerDisplay: `$${v} = ${ans}$`, worked: `$${v} = ${a * ans} \\div ${a} = ${ans}$` };
+            }
+            return { clue: `${sv}\n$\\dfrac{${v}}{${a}} = ${ans}$`, answer: String(a * ans),
+                answerDisplay: `$${v} = ${a * ans}$`, worked: `$${v} = ${ans} \\times ${a} = ${a * ans}$` };
+        }
+        // Hard: negative solution
+        const ans = ri(rng, 1, 12), a = ri(rng, 2, 9);
+        if (rng() < 0.5) {
+            return { clue: `${sv}\n$${v} + ${a} = ${a - ans}$`, answer: String(-ans),
+                answerDisplay: `$${v} = ${-ans}$`, worked: `$${v} = ${a - ans} - ${a} = ${-ans}$` };
+        }
+        return { clue: `${sv}\n$-${a}${v} = ${a * ans}$`, answer: String(-ans),
+            answerDisplay: `$${v} = ${-ans}$`, worked: `$${v} = ${a * ans} \\div (-${a}) = ${-ans}$` };
+    }
+
+    // -------- two-step:  ax + b = c,  x/a + b = c --------
+    if (op === 'two-step') {
+        if (diff === 'Easy') {
+            const a = ri(rng, 2, 5), ans = ri(rng, 1, 10), b = ri(rng, 1, 12);
+            return { clue: `${sv}\n$${a}${v} + ${b} = ${a * ans + b}$`, answer: String(ans),
+                answerDisplay: `$${v} = ${ans}$`,
+                worked: `$${a}${v} = ${a * ans + b} - ${b} = ${a * ans}$, so $${v} = ${ans}$` };
+        }
+        if (diff === 'Medium') {
+            if (rng() < 0.5) {
+                const a = ri(rng, 2, 8), ans = ri(rng, 2, 12), b = ri(rng, 2, 20);
+                return { clue: `${sv}\n$${a}${v} - ${b} = ${a * ans - b}$`, answer: String(ans),
+                    answerDisplay: `$${v} = ${ans}$`,
+                    worked: `$${a}${v} = ${a * ans - b} + ${b} = ${a * ans}$, so $${v} = ${ans}$` };
+            }
+            // x/a + b = c
+            const a = ri(rng, 2, 6), t = ri(rng, 2, 9), b = ri(rng, 1, 12);
+            const x = a * t, c = t + b;
+            return { clue: `${sv}\n$\\dfrac{${v}}{${a}} + ${b} = ${c}$`, answer: String(x),
+                answerDisplay: `$${v} = ${x}$`,
+                worked: `$\\frac{${v}}{${a}} = ${c} - ${b} = ${t}$, so $${v} = ${t} \\times ${a} = ${x}$` };
+        }
+        // Hard: ax + b = c with a negative solution
+        const a = ri(rng, 3, 9), ans = ri(rng, 1, 10), b = ri(rng, 5, 30);
+        const rhs = a * (-ans) + b;
+        return { clue: `${sv}\n$${a}${v} + ${b} = ${rhs}$`, answer: String(-ans),
+            answerDisplay: `$${v} = ${-ans}$`,
+            worked: `$${a}${v} = ${rhs} - ${b} = ${a * (-ans)}$, so $${v} = ${-ans}$` };
+    }
+
+    // -------- variables on both sides:  ax + b = cx + d --------
+    if (op === 'both-sides') {
+        const ans = diff === 'Hard' ? -ri(rng, 1, 9) : ri(rng, 1, diff === 'Easy' ? 8 : 12);
+        const a = ri(rng, 3, 9);
+        const c = ri(rng, 1, a - 1);
+        const b = ri(rng, 1, diff === 'Easy' ? 10 : 20);
+        const d = (a - c) * ans + b;
+        if (d === 0) return null; // avoid a "+ 0" RHS constant
+        return { clue: `${sv}\n$${a}${v} + ${b} = ${c}${v} ${pm(d)}$`, answer: String(ans),
+            answerDisplay: `$${v} = ${ans}$`,
+            worked: `$${a - c}${v} = ${d} - ${b} = ${d - b}$, so $${v} = ${d - b} \\div ${a - c} = ${ans}$` };
+    }
+
+    // -------- brackets:  a(x + b) = c  (Hard adds both sides) --------
+    if (op === 'brackets') {
+        if (diff === 'Easy') {
+            const a = ri(rng, 2, 6), ans = ri(rng, 1, 9), b = ri(rng, 1, 8);
+            const rhs = a * (ans + b);
+            return { clue: `${sv}\n$${a}(${v} + ${b}) = ${rhs}$`, answer: String(ans),
+                answerDisplay: `$${v} = ${ans}$`,
+                worked: `$${v} + ${b} = ${rhs} \\div ${a} = ${ans + b}$, so $${v} = ${ans}$` };
+        }
+        if (diff === 'Medium') {
+            const a = ri(rng, 2, 7), ans = ri(rng, 2, 10), b = ri(rng, 1, 6);
+            const rhs = a * (ans - b);
+            return { clue: `${sv}\n$${a}(${v} - ${b}) = ${rhs}$`, answer: String(ans),
+                answerDisplay: `$${v} = ${ans}$`,
+                worked: `$${v} - ${b} = ${rhs} \\div ${a} = ${ans - b}$, so $${v} = ${ans}$` };
+        }
+        // Hard: a(x + b) = cx + d
+        const a = ri(rng, 3, 6), ans = ri(rng, 1, 8), b = ri(rng, 1, 7);
+        const c = ri(rng, 1, a - 1);
+        const d = (a - c) * ans + a * b;
+        return { clue: `${sv}\n$${a}(${v} + ${b}) = ${c}${v} + ${d}$`, answer: String(ans),
+            answerDisplay: `$${v} = ${ans}$`,
+            worked: `$${a}${v} + ${a * b} = ${c}${v} + ${d}$, $${a - c}${v} = ${d - a * b}$, so $${v} = ${ans}$` };
+    }
+
+    // -------- equations with substitution: sub known values into a
+    //          formula / relationship, then solve for the unknown --------
+    if (op === 'substitution') {
+        if (diff === 'Easy') {
+            const [fv, iv] = rc(rng, SUBST_PAIRS);
+            const a = ri(rng, 2, 6), x = ri(rng, 1, 9), b = ri(rng, 1, 12);
+            const y = a * x + b;
+            const clue = rc(rng, [
+                `Given $${fv} = ${a}${iv} + ${b}$, find $${iv}$ when $${fv} = ${y}$.`,
+                `If $${fv} = ${a}${iv} + ${b}$ and $${fv} = ${y}$, find $${iv}$.`,
+                `Substitute $${fv} = ${y}$ into $${fv} = ${a}${iv} + ${b}$ and solve for $${iv}$.`,
+            ]);
+            return { clue, answer: String(x), answerDisplay: `$${iv} = ${x}$`,
+                worked: `$${y} = ${a}${iv} + ${b}$, $${a}${iv} = ${y - b}$, so $${iv} = ${x}$` };
+        }
+        if (diff === 'Medium') {
+            if (rng() < 0.5) {
+                // v = u + at, solve for a
+                const u = ri(rng, 1, 12), a = ri(rng, 2, 8), t = ri(rng, 2, 9);
+                const vv = u + a * t;
+                return {
+                    clue: `Using $v = u + at$, find $a$ when $v = ${vv}$, $u = ${u}$ and $t = ${t}$.`,
+                    answer: String(a), answerDisplay: `$a = ${a}$`,
+                    worked: `$${vv} = ${u} + ${t}a$, $${t}a = ${vv - u}$, so $a = ${a}$`,
+                };
+            }
+            // P = 2(l + w), solve for l
+            const l = ri(rng, 2, 15), w = ri(rng, 1, 12), P = 2 * (l + w);
+            return {
+                clue: `A rectangle has perimeter $P = 2(l + w)$. Find $l$ when $P = ${P}$ and $w = ${w}$.`,
+                answer: String(l), answerDisplay: `$l = ${l}$`,
+                worked: `$${P} = 2(l + ${w})$, $l + ${w} = ${P / 2}$, so $l = ${l}$`,
+            };
+        }
+        // Hard
+        if (rng() < 0.5) {
+            // A = 1/2 b h, solve for h (b chosen even → integer answer)
+            const b = ri(rng, 1, 7) * 2, h = ri(rng, 2, 12);
+            const A = b * h / 2;
+            return {
+                clue: `The area of a triangle is $A = \\dfrac{1}{2}bh$. Find $h$ when $A = ${A}$ and $b = ${b}$.`,
+                answer: String(h), answerDisplay: `$h = ${h}$`,
+                worked: `$${A} = \\frac{1}{2}(${b})h = ${b / 2}h$, so $h = ${A} \\div ${b / 2} = ${h}$`,
+            };
+        }
+        // d = s t, solve for s
+        const s = ri(rng, 2, 9), t = ri(rng, 2, 12), d = s * t;
+        return {
+            clue: `Using $d = st$ (distance = speed × time), find $s$ when $d = ${d}$ and $t = ${t}$.`,
+            answer: String(s), answerDisplay: `$s = ${s}$`,
+            worked: `$${d} = s \\times ${t}$, so $s = ${d} \\div ${t} = ${s}$`,
+        };
+    }
+
+    // -------- equations with fractions (Stage 5) --------
+    if (op === 'fractions') {
+        if (diff === 'Easy') {
+            const a = ri(rng, 2, 6), t = ri(rng, 2, 9), b = ri(rng, 1, 10);
+            const x = a * t, c = t + b;
+            return { clue: `${sv}\n$\\dfrac{${v}}{${a}} + ${b} = ${c}$`, answer: String(x),
+                answerDisplay: `$${v} = ${x}$`,
+                worked: `$\\frac{${v}}{${a}} = ${c} - ${b} = ${t}$, so $${v} = ${t} \\times ${a} = ${x}$` };
+        }
+        if (diff === 'Medium') {
+            const b = ri(rng, 2, 6), c = ri(rng, 2, 9), a = ri(rng, 1, 10);
+            const x = b * c - a;
+            return { clue: `${sv}\n$\\dfrac{${v} + ${a}}{${b}} = ${c}$`, answer: String(x),
+                answerDisplay: `$${v} = ${x}$`,
+                worked: `$${v} + ${a} = ${c} \\times ${b} = ${b * c}$, so $${v} = ${b * c} - ${a} = ${x}$` };
+        }
+        // Hard: (ax + b)/c = d
+        const aa = ri(rng, 2, 5), cc = ri(rng, 2, 5), x = ri(rng, 2, 8), d = ri(rng, 2, 9);
+        const b = cc * d - aa * x;
+        if (b < 1) return null; // keep the constant positive; engine retries
+        return { clue: `${sv}\n$\\dfrac{${aa}${v} + ${b}}{${cc}} = ${d}$`, answer: String(x),
+            answerDisplay: `$${v} = ${x}$`,
+            worked: `$${aa}${v} + ${b} = ${cc} \\times ${d} = ${cc * d}$, $${aa}${v} = ${cc * d - b}$, so $${v} = ${x}$` };
+    }
+
+    return null;
 }
 
 // ============================================================
@@ -5598,6 +5804,7 @@ const GENERATORS = {
     // 2022-syllabus focus areas (additive — see comment near SUB_OPS)
     'Indices':                          genIndices,
     'Algebraic Indices':                genAlgebraicIndices,
+    'Equations':                        genEquations,
     'Linear Relationships':             genLinear,
     'Properties of Geometrical Figures': genPropsOfFigures,
     'Variation & Rates of Change':      genVariation,
@@ -5620,6 +5827,7 @@ const TOPIC_MAP = {
     'Ratios & Rates':           'Number',
     'Indices':                          'Algebra',
     'Algebraic Indices':                'Algebra',
+    'Equations':                        'Algebra',
     'Linear Relationships':             'Algebra',
     'Properties of Geometrical Figures': 'Geometry',
     'Variation & Rates of Change':      'Algebra',

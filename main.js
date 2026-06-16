@@ -53,6 +53,7 @@ const TOPIC_META = {
     // 2022-syllabus focus areas added in the alignment pass
     'Indices':                          { label: 'Indices',                          icon: 'fas fa-superscript' },
     'Algebraic Indices':                { label: 'Algebraic Indices',                icon: 'fas fa-square-root-variable' },
+    'Equations':                        { label: 'Equations',                        icon: 'fas fa-equals' },
     'Linear Relationships':             { label: 'Linear Relationships',             icon: 'fas fa-chart-line' },
     'Properties of Geometrical Figures': { label: 'Properties of Geometrical Figures', icon: 'fas fa-shapes' },
     'Variation & Rates of Change':      { label: 'Variation & Rates of Change',      icon: 'fas fa-arrow-trend-up' },
