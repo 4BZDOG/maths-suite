@@ -78,6 +78,9 @@ test('Equations: worked solution ends at the stated answer', () => {
         for (let seed = 1; seed <= 50; seed++) {
             const qs = genStage5({ topic: TOPIC, difficulty: diff, count: 8, seed });
             for (const q of qs) {
+                // Only the solve-type ops have a single numeric answer; skip
+                // inequalities / simultaneous (non-numeric answers, no worked).
+                if (!/^-?\d+$/.test(String(q.answer))) continue;
                 assert.ok(q.worked, `${diff}/seed${seed}: missing worked solution`);
                 const nums = q.worked.match(/-?\d+/g) || [];
                 const last = Number(nums[nums.length - 1]);
@@ -105,14 +108,14 @@ test('Equations: substitution questions yield integer solutions', () => {
     assert.ok(n > 100, `only ${n} substitution questions generated`);
 });
 
-// ---- Stage 4 gating: fraction equations are Stage 5 only -------
-test('Equations: fraction equations are Stage 5 only', () => {
+// ---- Stage gating: inequalities & simultaneous are Stage 5 only ----
+test('Equations: inequalities & simultaneous are Stage 5 only', () => {
     for (let seed = 1; seed <= 40; seed++) {
         const qs = generateMathsQuestions({
             subTopic: TOPIC, difficulty: 'All', count: 10, seed, stage: 'Stage 4',
-            subOpsFilter: { [TOPIC]: ['fractions'] },
+            subOpsFilter: { [TOPIC]: ['inequalities', 'simultaneous'] },
         });
         assert.equal(qs.length, 0,
-            `Stage 4 produced fraction equations at seed ${seed}`);
+            `Stage 4 produced inequalities/simultaneous at seed ${seed}`);
     }
 });

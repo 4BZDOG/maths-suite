@@ -26,20 +26,27 @@ export const FORMULA_GROUPS = ['area-perimeter', 'pythagoras', 'circles', 'simpl
 
 export const state = {
     // Which subtopics are enabled for generation (includes Stage 5-only topics, defaulting true)
+    // Defaults follow the NESA focus-area structure. Topics omitted here render
+    // unselected; the user enables them per stage in the selector.
     selectedTopics: {
+        // Number and Algebra
         'Integers': true,
         'Decimals': true,
         'Rounding': true,
         'Fractions': true,
         'Percentages': true,
-        'Algebra': true,
-        'Geometry': true,
-        'Statistics': true,
-        'Financial Maths': false,
-        'Trigonometry': true,
-        'Non-linear Relationships': true,
-        'Probability': true,
         'Ratios & Rates': true,
+        'Algebra': true,
+        'Equations': true,
+        'Linear Relationships': true,
+        // Measurement and Space
+        'Length': true,
+        'Area': true,
+        'Properties of Geometrical Figures': true,
+        "Pythagoras' Theorem": true,
+        // Statistics and Probability
+        'Statistics': true,
+        'Probability': true,
     },
 
     // Granular sub-operation selection per topic (null entry or missing = all enabled)

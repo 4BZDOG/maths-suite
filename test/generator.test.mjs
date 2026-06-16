@@ -212,6 +212,10 @@ const VARIETY_FLOOR = {
     // Raise as content is fleshed out.
     'Indices': 8, 'Algebraic Indices': 8, 'Equations': 8, 'Linear Relationships': 7,
     'Properties of Geometrical Figures': 5, 'Variation & Rates of Change': 10,
+    // NESA Measurement & Space + Statistics focus areas. Volume is low because
+    // a Stage-4-only page (prisms + cylinders) has few distinct templates.
+    'Length': 6, 'Area': 8, 'Volume': 3, 'Time': 5, "Pythagoras' Theorem": 3,
+    'Data Classification and Visualisation': 5,
 };
 
 test('variety: a single-topic page yields a healthy spread of distinct clues', () => {
