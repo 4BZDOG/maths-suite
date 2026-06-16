@@ -30,6 +30,7 @@ export const TOPIC_STRAND_MAP = {
     'Algebra':                  'Number & Algebra',
     'Indices':                  'Number & Algebra',
     'Algebraic Indices':        'Number & Algebra',
+    'Equations':                'Number & Algebra',
     'Linear Relationships':     'Number & Algebra',
     'Financial Maths':          'Number & Algebra',
     'Non-linear Relationships': 'Number & Algebra',
@@ -46,13 +47,13 @@ export const STAGE_TOPICS = {
     'Stage 4': [
         'Integers', 'Decimals', 'Rounding', 'Fractions', 'Percentages',
         'Ratios & Rates', 'Algebra', 'Indices', 'Algebraic Indices',
-        'Linear Relationships',
+        'Equations', 'Linear Relationships',
         'Geometry', 'Statistics', 'Probability', 'Financial Maths',
     ],
     'Stage 5': [
         'Integers', 'Decimals', 'Rounding', 'Fractions', 'Percentages',
         'Ratios & Rates', 'Algebra', 'Indices', 'Algebraic Indices',
-        'Linear Relationships',
+        'Equations', 'Linear Relationships',
         'Variation & Rates of Change',
         'Geometry', 'Properties of Geometrical Figures',
         'Statistics', 'Probability', 'Financial Maths',
@@ -360,6 +361,16 @@ export const TOPIC_OUTCOME_MAP = {
             // integer/zero indices and algebraic simplification.
             'Stage 4': ['MA4-IND-C-01'],
             'Stage 5': ['MA5-IND-C-01'],
+        },
+    },
+    'Equations': {
+        displayName: 'Equations',
+        outcomes: {
+            // NESA Equations focus area — granular linear-equation solving,
+            // including substitution into formulas. MA4 covers up-to-2-step
+            // linear equations; MA5 extends to multi-step and fraction forms.
+            'Stage 4': ['MA4-EQU-C-01'],
+            'Stage 5': ['MA5-EQU-C-01'],
         },
     },
     'Linear Relationships': {
