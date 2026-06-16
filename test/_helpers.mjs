@@ -10,7 +10,7 @@ export const STAGE4_TOPICS = [
     'Algebra', 'Geometry', 'Statistics', 'Financial Maths',
     'Probability', 'Ratios & Rates',
     // 2022-syllabus focus areas
-    'Indices', 'Linear Relationships',
+    'Indices', 'Algebraic Indices', 'Linear Relationships',
 ];
 export const STAGE5_TOPICS = [
     'Trigonometry', 'Non-linear Relationships',
