@@ -11,6 +11,9 @@ export const STAGE4_TOPICS = [
     'Probability', 'Ratios & Rates',
     // 2022-syllabus focus areas
     'Indices', 'Algebraic Indices', 'Equations', 'Linear Relationships',
+    // NESA Measurement & Space + Statistics focus areas
+    'Length', 'Area', 'Volume', 'Time', "Pythagoras' Theorem",
+    'Data Classification and Visualisation',
 ];
 export const STAGE5_TOPICS = [
     'Trigonometry', 'Non-linear Relationships',

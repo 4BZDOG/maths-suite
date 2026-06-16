@@ -15,49 +15,70 @@ export const DEFAULT_STAGE = 'Stage 4';
 
 // ---- Strand organisation (NESA K–10 Mathematics) ------------
 export const STRANDS = [
-    'Number & Algebra',
-    'Measurement & Space',
-    'Statistics & Probability',
+    'Number and Algebra',
+    'Measurement and Space',
+    'Statistics and Probability',
 ];
 
 export const TOPIC_STRAND_MAP = {
-    'Integers':                 'Number & Algebra',
-    'Decimals':                 'Number & Algebra',
-    'Rounding':                 'Number & Algebra',
-    'Fractions':                'Number & Algebra',
-    'Percentages':              'Number & Algebra',
-    'Ratios & Rates':           'Number & Algebra',
-    'Algebra':                  'Number & Algebra',
-    'Indices':                  'Number & Algebra',
-    'Algebraic Indices':        'Number & Algebra',
-    'Equations':                'Number & Algebra',
-    'Linear Relationships':     'Number & Algebra',
-    'Financial Maths':          'Number & Algebra',
-    'Non-linear Relationships': 'Number & Algebra',
-    'Variation & Rates of Change': 'Number & Algebra',
-    'Geometry':                 'Measurement & Space',
-    'Properties of Geometrical Figures': 'Measurement & Space',
-    'Trigonometry':             'Measurement & Space',
-    'Statistics':               'Statistics & Probability',
-    'Probability':              'Statistics & Probability',
+    // Number and Algebra
+    'Integers':                 'Number and Algebra',
+    'Decimals':                 'Number and Algebra',
+    'Rounding':                 'Number and Algebra',
+    'Fractions':                'Number and Algebra',
+    'Percentages':              'Number and Algebra',
+    'Financial Maths':          'Number and Algebra',
+    'Ratios & Rates':           'Number and Algebra',
+    'Algebra':                  'Number and Algebra',
+    'Indices':                  'Number and Algebra',
+    'Algebraic Indices':        'Number and Algebra',
+    'Equations':                'Number and Algebra',
+    'Linear Relationships':     'Number and Algebra',
+    'Non-linear Relationships': 'Number and Algebra',
+    'Variation & Rates of Change': 'Number and Algebra',
+    // Measurement and Space
+    'Length':                   'Measurement and Space',
+    'Area':                     'Measurement and Space',
+    'Volume':                   'Measurement and Space',
+    'Time':                     'Measurement and Space',
+    'Properties of Geometrical Figures': 'Measurement and Space',
+    "Pythagoras' Theorem":      'Measurement and Space',
+    'Trigonometry':             'Measurement and Space',
+    'Geometry':                 'Measurement and Space',
+    // Statistics and Probability
+    'Data Classification and Visualisation': 'Statistics and Probability',
+    'Statistics':               'Statistics and Probability',
+    'Probability':              'Statistics and Probability',
 };
 
 // ---- Topics available per stage ----
+// Topics are ordered to mirror the NESA Mathematics K–10 (2022) focus-area
+// sequence within each strand. 'Geometry' is retained as an internal umbrella
+// generator (used by the split Measurement & Space focus areas) but is not
+// listed here, so it no longer appears as its own selector entry.
 export const STAGE_TOPICS = {
     'Stage 4': [
+        // Number and Algebra
         'Integers', 'Decimals', 'Rounding', 'Fractions', 'Percentages',
-        'Ratios & Rates', 'Algebra', 'Indices', 'Algebraic Indices',
-        'Equations', 'Linear Relationships',
-        'Geometry', 'Statistics', 'Probability', 'Financial Maths',
+        'Financial Maths', 'Ratios & Rates',
+        'Algebra', 'Indices', 'Algebraic Indices', 'Equations', 'Linear Relationships',
+        // Measurement and Space
+        'Length', 'Area', 'Volume', 'Time',
+        'Properties of Geometrical Figures', "Pythagoras' Theorem", 'Trigonometry',
+        // Statistics and Probability
+        'Data Classification and Visualisation', 'Statistics', 'Probability',
     ],
     'Stage 5': [
+        // Number and Algebra
         'Integers', 'Decimals', 'Rounding', 'Fractions', 'Percentages',
-        'Ratios & Rates', 'Algebra', 'Indices', 'Algebraic Indices',
-        'Equations', 'Linear Relationships',
-        'Variation & Rates of Change',
-        'Geometry', 'Properties of Geometrical Figures',
-        'Statistics', 'Probability', 'Financial Maths',
-        'Trigonometry', 'Non-linear Relationships',
+        'Financial Maths', 'Ratios & Rates',
+        'Algebra', 'Indices', 'Algebraic Indices', 'Equations',
+        'Linear Relationships', 'Non-linear Relationships', 'Variation & Rates of Change',
+        // Measurement and Space (Length, Time & Pythagoras fold into
+        // Area / Trigonometry at Stage 5, per the NESA focus-area structure)
+        'Area', 'Volume', 'Properties of Geometrical Figures', 'Trigonometry',
+        // Statistics and Probability
+        'Data Classification and Visualisation', 'Statistics', 'Probability',
     ],
 };
 
@@ -152,6 +173,16 @@ export const STAGE_OUTCOMES = {
                 code: 'MA4-IND-C-01',
                 contentLabel: 'Indices',
                 statement: 'operates with primes and roots, positive-integer and zero indices involving numerical bases and establishes the relevant index laws',
+            },
+            {
+                code: 'MA4-TIM-C-01',
+                contentLabel: 'Time',
+                statement: 'interprets and uses 12- and 24-hour time, timetables and time zones to solve problems',
+            },
+            {
+                code: 'MA4-TRG-C-01',
+                contentLabel: 'Right-angled triangles (trigonometry)',
+                statement: 'applies the trigonometric ratios sine, cosine and tangent to solve problems involving right-angled triangles',
             },
         ],
     },
@@ -334,8 +365,9 @@ export const TOPIC_OUTCOME_MAP = {
     },
     // Stage 5 only topics
     'Trigonometry': {
-        displayName: 'Trigonometry',
+        displayName: 'Right-Angled Triangles (Trigonometry)',
         outcomes: {
+            'Stage 4': ['MA4-TRG-C-01'],
             'Stage 5': ['MA5-TRG-C-01', 'MA5-TRG-C-02'],
         },
     },
@@ -383,10 +415,52 @@ export const TOPIC_OUTCOME_MAP = {
     'Properties of Geometrical Figures': {
         displayName: 'Properties of Geometrical Figures',
         outcomes: {
-            // Stage 5-only topic per the 2022 syllabus (proofs of congruence /
-            // similarity are introduced at Stage 5; Stage 4 covers basic
-            // properties via MA4-GEO-C-01 already through the Geometry topic).
+            // Stage 4: angle relationships and basic figure properties.
+            // Stage 5: deductive proofs of congruence / similarity.
+            'Stage 4': ['MA4-GEO-C-01', 'MA4-ANG-C-01'],
             'Stage 5': ['MA5-GEO-C-01'],
+        },
+    },
+    // ── Measurement & Space focus areas (split from the Geometry umbrella) ──
+    'Length': {
+        displayName: 'Length',
+        outcomes: {
+            'Stage 4': ['MA4-LEN-C-01'],
+            'Stage 5': ['MA5-ARE-C-01'],
+        },
+    },
+    'Area': {
+        displayName: 'Area and Surface Area',
+        outcomes: {
+            'Stage 4': ['MA4-ARE-C-01'],
+            'Stage 5': ['MA5-ARE-C-01'],
+        },
+    },
+    'Volume': {
+        displayName: 'Volume',
+        outcomes: {
+            'Stage 4': ['MA4-VOL-C-01'],
+            'Stage 5': ['MA5-VOL-C-01'],
+        },
+    },
+    'Time': {
+        displayName: 'Time',
+        outcomes: {
+            'Stage 4': ['MA4-TIM-C-01'],
+        },
+    },
+    "Pythagoras' Theorem": {
+        displayName: "Pythagoras' Theorem",
+        outcomes: {
+            'Stage 4': ['MA4-PYT-C-01'],
+            'Stage 5': ['MA5-TRG-C-01'],
+        },
+    },
+    'Data Classification and Visualisation': {
+        displayName: 'Data Classification and Visualisation',
+        outcomes: {
+            'Stage 4': ['MA4-DAT-C-01'],
+            'Stage 5': ['MA5-DAT-C-01'],
         },
     },
     'Variation & Rates of Change': {

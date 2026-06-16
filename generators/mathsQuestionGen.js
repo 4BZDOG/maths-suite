@@ -140,11 +140,12 @@ export const SUB_OPS = {
         { key: 'depreciation',    label: 'Depreciation',       stages: ['Stage 5'] },
         { key: 'compound-period', label: 'Compound (periods)', stages: ['Stage 5'] },
     ],
-    // Stage 5 only topics
+    // Right-Angled Triangles — trig intro (Stage 4) extending to applications
+    // (angles of elevation/depression) and non-right triangles (Stage 5 Path)
     'Trigonometry': [
-        { key: 'find-side',    label: 'Find a side (SOHCAHTOA)', stages: ['Stage 5'] },
-        { key: 'find-angle',   label: 'Find an angle',           stages: ['Stage 5'] },
-        { key: 'applications', label: 'Real-world applications', stages: ['Stage 5'] },
+        { key: 'find-side',    label: 'Find a side (SOHCAHTOA)' },
+        { key: 'find-angle',   label: 'Find an angle' },
+        { key: 'applications', label: 'Elevation / depression',  stages: ['Stage 5'] },
         // Path
         { key: 'obtuse-angles', label: 'Obtuse angles',  stages: ['Stage 5'], pathway: 'path' },
         { key: 'bearings',      label: 'Bearings (true)', stages: ['Stage 5'], pathway: 'path' },
@@ -193,8 +194,11 @@ export const SUB_OPS = {
         { key: 'two-step',     label: 'Two-step' },
         { key: 'both-sides',   label: 'Variables on both sides' },
         { key: 'brackets',     label: 'With brackets' },
+        { key: 'fractions',    label: 'With fractions' },
         { key: 'substitution', label: 'With substitution' },
-        { key: 'fractions',    label: 'With fractions', stages: ['Stage 5'] },
+        // Stage 5: Equations and Inequalities
+        { key: 'inequalities', label: 'Linear inequalities',     stages: ['Stage 5'] },
+        { key: 'simultaneous', label: 'Simultaneous equations',  stages: ['Stage 5'] },
     ],
     'Linear Relationships': [
         { key: 'plot-line',         label: 'Plot points on y = mx + c' },
@@ -205,6 +209,7 @@ export const SUB_OPS = {
         { key: 'equation-from-gp',  label: 'Equation from gradient + point', stages: ['Stage 5'] },
     ],
     'Properties of Geometrical Figures': [
+        { key: 'angles',            label: 'Angle relationships' },
         { key: 'congruent-tests',   label: 'Congruence tests',   stages: ['Stage 5'] },
         { key: 'similar-ratio',     label: 'Similarity scale factor', stages: ['Stage 5'] },
         { key: 'quad-properties',   label: 'Quadrilateral properties', stages: ['Stage 5'] },
@@ -212,6 +217,38 @@ export const SUB_OPS = {
     'Variation & Rates of Change': [
         { key: 'direct-variation',   label: 'Direct variation  y = kx', stages: ['Stage 5'] },
         { key: 'inverse-variation',  label: 'Inverse variation  y = k/x', stages: ['Stage 5'] },
+    ],
+    // ─── Measurement & Space focus areas (NESA structure) ───────────────
+    'Length': [
+        { key: 'perimeter',     label: 'Perimeter' },
+        { key: 'circumference', label: 'Circumference' },
+        { key: 'unit-convert',  label: 'Unit conversion' },
+    ],
+    'Area': [
+        { key: 'area-perimeter', label: 'Area of plane shapes' },
+        { key: 'circles',        label: 'Area of circles' },
+        { key: 'surface-area',   label: 'Surface area', stages: ['Stage 5'] },
+    ],
+    'Volume': [
+        { key: 'prism',    label: 'Prisms' },
+        { key: 'cylinder', label: 'Cylinders' },
+        { key: 'pyramid',  label: 'Pyramids',         stages: ['Stage 5'] },
+        { key: 'sphere',   label: 'Spheres',          stages: ['Stage 5'] },
+    ],
+    'Time': [
+        { key: 'convert',  label: '24-hour time' },
+        { key: 'duration', label: 'Elapsed time' },
+        { key: 'zones',    label: 'Time zones' },
+    ],
+    "Pythagoras' Theorem": [
+        { key: 'pythagoras', label: 'Find a side' },
+    ],
+    // ─── Statistics & Probability focus areas (NESA structure) ──────────
+    'Data Classification and Visualisation': [
+        { key: 'frequency-total', label: 'Frequency tables' },
+        { key: 'tally',           label: 'Tally charts' },
+        { key: 'graph-choice',    label: 'Choosing a display' },
+        { key: 'data-type',       label: 'Categorical / numerical' },
     ],
 };
 
@@ -1824,10 +1861,13 @@ function _genAlgebraCore(rng, diff, allowedOps) {
 // relationship and the remaining unknown is then solved for.
 // ============================================================
 function genEquations(rng, diff, allowedOps) {
-    const ALL = ['one-step', 'two-step', 'both-sides', 'brackets', 'substitution', 'fractions'];
+    const ALL = ['one-step', 'two-step', 'both-sides', 'brackets', 'substitution',
+                 'fractions', 'inequalities', 'simultaneous'];
     const pool = ALL.filter(k => !allowedOps || allowedOps.includes(k));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
+    // simultaneous equations reuse the tested Algebra implementation
+    if (op === 'simultaneous') return _genAlgebraOp(rng, diff, 'simultaneous');
     const v = rc(rng, ALGEBRA_VARS);
     const sv = rc(rng, _solveVerbsFor(v));
     // render "+ n" / "- |n|" so a negative constant never prints as "+ -5"
@@ -2008,6 +2048,16 @@ function genEquations(rng, diff, allowedOps) {
         return { clue: `${sv}\n$\\dfrac{${aa}${v} + ${b}}{${cc}} = ${d}$`, answer: String(x),
             answerDisplay: `$${v} = ${x}$`,
             worked: `$${aa}${v} + ${b} = ${cc} \\times ${d} = ${cc * d}$, $${aa}${v} = ${cc * d - b}$, so $${v} = ${x}$` };
+    }
+
+    // -------- linear inequalities (Stage 5): ax + b </> c --------
+    if (op === 'inequalities') {
+        const a = ri(rng, 2, 6), x = ri(rng, 1, 9), b = ri(rng, 1, 12);
+        const c = a * x + b;
+        const lt = rng() < 0.5, sign = lt ? '<' : '>';
+        return { clue: `${rc(rng, ['Solve the inequality:', 'Solve:'])}\n$${a}${v} + ${b} ${sign} ${c}$`,
+            answer: `${v}${sign}${x}`, answerDisplay: `$${v} ${sign} ${x}$`,
+            worked: `$${a}${v} ${sign} ${c} - ${b} = ${c - b}$, so $${v} ${sign} ${x}$` };
     }
 
     return null;
@@ -5785,6 +5835,240 @@ function genFinancial(rng, diff, allowedOps, opts = {}, _depth = 0) {
 }
 
 // ============================================================
+// MEASUREMENT & SPACE focus areas added to mirror the NESA
+// structure. Area, Surface Area and Pythagoras' Theorem reuse the
+// existing geometry engine via the dispatch table (each gets a
+// sub-op subset in SUB_OPS); the generators below cover Length,
+// Volume, Time, the Properties wrapper and the data-viz starter.
+// ============================================================
+
+// ---- Length: perimeter, circumference, unit conversion ----
+function genLength(rng, diff, allowedOps) {
+    const OPS = ['perimeter', 'circumference', 'unit-convert'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+
+    if (op === 'perimeter') {
+        if (diff === 'Easy') {
+            const w = ri(rng, 2, 15), h = ri(rng, 2, 15);
+            return { clue: `Find the perimeter of a rectangle $${w}\\text{ cm}$ long and $${h}\\text{ cm}$ wide.`,
+                answer: String(2 * (w + h)), answerDisplay: `$${2 * (w + h)}\\text{ cm}$`,
+                worked: `$P = 2(${w} + ${h}) = ${2 * (w + h)}\\text{ cm}$` };
+        }
+        if (diff === 'Medium') {
+            const s = ri(rng, 3, 12), n = rc(rng, [3, 5, 6, 8]);
+            const shape = { 3: 'triangle', 5: 'pentagon', 6: 'hexagon', 8: 'octagon' }[n];
+            return { clue: `A regular ${shape} has sides of $${s}\\text{ cm}$. Find its perimeter.`,
+                answer: String(n * s), answerDisplay: `$${n * s}\\text{ cm}$`,
+                worked: `$P = ${n} \\times ${s} = ${n * s}\\text{ cm}$` };
+        }
+        // Hard: missing side from a known perimeter
+        const w = ri(rng, 5, 20), h = ri(rng, 4, 15), P = 2 * (w + h);
+        return { clue: `A rectangle has perimeter $${P}\\text{ cm}$ and width $${h}\\text{ cm}$. Find its length.`,
+            answer: String(w), answerDisplay: `$${w}\\text{ cm}$`,
+            worked: `$l = \\frac{${P}}{2} - ${h} = ${P / 2} - ${h} = ${w}\\text{ cm}$` };
+    }
+
+    if (op === 'circumference') {
+        const r = ri(rng, 2, diff === 'Easy' ? 9 : 20), d = 2 * r;
+        if (diff === 'Hard') {
+            return { clue: `A circle has circumference $${d}\\pi\\text{ cm}$. Find its radius.`,
+                answer: String(r), answerDisplay: `$${r}\\text{ cm}$`,
+                worked: `$r = \\frac{C}{2\\pi} = \\frac{${d}\\pi}{2\\pi} = ${r}\\text{ cm}$` };
+        }
+        const useD = rng() < 0.5;
+        return { clue: `Find the circumference of a circle with ${useD ? `diameter $${d}` : `radius $${r}`}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
+            answer: `${d}π`, answerDisplay: `$${d}\\pi\\text{ cm}$`,
+            worked: `$C = \\pi d = ${d}\\pi\\text{ cm}$` };
+    }
+
+    // unit-convert
+    const units = [['cm', 'mm', 10], ['m', 'cm', 100], ['km', 'm', 1000], ['m', 'mm', 1000]];
+    const [big, small, factor] = rc(rng, units);
+    if (rng() < 0.5) {
+        const val = ri(rng, 2, diff === 'Easy' ? 9 : 50);
+        return { clue: `Convert $${val}\\text{ ${big}}$ to ${small}.`,
+            answer: String(val * factor), answerDisplay: `$${val * factor}\\text{ ${small}}$`,
+            worked: `$${val} \\times ${factor} = ${val * factor}\\text{ ${small}}$` };
+    }
+    const m = ri(rng, 1, 9), val = m * factor;
+    return { clue: `Convert $${val}\\text{ ${small}}$ to ${big}.`,
+        answer: String(m), answerDisplay: `$${m}\\text{ ${big}}$`,
+        worked: `$${val} \\div ${factor} = ${m}\\text{ ${big}}$` };
+}
+
+// ---- Volume: prisms & cylinders (S4); pyramids & spheres (S5) ----
+function genVolume(rng, diff, allowedOps) {
+    const OPS = ['prism', 'cylinder', 'pyramid', 'sphere'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+
+    if (op === 'prism') {
+        if (diff === 'Easy') {
+            const l = ri(rng, 2, 10), w = ri(rng, 2, 10), h = ri(rng, 2, 10);
+            return { clue: `Find the volume of a rectangular prism $${l}\\text{ cm} \\times ${w}\\text{ cm} \\times ${h}\\text{ cm}$.`,
+                answer: String(l * w * h), answerDisplay: `$${l * w * h}\\text{ cm}^3$`,
+                worked: `$V = ${l} \\times ${w} \\times ${h} = ${l * w * h}\\text{ cm}^3$` };
+        }
+        const b = ri(rng, 1, 6) * 2, ht = ri(rng, 2, 9), L = ri(rng, 3, 12);
+        const V = (b * ht / 2) * L;
+        return { clue: `A triangular prism has a cross-section of base $${b}\\text{ cm}$ and height $${ht}\\text{ cm}$, and length $${L}\\text{ cm}$. Find its volume.`,
+            answer: String(V), answerDisplay: `$${V}\\text{ cm}^3$`,
+            worked: `$V = \\tfrac{1}{2} \\times ${b} \\times ${ht} \\times ${L} = ${V}\\text{ cm}^3$` };
+    }
+
+    if (op === 'cylinder') {
+        const r = ri(rng, 2, 9), h = ri(rng, 2, 12), V = r * r * h;
+        return { clue: `Find the volume of a cylinder with radius $${r}\\text{ cm}$ and height $${h}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
+            answer: `${V}π`, answerDisplay: `$${V}\\pi\\text{ cm}^3$`,
+            worked: `$V = \\pi r^2 h = \\pi \\times ${r * r} \\times ${h} = ${V}\\pi\\text{ cm}^3$` };
+    }
+
+    if (op === 'pyramid') {
+        const base = ri(rng, 2, 9), h0 = ri(rng, 3, 12), baseArea = base * base;
+        const h = (baseArea * h0) % 3 === 0 ? h0 : h0 + (3 - (baseArea * h0) % 3);
+        const V = baseArea * h / 3;
+        return { clue: `A square pyramid has base side $${base}\\text{ cm}$ and perpendicular height $${h}\\text{ cm}$. Find its volume.`,
+            answer: String(V), answerDisplay: `$${V}\\text{ cm}^3$`,
+            worked: `$V = \\tfrac{1}{3} \\times ${baseArea} \\times ${h} = ${V}\\text{ cm}^3$` };
+    }
+
+    // sphere: V = 4/3 π r^3, leave in terms of π (r a multiple of 3 → integer coeff)
+    const r = rc(rng, [3, 6, 9]), coeff = 4 * r * r * r / 3;
+    return { clue: `Find the volume of a sphere with radius $${r}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
+        answer: `${coeff}π`, answerDisplay: `$${coeff}\\pi\\text{ cm}^3$`,
+        worked: `$V = \\tfrac{4}{3}\\pi r^3 = \\tfrac{4}{3}\\pi \\times ${r * r * r} = ${coeff}\\pi\\text{ cm}^3$` };
+}
+
+// ---- Time: 24-hour conversion, duration, time zones (starter) ----
+function genTime(rng, diff, allowedOps) {
+    const OPS = ['convert', 'duration', 'zones'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+    const pad = (n) => String(n).padStart(2, '0');
+
+    if (op === 'convert') {
+        const h12 = ri(rng, 1, 11), min = ri(rng, 0, 59), pm = rng() < 0.5;
+        const h24 = pm ? h12 + 12 : h12;
+        return { clue: `Write $${h12}{:}${pad(min)}\\text{ ${pm ? 'pm' : 'am'}}$ in 24-hour time.`,
+            answer: `${pad(h24)}:${pad(min)}`, answerDisplay: `$${pad(h24)}{:}${pad(min)}$`,
+            worked: `${pm ? `Add 12 hours: ${h12} + 12 = ${h24}` : 'Morning hours are unchanged'} $\\rightarrow ${pad(h24)}{:}${pad(min)}$` };
+    }
+
+    if (op === 'duration') {
+        const startH = ri(rng, 6, 18), startM = ri(rng, 0, 50);
+        const addMin = ri(rng, 10, diff === 'Easy' ? 45 : 180);
+        const total = startH * 60 + startM + addMin;
+        const endH = Math.floor(total / 60) % 24, endM = total % 60;
+        if (rng() < 0.5) {
+            return { clue: `A film starts at $${pad(startH)}{:}${pad(startM)}$ and runs for $${addMin}$ minutes. What time does it finish?`,
+                answer: `${pad(endH)}:${pad(endM)}`, answerDisplay: `$${pad(endH)}{:}${pad(endM)}$`,
+                worked: `$${pad(startH)}{:}${pad(startM)} + ${addMin}\\text{ min} = ${pad(endH)}{:}${pad(endM)}$` };
+        }
+        return { clue: `How many minutes are there from $${pad(startH)}{:}${pad(startM)}$ to $${pad(endH)}{:}${pad(endM)}$?`,
+            answer: String(addMin), answerDisplay: `$${addMin}\\text{ min}$`,
+            worked: `$${addMin}\\text{ minutes}$` };
+    }
+
+    // zones
+    const offset = ri(rng, 1, 3), baseH = ri(rng, 6, 18), ahead = rng() < 0.5;
+    const otherH = (baseH + (ahead ? offset : -offset) + 24) % 24;
+    return { clue: `Sydney is $${offset}$ hours ahead of Perth. When it is $${pad(baseH)}{:}00$ in ${ahead ? 'Perth' : 'Sydney'}, what time is it in ${ahead ? 'Sydney' : 'Perth'}?`,
+        answer: `${pad(otherH)}:00`, answerDisplay: `$${pad(otherH)}{:}00$`,
+        worked: `$${pad(baseH)}{:}00 ${ahead ? '+' : '-'} ${offset}\\text{ h} = ${pad(otherH)}{:}00$` };
+}
+
+// ---- Data classification & visualisation (starter) ----
+function genDataViz(rng, diff, allowedOps) {
+    const OPS = ['frequency-total', 'tally', 'graph-choice', 'data-type'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+
+    if (op === 'frequency-total') {
+        const n = diff === 'Easy' ? 4 : diff === 'Medium' ? 5 : 6;
+        const freqs = Array.from({ length: n }, () => ri(rng, 1, 12));
+        const total = freqs.reduce((a, b) => a + b, 0);
+        return { clue: `A frequency table records frequencies of $${freqs.join(', ')}$. How many data values are there in total?`,
+            answer: String(total), answerDisplay: `$${total}$`,
+            worked: `$${freqs.join(' + ')} = ${total}$` };
+    }
+
+    if (op === 'tally') {
+        const f = ri(rng, 3, 18), groups = Math.floor(f / 5), rem = f % 5;
+        return { clue: `In a tally chart, one category has **${groups} complete group(s) of five and ${rem} extra mark(s)**. What is its frequency?`,
+            answer: String(f), answerDisplay: `$${f}$`,
+            worked: `$5 \\times ${groups} + ${rem} = ${f}$` };
+    }
+
+    if (op === 'graph-choice') {
+        const c = rc(rng, [
+            ['the favourite colours of a class', 'column graph'],
+            ['the proportion of a budget spent in each category', 'sector (pie) graph'],
+            ['how temperature changes over a day', 'line graph'],
+            ['the spread of a set of test scores', 'dot plot'],
+        ]);
+        return { clue: `Which graph best displays *${c[0]}*?`,
+            answer: c[1], answerDisplay: c[1], worked: `A ${c[1]} is the most appropriate display here.` };
+    }
+
+    // data-type
+    const item = rc(rng, [
+        ['the number of siblings a student has', 'numerical'],
+        ['a person’s eye colour', 'categorical'],
+        ['the brand of a car', 'categorical'],
+        ['the height of a plant in cm', 'numerical'],
+        ['a student’s favourite sport', 'categorical'],
+    ]);
+    return { clue: `Classify the data *${item[0]}* as categorical or numerical.`,
+        answer: item[1], answerDisplay: item[1], worked: `This data is ${item[1]}.` };
+}
+
+// ---- Pythagoras' Theorem: find the hypotenuse or a shorter side ----
+function genPythagoras(rng, diff, allowedOps) {
+    if (allowedOps && !allowedOps.includes('pythagoras')) return null;
+    const TRIPLES = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17],
+                     [9, 12, 15], [7, 24, 25], [20, 21, 29], [12, 16, 20]];
+    if (diff === 'Hard') {
+        // non-triple: irrational hypotenuse, rounded to 1 dp
+        const a = ri(rng, 4, 12), b = ri(rng, 4, 14);
+        const hr = Math.round(Math.sqrt(a * a + b * b) * 10) / 10;
+        return { clue: `A right-angled triangle has the two shorter sides $${a}\\text{ cm}$ and $${b}\\text{ cm}$. Find the hypotenuse, correct to 1 decimal place.`,
+            answer: String(hr), answerDisplay: `$${hr}\\text{ cm}$`,
+            worked: `$c = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} \\approx ${hr}\\text{ cm}$` };
+    }
+    const [ta, tb, tc] = rc(rng, TRIPLES);
+    const k = diff === 'Medium' ? ri(rng, 1, 3) : 1;
+    const a = ta * k, b = tb * k, c = tc * k;
+    if (diff === 'Easy' || rng() < 0.5) {
+        return { clue: `Find the hypotenuse of a right-angled triangle with the two shorter sides $${a}\\text{ cm}$ and $${b}\\text{ cm}$.`,
+            answer: String(c), answerDisplay: `$${c}\\text{ cm}$`,
+            worked: `$c = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} = ${c}\\text{ cm}$` };
+    }
+    return { clue: `A right-angled triangle has hypotenuse $${c}\\text{ cm}$ and one shorter side $${a}\\text{ cm}$. Find the length of the other side.`,
+        answer: String(b), answerDisplay: `$${b}\\text{ cm}$`,
+        worked: `$b = \\sqrt{${c}^2 - ${a}^2} = \\sqrt{${c * c - a * a}} = ${b}\\text{ cm}$` };
+}
+
+// ---- Properties of Geometrical Figures: angle relationships (S4)
+//      + congruence / similarity / quadrilateral properties (S5) ----
+function genProperties(rng, diff, allowedOps, opts = {}) {
+    const GEO = ['angles'];
+    const PROP = ['congruent-tests', 'similar-ratio', 'quad-properties'];
+    const a = allowedOps || [...GEO, ...PROP];
+    const useGeo = GEO.filter(k => a.includes(k));
+    const useProp = PROP.filter(k => a.includes(k));
+    if (useProp.length && (!useGeo.length || rng() < 0.5)) {
+        return genPropsOfFigures(rng, diff, useProp, opts);
+    }
+    if (useGeo.length) return genGeometry(rng, diff, useGeo, opts);
+    return null;
+}
+
+// ============================================================
 // DISPATCH table
 // ============================================================
 const GENERATORS = {
@@ -5806,8 +6090,17 @@ const GENERATORS = {
     'Algebraic Indices':                genAlgebraicIndices,
     'Equations':                        genEquations,
     'Linear Relationships':             genLinear,
-    'Properties of Geometrical Figures': genPropsOfFigures,
+    'Properties of Geometrical Figures': genProperties,
     'Variation & Rates of Change':      genVariation,
+    // Measurement & Space focus areas (NESA structure). Area / Pythagoras
+    // reuse the geometry engine; Length / Volume / Time are standalone.
+    'Length':                           genLength,
+    'Area':                             genGeometry,
+    'Volume':                           genVolume,
+    'Time':                             genTime,
+    "Pythagoras' Theorem":              genPythagoras,
+    // Statistics & Probability focus areas
+    'Data Classification and Visualisation': genDataViz,
 };
 
 // Map generator sub-topic → clue bank topic field
@@ -5831,6 +6124,12 @@ const TOPIC_MAP = {
     'Linear Relationships':             'Algebra',
     'Properties of Geometrical Figures': 'Geometry',
     'Variation & Rates of Change':      'Algebra',
+    'Length':                           'Geometry',
+    'Area':                             'Geometry',
+    'Volume':                           'Geometry',
+    'Time':                             'Geometry',
+    "Pythagoras' Theorem":              'Geometry',
+    'Data Classification and Visualisation': 'Statistics',
 };
 
 const ALL_SUBTOPICS = Object.keys(GENERATORS);

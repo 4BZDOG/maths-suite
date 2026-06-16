@@ -36,27 +36,35 @@ import {
 // =============================================================
 const WATERMARK_MAX_BYTES = 2e6;
 
+// Labels follow the NESA Mathematics K–10 (2022) focus-area names.
 const TOPIC_META = {
+    // ── Number and Algebra ──
     'Integers':                 { label: 'Computation with Integers',  icon: 'fas fa-hashtag' },
     'Decimals':                 { label: 'Decimals',                    icon: 'fas fa-superscript' },
     'Rounding':                 { label: 'Rounding',                    icon: 'fas fa-compress-arrows-alt' },
     'Fractions':                { label: 'Fractions',                   icon: 'fas fa-divide' },
     'Percentages':              { label: 'Percentages',                  icon: 'fas fa-percent' },
-    'Ratios & Rates':           { label: 'Ratios & Rates',               icon: 'fas fa-balance-scale' },
-    'Algebra':                  { label: 'Algebraic Techniques',         icon: 'fas fa-x' },
-    'Geometry':                 { label: 'Measurement & Geometry',       icon: 'fas fa-draw-polygon' },
-    'Statistics':               { label: 'Data Analysis',               icon: 'fas fa-chart-bar' },
-    'Probability':              { label: 'Probability',                  icon: 'fas fa-dice' },
     'Financial Maths':          { label: 'Financial Mathematics',        icon: 'fas fa-dollar-sign' },
-    'Trigonometry':             { label: 'Trigonometry',                 icon: 'fas fa-drafting-compass' },
-    'Non-linear Relationships': { label: 'Non-linear Relationships',     icon: 'fas fa-chart-line' },
-    // 2022-syllabus focus areas added in the alignment pass
-    'Indices':                          { label: 'Indices',                          icon: 'fas fa-superscript' },
-    'Algebraic Indices':                { label: 'Algebraic Indices',                icon: 'fas fa-square-root-variable' },
-    'Equations':                        { label: 'Equations',                        icon: 'fas fa-equals' },
-    'Linear Relationships':             { label: 'Linear Relationships',             icon: 'fas fa-chart-line' },
+    'Ratios & Rates':           { label: 'Ratios and Rates',             icon: 'fas fa-balance-scale' },
+    'Algebra':                  { label: 'Algebraic Expressions',        icon: 'fas fa-x' },
+    'Indices':                  { label: 'Indices',                      icon: 'fas fa-superscript' },
+    'Algebraic Indices':        { label: 'Algebraic Indices',            icon: 'fas fa-square-root-variable' },
+    'Equations':                { label: 'Equations',                    icon: 'fas fa-equals' },
+    'Linear Relationships':     { label: 'Linear Relationships',         icon: 'fas fa-chart-line' },
+    'Non-linear Relationships': { label: 'Non-Linear Relationships',     icon: 'fas fa-bezier-curve' },
+    'Variation & Rates of Change': { label: 'Variation and Rates of Change', icon: 'fas fa-arrow-trend-up' },
+    // ── Measurement and Space ──
+    'Length':                   { label: 'Length',                       icon: 'fas fa-ruler-horizontal' },
+    'Area':                     { label: 'Area and Surface Area',        icon: 'fas fa-vector-square' },
+    'Volume':                   { label: 'Volume',                       icon: 'fas fa-cube' },
+    'Time':                     { label: 'Time',                         icon: 'fas fa-clock' },
     'Properties of Geometrical Figures': { label: 'Properties of Geometrical Figures', icon: 'fas fa-shapes' },
-    'Variation & Rates of Change':      { label: 'Variation & Rates of Change',      icon: 'fas fa-arrow-trend-up' },
+    "Pythagoras' Theorem":      { label: "Pythagoras' Theorem",          icon: 'fas fa-draw-polygon' },
+    'Trigonometry':             { label: 'Right-Angled Triangles (Trigonometry)', icon: 'fas fa-drafting-compass' },
+    // ── Statistics and Probability ──
+    'Data Classification and Visualisation': { label: 'Data Classification and Visualisation', icon: 'fas fa-table-list' },
+    'Statistics':               { label: 'Data Analysis',                icon: 'fas fa-chart-bar' },
+    'Probability':              { label: 'Probability',                  icon: 'fas fa-dice' },
 };
 
 const debounceFn = (func, wait) => {
