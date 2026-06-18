@@ -5,7 +5,7 @@ import { state, syncSettingsFromDOM } from '../core/state.js';
 import { showToast } from '../ui/toast.js';
 import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
 import { loadJSPDF, loadFontForPDF, FONT_SELECT_MAP } from './pdfFonts.js';
-import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue, drawText, setLatexAsciiFallback, drawSup, measureSup } from './pdfHelpers.js';
+import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue, drawText, setLatexAsciiFallback, drawSup, measureSup, _winAnsiSafe } from './pdfHelpers.js';
 import { detectVerb, detectMidVerb, autoBoldVerb } from '../renderers/htmlUtils.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
@@ -237,7 +237,8 @@ function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
     doc.text(missText, labelX, cy + 1.5 * ps, { align: 'left' });
 
     // Formula hint below the missing label (parity with the on-screen SVG)
-    const hintText = missing === 'area' ? 'A = πr²' : 'C = 2πr';
+    // π has no glyph in the embedded font subset, so spell it out to ASCII.
+    const hintText = _winAnsiSafe(missing === 'area' ? 'A = π r²' : 'C = 2π r');
     doc.setFont(font, 'normal');
     doc.setFontSize(6.5 * ps);
     doc.setTextColor(150, 160, 175);
@@ -556,7 +557,8 @@ function _drawRightTriangleTrigPDF(doc, { opp, adj, hyp, angle, missing }, x0, y
     doc.setFontSize(7 * ps);
     doc.setFont(font, isMissing('angle') ? 'bold' : 'normal');
     doc.setTextColor(...(isMissing('angle') ? _MC : _LC));
-    doc.text(`${font === 'helvetica' ? 'theta' : 'θ'}=${lbl('angle', angle, '°')}`, Bx - arcR - 7 * ps, By - arcR * 0.5, { align: 'right' });
+    // θ has no glyph in the embedded font subset (or helvetica) — use "theta".
+    doc.text(`theta=${lbl('angle', angle, '°')}`, Bx - arcR - 7 * ps, By - arcR * 0.5, { align: 'right' });
 }
 
 // "Nice" tick step (1, 2, 5, ×10ⁿ) for ~`target` ticks across span.

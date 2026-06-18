@@ -76,6 +76,12 @@ test('latexToText: known commands map to the expected unicode', () => {
         ['$2 \\times 3$',              '2 × 3'],
         ['$6 \\div 2$',                '6 ÷ 2'],
         ['$\\frac{3}{4}$',             '3/4'],
+        // \frac / \dfrac whose numerator or denominator carries an exponent
+        // (nested braces) must still keep the division bar — a naive [^}]+
+        // capture fails to match and silently drops it ("d⁸d⁵").
+        ['$\\dfrac{d^{8}}{d^{5}}$',    'd⁸/d⁵'],
+        ['$\\frac{p^{9}}{p^{5}}$',     'p⁹/p⁵'],
+        ['$\\dfrac{15d^{6}}{3d^{2}}$', '15d⁶/3d²'],
         ['$\\sqrt{16}$',               '√(16)'],
         ['$\\pi r^2$',                 'π r²'],
         ['$x \\approx 3$',             'x ≈ 3'],
@@ -85,6 +91,38 @@ test('latexToText: known commands map to the expected unicode', () => {
         assert.equal(actual, expected,
             `latexToText(${JSON.stringify(input)}) → ${JSON.stringify(actual)} (expected ${JSON.stringify(expected)})`);
     }
+});
+
+test('latexToText: a \\frac/\\dfrac never collapses to juxtaposed terms (division bar survives)', () => {
+    // Regression: \dfrac{d^{8}}{d^{5}} printed "d⁸d⁵" — the bar vanished, so the
+    // question read as a product, not a quotient. Across every generated field,
+    // any clue/worked containing a fraction command must keep a "/" after
+    // conversion (the inline stand-in for the bar).
+    // Force Stage 5 + Path so the gated \dfrac forms (divide / negative index)
+    // are actually generated for the indices topics.
+    const gen5 = (topic, diff, seed) => generateMathsQuestions({
+        subTopic: topic, difficulty: diff, count: 8, seed,
+        stage: 'Stage 5', includePath: true,
+    });
+    const offenders = [];
+    for (const topic of ALL_TOPICS.concat(['Indices', 'Algebraic Indices'])) {
+        for (const diff of ['Easy', 'Medium', 'Hard']) {
+            for (let seed = 1; seed <= 60; seed++) {
+                let qs;
+                try { qs = gen5(topic, diff, seed); } catch { continue; }
+                for (const q of qs) {
+                    for (const field of ['clue', 'answerDisplay', 'worked']) {
+                        const v = q[field];
+                        if (!v || !/\\d?frac\{/.test(String(v))) continue;
+                        const out = latexToText(String(v));
+                        if (!out.includes('/')) offenders.push(`${topic}/${diff} ${field}: ${v} → ${out}`);
+                    }
+                }
+            }
+        }
+    }
+    assert.equal(offenders.length, 0,
+        `fraction bar dropped during conversion:\n  ${offenders.slice(0, 8).join('\n  ')}`);
 });
 
 test('latexToText: markdown emphasis markers are stripped (not leaked as raw asterisks)', () => {

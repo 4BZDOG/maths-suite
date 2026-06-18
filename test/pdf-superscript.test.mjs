@@ -12,6 +12,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { drawSup, measureSup, hasSuperscript, latexToText } from '../pdf/pdfHelpers.js';
+import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
 
 // Minimal jsPDF stand-in: records every text() call with the active font size.
 function mockDoc() {
@@ -71,6 +72,82 @@ test('measureSup matches the advance drawSup produces and counts the smaller exp
     // "2" at size 10 + "7" at size 7 → 0.5*10 + 0.5*7 = 8.5 (narrower than 10).
     assert.ok(measureSup(doc, text, 10) < doc.getTextWidth('27'),
         'superscript run is measured at the reduced size');
+});
+
+test('the "^(?)" missing-index fallback renders as a raised "?" — never a literal caret', () => {
+    // "Find the missing index" clues produce $3^{?}$, which has no Unicode
+    // superscript glyph and falls back to caret notation "3^(?)". It must still
+    // draw as a raised "?" rather than the literal "^(?)".
+    const text = latexToText('Find the missing index: $(3^{?})^{2} = 3^{4}$');
+    assert.ok(hasSuperscript(text), 'caret fallback is treated as a superscript');
+    const doc = mockDoc();
+    drawSup(doc, text, 0, 100, 10);
+    const drawn = doc.calls.map(c => c.t).join('');
+    assert.ok(!drawn.includes('^('), `literal caret leaked into the PDF: "${drawn}"`);
+    assert.ok(!/[()]/.test(doc.calls.find(c => c.t.includes('?'))?.t ?? '?'),
+        'the "?" is drawn bare, without its caret parentheses');
+    const q = doc.calls.find(c => c.t === '?');
+    assert.ok(q && q.y < 100 && q.size < 10, 'the "?" is raised and smaller');
+});
+
+// The fontsource "latin" subset is also missing every non-Latin-1 math symbol
+// (√ π θ ∠ ≈ ≤ ≥ ≠ ∞ → □) and the combining macron, so they vanished in the PDF
+// too — an answer of 2√(3) printed as "2(3)". drawSup must remap them to ASCII.
+const OUT_OF_SUBSET = /[√π≈≤≥≠∞θαβγ∠→□]/;
+
+test('drawSup remaps out-of-subset math symbols to ASCII (none reach the page)', () => {
+    const cases = [
+        ['$2\\sqrt{3}$',          '2sqrt(3)'],   // was rendering as "2(3)" — wrong answer!
+        ['$\\theta = 12.7$°',     'theta = 12.7°'],
+        ['$\\pi \\approx 3.14$',  'pi ~ 3.14'],
+        ['$\\angle A = 60$°',     'angle A = 60°'],
+        ['$14 - \\square = 5$',   '14 - [ ] = 5'],
+        ['7 $\\geq$ 5',           '7 >= 5'],
+    ];
+    for (const [input, expected] of cases) {
+        const doc = mockDoc();
+        const text = latexToText(input);
+        drawSup(doc, text, 0, 100, 10);
+        const drawn = doc.calls.map(c => c.t).join('');
+        assert.equal(drawn, expected, `${input} → ${JSON.stringify(drawn)} (expected ${JSON.stringify(expected)})`);
+        assert.ok(!OUT_OF_SUBSET.test(drawn), `out-of-subset glyph survived: ${drawn}`);
+    }
+});
+
+test('no generated field leaves an out-of-subset glyph on the page after drawSup', () => {
+    // The decisive guard: across every topic/difficulty/seed, whatever drawSup
+    // actually paints must contain only glyphs the embedded font can render
+    // (ASCII, Latin-1, or the raised ASCII it emits for superscripts).
+    const TOPICS = [
+        'Integers', 'Decimals', 'Rounding', 'Fractions', 'Percentages', 'Algebra',
+        'Geometry', 'Statistics', 'Financial Maths', 'Probability', 'Ratios & Rates',
+        'Trigonometry', 'Non-linear Relationships', 'Indices', 'Algebraic Indices',
+    ];
+    const offenders = new Set();
+    for (const topic of TOPICS) {
+        for (const diff of ['Easy', 'Medium', 'Hard']) {
+            for (let seed = 1; seed <= 25; seed++) {
+                let qs;
+                try {
+                    qs = generateMathsQuestions({
+                        subTopic: topic, difficulty: diff, count: 8, seed,
+                        stage: 'Stage 5', includePath: true,
+                    });
+                } catch { continue; }
+                for (const q of qs) {
+                    for (const field of ['clue', 'answerDisplay', 'worked', 'unit']) {
+                        if (!q[field]) continue;
+                        const doc = mockDoc();
+                        drawSup(doc, latexToText(String(q[field])), 0, 100, 10);
+                        const drawn = doc.calls.map(c => c.t).join('');
+                        if (OUT_OF_SUBSET.test(drawn)) offenders.add(`${topic}/${field}: ${drawn.slice(0, 60)}`);
+                    }
+                }
+            }
+        }
+    }
+    assert.equal(offenders.size, 0,
+        `glyphs that the PDF font subset cannot render reached the page:\n  ${[...offenders].slice(0, 8).join('\n  ')}`);
 });
 
 test('drawSup leaves plain (exponent-free) text untouched', () => {

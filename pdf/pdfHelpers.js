@@ -73,16 +73,17 @@ export function setLatexAsciiFallback(on) { _asciiFallback = !!on; }
 const _SUP_REV = { '⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9','ⁿ':'n','ˣ':'x','⁺':'+','⁻':'-' };
 const _WINANSI_MAP = {
     'π':'pi', '≈':'~', '≤':'<=', '≥':'>=', '≠':'!=', '√':'sqrt', '∞':'inf',
-    'θ':'theta', 'α':'alpha', 'β':'beta', 'γ':'gamma', '∠':'angle ',
+    'θ':'theta', 'α':'alpha', 'β':'beta', 'γ':'gamma', '∠':'angle',
     '−':'-',    // U+2212 minus sign → ASCII hyphen
     '→':'->',   // U+2192 rightwards arrow
+    '□':'[ ]',  // U+25A1 fill-in-the-box placeholder
     '̄':'',   // combining macron (overline, e.g. x̄) — drop, keep the base letter
 };
 export function _winAnsiSafe(s) {
     if (!s) return s;
     // Collapse runs of superscript characters into caret notation: x⁴→x^4, 2¹²→2^12
     s = s.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹ⁿˣ⁺⁻]+/g, run => '^' + [...run].map(c => _SUP_REV[c] || '').join(''));
-    return s.replace(/[π≈≤≥≠√∞θαβγ∠−→]/g, c => (c in _WINANSI_MAP ? _WINANSI_MAP[c] : c)).replace(/\u0304/g, '');
+    return s.replace(/[π≈≤≥≠√∞θαβγ∠−→□]/g, c => (c in _WINANSI_MAP ? _WINANSI_MAP[c] : c)).replace(/\u0304/g, '');
 }
 
 const _SUP_MAP = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','n':'ⁿ','x':'ˣ','+':'⁺','-':'⁻'};
@@ -102,20 +103,43 @@ function _toSuperscript(s) {
 // rather than trusting the superscript codepoints to exist in the font.
 const _SUP_DOWN = { '⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9','ⁿ':'n','ˣ':'x','⁺':'+','⁻':'-' };
 const _SUP_RE = /[⁰¹²³⁴⁵⁶⁷⁸⁹ⁿˣ⁺⁻]/;
+// _toSuperscript() can't map an exponent that has no Unicode superscript glyph
+// (the "find the missing index" placeholder, e.g. $3^{?}$) and falls back to
+// caret notation "^(?)". Treat that as a superscript run too so it renders as a
+// raised "?" instead of a literal "^(?)".
+const _CARET_RE = /\^\(/;
+// The same "latin" subset is also missing every non-Latin-1 math symbol
+// latexToText can emit — √ π θ ∠ ≈ ≤ ≥ ≠ ∞ → and the fill-in box □ — so they
+// vanish too (an answer of 2√(3) printed as "2(3)", marking students wrong).
+// drawSup() remaps those to the ASCII spellings in _WINANSI_MAP as it draws, so
+// every symbol prints as something correct instead of disappearing. (The
+// superscript glyphs are handled separately above — they stay raised, not ASCII.)
+const _SYMBOL_RE = /[π≈≤≥≠√∞θαβγ∠→□]/;
+const _needsRich = s => _SUP_RE.test(s || '') || _CARET_RE.test(s || '') || _SYMBOL_RE.test(s || '');
 
-/** True when the string contains any Unicode superscript glyph. */
-export function hasSuperscript(s) { return _SUP_RE.test(s || ''); }
+/** True when the string contains a superscript glyph or a "^(…)" caret run. */
+export function hasSuperscript(s) { return _SUP_RE.test(s || '') || _CARET_RE.test(s || ''); }
 
-// Split a string into consecutive { sup, text } runs, de-superscripting the
-// superscript glyphs back to their ASCII base characters.
+// Split a string into consecutive { sup, text } runs: Unicode superscript glyphs
+// are de-superscripted back to ASCII, "^(inner)" caret fallbacks contribute their
+// inner text as a superscript run, and out-of-subset symbols are remapped to
+// their ASCII spelling so they survive the font subset.
 function _superscriptRuns(s) {
     const runs = [];
     let buf = '', sup = false;
-    for (const ch of s) {
+    const push = (isSup, text) => {
+        if (isSup === sup) { buf += text; }
+        else { if (buf) runs.push({ sup, text: buf }); buf = text; sup = isSup; }
+    };
+    for (let i = 0; i < s.length; i++) {
+        const ch = s[i];
+        if (ch === '^' && s[i + 1] === '(') {
+            const close = s.indexOf(')', i + 2);
+            if (close !== -1) { push(true, s.slice(i + 2, close)); i = close; continue; }
+        }
         const isSup = _SUP_RE.test(ch);
-        const c = isSup ? (_SUP_DOWN[ch] || ch) : ch;
-        if (isSup === sup) { buf += c; }
-        else { if (buf) runs.push({ sup, text: buf }); buf = c; sup = isSup; }
+        if (isSup) { push(true, _SUP_DOWN[ch] || ch); }
+        else       { push(false, ch in _WINANSI_MAP ? _WINANSI_MAP[ch] : ch); }
     }
     if (buf) runs.push({ sup, text: buf });
     return runs;
@@ -133,7 +157,7 @@ const _SUP_RISE  = 0.352778 * 0.32;
  * doc's current font family/style must already be set.
  */
 export function measureSup(doc, text, fontSizePt) {
-    if (!hasSuperscript(text)) return doc.getTextWidth(text);
+    if (!_needsRich(text)) return doc.getTextWidth(text);
     let w = 0;
     for (const run of _superscriptRuns(text)) {
         if (run.sup) {
@@ -155,7 +179,7 @@ export function measureSup(doc, text, fontSizePt) {
  * @returns {number} the X position after the last glyph.
  */
 export function drawSup(doc, text, x, y, fontSizePt) {
-    if (!hasSuperscript(text)) { doc.text(text, x, y); return x + doc.getTextWidth(text); }
+    if (!_needsRich(text)) { doc.text(text, x, y); return x + doc.getTextWidth(text); }
     const rise = fontSizePt * _SUP_RISE;
     let cx = x;
     for (const run of _superscriptRuns(text)) {
@@ -209,8 +233,12 @@ function _parseLatex(s) {
         // Square root: \sqrt{x} → √(x)
         .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
         .replace(/\\sqrt\s+(\S+)/g,    '√$1')
-        // Fractions: \frac{a}{b} → a/b
-        .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1/$2')
+        // Fractions: \frac{a}{b} → a/b. The numerator/denominator may themselves
+        // contain a braced group (an exponent, e.g. \frac{d^{8}}{d^{5}}), so the
+        // capture must allow one level of nesting — a plain [^}]+ stops at the
+        // first inner "}" and the whole \frac then fails to match, silently
+        // dropping the bar and printing "d⁸d⁵" with no division sign.
+        .replace(/\\frac\s*\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g, '$1/$2')
         // Superscripts: convert to Unicode superscript characters
         .replace(/\^\{([^}]+)\}/g,  (_, inner) => _toSuperscript(inner))
         .replace(/\^(\w+)/g,        (_, exp)   => _toSuperscript(exp))
@@ -235,10 +263,10 @@ function _parseLatex(s) {
 // =============================================================
 
 /**
- * Returns true if the text contains a LaTeX \frac{}{} command.
+ * Returns true if the text contains a LaTeX \frac{}{} or \dfrac{}{} command.
  */
 export function hasFraction(str) {
-    return /\\frac\{/.test(str || '');
+    return /\\d?frac\{/.test(str || '');
 }
 
 /**
@@ -264,16 +292,20 @@ function _parseClueSegments(text) {
         if (m.index > lastIdx) {
             result.push({ type: 'plain', value: _restoreDollars(safeText.slice(lastIdx, m.index)) });
         }
-        // Inside $...$, split on \frac{n}{d}
+        // Inside $...$, split on \frac{n}{d} / \dfrac{n}{d}. The capture allows
+        // one level of nested braces so a numerator/denominator carrying an
+        // exponent (\dfrac{d^{8}}{d^{5}}) is matched whole instead of slipping
+        // through as plain text. num/den are run through _parseLatex so their
+        // exponents become superscripts before the stacked drawer renders them.
         const mathStr = _restoreDollars(m[1]);
-        const fracRe = /\\frac\{([^}]+)\}\{([^}]+)\}/g;
+        const fracRe = /\\d?frac\s*\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
         let ml = 0, fm;
         while ((fm = fracRe.exec(mathStr)) !== null) {
             if (fm.index > ml) {
                 const v = _parseLatex(mathStr.slice(ml, fm.index));
                 if (v.trim()) result.push({ type: 'math', value: v });
             }
-            result.push({ type: 'frac', num: fm[1], den: fm[2] });
+            result.push({ type: 'frac', num: _parseLatex(fm[1]), den: _parseLatex(fm[2]) });
             ml = fm.index + fm[0].length;
         }
         if (ml < mathStr.length) {
@@ -461,9 +493,10 @@ export function drawText(doc, text, x, y, { fontSizePt, bold = false, italic = f
         doc.setFont(pdfFont, style);
         doc.setFontSize(fontSizePt);
         doc.setTextColor(...color);
-        if (hasSuperscript(renderText)) {
+        if (_needsRich(renderText)) {
             // Resolve alignment to a left edge, then draw runs with raised
-            // superscripts (the font subset lacks the U+2070 glyphs).
+            // superscripts and ASCII-remapped symbols (the font subset lacks
+            // both the U+2070 glyphs and √ π θ ∠ ≈ …).
             const w = measureSup(doc, renderText, fontSizePt);
             const left = align === 'right' ? x - w : align === 'center' ? x - w / 2 : x;
             drawSup(doc, renderText, left, y, fontSizePt);
