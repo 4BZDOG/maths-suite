@@ -92,6 +92,86 @@ function _toSuperscript(s) {
     return result === s && !_SUP_MAP[s[0]] ? `^(${s})` : result;
 }
 
+// ─── True superscript rendering (font-subset-proof) ─────────────────────────
+// latexToText emits Unicode superscript glyphs (x⁶, 5⁰). The fontsource "latin"
+// TTF subset we embed (pdfFonts.js → latin-*.ttf) only covers ¹²³ (Latin-1
+// Supplement, U+00B9/B2/B3) — the U+2070 block (⁰⁴⁵⁶⁷⁸⁹ⁿ) is absent, so those
+// exponents silently vanish in the PDF (an answer key showed "125x" for 125x⁶,
+// "5" for 5⁰). To render every exponent reliably we draw the superscript run as
+// a smaller, raised glyph using ASCII digits (always present in the subset)
+// rather than trusting the superscript codepoints to exist in the font.
+const _SUP_DOWN = { '⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9','ⁿ':'n','ˣ':'x','⁺':'+','⁻':'-' };
+const _SUP_RE = /[⁰¹²³⁴⁵⁶⁷⁸⁹ⁿˣ⁺⁻]/;
+
+/** True when the string contains any Unicode superscript glyph. */
+export function hasSuperscript(s) { return _SUP_RE.test(s || ''); }
+
+// Split a string into consecutive { sup, text } runs, de-superscripting the
+// superscript glyphs back to their ASCII base characters.
+function _superscriptRuns(s) {
+    const runs = [];
+    let buf = '', sup = false;
+    for (const ch of s) {
+        const isSup = _SUP_RE.test(ch);
+        const c = isSup ? (_SUP_DOWN[ch] || ch) : ch;
+        if (isSup === sup) { buf += c; }
+        else { if (buf) runs.push({ sup, text: buf }); buf = c; sup = isSup; }
+    }
+    if (buf) runs.push({ sup, text: buf });
+    return runs;
+}
+
+// Superscript glyphs render at 70% size; the raised runs sit ~32% of the cap
+// height above the baseline (pt → mm via 0.352778).
+const _SUP_SCALE = 0.7;
+const _SUP_RISE  = 0.352778 * 0.32;
+
+/**
+ * Measure the rendered width (mm) of a string that drawSup() would draw — the
+ * superscript runs are measured at the reduced size so callers laying out or
+ * right-aligning text get the true advance. `fontSizePt` is the base size; the
+ * doc's current font family/style must already be set.
+ */
+export function measureSup(doc, text, fontSizePt) {
+    if (!hasSuperscript(text)) return doc.getTextWidth(text);
+    let w = 0;
+    for (const run of _superscriptRuns(text)) {
+        if (run.sup) {
+            doc.setFontSize(fontSizePt * _SUP_SCALE);
+            w += doc.getTextWidth(run.text);
+            doc.setFontSize(fontSizePt);
+        } else {
+            w += doc.getTextWidth(run.text);
+        }
+    }
+    return w;
+}
+
+/**
+ * Draw `text` at baseline (x, y), rendering superscript runs as smaller, raised
+ * glyphs so exponents survive even when the embedded font subset lacks the
+ * superscript codepoints. The caller must set font family, style, colour and
+ * base size first; the size is restored to `fontSizePt` on return.
+ * @returns {number} the X position after the last glyph.
+ */
+export function drawSup(doc, text, x, y, fontSizePt) {
+    if (!hasSuperscript(text)) { doc.text(text, x, y); return x + doc.getTextWidth(text); }
+    const rise = fontSizePt * _SUP_RISE;
+    let cx = x;
+    for (const run of _superscriptRuns(text)) {
+        if (run.sup) {
+            doc.setFontSize(fontSizePt * _SUP_SCALE);
+            doc.text(run.text, cx, y - rise);
+            cx += doc.getTextWidth(run.text);
+            doc.setFontSize(fontSizePt);
+        } else {
+            doc.text(run.text, cx, y);
+            cx += doc.getTextWidth(run.text);
+        }
+    }
+    return cx;
+}
+
 function _parseLatex(s) {
     return s
         // Normalise display-fraction to inline-fraction before other rules
@@ -226,8 +306,7 @@ function _drawEmphasisTokens(doc, value, x, y, fontSizePt, pdfFont, color) {
         doc.setFont(pdfFont, bold ? 'bold' : (useNativeItalic ? 'italic' : 'normal'));
         doc.setFontSize(fontSizePt);
         doc.setTextColor(...((italic && !useNativeItalic) ? [13, 148, 136] : color));
-        doc.text(t, curX, y);
-        curX += doc.getTextWidth(t);
+        curX = drawSup(doc, t, curX, y, fontSizePt);
     };
     while ((m = re.exec(value)) !== null) {
         if (m.index > lastIdx) draw(value.slice(lastIdx, m.index), false, false);
@@ -272,20 +351,19 @@ export function drawFractionClue(doc, text, x, y, {
             doc.setFontSize(fontSizePt);
             doc.setTextColor(...color);
             if (seg.value) {
-                doc.text(seg.value, curX, y);
-                curX += doc.getTextWidth(seg.value);
+                curX = drawSup(doc, seg.value, curX, y, fontSizePt);
             }
         } else {   // frac
             doc.setFont(pdfFont, 'normal');
             doc.setFontSize(fracPt);
             doc.setTextColor(...color);
 
-            const nW = doc.getTextWidth(seg.num);
-            const dW = doc.getTextWidth(seg.den);
+            const nW = measureSup(doc, seg.num, fracPt);
+            const dW = measureSup(doc, seg.den, fracPt);
             const fw = Math.max(nW, dW) + 1.5;
 
             // Numerator — baseline just above bar
-            doc.text(seg.num, curX + (fw - nW) / 2, barY - 0.8);
+            drawSup(doc, seg.num, curX + (fw - nW) / 2, barY - 0.8, fracPt);
 
             // Fraction bar
             doc.setDrawColor(...color);
@@ -293,7 +371,7 @@ export function drawFractionClue(doc, text, x, y, {
             doc.line(curX, barY, curX + fw, barY);
 
             // Denominator — baseline below bar
-            doc.text(seg.den, curX + (fw - dW) / 2, barY + fracH + 0.5);
+            drawSup(doc, seg.den, curX + (fw - dW) / 2, barY + fracH + 0.5, fracPt);
 
             curX += fw + 1.0;
         }
@@ -383,7 +461,15 @@ export function drawText(doc, text, x, y, { fontSizePt, bold = false, italic = f
         doc.setFont(pdfFont, style);
         doc.setFontSize(fontSizePt);
         doc.setTextColor(...color);
-        doc.text(renderText, x, y, { align });
+        if (hasSuperscript(renderText)) {
+            // Resolve alignment to a left edge, then draw runs with raised
+            // superscripts (the font subset lacks the U+2070 glyphs).
+            const w = measureSup(doc, renderText, fontSizePt);
+            const left = align === 'right' ? x - w : align === 'center' ? x - w / 2 : x;
+            drawSup(doc, renderText, left, y, fontSizePt);
+        } else {
+            doc.text(renderText, x, y, { align });
+        }
     }
 }
 
