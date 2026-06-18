@@ -104,9 +104,14 @@ export const SUB_OPS = {
     'Algebra': [
         { key: 'solve',        label: 'Solve equations' },
         { key: 'substitution', label: 'Substitution' },
+        { key: 'like-terms',     label: 'Add / subtract like terms' },
+        { key: 'expand-simplify', label: 'Expand and simplify' },
+        { key: 'factorise-hcf',  label: 'Factorise (HCF)' },
+        { key: 'word-expression', label: 'Expression from words' },
         // Stage 5 core
         { key: 'expand',          label: 'Expand expressions',     stages: ['Stage 5'] },
         { key: 'factorise',       label: 'Factorise expressions',  stages: ['Stage 5'] },
+        { key: 'factorise-bracket', label: 'Factorise (common bracket)', stages: ['Stage 5'] },
         { key: 'quadratic-solve', label: 'Solve quadratics',       stages: ['Stage 5'] },
         { key: 'indices-laws',    label: 'Index laws',             stages: ['Stage 5'] },
         // Stage 5 Path
@@ -163,6 +168,7 @@ export const SUB_OPS = {
     ],
     'Ratios & Rates': [
         { key: 'simplify',     label: 'Simplify a ratio' },
+        { key: 'unit-ratio',   label: 'Ratios with unit conversion' },
         { key: 'divide-ratio', label: 'Divide in a ratio' },
         { key: 'equivalent',   label: 'Equivalent ratios' },
         { key: 'unit-rate',    label: 'Unit rate' },
@@ -3148,6 +3154,252 @@ function _genAlgebraOp(rng, diff, op) {
     return null;
 }
 
+// ============================================================
+// NEW ALGEBRA SUB-OPS — like terms, expand & simplify, factorise
+// (HCF / common bracket), and writing expressions from words.
+// Every answer is built constructively from the chosen coefficients,
+// so it is correct by construction; the test suite re-checks each by
+// substituting numbers into both the clue and the answer.
+// ============================================================
+const _ALG_VARS = ['x', 'y', 'a', 'b', 'm', 'n', 'p', 'k', 't'];
+function _otherVar(rng, ...used) { let w; do { w = rc(rng, _ALG_VARS); } while (used.includes(w)); return w; }
+
+// Format an ordered term list as a signed LaTeX string. Each term is
+// { c: coefficient, v: variable string ('' for a constant, 'x', 'x^2', 'xy', …) }.
+// Zero-coefficient terms are dropped; ±1 coefficients collapse (1x → x, -1x → -x).
+function _polyLatex(terms) {
+    let out = '';
+    for (const { c, v } of terms) {
+        if (c === 0) continue;
+        const mag = Math.abs(c);
+        const body = v === '' ? `${mag}` : (mag === 1 ? v : `${mag}${v}`);
+        out += out === '' ? (c < 0 ? `-${body}` : body) : (c < 0 ? ` - ${body}` : ` + ${body}`);
+    }
+    return out === '' ? '0' : out;
+}
+
+// Sum an ordered term list by variable, drop zeros, and order canonically:
+// squared terms first, then other variables alphabetically, constant last.
+function _combineTerms(terms) {
+    const m = new Map();
+    for (const { c, v } of terms) m.set(v, (m.get(v) || 0) + c);
+    const rank = v => (v === '' ? 2 : /\^2/.test(v) ? 0 : 1);
+    return [...m.entries()].map(([v, c]) => ({ c, v }))
+        .filter(t => t.c !== 0)
+        .sort((a, b) => rank(a.v) - rank(b.v) || (a.v < b.v ? -1 : a.v > b.v ? 1 : 0));
+}
+
+// Build a {clue, answer, answerDisplay, worked} from a clue expression string
+// and the fully simplified answer term list.
+function _mkAlg(clueExpr, verb, answerTerms, worked) {
+    const combined = _combineTerms(answerTerms);
+    if (combined.length === 0) return null;          // everything cancelled — skip
+    const ans = _polyLatex(combined);
+    return {
+        clue: `${verb}:\n$${clueExpr}$`,
+        answer: ans.replace(/ /g, ''),
+        answerDisplay: `$${ans}$`,
+        ...(worked ? { worked } : {}),
+    };
+}
+
+// ---- 1. Adding & subtracting like terms --------------------
+function _genLikeTerms(rng, diff) {
+    const v = rc(rng, _ALG_VARS);
+    if (diff === 'Easy') {
+        // a·v ± b·v with a positive result
+        if (rng() < 0.5) {
+            const a = ri(rng, 2, 9), b = ri(rng, 2, 9);
+            return _mkAlg(_polyLatex([{ c: a, v }, { c: b, v }]), 'Simplify', [{ c: a, v }, { c: b, v }]);
+        }
+        const a = ri(rng, 6, 12), b = ri(rng, 1, a - 1);
+        return _mkAlg(_polyLatex([{ c: a, v }, { c: -b, v }]), 'Simplify', [{ c: a, v }, { c: -b, v }]);
+    }
+    if (diff === 'Medium') {
+        // two variables, four terms scrambled; later occurrences may be negative
+        const w = _otherVar(rng, v);
+        const a1 = ri(rng, 2, 8), b1 = ri(rng, 2, 8);
+        const a2 = ri(rng, 1, 5) * (rng() < 0.5 ? -1 : 1);
+        const b2 = ri(rng, 1, 5) * (rng() < 0.5 ? -1 : 1);
+        if (a1 + a2 === 0 || b1 + b2 === 0) return null;     // keep both variables present
+        const terms = [{ c: a1, v }, { c: b1, v: w }, { c: a2, v }, { c: b2, v: w }];
+        return _mkAlg(_polyLatex(terms), 'Simplify', terms);
+    }
+    // Hard: a quadratic-ish mix — v², v and a constant, scrambled
+    const sq1 = ri(rng, 1, 4), sq2 = ri(rng, 1, 3) * (rng() < 0.5 ? -1 : 1);
+    const l1 = ri(rng, 2, 6), l2 = ri(rng, 1, 5) * (rng() < 0.5 ? -1 : 1);
+    const c1 = ri(rng, 1, 8), c2 = ri(rng, 1, 6) * (rng() < 0.5 ? -1 : 1);
+    if (sq1 + sq2 === 0) return null;                         // keep the v² term
+    const sqv = `${v}^2`;
+    const terms = [{ c: sq1, v: sqv }, { c: l1, v }, { c: c1, v: '' },
+        { c: sq2, v: sqv }, { c: l2, v }, { c: c2, v: '' }];
+    return _mkAlg(_polyLatex(terms), 'Simplify', terms);
+}
+
+// ---- 2. Expand brackets and simplify -----------------------
+function _genExpandSimplify(rng, diff) {
+    if (diff === 'Easy') {
+        // a(x ± b)
+        const a = ri(rng, 2, 6), b = ri(rng, 1, 9), s = rng() < 0.5 ? 1 : -1;
+        const clue = `${a}(${_polyLatex([{ c: 1, v: 'x' }, { c: s * b, v: '' }])})`;
+        const terms = [{ c: a, v: 'x' }, { c: a * s * b, v: '' }];
+        return _mkAlg(clue, 'Expand', terms,
+            `$${a}(${_polyLatex([{ c: 1, v: 'x' }, { c: s * b, v: '' }])}) = ${_polyLatex(terms)}$`);
+    }
+    if (diff === 'Medium') {
+        const type = ri(rng, 0, 2);
+        if (type === 0) {
+            // a(bx ± c)
+            const a = ri(rng, 2, 5), b = ri(rng, 2, 5), c = ri(rng, 1, 7), s = rng() < 0.5 ? 1 : -1;
+            const clue = `${a}(${_polyLatex([{ c: b, v: 'x' }, { c: s * c, v: '' }])})`;
+            return _mkAlg(clue, 'Expand', [{ c: a * b, v: 'x' }, { c: a * s * c, v: '' }]);
+        }
+        if (type === 1) {
+            // x(x ± b)  → x² ± bx
+            const b = ri(rng, 1, 9), s = rng() < 0.5 ? 1 : -1;
+            const clue = `x(${_polyLatex([{ c: 1, v: 'x' }, { c: s * b, v: '' }])})`;
+            return _mkAlg(clue, 'Expand', [{ c: 1, v: 'x^2' }, { c: s * b, v: 'x' }]);
+        }
+        // a(x ± b) ± c  (expand then collect the constant)
+        const a = ri(rng, 2, 6), b = ri(rng, 1, 7), c = ri(rng, 1, 9);
+        const s1 = rng() < 0.5 ? 1 : -1, s2 = rng() < 0.5 ? 1 : -1;
+        const clue = `${a}(${_polyLatex([{ c: 1, v: 'x' }, { c: s1 * b, v: '' }])}) ${s2 > 0 ? '+' : '-'} ${c}`;
+        return _mkAlg(clue, 'Expand and simplify', [{ c: a, v: 'x' }, { c: a * s1 * b, v: '' }, { c: s2 * c, v: '' }]);
+    }
+    // Hard: a(x ± b) ± c(x ± d) → collect like terms
+    const a = ri(rng, 2, 5), b = ri(rng, 1, 8), c = ri(rng, 2, 5), d = ri(rng, 1, 8);
+    const s1 = rng() < 0.5 ? 1 : -1, s2 = rng() < 0.5 ? 1 : -1, sBracket = rng() < 0.5 ? 1 : -1;
+    if (a + sBracket * c === 0) return null;                  // keep an x term in the answer
+    const left = `${a}(${_polyLatex([{ c: 1, v: 'x' }, { c: s1 * b, v: '' }])})`;
+    const right = `${c}(${_polyLatex([{ c: 1, v: 'x' }, { c: s2 * d, v: '' }])})`;
+    const clue = `${left} ${sBracket > 0 ? '+' : '-'} ${right}`;
+    const terms = [{ c: a, v: 'x' }, { c: a * s1 * b, v: '' },
+        { c: sBracket * c, v: 'x' }, { c: sBracket * c * s2 * d, v: '' }];
+    return _mkAlg(clue, 'Expand and simplify', terms);
+}
+
+// ---- 3. Factorise using the highest common factor ----------
+// Builds the question by multiplying a factor (number, or number×variable)
+// through a bracket whose terms are coprime, so the stated factor is exactly
+// the HCF and the answer is guaranteed correct.
+function _genFactoriseHCF(rng, diff) {
+    const coprime = (...xs) => xs.reduce((g, x) => gcd(g, Math.abs(x)), 0) === 1;
+    if (diff === 'Easy') {
+        // h(px ± q),  gcd(p, q) = 1
+        let p, q; do { p = ri(rng, 1, 6); q = ri(rng, 1, 9); } while (!coprime(p, q));
+        const h = ri(rng, 2, 6), s = rng() < 0.5 ? 1 : -1;
+        const clue = _polyLatex([{ c: h * p, v: 'x' }, { c: h * q * s, v: '' }]);
+        const bracket = _polyLatex([{ c: p, v: 'x' }, { c: q * s, v: '' }]);
+        return _mkFactorAns(clue, `${h}(${bracket})`,
+            `$${h} \\text{ is the HCF}: \\; ${h}(${bracket})$`);
+    }
+    if (diff === 'Medium') {
+        // common variable factor: h·x(px ± q)  →  from h·p·x² ± h·q·x
+        let p, q; do { p = ri(rng, 1, 5); q = ri(rng, 1, 8); } while (!coprime(p, q));
+        const h = ri(rng, 1, 5), s = rng() < 0.5 ? 1 : -1;
+        const clue = _polyLatex([{ c: h * p, v: 'x^2' }, { c: h * q * s, v: 'x' }]);
+        const fac = `${h === 1 ? '' : h}x`;
+        const bracket = _polyLatex([{ c: p, v: 'x' }, { c: q * s, v: '' }]);
+        return _mkFactorAns(clue, `${fac}(${bracket})`,
+            `$\\text{HCF} = ${fac}: \\; ${fac}(${bracket})$`);
+    }
+    // Hard: three coprime terms with a numeric HCF: h(px ± qy ± r)
+    let p, q, r; do { p = ri(rng, 1, 6); q = ri(rng, 1, 6); r = ri(rng, 1, 8); } while (!coprime(p, q, r));
+    const h = ri(rng, 2, 7), s1 = rng() < 0.5 ? 1 : -1, s2 = rng() < 0.5 ? 1 : -1;
+    const y = _otherVar(rng, 'x');
+    const clue = _polyLatex([{ c: h * p, v: 'x' }, { c: h * q * s1, v: y }, { c: h * r * s2, v: '' }]);
+    const bracket = _polyLatex([{ c: p, v: 'x' }, { c: q * s1, v: y }, { c: r * s2, v: '' }]);
+    return _mkFactorAns(clue, `${h}(${bracket})`,
+        `$\\text{HCF} = ${h}: \\; ${h}(${bracket})$`);
+}
+
+// ---- 4. Factorise a common bracket / by grouping -----------
+function _genFactoriseBracket(rng, diff) {
+    if (diff === 'Hard') {
+        // Grouping: (x + m)(y + n) = xy + n·x + m·y + m·n  (four terms)
+        const x = 'x', y = 'y';
+        const m = ri(rng, 1, 6) * (rng() < 0.5 ? -1 : 1);
+        const n = ri(rng, 1, 6) * (rng() < 0.5 ? -1 : 1);
+        const clue = _polyLatex([{ c: 1, v: 'xy' }, { c: n, v: x }, { c: m, v: y }, { c: m * n, v: '' }]);
+        const ans = `(${_polyLatex([{ c: 1, v: x }, { c: m, v: '' }])})(${_polyLatex([{ c: 1, v: y }, { c: n, v: '' }])})`;
+        return _mkFactorAns(clue, ans,
+            `$${x}(${_polyLatex([{ c: 1, v: y }, { c: n, v: '' }])}) ${m < 0 ? '-' : '+'} ${Math.abs(m)}(${_polyLatex([{ c: 1, v: y }, { c: n, v: '' }])}) = ${ans}$`);
+    }
+    // Easy / Medium: a visible common bracket  P(B) ± Q(B) = (B)(P ± Q)
+    const v2 = rc(rng, _ALG_VARS);
+    const v1 = _otherVar(rng, v2);
+    const nB = ri(rng, 2, 7) * (rng() < 0.5 ? -1 : 1);
+    const B = _polyLatex([{ c: 1, v: v2 }, { c: nB, v: '' }]);
+    // First multiplier is a variable; second is a constant (Easy) or another variable (Medium)
+    const P = { c: 1, v: v1 };
+    const Q = diff === 'Medium' && rng() < 0.5
+        ? { c: 1, v: _otherVar(rng, v1, v2) }
+        : { c: ri(rng, 2, 7) * (rng() < 0.5 ? -1 : 1), v: '' };
+    const piece = (t) => `${t.v === '' ? Math.abs(t.c) : (t.c < 0 ? '-' : '') + (Math.abs(t.c) === 1 ? t.v : `${Math.abs(t.c)}${t.v}`)}(${B})`;
+    const clue = `${piece(P)} ${Q.c < 0 ? '-' : '+'} ${piece({ c: Math.abs(Q.c), v: Q.v })}`;
+    const ans = `(${B})(${_polyLatex([P, Q])})`;
+    return _mkFactorAns(clue, ans, `$\\text{Common factor } (${B}): \\; ${ans}$`);
+}
+
+// Factorised answers are products of brackets, not a sum, so they use their own
+// builder (the polynomial combiner would try to "simplify" them).
+function _mkFactorAns(clueExpr, ansLatex, worked) {
+    return {
+        clue: `Factorise:\n$${clueExpr}$`,
+        answer: ansLatex.replace(/ /g, ''),
+        answerDisplay: `$${ansLatex}$`,
+        ...(worked ? { worked } : {}),
+    };
+}
+
+// ---- 6. Write an algebraic expression from words -----------
+function _genWordExpression(rng, diff) {
+    const v = rc(rng, _ALG_VARS);
+    if (diff === 'Easy') {
+        const n = ri(rng, 2, 12);
+        const forms = [
+            { c: `The sum of $${v}$ and $${n}$`,        a: _polyLatex([{ c: 1, v }, { c: n, v: '' }]) },
+            { c: `$${n}$ more than $${v}$`,             a: _polyLatex([{ c: 1, v }, { c: n, v: '' }]) },
+            { c: `$${v}$ increased by $${n}$`,          a: _polyLatex([{ c: 1, v }, { c: n, v: '' }]) },
+            { c: `$${n}$ less than $${v}$`,             a: _polyLatex([{ c: 1, v }, { c: -n, v: '' }]) },
+            { c: `$${v}$ decreased by $${n}$`,          a: _polyLatex([{ c: 1, v }, { c: -n, v: '' }]) },
+            { c: `The product of $${n}$ and $${v}$`,    a: _polyLatex([{ c: n, v }]) },
+            { c: `Twice the number $${v}$`,             a: _polyLatex([{ c: 2, v }]) },
+            { c: `Half of $${v}$`,                      a: `\\frac{${v}}{2}` },
+        ];
+        const f = rc(rng, forms);
+        return { clue: `Write an algebraic expression for:\n${f.c}.`, answer: _plainExpr(f.a), answerDisplay: `$${f.a}$` };
+    }
+    if (diff === 'Medium') {
+        const m = ri(rng, 2, 6), n = ri(rng, 2, 12);
+        const forms = [
+            { c: `$${n}$ more than $${m}$ times $${v}$`,                a: _polyLatex([{ c: m, v }, { c: n, v: '' }]) },
+            { c: `$${n}$ less than the product of $${m}$ and $${v}$`,   a: _polyLatex([{ c: m, v }, { c: -n, v: '' }]) },
+            { c: `$${m}$ times $${v}$, then subtract $${n}$`,          a: _polyLatex([{ c: m, v }, { c: -n, v: '' }]) },
+            { c: `The product of $${m}$ and $${v}$, increased by $${n}$`, a: _polyLatex([{ c: m, v }, { c: n, v: '' }]) },
+        ];
+        const f = rc(rng, forms);
+        return { clue: `Write an algebraic expression for:\n${f.c}.`, answer: f.a.replace(/ /g, ''), answerDisplay: `$${f.a}$` };
+    }
+    // Hard: bracketed / fractional expressions
+    const m = ri(rng, 2, 6), n = ri(rng, 2, 9);
+    const sumStr = _polyLatex([{ c: 1, v }, { c: n, v: '' }]);
+    const diffStr = _polyLatex([{ c: 1, v }, { c: -n, v: '' }]);
+    const forms = [
+        { c: `The product of $${m}$ and the sum of $${v}$ and $${n}$`,       a: `${m}(${sumStr})` },
+        { c: `$${m}$ times the difference of $${v}$ and $${n}$`,             a: `${m}(${diffStr})` },
+        { c: `The sum of $${v}$ and $${n}$, all divided by $${m}$`,          a: `\\frac{${sumStr}}{${m}}` },
+    ];
+    const f = rc(rng, forms);
+    return { clue: `Write an algebraic expression for:\n${f.c}.`, answer: _plainExpr(f.a), answerDisplay: `$${f.a}$` };
+}
+
+// Plain-text form of a display expression for the `answer` field — strips spaces
+// and turns \frac{p}{q} into (p)/q so no raw LaTeX command lands in `answer`.
+function _plainExpr(s) {
+    return s.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '($1)/$2').replace(/ /g, '');
+}
+
 // ---- Statistics Stage 5 operations -------------------------
 function _genStatisticsS5Op(rng, diff, op) {
     if (op === 'five-number-summary') {
@@ -4138,10 +4390,50 @@ function genProbability(rng, diff, allowedOps) {
 // RATIOS & RATES
 // ============================================================
 function genRatiosRates(rng, diff, allowedOps) {
-    const OPS = ['simplify', 'divide-ratio', 'equivalent', 'unit-rate', 'speed'];
+    const OPS = ['simplify', 'unit-ratio', 'divide-ratio', 'equivalent', 'unit-rate', 'speed'];
     const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
+
+    if (op === 'unit-ratio') {
+        // A ratio whose two quantities are in DIFFERENT units of the same kind:
+        // convert to the smaller unit, then simplify. Built backwards from a
+        // chosen coprime answer n:d so the simplified ratio is exact, with side A
+        // an exact whole number of the BIG unit (the part that needs converting).
+        // Each entry: [bigUnit, smallUnit, smallPerBig]
+        const FAMILIES = [
+            [['km', 'm', 1000], ['m', 'cm', 100], ['cm', 'mm', 10]],   // length
+            [['kg', 'g', 1000], ['t', 'kg', 1000]],                    // mass
+            [['L', 'mL', 1000]],                                       // volume
+            [['h', 'min', 60], ['min', 's', 60]],                      // time
+            [['$', 'c', 100]],                                         // money
+        ];
+        const [big, small, factor] = rc(rng, rc(rng, FAMILIES));
+        const fmt = (val, unit) => unit === '$' ? `\\$${val}` : `${val}\\text{ ${unit}}`;
+
+        // Target simplified ratio n : d (coprime, not equal).
+        const hi = diff === 'Easy' ? 5 : diff === 'Medium' ? 8 : 11;
+        let n, d; do { n = ri(rng, 1, hi); d = ri(rng, 1, hi); } while (gcd(n, d) !== 1 || n === d);
+        // Scale k so side A (n·k small units) is a whole number of big units.
+        const kBase = factor / gcd(n, factor);
+        const k = kBase * (diff === 'Hard' ? ri(rng, 1, 2) : 1);
+        const aSmall = n * k, bSmall = d * k, aBig = aSmall / factor;
+        if (aBig < 1 || bSmall < 1) return null;
+        // answerDisplay guard — keep the printed amounts sensible.
+        if (aBig > 2000 || bSmall > 5000) return null;
+
+        const ph = rc(rng, [
+            `Express $${fmt(aBig, big)} : ${fmt(bSmall, small)}$ in its **simplest form**.`,
+            `Write the ratio $${fmt(aBig, big)} : ${fmt(bSmall, small)}$ in **simplest form**.`,
+            `Simplify the ratio $${fmt(aBig, big)} : ${fmt(bSmall, small)}$ (convert to the same unit first).`,
+        ]);
+        return {
+            clue: ph,
+            answer: `${n} : ${d}`,
+            answerDisplay: `$${n} : ${d}$`,
+            worked: `$${fmt(aBig, big)} = ${aSmall}\\text{ ${small}}, \\; ${aSmall} : ${bSmall} = ${n} : ${d}$`,
+        };
+    }
 
     if (op === 'simplify') {
         if (diff === 'Hard') {
@@ -5791,13 +6083,34 @@ function genVariation(rng, diff, allowedOps) {
 // Each public function delegates S5-only ops to the Stage 5 helper,
 // falling back to the original Stage 4 core for S4 ops.
 function genAlgebra(rng, diff, allowedOps, opts = {}) {
+    // Dedicated sub-ops, each with its own generator.
+    const DEDICATED = {
+        'like-terms':        () => _genLikeTerms(rng, diff),
+        'expand-simplify':   () => _genExpandSimplify(rng, diff),
+        'factorise-hcf':     () => _genFactoriseHCF(rng, diff),
+        'factorise-bracket': () => _genFactoriseBracket(rng, diff),
+        'word-expression':   () => _genWordExpression(rng, diff),
+    };
+    // Existing Stage 5 quadratic/index/surd ops routed through _genAlgebraOp.
     const S5_KEYS = ['expand', 'factorise', 'quadratic-solve', 'indices-laws', 'simultaneous', 'surds-simplify', 'surds-operate'];
-    const s5Active = S5_KEYS.filter(k => allowedOps && allowedOps.includes(k));
-    const s4Active = ['solve', 'substitution'].filter(k => !allowedOps || allowedOps.includes(k));
-    if (s5Active.length > 0 && (!s4Active.length || rng() < 0.5)) {
-        return _genAlgebraOp(rng, diff, rc(rng, s5Active));
+
+    // allowedOps is always the explicit list of stage-permitted keys. Build a
+    // pool of generator thunks for everything the teacher has enabled, then pick
+    // one (retrying a few times if a generator declines a degenerate case).
+    const pool = [];
+    for (const k of allowedOps) {
+        if (DEDICATED[k]) pool.push(DEDICATED[k]);
+        else if (S5_KEYS.includes(k)) pool.push(() => _genAlgebraOp(rng, diff, k));
     }
-    return _genAlgebraCore(rng, diff, allowedOps, opts);
+    const coreKeys = allowedOps.filter(k => k === 'solve' || k === 'substitution');
+    if (coreKeys.length) pool.push(() => _genAlgebraCore(rng, diff, coreKeys));
+
+    if (pool.length === 0) return _genAlgebraCore(rng, diff, allowedOps);
+    for (let attempt = 0; attempt < 6; attempt++) {
+        const q = rc(rng, pool)();
+        if (q) return q;
+    }
+    return null;
 }
 
 function genStatistics(rng, diff, allowedOps, opts = {}, _depth = 0) {
