@@ -10,6 +10,42 @@ import { gen, DIFFS, approxEqual } from '../_helpers.mjs';
 
 function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 
+test('Ratios & Rates: unit-conversion ratio simplifies the same-unit amounts', () => {
+    // Convert both quantities to the smaller unit, then simplify, and confirm it
+    // equals the stated answer. Covers length, mass, volume, time and money.
+    // Each unit expressed in the smallest unit of its family (mm / g / mL / s / c).
+    const UNIT = {
+        mm: 1, cm: 10, m: 1000, km: 1000000,
+        g: 1, kg: 1000, t: 1000000,
+        mL: 1, L: 1000,
+        s: 1, min: 60, h: 3600,
+        c: 1, $: 100,
+    };
+    const toBase = (val, unit) => val * UNIT[unit];
+    let checked = 0;
+    for (const difficulty of DIFFS) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = gen({
+                topic: 'Ratios & Rates', difficulty, count: 8, seed,
+                subOpsFilter: { 'Ratios & Rates': ['unit-ratio'] },
+            });
+            for (const q of qs) {
+                // Parse "<a><unitA> : <b><unitB>" from the clue (money is "$<a>").
+                const m = q.clue.match(/\$(?:\\\$)?(\d+)(?:\\text\{ (\w+)\})? : (?:\\\$)?(\d+)(?:\\text\{ (\w+)\})?\$/);
+                if (!m) continue;
+                const ua = m[2] || '$', ub = m[4] || '$';
+                const A = toBase(Number(m[1]), ua), B = toBase(Number(m[3]), ub);
+                const g = gcd(A, B);
+                const expected = `${A / g} : ${B / g}`;
+                assert.equal(q.answer, expected,
+                    `${difficulty}/seed${seed}: "${q.clue}" → "${q.answer}" (expected ${expected})`);
+                checked++;
+            }
+        }
+    }
+    assert.ok(checked > 40, `only ${checked} unit-ratio questions verified`);
+});
+
 test('Ratios & Rates: scale-drawing answer = drawn-cm × (real-per-cm)', () => {
     let checked = 0;
     for (let seed = 1; seed <= 200; seed++) {
