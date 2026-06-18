@@ -114,10 +114,11 @@ export function drawFormulaSheet(ctx, activeTopics, pScale) {
     pScale = pScale || 1;
     const availW = PAGE_WIDTH - MARGIN * 2;
     const _availH = PAGE_HEIGHT - MARGIN * 2;
-    // On the standard-font fallback (custom font CDN unreachable), downgrade
-    // non-WinAnsi glyphs (π, θ, ², ⁿ, sin⁻¹, ≤, −, →) to ASCII so the formula
-    // sheet stays readable instead of rendering mojibake.
-    const safe = s => pdfFont === 'helvetica' ? _winAnsiSafe(s) : s;
+    // The embedded "latin" font subset has no glyphs for the math symbols these
+    // formulas use (π, θ, √, ≤, sin⁻¹, →, …), so they silently vanish in the
+    // PDF — not just on the helvetica fallback. Downgrade them to ASCII spellings
+    // ("pi", "theta", "sin^-1") unconditionally so the sheet is always readable.
+    const safe = s => _winAnsiSafe(s);
 
     // Collect all formula cards for active topics first — bail out before
     // drawing anything if there's nothing to show.
