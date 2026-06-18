@@ -83,6 +83,11 @@ test('latexToText: known commands map to the expected unicode', () => {
         ['$\\frac{p^{9}}{p^{5}}$',     'p⁹/p⁵'],
         ['$\\dfrac{15d^{6}}{3d^{2}}$', '15d⁶/3d²'],
         ['$\\sqrt{16}$',               '√(16)'],
+        // Indexed roots — cube root must not leak its "[3]" index (regression:
+        // "\sqrt[3]{216}" printed as "[3]216" when the index rule was missing).
+        ['$\\sqrt[3]{216}$',           '³√(216)'],
+        ['Find $\\sqrt[3]{27}$',       'Find ³√(27)'],
+        ['$\\sqrt[4]{81}$',            '⁴√(81)'],
         ['$\\pi r^2$',                 'π r²'],
         ['$x \\approx 3$',             'x ≈ 3'],
     ];
