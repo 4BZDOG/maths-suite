@@ -5,7 +5,7 @@ import { state, syncSettingsFromDOM } from '../core/state.js';
 import { showToast } from '../ui/toast.js';
 import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
 import { loadJSPDF, loadFontForPDF, FONT_SELECT_MAP } from './pdfFonts.js';
-import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue, drawText, setLatexAsciiFallback } from './pdfHelpers.js';
+import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue, drawText, setLatexAsciiFallback, drawSup, measureSup } from './pdfHelpers.js';
 import { detectVerb, detectMidVerb, autoBoldVerb } from '../renderers/htmlUtils.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
@@ -882,7 +882,7 @@ function _drawKeyClueRich(doc, prefix, clue, x, y, {
 
         const tokens = seg.t.match(/\S+|\s+/g) || [];
         for (const token of tokens) {
-            const tw = doc.getTextWidth(token);
+            const tw = measureSup(doc, token, fontSizePt);
             if (token.trim() === '') { curX += tw; continue; }
             if (curX + tw > x + maxW + 0.5 && curX > x) {
                 if (!advanceLine()) {
@@ -895,8 +895,7 @@ function _drawKeyClueRich(doc, prefix, clue, x, y, {
                 doc.setFont(pdfFont, style);
                 doc.setTextColor(...drawColor);
             }
-            doc.text(token, curX, curY);
-            curX += tw;
+            curX = drawSup(doc, token, curX, curY, fontSizePt);
         }
     }
     return line + 1;
@@ -1010,34 +1009,32 @@ function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, line
         let buf = '';
         for (const ch of token) {
             const next = buf + ch;
-            if (curX + doc.getTextWidth(next) > x + maxW + 0.5 && buf) {
-                doc.text(buf, curX, curY);
+            if (curX + measureSup(doc, next, fontSizePt) > x + maxW + 0.5 && buf) {
+                drawSup(doc, buf, curX, curY, fontSizePt);
                 curY += lineH; curX = x; applyStyle(seg);
                 buf = ch;
             } else { buf = next; }
         }
-        if (buf) { doc.text(buf, curX, curY); curX += doc.getTextWidth(buf); }
+        if (buf) { curX = drawSup(doc, buf, curX, curY, fontSizePt); }
     };
     // Atomic run: keep the whole math expression on one line — wrap it as a unit
     // to the next line if it doesn't fit, and only char-break if it alone is
     // wider than the column. This stops expressions splitting between operators.
     const drawUnit = (text, seg) => {
-        const w = doc.getTextWidth(text);
+        const w = measureSup(doc, text, fontSizePt);
         if (w > maxW + 0.5) { charBreak(text, seg); return; }
         if (curX + w > x + maxW + 0.5 && curX > x) { curY += lineH; curX = x; applyStyle(seg); }
-        doc.text(text, curX, curY);
-        curX += w;
+        curX = drawSup(doc, text, curX, curY, fontSizePt);
     };
     // Prose run: wrap on word boundaries.
     const drawWrapped = (text, seg) => {
         const tokens = text.match(/\S+|\s+/g) || [];
         for (const token of tokens) {
-            const tw = doc.getTextWidth(token);
+            const tw = measureSup(doc, token, fontSizePt);
             if (token.trim() === '') { curX += tw; continue; }
             if (curX + tw > x + maxW + 0.5 && curX > x) { curY += lineH; curX = x; applyStyle(seg); }
             if (tw > maxW + 0.5) { charBreak(token, seg); continue; }
-            doc.text(token, curX, curY);
-            curX += tw;
+            curX = drawSup(doc, token, curX, curY, fontSizePt);
         }
     };
 
@@ -1313,7 +1310,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
         // the generator; printing it as a hint after the answer line tells
         // students whether to write cm² / m / ° / etc.
         const unitText  = item.unit ? ` ${latexToText(item.unit)}` : '';
-        const unitW     = unitText ? doc.getTextWidth(unitText) + 1 : 0;
+        const unitW     = unitText ? measureSup(doc, unitText, 8 * pScale) + 1 : 0;
         // Right edge of the line is the column edge; label sits to the
         // left of a fixed-length track so teachers can scan answers in a
         // consistent vertical "rail" down the page.
@@ -1330,7 +1327,7 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
             doc.setFont(pdfFont, 'bold');
             doc.setFontSize(8 * pScale);
             doc.setTextColor(100, 116, 139);
-            doc.text(unitText.trim(), rightEdge + 1.5, lineY);
+            drawSup(doc, unitText.trim(), rightEdge + 1.5, lineY, 8 * pScale);
         }
         nextY = lineY + SECTION_PAD;
 
@@ -1594,7 +1591,10 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId, startNums = {}) {
             doc.setFont(pdfFont, 'bold');
             doc.setFontSize(8 * pScale);
             doc.setTextColor(...sec.rgb);
-            doc.text(ansText, cx + colW, ky, { align: 'right' });
+            // Right-align manually so superscript exponents (drawn smaller/raised
+            // to survive the font subset) still sit flush to the marking rail.
+            const ansW = measureSup(doc, ansText, 8 * pScale);
+            drawSup(doc, ansText, cx + colW - ansW, ky, 8 * pScale);
 
             let blockH = Math.max(shown.length * lineH, 5 * pScale);
 
@@ -1608,7 +1608,7 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId, startNums = {}) {
                 doc.setFontSize(6.5 * pScale);
                 doc.setTextColor(71, 85, 105);          // slate-600 — legible
                 const workedLines = doc.splitTextToSize(workedText, colW - 4).slice(0, 2);
-                workedLines.forEach((line, li) => doc.text(line, cx + 2, ky + blockH + li * 3.3 * pScale));
+                workedLines.forEach((line, li) => drawSup(doc, line, cx + 2, ky + blockH + li * 3.3 * pScale, 6.5 * pScale));
                 blockH += workedLines.length * 3.3 * pScale + 1;
             }
 
