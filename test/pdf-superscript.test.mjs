@@ -73,6 +73,22 @@ test('measureSup matches the advance drawSup produces and counts the smaller exp
         'superscript run is measured at the reduced size');
 });
 
+test('the "^(?)" missing-index fallback renders as a raised "?" — never a literal caret', () => {
+    // "Find the missing index" clues produce $3^{?}$, which has no Unicode
+    // superscript glyph and falls back to caret notation "3^(?)". It must still
+    // draw as a raised "?" rather than the literal "^(?)".
+    const text = latexToText('Find the missing index: $(3^{?})^{2} = 3^{4}$');
+    assert.ok(hasSuperscript(text), 'caret fallback is treated as a superscript');
+    const doc = mockDoc();
+    drawSup(doc, text, 0, 100, 10);
+    const drawn = doc.calls.map(c => c.t).join('');
+    assert.ok(!drawn.includes('^('), `literal caret leaked into the PDF: "${drawn}"`);
+    assert.ok(!/[()]/.test(doc.calls.find(c => c.t.includes('?'))?.t ?? '?'),
+        'the "?" is drawn bare, without its caret parentheses');
+    const q = doc.calls.find(c => c.t === '?');
+    assert.ok(q && q.y < 100 && q.size < 10, 'the "?" is raised and smaller');
+});
+
 test('drawSup leaves plain (exponent-free) text untouched', () => {
     const doc = mockDoc();
     const endX = drawSup(doc, '125x', 0, 100, 10);

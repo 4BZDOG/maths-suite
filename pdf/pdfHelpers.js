@@ -102,20 +102,33 @@ function _toSuperscript(s) {
 // rather than trusting the superscript codepoints to exist in the font.
 const _SUP_DOWN = { '⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9','ⁿ':'n','ˣ':'x','⁺':'+','⁻':'-' };
 const _SUP_RE = /[⁰¹²³⁴⁵⁶⁷⁸⁹ⁿˣ⁺⁻]/;
+// _toSuperscript() can't map an exponent that has no Unicode superscript glyph
+// (the "find the missing index" placeholder, e.g. $3^{?}$) and falls back to
+// caret notation "^(?)". Treat that as a superscript run too so it renders as a
+// raised "?" instead of a literal "^(?)".
+const _CARET_RE = /\^\(/;
 
-/** True when the string contains any Unicode superscript glyph. */
-export function hasSuperscript(s) { return _SUP_RE.test(s || ''); }
+/** True when the string contains a superscript glyph or a "^(…)" caret run. */
+export function hasSuperscript(s) { return _SUP_RE.test(s || '') || _CARET_RE.test(s || ''); }
 
-// Split a string into consecutive { sup, text } runs, de-superscripting the
-// superscript glyphs back to their ASCII base characters.
+// Split a string into consecutive { sup, text } runs: Unicode superscript glyphs
+// are de-superscripted back to ASCII, and "^(inner)" caret fallbacks contribute
+// their inner text as a superscript run.
 function _superscriptRuns(s) {
     const runs = [];
     let buf = '', sup = false;
-    for (const ch of s) {
+    const push = (isSup, text) => {
+        if (isSup === sup) { buf += text; }
+        else { if (buf) runs.push({ sup, text: buf }); buf = text; sup = isSup; }
+    };
+    for (let i = 0; i < s.length; i++) {
+        const ch = s[i];
+        if (ch === '^' && s[i + 1] === '(') {
+            const close = s.indexOf(')', i + 2);
+            if (close !== -1) { push(true, s.slice(i + 2, close)); i = close; continue; }
+        }
         const isSup = _SUP_RE.test(ch);
-        const c = isSup ? (_SUP_DOWN[ch] || ch) : ch;
-        if (isSup === sup) { buf += c; }
-        else { if (buf) runs.push({ sup, text: buf }); buf = c; sup = isSup; }
+        push(isSup, isSup ? (_SUP_DOWN[ch] || ch) : ch);
     }
     if (buf) runs.push({ sup, text: buf });
     return runs;
@@ -209,8 +222,12 @@ function _parseLatex(s) {
         // Square root: \sqrt{x} → √(x)
         .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
         .replace(/\\sqrt\s+(\S+)/g,    '√$1')
-        // Fractions: \frac{a}{b} → a/b
-        .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '$1/$2')
+        // Fractions: \frac{a}{b} → a/b. The numerator/denominator may themselves
+        // contain a braced group (an exponent, e.g. \frac{d^{8}}{d^{5}}), so the
+        // capture must allow one level of nesting — a plain [^}]+ stops at the
+        // first inner "}" and the whole \frac then fails to match, silently
+        // dropping the bar and printing "d⁸d⁵" with no division sign.
+        .replace(/\\frac\s*\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g, '$1/$2')
         // Superscripts: convert to Unicode superscript characters
         .replace(/\^\{([^}]+)\}/g,  (_, inner) => _toSuperscript(inner))
         .replace(/\^(\w+)/g,        (_, exp)   => _toSuperscript(exp))
@@ -235,10 +252,10 @@ function _parseLatex(s) {
 // =============================================================
 
 /**
- * Returns true if the text contains a LaTeX \frac{}{} command.
+ * Returns true if the text contains a LaTeX \frac{}{} or \dfrac{}{} command.
  */
 export function hasFraction(str) {
-    return /\\frac\{/.test(str || '');
+    return /\\d?frac\{/.test(str || '');
 }
 
 /**
@@ -264,16 +281,20 @@ function _parseClueSegments(text) {
         if (m.index > lastIdx) {
             result.push({ type: 'plain', value: _restoreDollars(safeText.slice(lastIdx, m.index)) });
         }
-        // Inside $...$, split on \frac{n}{d}
+        // Inside $...$, split on \frac{n}{d} / \dfrac{n}{d}. The capture allows
+        // one level of nested braces so a numerator/denominator carrying an
+        // exponent (\dfrac{d^{8}}{d^{5}}) is matched whole instead of slipping
+        // through as plain text. num/den are run through _parseLatex so their
+        // exponents become superscripts before the stacked drawer renders them.
         const mathStr = _restoreDollars(m[1]);
-        const fracRe = /\\frac\{([^}]+)\}\{([^}]+)\}/g;
+        const fracRe = /\\d?frac\s*\{((?:[^{}]|\{[^{}]*\})*)\}\s*\{((?:[^{}]|\{[^{}]*\})*)\}/g;
         let ml = 0, fm;
         while ((fm = fracRe.exec(mathStr)) !== null) {
             if (fm.index > ml) {
                 const v = _parseLatex(mathStr.slice(ml, fm.index));
                 if (v.trim()) result.push({ type: 'math', value: v });
             }
-            result.push({ type: 'frac', num: fm[1], den: fm[2] });
+            result.push({ type: 'frac', num: _parseLatex(fm[1]), den: _parseLatex(fm[2]) });
             ml = fm.index + fm[0].length;
         }
         if (ml < mathStr.length) {
