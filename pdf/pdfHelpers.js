@@ -230,6 +230,11 @@ function _parseLatex(s) {
         .replace(/\\overline\{([^}]+)\}/g, (_, x) => x + '̄')
         // \text{...} → ... (plain text inside math mode). Used in stats: "\text{sum}".
         .replace(/\\text\{([^}]+)\}/g, '$1')
+        // Indexed root: \sqrt[n]{x} → ⁿ√(x). Cube roots (\sqrt[3]{216}) MUST be
+        // handled before the plain \sqrt{x} rule below — otherwise the [n] index
+        // is left behind and the catch-all \command strip turns "\sqrt[3]{216}"
+        // into "[3]216".
+        .replace(/\\sqrt\s*\[([^\]]+)\]\s*\{([^}]+)\}/g, (_, idx, x) => _toSuperscript(idx) + '√(' + x + ')')
         // Square root: \sqrt{x} → √(x)
         .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
         .replace(/\\sqrt\s+(\S+)/g,    '√$1')
