@@ -54,11 +54,11 @@
             </div>
         </div>
         <div class="nav-tabs" role="tablist" aria-label="Sidebar panels">
-            <div class="nav-tab active" onclick="switchTab('content')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" data-tab="content" role="tab"
+            <div class="nav-tab active" onclick="switchTab('content')" data-tab="content" role="tab"
                 aria-selected="true" tabindex="0"><i class="fas fa-list"></i> Editor</div>
-            <div class="nav-tab" onclick="switchTab('design')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" data-tab="design" role="tab" aria-selected="false"
+            <div class="nav-tab" onclick="switchTab('design')" data-tab="design" role="tab" aria-selected="false"
                 tabindex="-1"><i class="fas fa-sliders-h"></i> Settings</div>
-            <div class="nav-tab" onclick="switchTab('export')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}" data-tab="export" role="tab" aria-selected="false"
+            <div class="nav-tab" onclick="switchTab('export')" data-tab="export" role="tab" aria-selected="false"
                 tabindex="-1"><i class="fas fa-download"></i> Export</div>
         </div>
         <div class="scroll-area">
@@ -124,6 +124,11 @@
                     <i class="fas fa-bolt"></i> Regenerate
                 </button>
 
+                <button class="btn-ai-generate feature-gated" id="ghost-ai-generate" type="button" disabled
+                    style="display:none;" title="AI question generation requires a Pro subscription.">
+                    <i class="fas fa-wand-magic-sparkles"></i> Generate with AI <span class="pro-badge">PRO</span>
+                </button>
+
                 <div class="seed-row">
                     <label for="seed-input">Seed:</label>
                     <input id="seed-input" type="number" placeholder="auto" title="Enter a seed to reproduce this question set exactly, or leave blank for a fresh seed each time"
@@ -185,6 +190,10 @@
                         </div>
                         <button onclick="clearWatermark()" class="btn-remove-watermark"
                             aria-label="Remove watermark image"><i class="fas fa-trash" style="margin-right:5px; font-size:11px;"></i>Remove Watermark</button>
+                        <div class="ghost-pro-row feature-gated" id="ghost-remove-watermark" style="display:none;"
+                            title="Removing the branding watermark requires a Pro subscription.">
+                            <i class="fas fa-stamp"></i><span>Remove branding watermark</span><span class="pro-badge">PRO</span>
+                        </div>
                     </div>
                 </details>
 
@@ -200,6 +209,10 @@
                             <option value="'Lora', serif">Classic (Lora)</option>
                             <option value="'Comic Neue', cursive">Playful (Comic)</option>
                         </select>
+                        <div class="ghost-pro-row feature-gated" id="ghost-custom-font" style="display:none;"
+                            title="Custom fonts require a Pro subscription.">
+                            <i class="fas fa-cloud-arrow-up"></i><span>Upload custom font</span><span class="pro-badge">PRO</span>
+                        </div>
                         <label class="field-label" style="margin-top:6px;">Global Font Scale</label>
                         <div class="slider-row">
                             <input type="range" id="globalFontScale" min="0.7" max="1.5" step="0.05" value="1"
@@ -403,7 +416,7 @@
                 <!-- Upsell strip: visible for free-tier users -->
                 <div id="upsell-strip" class="upsell-strip" style="display:none;">
                     <div class="upsell-title"><i class="fas fa-star" style="color:#8b5cf6; margin-right:5px;"></i>Upgrade to Pro</div>
-                    <div class="upsell-body">Unlock 2-page difficulty sets, watermark removal, and custom PDF fonts.</div>
+                    <div class="upsell-body">Unlock unlimited bulk export, 2-page difficulty sets, watermark removal, custom fonts, and AI question generation.</div>
                     <button class="upsell-btn" id="upsell-cta-btn" onclick="_handleUpgradeClick(this)">Upgrade to Pro →</button>
                 </div>
 
@@ -431,13 +444,13 @@
         <div class="preview-toolbar">
             <div class="page-tabs" role="tablist" aria-label="Worksheet pages">
                 <button class="page-btn active" data-page="1" onclick="showPage(1)" role="tab" aria-current="page"
-                    aria-label="Easy page"><i class="fas fa-seedling" aria-hidden="true"></i> Easy</button>
+                    aria-selected="true" tabindex="0" aria-label="Easy page"><i class="fas fa-seedling" aria-hidden="true"></i> Easy</button>
                 <button class="page-btn" data-page="2" onclick="showPage(2)" role="tab"
-                    aria-label="Medium page"><i class="fas fa-bolt" aria-hidden="true"></i> Medium</button>
+                    aria-selected="false" tabindex="-1" aria-label="Medium page"><i class="fas fa-bolt" aria-hidden="true"></i> Medium</button>
                 <button class="page-btn" data-page="3" onclick="showPage(3)" role="tab"
-                    aria-label="Hard page"><i class="fas fa-fire" aria-hidden="true"></i> Hard</button>
+                    aria-selected="false" tabindex="-1" aria-label="Hard page"><i class="fas fa-fire" aria-hidden="true"></i> Hard</button>
                 <button class="page-btn" data-page="4" onclick="showPage(4)" role="tab"
-                    aria-label="Answer key page"><i class="fas fa-key" aria-hidden="true"></i> Key</button>
+                    aria-selected="false" tabindex="-1" aria-label="Answer key page"><i class="fas fa-key" aria-hidden="true"></i> Key</button>
             </div>
             <div class="preview-quick-toggles" role="group" aria-label="Preview options">
                 <!-- Quick toggle for geometry diagrams. Mirrors the Settings panel's
@@ -548,7 +561,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=20d0943194"></script>
+    <script src="bundle.js?v=20681aed96"></script>
 </body>
 
 </html>

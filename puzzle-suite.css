@@ -3217,6 +3217,27 @@ table.mode-cw td.cell.empty {
     border-color: rgba(99,102,241,0.35);
 }
 
+/* Stage 5.3 Path divider inside a topic's sub-op accordion — separates NESA
+   Core content from Path (5.3) content */
+.subop-path-divider {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 4px 0 2px;
+    padding: 3px 8px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--primary);
+    border-top: 1px dashed rgba(99,102,241,0.30);
+}
+.subop-path-divider i { font-size: 9px; opacity: 0.8; }
+[data-theme="dark"] .subop-path-divider {
+    color: #a5b4fc;
+    border-top-color: rgba(165,180,252,0.30);
+}
+
 /* Stage 5 "Path" toggle — reads as an indented sub-option of the stage block */
 .path-toggle {
     margin-top: 6px;
@@ -3726,6 +3747,23 @@ details.outcomes-ws-header:not([open]) .outcomes-ws-summary::after { transform: 
     inset: 0;
     cursor: not-allowed;
 }
+
+/* Ghost / locked Pro upsell row — advertises a Pro feature without offering a
+   working control. Pairs with .feature-gated (dim + non-interactive). */
+.ghost-pro-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 7px 10px;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+.ghost-pro-row > i { width: 14px; text-align: center; font-size: 11px; opacity: 0.7; }
+.ghost-pro-row .pro-badge { margin-left: auto; }
 
 /* =============================================================
    Export Preview Panel

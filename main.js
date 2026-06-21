@@ -15,7 +15,7 @@ import { exportPDF } from './pdf/pdfExport.js';
 import { showToast } from './ui/toast.js';
 import { generateMathsQuestions } from './generators/mathsQuestionGen.js';
 import { openModal, closeModal } from './ui/modal.js';
-import { setupSidebarResize, toggleSidebar, switchTab } from './ui/sidebar.js';
+import { setupSidebarResize, toggleSidebar, switchTab, setupTablistKeys } from './ui/sidebar.js';
 import { toggleDarkMode } from './ui/darkMode.js';
 import { adjustZoom, resetZoom } from './ui/zoom.js';
 import { setupSortableList } from './ui/pageOrder.js';
@@ -360,6 +360,18 @@ function renderTierUI() {
     const bulkNote = document.getElementById('bulk-tier-note');
     if (bulkNote) bulkNote.style.display = (isPro || adminOn) ? 'none' : '';
 
+    // Ghost / locked Pro items — greyed, non-interactive upsell affordances
+    // shown only while the feature is locked, hidden once it's unlocked.
+    // Display-only: they never remove a control free users already have.
+    [
+        ['ghost-custom-font',      FEATURE.CUSTOM_FONT],
+        ['ghost-remove-watermark', FEATURE.REMOVE_WATERMARK],
+        ['ghost-ai-generate',      FEATURE.AI_GENERATION],
+    ].forEach(([id, feat]) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = hasFeature(feat) ? 'none' : '';
+    });
+
     renderExportPreview();
 }
 
@@ -596,6 +608,8 @@ function showPage(n) {
         b.classList.toggle('active', active);
         if (active) b.setAttribute('aria-current', 'page');
         else b.removeAttribute('aria-current');
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
+        b.tabIndex = active ? 0 : -1;   // roving tabindex for the tablist
     });
     renderActivePage();
     document.querySelector('.viewport')?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -941,7 +955,7 @@ function _buildSubOpsPanels() {
         let html = '';
         if (ops.length > 0) {
             const enabledOps = state.selectedSubOps[t];
-            html += ops.map(op => {
+            const renderRow = op => {
                 const checked = enabledOps ? enabledOps.includes(op.key) : true;
                 const pathBadge = op.pathway === 'path'
                     ? ' <span class="path-badge" title="Stage 5.3 Path content">5.3</span>'
@@ -951,7 +965,18 @@ function _buildSubOpsPanels() {
                            onchange="toggleSubOp('${t}', '${op.key}')">
                     <span class="sub-op-name"><i class="fas fa-angle-right sub-op-icon"></i>${op.label}${pathBadge}</span>
                 </label>`;
-            }).join('');
+            };
+
+            // Separate NESA Core content from Stage 5.3 Path content so the
+            // syllabus split is explicit. Path ops only survive the filter above
+            // when state.includePath is on.
+            const coreOps = ops.filter(op => op.pathway !== 'path');
+            const pathOps = ops.filter(op => op.pathway === 'path');
+            html += coreOps.map(renderRow).join('');
+            if (pathOps.length > 0) {
+                html += `<div class="subop-path-divider"><i class="fas fa-road"></i>Stage 5.3 Path</div>`;
+                html += pathOps.map(renderRow).join('');
+            }
         }
 
         html += `<div id="outcomes-for-${topicId}" class="topic-outcomes-wrapper"></div>`;
@@ -1468,6 +1493,7 @@ window.addEventListener('load', async () => {
 
         _step('Setting up…', 90);
         setupSidebarResize();
+        setupTablistKeys();
         setupSortableList('#page-order-list', () => saveState());
         setupDragAndDrop((f) => {
             if (!f.name.toLowerCase().endsWith('.json')) {
