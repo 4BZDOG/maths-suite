@@ -681,6 +681,7 @@ function updateTopicCount() {
             el.textContent = `${rawSelected} of ${stageTopics.length} selected`;
         }
     }
+    _updateStrandCounts();
     _updateGenerateButtonState(active);
 }
 
@@ -943,7 +944,7 @@ function _buildSubOpsPanels() {
             html += ops.map(op => {
                 const checked = enabledOps ? enabledOps.includes(op.key) : true;
                 const pathBadge = op.pathway === 'path'
-                    ? ' <span style="font-size:9px;background:rgba(99,102,241,0.12);color:#6366f1;border-radius:3px;padding:0 3px;margin-left:2px;">5.3</span>'
+                    ? ' <span class="path-badge" title="Stage 5.3 Path content">5.3</span>'
                     : '';
                 return `<label class="sub-op-row">
                     <input type="checkbox" id="subop-${topicId}-${op.key}" ${checked ? 'checked' : ''}
@@ -953,10 +954,32 @@ function _buildSubOpsPanels() {
             }).join('');
         }
 
-        html += `<div id="outcomes-for-${topicId}" class="topic-outcomes-wrapper" style="padding: 0 4px 6px;"></div>`;
+        html += `<div id="outcomes-for-${topicId}" class="topic-outcomes-wrapper"></div>`;
         container.innerHTML = html;
     });
     _updateAllSubOpBadges();
+}
+
+// Stable DOM-id fragment for a NESA strand name (e.g. "Number and Algebra"
+// → "number-and-algebra"), mirroring the topicSlug() pattern.
+function _strandSlug(strand) {
+    return strand.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+// Refresh the "selected/total" pill on each strand heading in place — the topic
+// list is not re-rendered on every toggle (preserves accordion state), so this
+// keeps the counts live. Called from updateTopicCount().
+function _updateStrandCounts() {
+    const stageTopics = getTopicsForStage(state.stage);
+    STRANDS.forEach(strand => {
+        const inStrand = stageTopics.filter(t => TOPIC_STRAND_MAP[t] === strand);
+        if (inStrand.length === 0) return;
+        const el = document.getElementById('strand-count-' + _strandSlug(strand));
+        if (!el) return;
+        const sel = inStrand.filter(t => state.selectedTopics[t]).length;
+        el.textContent = `${sel}/${inStrand.length}`;
+        el.title = `${sel} of ${inStrand.length} topics selected in this strand`;
+    });
 }
 
 function renderTopicTogglesByStrand() {
@@ -970,7 +993,11 @@ function renderTopicTogglesByStrand() {
         const topicsInStrand = stageTopics.filter(t => TOPIC_STRAND_MAP[t] === strand);
         if (topicsInStrand.length === 0) return;
 
-        html += `<div class="strand-heading">${strand}</div>`;
+        const sel = topicsInStrand.filter(t => state.selectedTopics[t]).length;
+        html += `<div class="strand-heading">${strand}`
+              + `<span class="strand-count" id="strand-count-${_strandSlug(strand)}" `
+              + `title="${sel} of ${topicsInStrand.length} topics selected in this strand">`
+              + `${sel}/${topicsInStrand.length}</span></div>`;
 
         topicsInStrand.forEach(t => {
             const meta    = TOPIC_META[t] || { label: t, icon: 'fas fa-circle' };

@@ -81,7 +81,7 @@
                 </div>
 
                 <!-- STAGE SELECTOR -->
-                <div class="section-label" id="stage-section-label" style="margin-top:4px;"><i class="fas fa-graduation-cap"></i><span data-nesa-prefix>NESA </span>STAGE</div>
+                <div class="section-label" id="stage-section-label"><i class="fas fa-graduation-cap"></i><span data-nesa-prefix>NESA </span>STAGE</div>
                 <div class="stage-selector-group" role="group" aria-label="NESA Stage">
                     <label class="stage-btn">
                         <input type="radio" name="stage-selector" value="Stage 4" checked onchange="setStage('Stage 4')">
@@ -92,10 +92,10 @@
                         <span>Stage 5 <span class="stage-years">Yr 9–10</span></span>
                     </label>
                 </div>
-                <div id="path-toggle-wrapper" style="display:none; margin-top:6px;">
-                    <label class="sub-op-row" style="padding:5px 10px; border-radius:6px; background:rgba(99,102,241,0.07); border:1px solid rgba(99,102,241,0.18);">
+                <div id="path-toggle-wrapper" style="display:none;">
+                    <label class="sub-op-row path-toggle">
                         <input type="checkbox" id="include-path-toggle" onchange="setIncludePath(this.checked)">
-                        <span class="sub-op-name" style="font-size:12px;"><i class="fas fa-road sub-op-icon"></i>Include Stage 5 <strong>Path</strong> content</span>
+                        <span class="sub-op-name"><i class="fas fa-road sub-op-icon"></i>Include Stage 5 <strong>Path</strong> content</span>
                     </label>
                 </div>
 
@@ -103,8 +103,8 @@
                 <div class="section-label"><i class="fas fa-calculator"></i>MATHS TOPICS</div>
                 <div id="topic-toggles"></div>
                 <div class="topic-action-row">
-                    <button class="btn-sec" style="flex:1; font-size:11px;" onclick="setTopicsAll(true)"><i class="fas fa-check-double" style="margin-right:4px;"></i>All</button>
-                    <button class="btn-sec" style="flex:1; font-size:11px;" onclick="setTopicsAll(false)"><i class="fas fa-xmark" style="margin-right:4px;"></i>None</button>
+                    <button class="btn-sec btn-sec--compact" onclick="setTopicsAll(true)"><i class="fas fa-check-double" style="margin-right:4px;"></i>All</button>
+                    <button class="btn-sec btn-sec--compact" onclick="setTopicsAll(false)"><i class="fas fa-xmark" style="margin-right:4px;"></i>None</button>
                     <span id="topic-count" class="topic-count-label"></span>
                 </div>
 
@@ -136,7 +136,7 @@
 
                 <div class="status-row">
                     <div id="status-icon" class="status-icon icon-warning"><i class="fas fa-exclamation"></i></div>
-                    <span id="placed-count" style="font-size:12px; color:var(--text-muted);">0 questions</span>
+                    <span id="placed-count" class="placed-count">0 questions</span>
                 </div>
 
                 <div class="button-row">
@@ -548,7 +548,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=951a4cf882"></script>
+    <script src="bundle.js?v=20d0943194"></script>
 </body>
 
 </html>
