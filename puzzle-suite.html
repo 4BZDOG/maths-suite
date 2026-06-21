@@ -95,7 +95,7 @@
                 <div id="path-toggle-wrapper" style="display:none;">
                     <label class="sub-op-row path-toggle">
                         <input type="checkbox" id="include-path-toggle" onchange="setIncludePath(this.checked)">
-                        <span class="sub-op-name"><i class="fas fa-road sub-op-icon"></i>Include Stage 5 <strong>Path</strong> content</span>
+                        <span class="sub-op-name"><i class="fas fa-road sub-op-icon"></i><span>Include Stage 5 <strong>Path</strong> content</span></span>
                     </label>
                 </div>
 
@@ -164,7 +164,7 @@
                         <input type="text" id="titleInput" value="Maths Quiz" oninput="updateUI(); saveState()">
                         <label class="field-label">Subtitle</label>
                         <input type="text" id="subInput" value="Stage 4 Review" oninput="updateUI(); saveState()">
-                        <label class="field-label" style="margin-top:6px;">Title &amp; Subtitle Scale</label>
+                        <label class="field-label field-label--spaced">Title &amp; Subtitle Scale</label>
                         <div class="slider-row">
                             <input type="range" id="titleScale" min="0.4" max="1.5" step="0.05" value="1" oninput="updateTitleScale()">
                             <span id="titleScaleVal" class="slider-val">1.00x</span>
@@ -189,7 +189,7 @@
                             <span id="wmOpacityVal" class="slider-val">0.15</span>
                         </div>
                         <button onclick="clearWatermark()" class="btn-remove-watermark"
-                            aria-label="Remove watermark image"><i class="fas fa-trash" style="margin-right:5px; font-size:11px;"></i>Remove Watermark</button>
+                            aria-label="Remove watermark image"><i class="fas fa-trash field-icon"></i>Remove Watermark</button>
                         <div class="ghost-pro-row feature-gated" id="ghost-remove-watermark" style="display:none;"
                             title="Removing the branding watermark requires a Pro subscription.">
                             <i class="fas fa-stamp"></i><span>Remove branding watermark</span><span class="pro-badge">PRO</span>
@@ -213,7 +213,7 @@
                             title="Custom fonts require a Pro subscription.">
                             <i class="fas fa-cloud-arrow-up"></i><span>Upload custom font</span><span class="pro-badge">PRO</span>
                         </div>
-                        <label class="field-label" style="margin-top:6px;">Global Font Scale</label>
+                        <label class="field-label field-label--spaced">Global Font Scale</label>
                         <div class="slider-row">
                             <input type="range" id="globalFontScale" min="0.7" max="1.5" step="0.05" value="1"
                                 oninput="updateGlobalFontScale()">
@@ -224,25 +224,25 @@
 
                         <label class="field-label">Per-Page Font Scale</label>
                         <div class="slider-row">
-                            <span class="slider-label"><i class="fas fa-seedling" style="color:#10b981; font-size:9px; margin-right:4px;"></i>Easy</span>
+                            <span class="slider-label"><i class="fas fa-seedling diff-dot diff-dot--easy"></i>Easy</span>
                             <input type="range" id="scaleEasyFont" min="0.5" max="2.0" step="0.05" value="1"
                                 oninput="focusPage(1); updatePageScales()">
                             <span id="scaleEasyFontVal" class="slider-val">1.00x</span>
                         </div>
                         <div class="slider-row">
-                            <span class="slider-label"><i class="fas fa-bolt" style="color:#f59e0b; font-size:9px; margin-right:4px;"></i>Medium</span>
+                            <span class="slider-label"><i class="fas fa-bolt diff-dot diff-dot--medium"></i>Medium</span>
                             <input type="range" id="scaleMediumFont" min="0.5" max="2.0" step="0.05" value="1"
                                 oninput="focusPage(2); updatePageScales()">
                             <span id="scaleMediumFontVal" class="slider-val">1.00x</span>
                         </div>
                         <div class="slider-row">
-                            <span class="slider-label"><i class="fas fa-fire" style="color:#ef4444; font-size:9px; margin-right:4px;"></i>Hard</span>
+                            <span class="slider-label"><i class="fas fa-fire diff-dot diff-dot--hard"></i>Hard</span>
                             <input type="range" id="scaleHardFont" min="0.5" max="2.0" step="0.05" value="1"
                                 oninput="focusPage(3); updatePageScales()">
                             <span id="scaleHardFontVal" class="slider-val">1.00x</span>
                         </div>
                         <div class="slider-row">
-                            <span class="slider-label"><i class="fas fa-key" style="color:#6366f1; font-size:9px; margin-right:4px;"></i>Key</span>
+                            <span class="slider-label"><i class="fas fa-key diff-dot diff-dot--key"></i>Key</span>
                             <input type="range" id="scaleKeyFont" min="0.5" max="2.0" step="0.05" value="1"
                                 oninput="focusPage(4); updatePageScales()">
                             <span id="scaleKeyFontVal" class="slider-val">1.00x</span>
@@ -254,17 +254,17 @@
                     <summary>
                         <div class="card-header-inner"><i class="fas fa-square-root-alt"></i> Formulas &amp; Hints</div>
                     </summary>
-                    <div class="card-content" style="font-size:12px;">
-                        <p style="margin:0 0 8px 0; color:var(--text-muted); line-height:1.3;">Show formula hints for specific question types and difficulty levels.</p>
+                    <div class="card-content card-content--compact">
+                        <p class="card-intro">Show formula hints for specific question types and difficulty levels.</p>
 
                         <!-- Bulk toggles -->
                         <div class="formula-bulk-bar">
                             <button type="button" class="formula-bulk-btn" onclick="setAllFormulaHints('all', true)" title="Enable hints for all subtopics and difficulties"><i class="fas fa-check-double"></i> All on</button>
                             <button type="button" class="formula-bulk-btn" onclick="setAllFormulaHints('all', false)" title="Disable hints for all subtopics and difficulties"><i class="fas fa-times"></i> All off</button>
                             <span class="formula-bulk-sep">·</span>
-                            <button type="button" class="formula-bulk-btn formula-bulk-diff" onclick="toggleFormulaHintColumn('easy')" style="color:#10b981;" title="Toggle Easy column for all subtopics">Easy</button>
-                            <button type="button" class="formula-bulk-btn formula-bulk-diff" onclick="toggleFormulaHintColumn('medium')" style="color:#f59e0b;" title="Toggle Medium column for all subtopics">Med</button>
-                            <button type="button" class="formula-bulk-btn formula-bulk-diff" onclick="toggleFormulaHintColumn('hard')" style="color:#ef4444;" title="Toggle Hard column for all subtopics">Hard</button>
+                            <button type="button" class="formula-bulk-btn formula-bulk-diff diff-dot--easy" onclick="toggleFormulaHintColumn('easy')" title="Toggle Easy column for all subtopics">Easy</button>
+                            <button type="button" class="formula-bulk-btn formula-bulk-diff diff-dot--medium" onclick="toggleFormulaHintColumn('medium')" title="Toggle Medium column for all subtopics">Med</button>
+                            <button type="button" class="formula-bulk-btn formula-bulk-diff diff-dot--hard" onclick="toggleFormulaHintColumn('hard')" title="Toggle Hard column for all subtopics">Hard</button>
                         </div>
 
                         <!-- Area & Perimeter -->
@@ -334,7 +334,7 @@
                         <div class="card-header-inner"><i class="fas fa-list-ol"></i> Question Display</div>
                     </summary>
                     <div class="card-content">
-                        <label class="field-label"><i class="fas fa-columns" style="margin-right:4px; opacity:.7;"></i>Columns</label>
+                        <label class="field-label"><i class="fas fa-columns field-icon"></i>Columns</label>
                         <select id="psCols" onchange="renderActivePage(); saveState();">
                             <option value="1">1 Column</option>
                             <option value="2" selected>2 Columns</option>
@@ -452,23 +452,25 @@
                 <button class="page-btn" data-page="4" onclick="showPage(4)" role="tab"
                     aria-selected="false" tabindex="-1" aria-label="Answer key page"><i class="fas fa-key" aria-hidden="true"></i> Key</button>
             </div>
-            <div class="preview-quick-toggles" role="group" aria-label="Preview options">
-                <!-- Quick toggle for geometry diagrams. Mirrors the Settings panel's
-                     "Show Diagrams" checkbox; this surface makes it discoverable. -->
-                <button id="quick-diagrams" class="quick-toggle" type="button"
-                        onclick="toggleQuickDiagrams()" aria-pressed="true"
-                        title="Show / hide geometry diagrams">
-                    <i class="fas fa-shapes" aria-hidden="true"></i>
-                    <span class="quick-toggle-label">Diagrams</span>
-                </button>
-            </div>
-            <div class="zoom-controls" role="group" aria-label="Zoom">
-                <button class="zoom-btn" onclick="adjustZoom(-0.1)" title="Zoom out" aria-label="Zoom out"><i class="fas fa-minus" aria-hidden="true"></i></button>
-                <button class="zoom-display" type="button" title="Reset zoom to 100%" onclick="resetZoom()" aria-label="Reset zoom">
-                    <i class="fas fa-magnifying-glass zoom-display-icon" aria-hidden="true"></i>
-                    <span id="zoom-level">100%</span>
-                </button>
-                <button class="zoom-btn" onclick="adjustZoom(0.1)" title="Zoom in" aria-label="Zoom in"><i class="fas fa-plus" aria-hidden="true"></i></button>
+            <div class="toolbar-tools">
+                <div class="preview-quick-toggles" role="group" aria-label="Preview options">
+                    <!-- Quick toggle for geometry diagrams. Mirrors the Settings panel's
+                         "Show Diagrams" checkbox; this surface makes it discoverable. -->
+                    <button id="quick-diagrams" class="quick-toggle" type="button"
+                            onclick="toggleQuickDiagrams()" aria-pressed="true"
+                            title="Show / hide geometry diagrams">
+                        <i class="fas fa-shapes" aria-hidden="true"></i>
+                        <span class="quick-toggle-label">Diagrams</span>
+                    </button>
+                </div>
+                <div class="zoom-controls" role="group" aria-label="Zoom">
+                    <button class="zoom-btn" onclick="adjustZoom(-0.1)" title="Zoom out" aria-label="Zoom out"><i class="fas fa-minus" aria-hidden="true"></i></button>
+                    <button class="zoom-display" type="button" title="Reset zoom to 100%" onclick="resetZoom()" aria-label="Reset zoom">
+                        <i class="fas fa-magnifying-glass zoom-display-icon" aria-hidden="true"></i>
+                        <span id="zoom-level">100%</span>
+                    </button>
+                    <button class="zoom-btn" onclick="adjustZoom(0.1)" title="Zoom in" aria-label="Zoom in"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                </div>
             </div>
         </div>
         <div class="viewport">
@@ -561,7 +563,7 @@
         </div>
     </div>
 
-    <script src="bundle.js?v=20681aed96"></script>
+    <script src="bundle.js?v=d5ccb74c61"></script>
 </body>
 
 </html>
