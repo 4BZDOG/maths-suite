@@ -3887,6 +3887,21 @@ function genTrigonometry(rng, diff, allowedOps) {
         const aAngles = diff === 'Easy' ? [30, 45, 60] : [25, 30, 35, 40, 45, 50, 55, 60];
         const A = rc(rng, aAngles);
         const aVal = diff === 'Easy' ? ri(rng, 4, 10) : diff === 'Medium' ? ri(rng, 5, 15) : ri(rng, 6, 20);
+        // Medium/Hard: area of a triangle  A = ½·a·b·sin C  (includes obtuse C)
+        if (diff !== 'Easy' && rng() < 0.35) {
+            const a2 = ri(rng, 5, diff === 'Hard' ? 20 : 14), b2 = ri(rng, 5, diff === 'Hard' ? 20 : 14);
+            const C = rc(rng, diff === 'Hard' ? [30, 45, 60, 100, 110, 120, 135] : [30, 45, 60, 75]);
+            const area = round(0.5 * a2 * b2 * Math.sin(C * Math.PI / 180), 1);
+            const ph = rc(rng, [
+                `A triangle has sides $a = ${a2}$ cm and $b = ${b2}$ cm with an *included* angle $C = ${C}$°. Find its area (to 1 d.p.).`,
+                `Find the area of a triangle with $a = ${a2}$ cm, $b = ${b2}$ cm and included angle $C = ${C}$°.`,
+            ]);
+            return {
+                clue: ph, answer: String(area), answerDisplay: `${area} cm²`,
+                worked: `$A = \\tfrac{1}{2}ab\\sin C = \\tfrac{1}{2}(${a2})(${b2})\\sin(${C}°) = ${area}$ cm²`,
+                diagram: { type: 'general-triangle', sides: { a: a2, b: b2 }, angles: { C } },
+            };
+        }
         // Hard: sometimes use cosine rule instead of sine rule
         if (diff === 'Hard' && rng() < 0.35) {
             const b = ri(rng, 5, 16);
@@ -3902,6 +3917,7 @@ function genTrigonometry(rng, diff, allowedOps) {
             return {
                 clue: ph, answer: String(c), answerDisplay: `${c} cm`,
                 worked: `$c^2 = ${aVal}^2 + ${b}^2 - 2(${aVal})(${b})\\cos(${C}°) \\Rightarrow c = ${c}$ cm`,
+                diagram: { type: 'general-triangle', sides: { a: aVal, b }, angles: { C }, missing: 'c' },
             };
         }
         const bAngles = diff === 'Easy' ? [20, 35, 50, 80] : [20, 25, 35, 40, 50, 55, 70, 80, 100, 110, 120, 130, 135];
@@ -3917,6 +3933,7 @@ function genTrigonometry(rng, diff, allowedOps) {
         return {
             clue: ph, answer: String(b), answerDisplay: `${b} cm`,
             worked: `$\\frac{b}{\\sin(${B}°)} = \\frac{${aVal}}{\\sin(${A}°)} \\Rightarrow b = ${b}$ cm`,
+            diagram: { type: 'general-triangle', sides: { a: aVal }, angles: { A, B }, missing: 'b' },
         };
     }
 

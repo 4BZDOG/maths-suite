@@ -203,6 +203,9 @@ Dispatch lives in the `switch` near the bottom of the file. Supported types:
 - `right-triangle` — Pythagoras layout with right-angle mark, missing side as `?`
 - `right-triangle-trig` — labelled angle/side for trig ratios
 - `triangle-angles` — two known angles, third as `?`
+- `general-triangle` — non-right (scalene) triangle for the sine/cosine rule and
+  ½·ab·sinC area; `{sides:{a,b,c}, angles:{A,B,C}, missing}` labels only the
+  given parts (sides a/b/c opposite A/B/C), missing side shown as `?` (not to scale)
 - `triangle-area` — dashed height line and right-angle mark
 - `circle` — radius line with missing area or circumference label
 - `parabola` — non-linear plot; the viewing window **auto-frames the vertex**

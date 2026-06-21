@@ -6,7 +6,7 @@
 // =============================================================
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gen, DIFFS, approxEqual } from '../_helpers.mjs';
+import { gen, genStage5, DIFFS, approxEqual } from '../_helpers.mjs';
 
 function round1(x) { return Math.round(x * 10) / 10; }
 function nums(clue) {
@@ -68,4 +68,34 @@ test('Trig application: angle of elevation matches atan2(height, distance)', () 
         }
     }
     assert.ok(checked > 20, `only ${checked} application questions verified`);
+});
+
+// ---- Stage 5 obtuse-angles: sine rule, cosine rule and area of a triangle ----
+test('Trig (Stage 5) obtuse-angles: sine/cosine rule & area answers match', () => {
+    let checked = 0;
+    for (const diff of DIFFS) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = genStage5({ topic: 'Trigonometry', difficulty: diff, count: 6, seed,
+                subOpsFilter: { Trigonometry: ['obtuse-angles'] } });
+            for (const q of qs) {
+                const c = q.clue, ans = Number(q.answer);
+                const get = (re) => { const m = c.match(re); return m ? Number(m[1]) : null; };
+                const aV = get(/a = (\d+)/), bV = get(/b = (\d+)/);
+                const AA = get(/A = (\d+)/), BB = get(/B = (\d+)/), CC = get(/C = (\d+)/);
+                const L = `${diff}/seed${seed}: "${c.slice(0, 80)}…" → ${q.answer}`;
+                let exp = null;
+                if (/area/i.test(c) && aV && bV && CC != null) {
+                    exp = round1(0.5 * aV * bV * Math.sin(CC * Math.PI / 180));
+                } else if (/cosine rule/i.test(c) && aV && bV && CC != null) {
+                    exp = round1(Math.sqrt(aV * aV + bV * bV - 2 * aV * bV * Math.cos(CC * Math.PI / 180)));
+                } else if (/sine rule/i.test(c) && aV && AA != null && BB != null) {
+                    exp = round1(aV * Math.sin(BB * Math.PI / 180) / Math.sin(AA * Math.PI / 180));
+                }
+                if (exp === null) continue;
+                assert.ok(approxEqual(ans, exp, 0.05), `${L} (expected ${exp})`);
+                checked++;
+            }
+        }
+    }
+    assert.ok(checked > 150, `only ${checked} obtuse-angles questions verified`);
 });
