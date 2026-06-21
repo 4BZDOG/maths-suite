@@ -963,7 +963,7 @@ function _buildSubOpsPanels() {
                 return `<label class="sub-op-row">
                     <input type="checkbox" id="subop-${topicId}-${op.key}" ${checked ? 'checked' : ''}
                            onchange="toggleSubOp('${t}', '${op.key}')">
-                    <span class="sub-op-name"><i class="fas fa-angle-right sub-op-icon"></i>${op.label}${pathBadge}</span>
+                    <span class="sub-op-name"><i class="fas fa-angle-right sub-op-icon"></i><span>${op.label}</span>${pathBadge}</span>
                 </label>`;
             };
 
@@ -1007,6 +1007,22 @@ function _updateStrandCounts() {
     });
 }
 
+// Strands the user has collapsed in the topic list. Module-level so the state
+// survives the in-place re-renders of renderTopicTogglesByStrand() (e.g. on a
+// stage switch). Ephemeral within the session — mirrors the topic accordions.
+const _collapsedStrands = new Set();
+
+function toggleStrandCollapse(strand) {
+    const group = document.querySelector(`.strand-group[data-strand="${_strandSlug(strand)}"]`);
+    if (!group) return;
+    const collapsed = !_collapsedStrands.has(strand);
+    if (collapsed) _collapsedStrands.add(strand);
+    else _collapsedStrands.delete(strand);
+    group.classList.toggle('collapsed', collapsed);
+    const btn = group.querySelector('.strand-heading');
+    if (btn) btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+}
+
 function renderTopicTogglesByStrand() {
     const stageTopics = getTopicsForStage(state.stage);
     const container   = document.getElementById('topic-toggles');
@@ -1019,10 +1035,15 @@ function renderTopicTogglesByStrand() {
         if (topicsInStrand.length === 0) return;
 
         const sel = topicsInStrand.filter(t => state.selectedTopics[t]).length;
-        html += `<div class="strand-heading">${strand}`
+        const collapsed = _collapsedStrands.has(strand);
+        html += `<div class="strand-group${collapsed ? ' collapsed' : ''}" data-strand="${_strandSlug(strand)}">`
+              + `<button type="button" class="strand-heading" aria-expanded="${collapsed ? 'false' : 'true'}" `
+              + `onclick="toggleStrandCollapse('${strand}')">`
+              + `<i class="strand-chevron fas fa-chevron-down" aria-hidden="true"></i>${strand}`
               + `<span class="strand-count" id="strand-count-${_strandSlug(strand)}" `
               + `title="${sel} of ${topicsInStrand.length} topics selected in this strand">`
-              + `${sel}/${topicsInStrand.length}</span></div>`;
+              + `${sel}/${topicsInStrand.length}</span></button>`
+              + `<div class="strand-topics">`;
 
         topicsInStrand.forEach(t => {
             const meta    = TOPIC_META[t] || { label: t, icon: 'fas fa-circle' };
@@ -1056,6 +1077,8 @@ function renderTopicTogglesByStrand() {
                 <div class="topic-subtypes" id="subs-${topicId}" style="display:none;"></div>
             </div>`;
         });
+
+        html += `</div></div>`; // .strand-topics, .strand-group
     });
 
     html += '</div>';
@@ -1358,6 +1381,7 @@ window._puzzleApp = {
     toggleTopic,
     toggleSubOp,
     toggleTopicExpand,
+    toggleStrandCollapse,
     setTopicsAll,
     setPagesPerDifficulty,
     openModal: (el) => openModal(el),

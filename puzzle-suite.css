@@ -388,7 +388,7 @@ details.setting-card summary {
     justify-content: space-between;
     align-items: center;
     list-style: none;
-    background: #f8fafc;
+    background: var(--input-bg);
     transition: background 0.2s;
     -webkit-user-select: none;
     user-select: none;
@@ -447,6 +447,24 @@ label.field-label {
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
+.field-label--spaced { margin-top: 6px; }
+
+/* Small difficulty colour dot used on per-page font-scale labels and the
+   formula bulk-toggle buttons. Colour comes from the modifier class. */
+.diff-dot { font-size: 9px; margin-right: 4px; }
+.diff-dot--easy   { color: #10b981; }
+.diff-dot--medium { color: #f59e0b; }
+.diff-dot--hard   { color: #ef4444; }
+.diff-dot--key    { color: #6366f1; }
+.formula-bulk-btn.diff-dot--easy,
+.formula-bulk-btn.diff-dot--medium,
+.formula-bulk-btn.diff-dot--hard { font-size: inherit; margin-right: 0; }
+
+/* Inline icon preceding a field label / toggle label */
+.field-icon { margin-right: 4px; opacity: 0.7; }
+/* Intro line at the top of a setting card's content */
+.card-intro { margin: 0 0 8px; color: var(--text-muted); line-height: 1.3; }
+.card-content--compact { font-size: 12px; }
 
 /* ── NESA syllabus mode toggle ──────────────────────────────────────────
    When NESA mode is OFF the body gets .nesa-off, which:
@@ -1042,19 +1060,21 @@ main {
     background: var(--bg-panel);
     border-bottom: 1px solid var(--border);
     padding: 10px 20px;
-    /* 3-column grid keeps the difficulty tabs perfectly centered in the
-       toolbar regardless of how wide the flanking controls are. */
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    /* Page tabs sit on the left; the preview tools (Diagrams + zoom) group on
+       the right behind a single divider. */
+    display: flex;
+    justify-content: space-between;
     align-items: center;
     gap: 16px;
     flex-shrink: 0;
     box-shadow: var(--shadow-sm);
     z-index: 20;
 }
-.preview-toolbar > .preview-quick-toggles { grid-column: 1; justify-self: start; }
-.preview-toolbar > .page-tabs            { grid-column: 2; justify-self: center; }
-.preview-toolbar > .zoom-controls        { grid-column: 3; justify-self: end; }
+.toolbar-tools {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
 
 .page-tabs {
     display: flex;
@@ -1137,16 +1157,13 @@ main {
     opacity: 0.55;
 }
 
-/* Preview-toolbar quick toggles (e.g. "Diagrams" on/off). Sits between
-   the page tabs and the zoom controls. Mirrors a buried Settings option
-   so it's one click away. */
+/* Preview-toolbar quick toggles (e.g. "Diagrams" on/off). Grouped with the
+   zoom controls in the right-hand tool cluster. Mirrors a buried Settings
+   option so it's one click away. */
 .preview-quick-toggles {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-left: auto;
-    border-left: 1px solid var(--border);
-    padding-left: 16px;
 }
 
 .quick-toggle {
@@ -2866,11 +2883,14 @@ table.mode-cw td.cell.empty {
 [data-theme="dark"] .stage-btn:has(input:checked) { background: var(--primary); color: #fff; }
 
 /* Strand section heading inside topic list — NESA syllabus grouping
-   (Number and Algebra / Measurement and Space / Statistics and Probability) */
+   (Number and Algebra / Measurement and Space / Statistics and Probability).
+   A collapse toggle for the whole strand group. */
 .strand-heading {
     display: flex;
     align-items: center;
     gap: 8px;
+    width: 100%;
+    font-family: inherit;
     font-size: 9.5px;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -2878,8 +2898,28 @@ table.mode-cw td.cell.empty {
     color: var(--text-muted);
     padding: 12px 4px 4px;
     margin-top: 6px;
+    border: none;
     border-top: 1px solid var(--border);
+    background: none;
+    cursor: pointer;
+    text-align: left;
+    transition: color 0.15s;
 }
+.strand-heading:hover { color: var(--text-main); }
+.strand-heading:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+.strand-chevron {
+    order: -1;
+    font-size: 8px;
+    opacity: 0.6;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+.strand-group.collapsed .strand-chevron { transform: rotate(-90deg); }
+.strand-group.collapsed .strand-topics  { display: none; }
 .strand-heading::after {
     content: '';
     order: 2;
@@ -2887,7 +2927,7 @@ table.mode-cw td.cell.empty {
     height: 1px;
     background: linear-gradient(90deg, var(--border), transparent);
 }
-.strand-heading:first-child {
+.strand-group:first-child .strand-heading {
     padding-top: 4px;
     margin-top: 0;
     border-top: none;
