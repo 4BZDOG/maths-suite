@@ -16,6 +16,14 @@ export const TIER = Object.freeze({
     ADMIN: 'admin', // internal/testing — all features, no limits
 });
 
+// ---- Admin unlock key ----------------------------------------
+// Enter this key (Ctrl/Cmd+Shift+A in the app, or ?admin=<key> in the URL) to
+// switch on Admin mode locally and unlock every option for testing. This is a
+// convenience gate for testing only — not a security boundary, since all tier
+// logic runs client-side. Change it to whatever you like.
+export const ADMIN_KEY = 'maths-admin-2026';
+
+
 // ---- Feature keys --------------------------------------------
 // Add new feature keys here as the product grows.
 export const FEATURE = Object.freeze({

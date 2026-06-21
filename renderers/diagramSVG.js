@@ -349,9 +349,9 @@ function _rightTriangleTrig({ opp, adj, hyp, angle, missing }) {
     const Bx = Ax + adjPx, By = Ay;  // theta (bottom-right)
     const Cx = Ax, Cy = Ay - oppPx;  // apex (top-left)
 
-    const adjLabel = missing === 'adj'   ? '?' : String(adj);
-    const oppLabel = missing === 'opp'   ? '?' : String(opp);
-    const hypLabel = missing === 'hyp'   ? '?' : String(hyp);
+    const adjLabel = missing === 'adj'   ? '?' : (adj == null ? null : String(adj));
+    const oppLabel = missing === 'opp'   ? '?' : (opp == null ? null : String(opp));
+    const hypLabel = missing === 'hyp'   ? '?' : (hyp == null ? null : String(hyp));
     const angLabel = missing === 'angle' ? '?' : `${angle}°`;
 
     // Hyp midpoint + outward normal for label
@@ -361,8 +361,14 @@ function _rightTriangleTrig({ opp, adj, hyp, angle, missing }) {
     const nx = hdy / hlen, ny = -hdx / hlen;
     const lx = hmx + nx * 26, ly = hmy + ny * 26 + 4;
 
-    // Theta arc at B between legs BA and BC
-    const arcR = 22;
+    // Theta arc at B; the angle value sits just inside the arc along the angle
+    // bisector (no "θ =" prefix — the arc already shows which angle it is).
+    const arcR = 20;
+    const baLen = Math.hypot(Ax - Bx, Ay - By), bcLen = Math.hypot(Cx - Bx, Cy - By);
+    let bisx = (Ax - Bx) / baLen + (Cx - Bx) / bcLen;
+    let bisy = (Ay - By) / baLen + (Cy - By) / bcLen;
+    const bl = Math.hypot(bisx, bisy) || 1; bisx /= bl; bisy /= bl;
+    const angX = Bx + bisx * (arcR + 13), angY = By + bisy * (arcR + 13) + 3;
 
     const inner =
         `<polygon points="${Ax},${Ay} ${Bx},${By} ${Cx},${Cy}" ` +
@@ -372,17 +378,17 @@ function _rightTriangleTrig({ opp, adj, hyp, angle, missing }) {
         // Angle arc at B (between adj leg and hypotenuse)
         _angleArc(Bx, By, Ax, Ay, Cx, Cy, arcR) +
         // θ label inside the arc
-        _t(Bx - 34, By - 16, `θ = ${angLabel}`,
-            { anchor: 'end', missing: missing === 'angle', size: 10 }) +
+        _t(angX, angY, angLabel,
+            { anchor: 'middle', missing: missing === 'angle', size: 11 }) +
         // adj label below the baseline
-        _t((Ax + Bx) / 2, Ay + 17, `adj = ${adjLabel}`,
-            { anchor: 'middle', missing: missing === 'adj', size: 10 }) +
+        (adjLabel == null ? '' : _t((Ax + Bx) / 2, Ay + 17, `adj = ${adjLabel}`,
+            { anchor: 'middle', missing: missing === 'adj', size: 10 })) +
         // opp label left of the vertical leg
-        _t(Ax - 8, (Ay + Cy) / 2 + 4, `opp = ${oppLabel}`,
-            { anchor: 'end', missing: missing === 'opp', size: 10 }) +
+        (oppLabel == null ? '' : _t(Ax - 8, (Ay + Cy) / 2 + 4, `opp = ${oppLabel}`,
+            { anchor: 'end', missing: missing === 'opp', size: 10 })) +
         // hyp label along the hypotenuse
-        _t(lx, ly, `hyp = ${hypLabel}`,
-            { anchor: 'middle', missing: missing === 'hyp', size: 10 });
+        (hypLabel == null ? '' : _t(lx, ly, `hyp = ${hypLabel}`,
+            { anchor: 'middle', missing: missing === 'hyp', size: 10 }));
 
     return _svg(VW, VH, inner);
 }

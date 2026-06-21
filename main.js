@@ -22,7 +22,7 @@ import { setupSortableList } from './ui/pageOrder.js';
 import { setupDragAndDrop } from './ui/dropZone.js';
 
 import { downloadConfig } from './import-export/exportConfig.js';
-import { hasFeature, FEATURE, PRICING, TIER, GROUPS, FREE_LIMITS, isAdmin, enableAdminMode, disableAdminMode, getActiveGroupId, getBulkExportLimit } from './payments/access.js';
+import { hasFeature, FEATURE, PRICING, TIER, GROUPS, FREE_LIMITS, ADMIN_KEY, isAdmin, enableAdminMode, disableAdminMode, getActiveGroupId, getBulkExportLimit } from './payments/access.js';
 import { pruneExpiredSession } from './payments/session.js';
 import { handleCheckoutReturn, initiateCheckout, openCustomerPortal, isStripeConfigured, refreshSession } from './payments/stripe.js';
 import {
@@ -383,6 +383,33 @@ function setAdminMode(on) {
     if (on) enableAdminMode(); else disableAdminMode();
     renderTierUI();
     showToast(on ? 'Admin mode enabled — all features unlocked.' : 'Admin mode disabled — reverted to free tier.', on ? 'success' : 'info');
+}
+
+/**
+ * Prompt for the admin key and, if correct, switch on Admin mode so every
+ * option is unlocked for testing. Triggered by Ctrl/Cmd+Shift+A or the
+ * "Enter admin key" affordance. Not a security boundary — tier logic is
+ * client-side — just a convenience gate.
+ */
+function promptAdminKey() {
+    if (isAdmin()) { openAccessPanelUI(); return; }
+    const key = window.prompt('Enter admin key to unlock all options:');
+    if (key == null) return;                       // cancelled
+    if (key.trim() === ADMIN_KEY) {
+        enableAdminMode();
+        renderTierUI();
+        showToast('Admin mode enabled — all features unlocked.', 'success');
+    } else {
+        showToast('Incorrect admin key.', 'error');
+    }
+}
+
+/** Unlock admin mode silently from a ?admin=<key> URL parameter (testing). */
+function _checkAdminKeyParam() {
+    try {
+        const k = new URLSearchParams(window.location.search).get('admin');
+        if (k && k === ADMIN_KEY && !isAdmin()) { enableAdminMode(); }
+    } catch (_e) { /* ignore */ }
 }
 
 /** Open the access-control panel (admin only). */
@@ -1420,6 +1447,7 @@ window._puzzleApp = {
     setIncludePath,
     renderTopicTogglesByStrand,
     setAdminMode,
+    promptAdminKey,
     openAccessPanel: openAccessPanelUI,
     closeAccessPanel,
     applyGroupPreset,
@@ -1468,6 +1496,9 @@ window.addEventListener('load', async () => {
             // are reflected on next page load without blocking the UI.
             refreshSession().then(() => renderTierUI()).catch(() => {});
         }
+
+        // Honour a ?admin=<key> URL parameter for one-click admin testing.
+        _checkAdminKeyParam();
 
         const saved = loadRawState();
         if (saved) applyStateToDOM(saved);
@@ -1547,6 +1578,7 @@ window.addEventListener('load', async () => {
             if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }); }
             if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 's') { e.preventDefault(); downloadConfig(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); generateAll(); }
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) { e.preventDefault(); promptAdminKey(); }
         });
 
         _step('Ready!', 100);

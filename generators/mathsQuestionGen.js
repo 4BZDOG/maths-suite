@@ -3742,71 +3742,67 @@ function genTrigonometry(rng, diff, allowedOps) {
         const angle2 = round(Math.atan2(triple.a, triple.b) * 180 / Math.PI, 1);
         // Find-hypotenuse variant (Medium/Hard, 25%)
         if (diff !== 'Easy' && rng() < 0.25) {
-            const opp2 = triple.a * scale, hyp2 = triple.c * scale, adj2 = triple.b * scale;
+            const opp2 = triple.a * scale, hyp2 = triple.c * scale;
             const u2 = _geoUnit(hyp2);
-            const sinV = round(Math.sin(angle2 * Math.PI / 180), 3);
             const clue = rc(rng, [
-                `Find the *hypotenuse* of a right triangle with opposite side $${opp2}$ ${u2} and angle $${angle2}$°. Use $\\sin(${angle2}°) \\approx ${sinV}$.`,
-                `A right-angled triangle has opposite side $${opp2}$ ${u2} and angle $${angle2}$°. Calculate the *hypotenuse*. Use $\\sin(${angle2}°) \\approx ${sinV}$.`,
+                `Find the *hypotenuse* of a right triangle with opposite side $${opp2}$ ${u2} and angle $${angle2}$°.`,
+                `A right-angled triangle has opposite side $${opp2}$ ${u2} and angle $${angle2}$°. Calculate the *hypotenuse*.`,
             ]);
             return {
                 clue, answer: String(hyp2), answerDisplay: `${hyp2} ${u2}`,
-                worked: `$\\text{hyp} = \\frac{${opp2}}{\\sin(${angle2}°)} = \\frac{${opp2}}{${sinV}} = ${hyp2}$`,
-                diagram: { type: 'right-triangle-trig', opp: opp2, adj: adj2, hyp: hyp2, angle: angle2, missing: 'hyp' },
+                worked: `$\\text{hyp} = \\frac{${opp2}}{\\sin(${angle2}°)} = ${hyp2}$`,
+                diagram: { type: 'right-triangle-trig', opp: opp2, adj: null, hyp: hyp2, angle: angle2, missing: 'hyp' },
             };
         }
         const choice = rc(rng, diff === 'Easy' ? ['sin', 'cos'] : ['sin', 'cos', 'tan']);
         if (choice === 'sin') {
             const hyp2 = triple.c * scale, opp2 = triple.a * scale;
             const u2 = _geoUnit(hyp2);
-            const sinV = round(Math.sin(angle2 * Math.PI / 180), 3);
             const clue = rc(rng, [
-                `Find the *opposite* side of a right triangle with hypotenuse $${hyp2}$ ${u2} and angle $${angle2}$°. Use $\\sin(${angle2}°) \\approx ${sinV}$.`,
-                `A right-angled triangle has hypotenuse $${hyp2}$ ${u2} and an angle of $${angle2}$°. Find the *opposite* side. Use $\\sin(${angle2}°) \\approx ${sinV}$.`,
+                `Find the *opposite* side of a right triangle with hypotenuse $${hyp2}$ ${u2} and angle $${angle2}$°.`,
+                `A right-angled triangle has hypotenuse $${hyp2}$ ${u2} and an angle of $${angle2}$°. Find the *opposite* side.`,
             ]);
             return {
                 clue, answer: String(opp2), answerDisplay: `${opp2} ${u2}`,
-                worked: `$\\text{opp} = ${hyp2} \\times \\sin(${angle2}°) = ${hyp2} \\times ${sinV} = ${opp2}$`,
-                diagram: { type: 'right-triangle-trig', opp: opp2, adj: triple.b * scale, hyp: hyp2, angle: angle2, missing: 'opp' },
+                worked: `$\\text{opp} = ${hyp2} \\times \\sin(${angle2}°) = ${opp2}$`,
+                diagram: { type: 'right-triangle-trig', opp: opp2, adj: null, hyp: hyp2, angle: angle2, missing: 'opp' },
             };
         }
         if (choice === 'cos') {
             const hyp2 = triple.c * scale, adj2 = triple.b * scale;
             const u2 = _geoUnit(hyp2);
-            const cosV = round(Math.cos(angle2 * Math.PI / 180), 3);
             const clue = rc(rng, [
-                `Find the *adjacent* side of a right triangle with hypotenuse $${hyp2}$ ${u2} and angle $${angle2}$°. Use $\\cos(${angle2}°) \\approx ${cosV}$.`,
-                `A right-angled triangle has hypotenuse $${hyp2}$ ${u2} and an angle of $${angle2}$°. Calculate the *adjacent* side. Use $\\cos(${angle2}°) \\approx ${cosV}$.`,
+                `Find the *adjacent* side of a right triangle with hypotenuse $${hyp2}$ ${u2} and angle $${angle2}$°.`,
+                `A right-angled triangle has hypotenuse $${hyp2}$ ${u2} and an angle of $${angle2}$°. Calculate the *adjacent* side.`,
             ]);
             return {
                 clue, answer: String(adj2), answerDisplay: `${adj2} ${u2}`,
-                worked: `$\\text{adj} = ${hyp2} \\times \\cos(${angle2}°) = ${hyp2} \\times ${cosV} = ${adj2}$`,
-                diagram: { type: 'right-triangle-trig', opp: triple.a * scale, adj: adj2, hyp: hyp2, angle: angle2, missing: 'adj' },
+                worked: `$\\text{adj} = ${hyp2} \\times \\cos(${angle2}°) = ${adj2}$`,
+                diagram: { type: 'right-triangle-trig', opp: null, adj: adj2, hyp: hyp2, angle: angle2, missing: 'adj' },
             };
         }
         // tan: find opp from adj, or find adj from opp
-        const opp2 = triple.a * scale, adj2 = triple.b * scale, hyp2 = triple.c * scale;
+        const opp2 = triple.a * scale, adj2 = triple.b * scale;
         const u2 = _geoUnit(Math.max(opp2, adj2));
-        const tanV = round(Math.tan(angle2 * Math.PI / 180), 3);
         if (diff !== 'Easy' && rng() < 0.4) {
             const clue = rc(rng, [
-                `Find the *adjacent* side of a right triangle with opposite $${opp2}$ ${u2} and angle $${angle2}$°. Use $\\tan(${angle2}°) \\approx ${tanV}$.`,
-                `A right triangle has opposite side $${opp2}$ ${u2} and angle $${angle2}$°. Find the *adjacent* side. Use $\\tan(${angle2}°) \\approx ${tanV}$.`,
+                `Find the *adjacent* side of a right triangle with opposite $${opp2}$ ${u2} and angle $${angle2}$°.`,
+                `A right triangle has opposite side $${opp2}$ ${u2} and angle $${angle2}$°. Find the *adjacent* side.`,
             ]);
             return {
                 clue, answer: String(adj2), answerDisplay: `${adj2} ${u2}`,
-                worked: `$\\text{adj} = \\frac{${opp2}}{\\tan(${angle2}°)} = \\frac{${opp2}}{${tanV}} = ${adj2}$`,
-                diagram: { type: 'right-triangle-trig', opp: opp2, adj: adj2, hyp: hyp2, angle: angle2, missing: 'adj' },
+                worked: `$\\text{adj} = \\frac{${opp2}}{\\tan(${angle2}°)} = ${adj2}$`,
+                diagram: { type: 'right-triangle-trig', opp: opp2, adj: adj2, hyp: null, angle: angle2, missing: 'adj' },
             };
         }
         const clue = rc(rng, [
-            `Find the *opposite* side of a right triangle with adjacent $${adj2}$ ${u2} and angle $${angle2}$°. Use $\\tan(${angle2}°) \\approx ${tanV}$.`,
-            `A right triangle has adjacent side $${adj2}$ ${u2} and angle $${angle2}$°. Calculate the *opposite* side. Use $\\tan(${angle2}°) \\approx ${tanV}$.`,
+            `Find the *opposite* side of a right triangle with adjacent $${adj2}$ ${u2} and angle $${angle2}$°.`,
+            `A right triangle has adjacent side $${adj2}$ ${u2} and angle $${angle2}$°. Calculate the *opposite* side.`,
         ]);
         return {
             clue, answer: String(opp2), answerDisplay: `${opp2} ${u2}`,
-            worked: `$\\text{opp} = ${adj2} \\times \\tan(${angle2}°) = ${adj2} \\times ${tanV} = ${opp2}$`,
-            diagram: { type: 'right-triangle-trig', opp: opp2, adj: adj2, hyp: hyp2, angle: angle2, missing: 'opp' },
+            worked: `$\\text{opp} = ${adj2} \\times \\tan(${angle2}°) = ${opp2}$`,
+            diagram: { type: 'right-triangle-trig', opp: opp2, adj: adj2, hyp: null, angle: angle2, missing: 'opp' },
         };
     }
 
@@ -3843,7 +3839,7 @@ function genTrigonometry(rng, diff, allowedOps) {
         return {
             clue: ph, answer: `${theta}°`, answerDisplay: `$\\theta = ${theta}$°`,
             worked: `$\\${ratio}(\\theta) = ${ratioStr} \\Rightarrow \\theta = ${theta}°$`,
-            diagram: { type: 'right-triangle-trig', opp, adj, hyp, angle: theta, missing: 'angle' },
+            diagram: { type: 'right-triangle-trig', opp: ratio === 'cos' ? null : opp, adj: ratio === 'sin' ? null : adj, hyp: ratio === 'tan' ? null : hyp, angle: theta, missing: 'angle' },
         };
     }
 
@@ -3854,21 +3850,20 @@ function genTrigonometry(rng, diff, allowedOps) {
         const angle = round(Math.atan2(height, dist) * 180 / Math.PI, 1);
         // Hard: sometimes ask for a side given the angle (find the height/distance)
         if (diff === 'Hard' && rng() < 0.35) {
-            const tanV = round(Math.tan(angle * Math.PI / 180), 3);
             if (rng() < 0.5) {
                 const ph = rc(rng, [
-                    `From a point $${dist}$ m away from a tower, the *angle of elevation* to the top is $${angle}$°. Find the height of the tower. Use $\\tan(${angle}°) \\approx ${tanV}$.`,
-                    `A surveyor stands $${dist}$ m from a building. The *angle of elevation* to the roof is $${angle}$°. How tall is the building? Use $\\tan(${angle}°) \\approx ${tanV}$.`,
+                    `From a point $${dist}$ m away from a tower, the *angle of elevation* to the top is $${angle}$°. Find the height of the tower.`,
+                    `A surveyor stands $${dist}$ m from a building. The *angle of elevation* to the roof is $${angle}$°. How tall is the building?`,
                 ]);
                 return {
                     clue: ph, answer: String(height), answerDisplay: `${height} m`,
-                    worked: `$h = ${dist} \\times \\tan(${angle}°) = ${dist} \\times ${tanV} = ${height}$ m`,
+                    worked: `$h = ${dist} \\times \\tan(${angle}°) = ${height}$ m`,
                 };
             }
-            const ph = `A tree is $${height}$ m tall. The *angle of elevation* from a point on the ground to the top is $${angle}$°. How far is the point from the base? Use $\\tan(${angle}°) \\approx ${tanV}$.`;
+            const ph = `A tree is $${height}$ m tall. The *angle of elevation* from a point on the ground to the top is $${angle}$°. How far is the point from the base?`;
             return {
                 clue: ph, answer: String(dist), answerDisplay: `${dist} m`,
-                worked: `$d = \\frac{${height}}{\\tan(${angle}°)} = \\frac{${height}}{${tanV}} = ${dist}$ m`,
+                worked: `$d = \\frac{${height}}{\\tan(${angle}°)} = ${dist}$ m`,
             };
         }
         const ph = rc(rng, [

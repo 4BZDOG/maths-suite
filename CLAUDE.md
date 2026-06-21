@@ -274,6 +274,13 @@ Key functions in `payments/access.js`:
 - `acpFeatureChange()` — syncs group-preset button highlights after a checkbox change
 - `applyAccessOverrides()`, `resetAccessOverrides()`
 
+**Entering admin mode:** `promptAdminKey()` (bound to **Ctrl/Cmd+Shift+A**, also on
+`window`) prompts for `ADMIN_KEY` (`payments/config.js`) and, if correct, calls
+`enableAdminMode()` to unlock every option for testing. A `?admin=<key>` URL
+parameter does the same silently at load (`_checkAdminKeyParam()`). This is a
+convenience gate for local testing, **not** a security boundary — all tier logic
+is client-side. `setAdminMode(true/false)` from the console still works too.
+
 ### Stripe Payments (`payments/stripe.js` + `stripe-worker/`)
 Architecture: Browser → Cloudflare Worker (`stripe-worker/`) → Stripe API. The browser never holds a Stripe secret key.
 

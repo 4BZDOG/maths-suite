@@ -615,32 +615,44 @@ function _drawRightTriangleTrigPDF(doc, { opp, adj, hyp, angle, missing }, x0, y
     doc.setFontSize(7.5 * ps);
     const isMissing = (key) => missing === key;
     const lbl = (key, val, suffix = '') => isMissing(key) ? '?' : `${val}${suffix}`;
+    const show = (key, val) => isMissing(key) || val != null;
 
-    // adj label below baseline
-    doc.setFont(font, isMissing('adj') ? 'bold' : 'normal');
-    doc.setTextColor(...(isMissing('adj') ? _MC : _LC));
-    doc.text(`adj = ${lbl('adj', adj)}`, (Ax + Bx) / 2, Ay + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
+    // adj label below baseline (omitted when not part of the question)
+    if (show('adj', adj)) {
+        doc.setFont(font, isMissing('adj') ? 'bold' : 'normal');
+        doc.setTextColor(...(isMissing('adj') ? _MC : _LC));
+        doc.text(`adj = ${lbl('adj', adj)}`, (Ax + Bx) / 2, Ay + _LBL_OFFSET + 1.5 * ps, { align: 'center' });
+    }
 
     // opp label left of vertical leg
-    doc.setFont(font, isMissing('opp') ? 'bold' : 'normal');
-    doc.setTextColor(...(isMissing('opp') ? _MC : _LC));
-    doc.text(`opp = ${lbl('opp', opp)}`, Ax - _LBL_OFFSET, (Ay + Cy) / 2 + 1.2 * ps, { align: 'right' });
+    if (show('opp', opp)) {
+        doc.setFont(font, isMissing('opp') ? 'bold' : 'normal');
+        doc.setTextColor(...(isMissing('opp') ? _MC : _LC));
+        doc.text(`opp = ${lbl('opp', opp)}`, Ax - _LBL_OFFSET, (Ay + Cy) / 2 + 1.2 * ps, { align: 'right' });
+    }
 
     // hyp label along the hypotenuse (outward normal)
-    const hdx = Bx - Cx, hdy = By - Cy, hlen = Math.hypot(hdx, hdy);
-    const hnx = hdy / hlen, hny = -hdx / hlen;
-    const hmx = (Bx + Cx) / 2 + hnx * (_LBL_OFFSET + 2);
-    const hmy = (By + Cy) / 2 + hny * (_LBL_OFFSET + 2) + 1.2 * ps;
-    doc.setFont(font, isMissing('hyp') ? 'bold' : 'normal');
-    doc.setTextColor(...(isMissing('hyp') ? _MC : _LC));
-    doc.text(`hyp = ${lbl('hyp', hyp)}`, hmx, hmy, { align: 'center' });
+    if (show('hyp', hyp)) {
+        const hdx = Bx - Cx, hdy = By - Cy, hlen = Math.hypot(hdx, hdy);
+        const hnx = hdy / hlen, hny = -hdx / hlen;
+        const hmx = (Bx + Cx) / 2 + hnx * (_LBL_OFFSET + 2);
+        const hmy = (By + Cy) / 2 + hny * (_LBL_OFFSET + 2) + 1.2 * ps;
+        doc.setFont(font, isMissing('hyp') ? 'bold' : 'normal');
+        doc.setTextColor(...(isMissing('hyp') ? _MC : _LC));
+        doc.text(`hyp = ${lbl('hyp', hyp)}`, hmx, hmy, { align: 'center' });
+    }
 
-    // θ label inside the arc at B
+    // Angle value just inside the arc at B, along the bisector. No "theta="
+    // prefix — the arc shows which angle it is (θ has no glyph in the font).
+    const baLen = Math.hypot(Ax - Bx, Ay - By), bcLen = Math.hypot(Cx - Bx, Cy - By);
+    let bisx = (Ax - Bx) / baLen + (Cx - Bx) / bcLen;
+    let bisy = (Ay - By) / baLen + (Cy - By) / bcLen;
+    const bl = Math.hypot(bisx, bisy) || 1; bisx /= bl; bisy /= bl;
     doc.setFontSize(7 * ps);
     doc.setFont(font, isMissing('angle') ? 'bold' : 'normal');
     doc.setTextColor(...(isMissing('angle') ? _MC : _LC));
-    // θ has no glyph in the embedded font subset (or helvetica) — use "theta".
-    doc.text(`theta=${lbl('angle', angle, '°')}`, Bx - arcR - 7 * ps, By - arcR * 0.5, { align: 'right' });
+    doc.text(`${lbl('angle', angle, '°')}`,
+        Bx + bisx * (arcR + 4.5 * ps), By + bisy * (arcR + 4.5 * ps) + 1.0 * ps, { align: 'center' });
 }
 
 // "Nice" tick step (1, 2, 5, ×10ⁿ) for ~`target` ticks across span.
