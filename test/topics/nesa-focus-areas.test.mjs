@@ -71,8 +71,12 @@ test("Pythagoras' Theorem: sides satisfy a² + b² = c²", () => {
             for (const q of qs) {
                 const nums = cmNums(q.clue), ans = Number(q.answer);
                 let a, b, c;
-                if (/Find the hypotenuse/.test(q.clue)) { [a, b] = nums; c = ans; }
-                else { [c, a] = nums; b = ans; }
+                // Only the two cm-leg templates are checked here; the richer
+                // families (rectangle diagonal, point distance, applied) are
+                // covered in test/topics/pythagoras.test.mjs via the diagram.
+                if (/Find the hypotenuse of a right-angled triangle/.test(q.clue)) { [a, b] = nums; c = ans; }
+                else if (/has hypotenuse \$\d+\\text\{ cm\}\$ and one shorter side/.test(q.clue)) { [c, a] = nums; b = ans; }
+                else continue;
                 assert.equal(a * a + b * b, c * c, `${q.clue} → ${q.answer}`);
                 checked++;
             }
@@ -107,6 +111,9 @@ test('Data Classification and Visualisation: frequency total is the sum', () => 
             const qs = gen({ topic: 'Data Classification and Visualisation', difficulty: diff,
                 count: 6, seed, subOpsFilter: { 'Data Classification and Visualisation': ['frequency-total'] } });
             for (const q of qs) {
+                // The mode / fraction variants reuse the same frequency list but
+                // ask a different question — only verify the "total" form here.
+                if (!/How many data values are there in total/.test(q.clue)) continue;
                 const m = q.clue.match(/frequencies of \$([\d, ]+)\$/);
                 if (!m) continue;
                 const sum = m[1].split(',').reduce((a, b) => a + Number(b), 0);

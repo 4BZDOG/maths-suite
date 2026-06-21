@@ -238,6 +238,7 @@ export const SUB_OPS = {
     'Volume': [
         { key: 'prism',    label: 'Prisms' },
         { key: 'cylinder', label: 'Cylinders' },
+        { key: 'capacity', label: 'Volume / Capacity' },
         { key: 'pyramid',  label: 'Pyramids',         stages: ['Stage 5'] },
         { key: 'sphere',   label: 'Spheres',          stages: ['Stage 5'] },
     ],
@@ -253,6 +254,7 @@ export const SUB_OPS = {
     'Data Classification and Visualisation': [
         { key: 'frequency-total', label: 'Frequency tables' },
         { key: 'tally',           label: 'Tally charts' },
+        { key: 'dot-plot-read',   label: 'Read a dot plot' },
         { key: 'graph-choice',    label: 'Choosing a display' },
         { key: 'data-type',       label: 'Categorical / numerical' },
     ],
@@ -2077,10 +2079,10 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
     const maps = {
         Easy:   { 'mean-median': [0, 1], 'mode-range': [2, 3] },
         Medium: { 'mode-range': [0, 1], 'mean-median': [2, 3, 4] },
-        Hard:   { 'iqr': [0], 'mean-median': [1, 2, 3], 'mode-range': [4] },
+        Hard:   { 'iqr': [0], 'mean-median': [1, 2, 3, 5], 'mode-range': [4] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : 4);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : diff === 'Medium' ? 4 : 5);
     if (type === -1) return null;
 
     const ctx = rc(rng, DATA_CONTEXTS);
@@ -2355,22 +2357,39 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
         ]);
         return { clue: ph3, answer: String(newMean), worked: `$\\text{new sum} = ${newSum}, \\text{new mean} = ${newSum} \\div ${n3+1} = ${newMean}$` };
     }
-    // type 4: mode with larger dataset
-    const mode4 = ri(rng, 5, 30);
-    const usedVals4 = new Set([mode4]);
-    const nOthers4 = ri(rng, 6, 8);
-    const others4 = Array.from({ length: nOthers4 }, () => {
-        let v; do { v = ri(rng, 1, 40); } while (usedVals4.has(v)); usedVals4.add(v); return v;
-    });
-    const reps4 = 3;
-    const data4 = [...others4, ...Array(reps4).fill(mode4)].sort((a, b) => a - b);
-    const ph4 = rc(rng, [
-        `Find the *mode* of: $${data4.join(', ')}$`,
-        `Identify the *mode* of these ${ctx}: $${data4.join(', ')}$`,
-        `What is the *mode* of $${data4.join(', ')}$?`,
-        `The ${ctx} are $${data4.join(', ')}$. Find the *mode*.`,
-    ]);
-    return { clue: ph4, answer: String(mode4), worked: `$\\text{mode} = ${mode4} \\text{ (appears most often)}$` };
+    if (type === 4) {
+        // mode with larger dataset
+        const mode4 = ri(rng, 5, 30);
+        const usedVals4 = new Set([mode4]);
+        const nOthers4 = ri(rng, 6, 8);
+        const others4 = Array.from({ length: nOthers4 }, () => {
+            let v; do { v = ri(rng, 1, 40); } while (usedVals4.has(v)); usedVals4.add(v); return v;
+        });
+        const reps4 = 3;
+        const data4 = [...others4, ...Array(reps4).fill(mode4)].sort((a, b) => a - b);
+        const ph4 = rc(rng, [
+            `Find the *mode* of: $${data4.join(', ')}$`,
+            `Identify the *mode* of these ${ctx}: $${data4.join(', ')}$`,
+            `What is the *mode* of $${data4.join(', ')}$?`,
+            `The ${ctx} are $${data4.join(', ')}$. Find the *mode*.`,
+        ]);
+        return { clue: ph4, answer: String(mode4), worked: `$\\text{mode} = ${mode4} \\text{ (appears most often)}$` };
+    }
+    // type 5: mean from a frequency table  (mean = Σfx ÷ Σf), integer mean only
+    const k = ri(rng, 3, 4);
+    const vals5 = [];
+    while (vals5.length < k) { const v = ri(rng, 1, 8); if (!vals5.includes(v)) vals5.push(v); }
+    vals5.sort((a, b) => a - b);
+    const freqs5 = Array.from({ length: k }, () => ri(rng, 1, 6));
+    const sumF = freqs5.reduce((a, b) => a + b, 0);
+    const sumFX = vals5.reduce((s, v, i) => s + v * freqs5[i], 0);
+    if (sumFX % sumF !== 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
+    const mean5 = sumFX / sumF;
+    return {
+        clue: `A frequency table shows the values $${vals5.join(', ')}$ occurring with frequencies $${freqs5.join(', ')}$ respectively. Find the *mean*.`,
+        answer: String(mean5), answerDisplay: String(mean5),
+        worked: `$\\overline{x} = \\dfrac{${vals5.map((v, i) => `${v}\\times${freqs5[i]}`).join(' + ')}}{${freqs5.join(' + ')}} = \\dfrac{${sumFX}}{${sumF}} = ${mean5}$`,
+    };
 }
 
 // ============================================================
@@ -6167,16 +6186,48 @@ function genLength(rng, diff, allowedOps) {
             const w = ri(rng, 2, 15), h = ri(rng, 2, 15);
             return { clue: `Find the perimeter of a rectangle $${w}\\text{ cm}$ long and $${h}\\text{ cm}$ wide.`,
                 answer: String(2 * (w + h)), answerDisplay: `$${2 * (w + h)}\\text{ cm}$`,
-                worked: `$P = 2(${w} + ${h}) = ${2 * (w + h)}\\text{ cm}$` };
+                worked: `$P = 2(${w} + ${h}) = ${2 * (w + h)}\\text{ cm}$`,
+                diagram: { type: 'rectangle', l: w, w: h, missing: 'perimeter' } };
         }
         if (diff === 'Medium') {
-            const s = ri(rng, 3, 12), n = rc(rng, [3, 5, 6, 8]);
-            const shape = { 3: 'triangle', 5: 'pentagon', 6: 'hexagon', 8: 'octagon' }[n];
-            return { clue: `A regular ${shape} has sides of $${s}\\text{ cm}$. Find its perimeter.`,
-                answer: String(n * s), answerDisplay: `$${n * s}\\text{ cm}$`,
-                worked: `$P = ${n} \\times ${s} = ${n * s}\\text{ cm}$` };
+            const r = rng();
+            if (r < 0.4) {
+                const s = ri(rng, 3, 12), n = rc(rng, [3, 5, 6, 8]);
+                const shape = { 3: 'triangle', 5: 'pentagon', 6: 'hexagon', 8: 'octagon' }[n];
+                return { clue: `A regular ${shape} has sides of $${s}\\text{ cm}$. Find its perimeter.`,
+                    answer: String(n * s), answerDisplay: `$${n * s}\\text{ cm}$`,
+                    worked: `$P = ${n} \\times ${s} = ${n * s}\\text{ cm}$` };
+            }
+            if (r < 0.7) {
+                const a = ri(rng, 4, 14), b = ri(rng, 3, 12);
+                return { clue: `A parallelogram has side lengths $${a}\\text{ cm}$ and $${b}\\text{ cm}$. Find its perimeter.`,
+                    answer: String(2 * (a + b)), answerDisplay: `$${2 * (a + b)}\\text{ cm}$`,
+                    worked: `$P = 2(${a} + ${b}) = ${2 * (a + b)}\\text{ cm}$` };
+            }
+            const a = ri(rng, 4, 12), b = ri(rng, 4, 12), c = ri(rng, 4, 12);
+            return { clue: `A triangle has sides $${a}\\text{ cm}$, $${b}\\text{ cm}$ and $${c}\\text{ cm}$. Find its perimeter.`,
+                answer: String(a + b + c), answerDisplay: `$${a + b + c}\\text{ cm}$`,
+                worked: `$P = ${a} + ${b} + ${c} = ${a + b + c}\\text{ cm}$` };
         }
-        // Hard: missing side from a known perimeter
+        // Hard
+        const r = rng();
+        if (r < 0.4) {
+            // composite L-shape: six side lengths sum to the perimeter (= 2(W+H))
+            const W = ri(rng, 8, 16), H = ri(rng, 6, 14), w = ri(rng, 2, W - 3), h = ri(rng, 2, H - 3);
+            const sides = [W, h, w, H - h, W - w, H];
+            const P = sides.reduce((x, y) => x + y, 0);
+            return { clue: `An L-shaped garden has sides of length $${sides.join(', ')}\\text{ m}$. Find its perimeter.`,
+                answer: String(P), answerDisplay: `$${P}\\text{ m}$`,
+                worked: `$P = ${sides.join(' + ')} = ${P}\\text{ m}$` };
+        }
+        if (r < 0.7) {
+            // perimeter given area and one side
+            const l = ri(rng, 4, 15), w = ri(rng, 3, 12), A = l * w;
+            return { clue: `A rectangle has area $${A}\\text{ cm}^2$ and width $${w}\\text{ cm}$. Find its perimeter.`,
+                answer: String(2 * (l + w)), answerDisplay: `$${2 * (l + w)}\\text{ cm}$`,
+                worked: `$l = ${A} \\div ${w} = ${l}$, so $P = 2(${l} + ${w}) = ${2 * (l + w)}\\text{ cm}$` };
+        }
+        // missing side from a known perimeter
         const w = ri(rng, 5, 20), h = ri(rng, 4, 15), P = 2 * (w + h);
         return { clue: `A rectangle has perimeter $${P}\\text{ cm}$ and width $${h}\\text{ cm}$. Find its length.`,
             answer: String(w), answerDisplay: `$${w}\\text{ cm}$`,
@@ -6186,9 +6237,22 @@ function genLength(rng, diff, allowedOps) {
     if (op === 'circumference') {
         const r = ri(rng, 2, diff === 'Easy' ? 9 : 20), d = 2 * r;
         if (diff === 'Hard') {
-            return { clue: `A circle has circumference $${d}\\pi\\text{ cm}$. Find its radius.`,
-                answer: String(r), answerDisplay: `$${r}\\text{ cm}$`,
-                worked: `$r = \\frac{C}{2\\pi} = \\frac{${d}\\pi}{2\\pi} = ${r}\\text{ cm}$` };
+            if (rng() < 0.5) {
+                return { clue: `A circle has circumference $${d}\\pi\\text{ cm}$. Find its radius.`,
+                    answer: String(r), answerDisplay: `$${r}\\text{ cm}$`,
+                    worked: `$r = \\frac{C}{2\\pi} = \\frac{${d}\\pi}{2\\pi} = ${r}\\text{ cm}$` };
+            }
+            // arc length of a semicircle = πr (leave in terms of π)
+            return { clue: `Find the arc length (curved edge) of a semicircle with radius $${r}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
+                answer: `${r}π`, answerDisplay: `$${r}\\pi\\text{ cm}$`,
+                worked: `Arc $= \\tfrac{1}{2}\\times 2\\pi r = \\pi r = ${r}\\pi\\text{ cm}$` };
+        }
+        if (diff === 'Medium' && rng() < 0.45) {
+            // numeric answer using π ≈ 3.14, rounded to 1 dp
+            const Cnum = Math.round(3.14 * d * 10) / 10;
+            return { clue: `Find the circumference of a circle with diameter $${d}\\text{ cm}$. Use $\\pi \\approx 3.14$ and round to 1 decimal place.`,
+                answer: String(Cnum), answerDisplay: `$${Cnum}\\text{ cm}$`,
+                worked: `$C = \\pi d \\approx 3.14 \\times ${d} = ${Cnum}\\text{ cm}$` };
         }
         const useD = rng() < 0.5;
         return { clue: `Find the circumference of a circle with ${useD ? `diameter $${d}` : `radius $${r}`}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
@@ -6198,6 +6262,16 @@ function genLength(rng, diff, allowedOps) {
 
     // unit-convert
     const units = [['cm', 'mm', 10], ['m', 'cm', 100], ['km', 'm', 1000], ['m', 'mm', 1000]];
+    if (diff === 'Hard' && rng() < 0.5) {
+        // mixed-unit conversion, e.g. "3 m 25 cm → cm"
+        const mixed = [['m', 'cm', 100], ['km', 'm', 1000], ['cm', 'mm', 10]];
+        const [big, small, factor] = rc(rng, mixed);
+        const a = ri(rng, 1, 9), b = ri(rng, 1, factor - 1);
+        const tot = a * factor + b;
+        return { clue: `Convert $${a}\\text{ ${big}}\\ ${b}\\text{ ${small}}$ to ${small}.`,
+            answer: String(tot), answerDisplay: `$${tot}\\text{ ${small}}$`,
+            worked: `$${a} \\times ${factor} + ${b} = ${tot}\\text{ ${small}}$` };
+    }
     const [big, small, factor] = rc(rng, units);
     if (rng() < 0.5) {
         const val = ri(rng, 2, diff === 'Easy' ? 9 : 50);
@@ -6211,9 +6285,9 @@ function genLength(rng, diff, allowedOps) {
         worked: `$${val} \\div ${factor} = ${m}\\text{ ${big}}$` };
 }
 
-// ---- Volume: prisms & cylinders (S4); pyramids & spheres (S5) ----
+// ---- Volume: prisms, cylinders & capacity (S4); pyramids & spheres (S5) ----
 function genVolume(rng, diff, allowedOps) {
-    const OPS = ['prism', 'cylinder', 'pyramid', 'sphere'];
+    const OPS = ['prism', 'cylinder', 'capacity', 'pyramid', 'sphere'];
     const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
@@ -6225,6 +6299,24 @@ function genVolume(rng, diff, allowedOps) {
                 answer: String(l * w * h), answerDisplay: `$${l * w * h}\\text{ cm}^3$`,
                 worked: `$V = ${l} \\times ${w} \\times ${h} = ${l * w * h}\\text{ cm}^3$` };
         }
+        if (diff === 'Hard') {
+            const r = rng();
+            if (r < 0.45) {
+                // composite "L-shaped" solid: two stacked rectangular prisms
+                const l1 = ri(rng, 4, 10), w1 = ri(rng, 3, 8), h1 = ri(rng, 2, 6);
+                const l2 = ri(rng, 2, l1 - 1), h2 = ri(rng, 2, 6);
+                const V1 = l1 * w1 * h1, V2 = l2 * w1 * h2, V = V1 + V2;
+                return { clue: `A solid is made of two rectangular blocks sharing a width of $${w1}\\text{ cm}$. The lower block is $${l1}\\text{ cm} \\times ${w1}\\text{ cm} \\times ${h1}\\text{ cm}$ and the upper block is $${l2}\\text{ cm} \\times ${w1}\\text{ cm} \\times ${h2}\\text{ cm}$. Find the total volume.`,
+                    answer: String(V), answerDisplay: `$${V}\\text{ cm}^3$`,
+                    worked: `$V = ${V1} + ${V2} = ${V}\\text{ cm}^3$` };
+            }
+            // inverse: missing dimension given the volume of a rectangular prism
+            const l = ri(rng, 2, 10), w = ri(rng, 2, 10), h = ri(rng, 2, 10), V = l * w * h;
+            return { clue: `A rectangular prism has volume $${V}\\text{ cm}^3$, length $${l}\\text{ cm}$ and width $${w}\\text{ cm}$. Find its height.`,
+                answer: String(h), answerDisplay: `$${h}\\text{ cm}$`,
+                worked: `$h = ${V} \\div (${l} \\times ${w}) = ${V} \\div ${l * w} = ${h}\\text{ cm}$` };
+        }
+        // Medium: triangular prism
         const b = ri(rng, 1, 6) * 2, ht = ri(rng, 2, 9), L = ri(rng, 3, 12);
         const V = (b * ht / 2) * L;
         return { clue: `A triangular prism has a cross-section of base $${b}\\text{ cm}$ and height $${ht}\\text{ cm}$, and length $${L}\\text{ cm}$. Find its volume.`,
@@ -6234,9 +6326,55 @@ function genVolume(rng, diff, allowedOps) {
 
     if (op === 'cylinder') {
         const r = ri(rng, 2, 9), h = ri(rng, 2, 12), V = r * r * h;
+        if (diff === 'Hard' && rng() < 0.5) {
+            // inverse: find the height given the volume in terms of π
+            return { clue: `A cylinder has volume $${V}\\pi\\text{ cm}^3$ and radius $${r}\\text{ cm}$. Find its height.`,
+                answer: String(h), answerDisplay: `$${h}\\text{ cm}$`,
+                worked: `$h = \\dfrac{${V}\\pi}{\\pi \\times ${r}^2} = \\dfrac{${V}}{${r * r}} = ${h}\\text{ cm}$` };
+        }
+        if (diff !== 'Easy' && rng() < 0.4) {
+            // numeric answer using π ≈ 3.14, rounded to 1 dp
+            const Vnum = Math.round(V * 3.14 * 10) / 10;
+            return { clue: `Find the volume of a cylinder with radius $${r}\\text{ cm}$ and height $${h}\\text{ cm}$. Use $\\pi \\approx 3.14$ and round to 1 decimal place.`,
+                answer: String(Vnum), answerDisplay: `$${Vnum}\\text{ cm}^3$`,
+                worked: `$V = \\pi r^2 h \\approx 3.14 \\times ${r * r} \\times ${h} = ${Vnum}\\text{ cm}^3$` };
+        }
         return { clue: `Find the volume of a cylinder with radius $${r}\\text{ cm}$ and height $${h}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
             answer: `${V}π`, answerDisplay: `$${V}\\pi\\text{ cm}^3$`,
             worked: `$V = \\pi r^2 h = \\pi \\times ${r * r} \\times ${h} = ${V}\\pi\\text{ cm}^3$` };
+    }
+
+    if (op === 'capacity') {
+        // 1 cm³ = 1 mL, 1000 mL = 1 L, 1000 cm³ = 1 L
+        if (diff === 'Easy') {
+            // direct cm³ → mL (1:1) or mL ↔ L
+            if (rng() < 0.5) {
+                const v = ri(rng, 50, 900);
+                return { clue: `A container holds $${v}\\text{ cm}^3$ of water. What is this in millilitres (mL)?`,
+                    answer: String(v), answerDisplay: `$${v}\\text{ mL}$`,
+                    worked: `$1\\text{ cm}^3 = 1\\text{ mL}$, so $${v}\\text{ cm}^3 = ${v}\\text{ mL}$` };
+            }
+            const L = ri(rng, 1, 9);
+            return { clue: `Convert $${L}\\text{ L}$ to millilitres (mL).`,
+                answer: String(L * 1000), answerDisplay: `$${L * 1000}\\text{ mL}$`,
+                worked: `$${L} \\times 1000 = ${L * 1000}\\text{ mL}$` };
+        }
+        if (diff === 'Medium') {
+            // cm³ → L (÷1000), exact multiples
+            const k = ri(rng, 1, 12), v = k * 1000;
+            return { clue: `A tank has a volume of $${v}\\text{ cm}^3$. What is its capacity in litres (L)?`,
+                answer: String(k), answerDisplay: `$${k}\\text{ L}$`,
+                worked: `$${v} \\div 1000 = ${k}\\text{ L}$` };
+        }
+        // Hard: rectangular prism volume → capacity in litres
+        const l = ri(rng, 10, 30), w = ri(rng, 10, 30), h = ri(rng, 10, 30);
+        // scale so the volume is a whole number of litres
+        const Vraw = l * w * h;
+        const V = Math.round(Vraw / 1000) * 1000 || 1000;
+        const Ldisp = V / 1000;
+        return { clue: `A fish tank measures $${l}\\text{ cm} \\times ${w}\\text{ cm} \\times ${h}\\text{ cm}$. Approximately how many litres of water does it hold? (round to the nearest litre)`,
+            answer: String(Ldisp), answerDisplay: `$${Ldisp}\\text{ L}$`,
+            worked: `$V = ${l} \\times ${w} \\times ${h} = ${Vraw}\\text{ cm}^3 \\approx ${V}\\text{ cm}^3 = ${Ldisp}\\text{ L}$` };
     }
 
     if (op === 'pyramid') {
@@ -6255,48 +6393,93 @@ function genVolume(rng, diff, allowedOps) {
         worked: `$V = \\tfrac{4}{3}\\pi r^3 = \\tfrac{4}{3}\\pi \\times ${r * r * r} = ${coeff}\\pi\\text{ cm}^3$` };
 }
 
-// ---- Time: 24-hour conversion, duration, time zones (starter) ----
+// ---- Time: 24-hour conversion, elapsed time, time zones ----
 function genTime(rng, diff, allowedOps) {
     const OPS = ['convert', 'duration', 'zones'];
     const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
     const pad = (n) => String(n).padStart(2, '0');
+    const norm = (m) => ((m % 1440) + 1440) % 1440;
+    const hm = (m) => { m = norm(m); return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`; };
+    const disp = (m) => `$${hm(m).replace(':', '{:}')}$`;
 
     if (op === 'convert') {
-        const h12 = ri(rng, 1, 11), min = ri(rng, 0, 59), pm = rng() < 0.5;
-        const h24 = pm ? h12 + 12 : h12;
-        return { clue: `Write $${h12}{:}${pad(min)}\\text{ ${pm ? 'pm' : 'am'}}$ in 24-hour time.`,
-            answer: `${pad(h24)}:${pad(min)}`, answerDisplay: `$${pad(h24)}{:}${pad(min)}$`,
-            worked: `${pm ? `Add 12 hours: ${h12} + 12 = ${h24}` : 'Morning hours are unchanged'} $\\rightarrow ${pad(h24)}{:}${pad(min)}$` };
+        if (rng() < 0.5) {
+            // 12-hour → 24-hour
+            const h12 = ri(rng, 1, 11), min = ri(rng, 0, 59), pm = rng() < 0.5;
+            const h24 = pm ? h12 + 12 : h12;
+            return { clue: `Write $${h12}{:}${pad(min)}\\text{ ${pm ? 'pm' : 'am'}}$ in 24-hour time.`,
+                answer: `${pad(h24)}:${pad(min)}`, answerDisplay: `$${pad(h24)}{:}${pad(min)}$`,
+                worked: `${pm ? `Add 12 hours: ${h12} + 12 = ${h24}` : 'Morning hours are unchanged'} $\\rightarrow ${pad(h24)}{:}${pad(min)}$` };
+        }
+        // 24-hour → 12-hour (afternoon/evening, always pm, avoids the 12 edge)
+        const h24 = ri(rng, 13, 23), min = ri(rng, 0, 59), h12 = h24 - 12;
+        return { clue: `Write $${pad(h24)}{:}${pad(min)}$ as 12-hour time (include am or pm).`,
+            answer: `${h12}:${pad(min)} pm`, answerDisplay: `$${h12}{:}${pad(min)}\\text{ pm}$`,
+            worked: `Subtract 12: $${h24} - 12 = ${h12}$, afternoon $\\rightarrow ${h12}{:}${pad(min)}\\text{ pm}$` };
     }
 
     if (op === 'duration') {
-        const startH = ri(rng, 6, 18), startM = ri(rng, 0, 50);
-        const addMin = ri(rng, 10, diff === 'Easy' ? 45 : 180);
-        const total = startH * 60 + startM + addMin;
-        const endH = Math.floor(total / 60) % 24, endM = total % 60;
-        if (rng() < 0.5) {
-            return { clue: `A film starts at $${pad(startH)}{:}${pad(startM)}$ and runs for $${addMin}$ minutes. What time does it finish?`,
-                answer: `${pad(endH)}:${pad(endM)}`, answerDisplay: `$${pad(endH)}{:}${pad(endM)}$`,
-                worked: `$${pad(startH)}{:}${pad(startM)} + ${addMin}\\text{ min} = ${pad(endH)}{:}${pad(endM)}$` };
+        if (diff === 'Hard' && rng() < 0.45) {
+            // timetable: latest departure to arrive by a target time
+            const trip = ri(rng, 35, 110);
+            const arrM = ri(rng, 9, 18) * 60 + rc(rng, [0, 15, 30, 45]);
+            const depM = arrM - trip;
+            return { clue: `A train journey takes $${trip}$ minutes. To arrive by ${disp(arrM)}, what is the latest you can depart?`,
+                answer: hm(depM), answerDisplay: disp(depM),
+                worked: `${disp(arrM)} $- ${trip}\\text{ min} = $ ${disp(depM)}` };
         }
-        return { clue: `How many minutes are there from $${pad(startH)}{:}${pad(startM)}$ to $${pad(endH)}{:}${pad(endM)}$?`,
+        const startM = ri(rng, 6, 21) * 60 + ri(rng, 0, 59);
+        const addMin = ri(rng, 10, diff === 'Easy' ? 45 : diff === 'Medium' ? 180 : 600);
+        const endM = startM + addMin;            // Hard may cross midnight
+        if (rng() < 0.5) {
+            // express the duration as "h min" at Medium/Hard for variety
+            const durTxt = (diff !== 'Easy' && addMin >= 60)
+                ? `$${Math.floor(addMin / 60)}$ hours $${addMin % 60}$ minutes`
+                : `$${addMin}$ minutes`;
+            return { clue: `A film starts at ${disp(startM)} and runs for ${durTxt}. What time does it finish?`,
+                answer: hm(endM), answerDisplay: disp(endM),
+                worked: `${disp(startM)} $+ ${addMin}\\text{ min} = $ ${disp(endM)}` };
+        }
+        return { clue: `How many minutes are there from ${disp(startM)} to ${disp(endM)}?`,
             answer: String(addMin), answerDisplay: `$${addMin}\\text{ min}$`,
             worked: `$${addMin}\\text{ minutes}$` };
     }
 
-    // zones
-    const offset = ri(rng, 1, 3), baseH = ri(rng, 6, 18), ahead = rng() < 0.5;
-    const otherH = (baseH + (ahead ? offset : -offset) + 24) % 24;
-    return { clue: `Sydney is $${offset}$ hours ahead of Perth. When it is $${pad(baseH)}{:}00$ in ${ahead ? 'Perth' : 'Sydney'}, what time is it in ${ahead ? 'Sydney' : 'Perth'}?`,
-        answer: `${pad(otherH)}:00`, answerDisplay: `$${pad(otherH)}{:}00$`,
-        worked: `$${pad(baseH)}{:}00 ${ahead ? '+' : '-'} ${offset}\\text{ h} = ${pad(otherH)}{:}00$` };
+    // zones — offset stated explicitly; the asked city is tagged ahead/behind.
+    const PAIRS = diff === 'Easy'
+        ? [['Sydney', 'Perth', 180], ['Sydney', 'Brisbane', 60], ['Sydney', 'Darwin', 90]]
+        : [['Sydney', 'Perth', 180], ['Sydney', 'Brisbane', 60], ['Sydney', 'Adelaide', 30],
+           ['Adelaide', 'Perth', 90], ['Sydney', 'Darwin', 90]];
+    const [cityA, cityB, offMin] = rc(rng, PAIRS);   // A is offMin minutes ahead of B
+    const offTxt = offMin % 60 === 0 ? `$${offMin / 60}$ hours` : `$${offMin}$ minutes`;
+    const baseM = ri(rng, 6, 20) * 60 + (offMin % 60 === 0 ? 0 : rc(rng, [0, 30]));
+
+    if (diff === 'Hard' && rng() < 0.5) {
+        // flight: depart A, fly D hours, destination B is "behind" → arrival local
+        const askAhead = rng() < 0.5;            // destination ahead(+) or behind(−)
+        const given = askAhead ? cityB : cityA;
+        const dest = askAhead ? cityA : cityB;
+        const D = ri(rng, 2, 6);
+        const arrM = baseM + D * 60 + (askAhead ? offMin : -offMin);
+        return { clue: `A flight leaves ${given} at ${disp(baseM)} and lasts $${D}$ hours. ${dest} is ${offTxt} ${askAhead ? 'ahead' : 'behind'}. What is the local arrival time in ${dest}?`,
+            answer: hm(arrM), answerDisplay: disp(arrM),
+            worked: `${disp(baseM)} $+ ${D}\\text{ h} ${askAhead ? '+' : '-'} ${offMin}\\text{ min} = $ ${disp(arrM)}` };
+    }
+
+    const askAhead = rng() < 0.5;
+    const given = askAhead ? cityB : cityA;
+    const asked = askAhead ? cityA : cityB;
+    const targetM = baseM + (askAhead ? offMin : -offMin);
+    return { clue: `When it is ${disp(baseM)} in ${given}, what is the time in ${asked}, which is ${offTxt} ${askAhead ? 'ahead' : 'behind'}?`,
+        answer: hm(targetM), answerDisplay: disp(targetM),
+        worked: `${disp(baseM)} ${askAhead ? '+' : '-'} ${offTxt} $= $ ${disp(targetM)}` };
 }
 
-// ---- Data classification & visualisation (starter) ----
+// ---- Data classification & visualisation ----
 function genDataViz(rng, diff, allowedOps) {
-    const OPS = ['frequency-total', 'tally', 'graph-choice', 'data-type'];
+    const OPS = ['frequency-total', 'tally', 'dot-plot-read', 'graph-choice', 'data-type'];
     const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
@@ -6305,24 +6488,85 @@ function genDataViz(rng, diff, allowedOps) {
         const n = diff === 'Easy' ? 4 : diff === 'Medium' ? 5 : 6;
         const freqs = Array.from({ length: n }, () => ri(rng, 1, 12));
         const total = freqs.reduce((a, b) => a + b, 0);
+        const r = rng();
+        if (diff !== 'Easy' && r < 0.33) {
+            // which category has the highest frequency (the mode)?
+            const maxF = Math.max(...freqs);
+            // ensure a unique maximum so the answer is well defined
+            if (freqs.filter(f => f === maxF).length === 1) {
+                const cat = 'ABCDEF'[freqs.indexOf(maxF)];
+                return { clue: `A frequency table for categories A–${'ABCDEF'[n - 1]} records frequencies of $${freqs.join(', ')}$ respectively. Which category is the mode?`,
+                    answer: cat, answerDisplay: cat,
+                    worked: `The mode is the category with the highest frequency ($${maxF}$) → ${cat}.` };
+            }
+        }
+        if (diff === 'Hard' && r < 0.66) {
+            // what fraction of the data is in the first category?
+            const g = gcd(freqs[0], total);
+            return { clue: `A frequency table records frequencies of $${freqs.join(', ')}$. What fraction of the data is in the first category?`,
+                answer: `${freqs[0] / g}/${total / g}`, answerDisplay: `$\\frac{${freqs[0] / g}}{${total / g}}$`,
+                worked: `$\\frac{${freqs[0]}}{${total}} = \\frac{${freqs[0] / g}}{${total / g}}$` };
+        }
         return { clue: `A frequency table records frequencies of $${freqs.join(', ')}$. How many data values are there in total?`,
             answer: String(total), answerDisplay: `$${total}$`,
             worked: `$${freqs.join(' + ')} = ${total}$` };
     }
 
     if (op === 'tally') {
+        if (diff !== 'Easy' && rng() < 0.5) {
+            // reverse: frequency → groups of five + extras
+            const f = ri(rng, 6, 29), groups = Math.floor(f / 5), rem = f % 5;
+            return { clue: `A category in a tally chart has a frequency of $${f}$. How many complete groups of five marks does it have?`,
+                answer: String(groups), answerDisplay: `$${groups}$`,
+                worked: `$${f} \\div 5 = ${groups}$ remainder $${rem}$` };
+        }
         const f = ri(rng, 3, 18), groups = Math.floor(f / 5), rem = f % 5;
         return { clue: `In a tally chart, one category has **${groups} complete group(s) of five and ${rem} extra mark(s)**. What is its frequency?`,
             answer: String(f), answerDisplay: `$${f}$`,
             worked: `$5 \\times ${groups} + ${rem} = ${f}$` };
     }
 
+    if (op === 'dot-plot-read') {
+        // a small dot plot described as a value list; find mode/range/total
+        const n = diff === 'Easy' ? 6 : diff === 'Medium' ? 9 : 12;
+        const lo = ri(rng, 0, 3), hi = lo + ri(rng, 3, 6);
+        const data = Array.from({ length: n }, () => ri(rng, lo, hi)).sort((a, b) => a - b);
+        // guarantee both extremes appear so range is well defined
+        data[0] = lo; data[data.length - 1] = hi;
+        const want = diff === 'Easy' ? rc(rng, ['total', 'range'])
+            : rc(rng, ['mode', 'range', 'total']);
+        if (want === 'total') {
+            return { clue: `A dot plot shows the values $${data.join(', ')}$. How many data values are shown in total?`,
+                answer: String(n), answerDisplay: `$${n}$`, worked: `Count the dots: $${n}$.` };
+        }
+        if (want === 'range') {
+            return { clue: `A dot plot shows the values $${data.join(', ')}$. What is the range?`,
+                answer: String(hi - lo), answerDisplay: `$${hi - lo}$`,
+                worked: `$${hi} - ${lo} = ${hi - lo}$` };
+        }
+        // mode — pick the unique most-frequent value (rebuild if tied)
+        const counts = {};
+        for (const v of data) counts[v] = (counts[v] || 0) + 1;
+        const maxC = Math.max(...Object.values(counts));
+        const modes = Object.keys(counts).filter(k => counts[k] === maxC).map(Number);
+        if (modes.length !== 1) {
+            return genDataViz(rng, diff, ['dot-plot-read']);   // retry for a clean mode
+        }
+        return { clue: `A dot plot shows the values $${data.join(', ')}$. What is the mode?`,
+            answer: String(modes[0]), answerDisplay: `$${modes[0]}$`,
+            worked: `The most frequent value is $${modes[0]}$ (appears $${maxC}$ times).` };
+    }
+
     if (op === 'graph-choice') {
         const c = rc(rng, [
             ['the favourite colours of a class', 'column graph'],
+            ['the number of pets owned by each student', 'column graph'],
             ['the proportion of a budget spent in each category', 'sector (pie) graph'],
+            ['the percentage of students in each house team', 'sector (pie) graph'],
             ['how temperature changes over a day', 'line graph'],
+            ['a plant’s height measured each week', 'line graph'],
             ['the spread of a set of test scores', 'dot plot'],
+            ['the times for a class to run 100 m', 'dot plot'],
         ]);
         return { clue: `Which graph best displays *${c[0]}*?`,
             answer: c[1], answerDisplay: c[1], worked: `A ${c[1]} is the most appropriate display here.` };
@@ -6331,39 +6575,122 @@ function genDataViz(rng, diff, allowedOps) {
     // data-type
     const item = rc(rng, [
         ['the number of siblings a student has', 'numerical'],
+        ['the mass of a parcel in kg', 'numerical'],
+        ['the number of goals scored in a match', 'numerical'],
+        ['the time taken to finish a puzzle', 'numerical'],
         ['a person’s eye colour', 'categorical'],
         ['the brand of a car', 'categorical'],
-        ['the height of a plant in cm', 'numerical'],
         ['a student’s favourite sport', 'categorical'],
+        ['the postcode someone lives in', 'categorical'],
+        ['the type of pet a family owns', 'categorical'],
+        ['the height of a plant in cm', 'numerical'],
     ]);
     return { clue: `Classify the data *${item[0]}* as categorical or numerical.`,
         answer: item[1], answerDisplay: item[1], worked: `This data is ${item[1]}.` };
 }
 
-// ---- Pythagoras' Theorem: find the hypotenuse or a shorter side ----
+// ---- Pythagoras' Theorem ----
+// A fresh integer triple every call (Euclid's formula) instead of a fixed list
+// of 8, plus several question families (hypotenuse, shorter side, rectangle
+// diagonal, distance between points, applied ladder, two-step perimeter/area).
+function _pythagTriple(rng, maxM) {
+    // m > n > 0 → a = m²−n², b = 2mn, c = m²+n² is always a Pythagorean triple.
+    for (let t = 0; t < 30; t++) {
+        const m = ri(rng, 2, maxM), n = ri(rng, 1, m - 1);
+        let a = m * m - n * n, b = 2 * m * n;
+        const c = m * m + n * n;
+        if (a > b) { const tmp = a; a = b; b = tmp; }
+        if (a >= 3 && b !== a) return [a, b, c];
+    }
+    return [3, 4, 5];
+}
+
 function genPythagoras(rng, diff, allowedOps) {
     if (allowedOps && !allowedOps.includes('pythagoras')) return null;
-    const TRIPLES = [[3, 4, 5], [6, 8, 10], [5, 12, 13], [8, 15, 17],
-                     [9, 12, 15], [7, 24, 25], [20, 21, 29], [12, 16, 20]];
-    if (diff === 'Hard') {
-        // non-triple: irrational hypotenuse, rounded to 1 dp
-        const a = ri(rng, 4, 12), b = ri(rng, 4, 14);
-        const hr = Math.round(Math.sqrt(a * a + b * b) * 10) / 10;
-        return { clue: `A right-angled triangle has the two shorter sides $${a}\\text{ cm}$ and $${b}\\text{ cm}$. Find the hypotenuse, correct to 1 decimal place.`,
-            answer: String(hr), answerDisplay: `$${hr}\\text{ cm}$`,
-            worked: `$c = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} \\approx ${hr}\\text{ cm}$` };
-    }
-    const [ta, tb, tc] = rc(rng, TRIPLES);
-    const k = diff === 'Medium' ? ri(rng, 1, 3) : 1;
-    const a = ta * k, b = tb * k, c = tc * k;
-    if (diff === 'Easy' || rng() < 0.5) {
+
+    // --- Easy: find the hypotenuse from a small triple, with a diagram. ---
+    if (diff === 'Easy') {
+        const [a, b, c] = _pythagTriple(rng, 3);
         return { clue: `Find the hypotenuse of a right-angled triangle with the two shorter sides $${a}\\text{ cm}$ and $${b}\\text{ cm}$.`,
             answer: String(c), answerDisplay: `$${c}\\text{ cm}$`,
-            worked: `$c = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} = ${c}\\text{ cm}$` };
+            worked: `$c = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} = ${c}\\text{ cm}$`,
+            diagram: { type: 'right-triangle', a, b, c, missing: 'c' } };
     }
-    return { clue: `A right-angled triangle has hypotenuse $${c}\\text{ cm}$ and one shorter side $${a}\\text{ cm}$. Find the length of the other side.`,
-        answer: String(b), answerDisplay: `$${b}\\text{ cm}$`,
-        worked: `$b = \\sqrt{${c}^2 - ${a}^2} = \\sqrt{${c * c - a * a}} = ${b}\\text{ cm}$` };
+
+    // --- Medium: hypotenuse, shorter side, rectangle diagonal, distance. ---
+    if (diff === 'Medium') {
+        const [a, b, c] = _pythagTriple(rng, 4);
+        const fam = ri(rng, 0, 3);
+        if (fam === 0) {
+            return { clue: `Find the hypotenuse of a right-angled triangle with the two shorter sides $${a}\\text{ cm}$ and $${b}\\text{ cm}$.`,
+                answer: String(c), answerDisplay: `$${c}\\text{ cm}$`,
+                worked: `$c = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} = ${c}\\text{ cm}$`,
+                diagram: { type: 'right-triangle', a, b, c, missing: 'c' } };
+        }
+        if (fam === 1) {
+            return { clue: `A right-angled triangle has hypotenuse $${c}\\text{ cm}$ and one shorter side $${a}\\text{ cm}$. Find the length of the other side.`,
+                answer: String(b), answerDisplay: `$${b}\\text{ cm}$`,
+                worked: `$b = \\sqrt{${c}^2 - ${a}^2} = \\sqrt{${c * c - a * a}} = ${b}\\text{ cm}$`,
+                diagram: { type: 'right-triangle', a, b, c, missing: 'b' } };
+        }
+        if (fam === 2) {
+            return { clue: `A rectangle is $${a}\\text{ cm}$ long and $${b}\\text{ cm}$ wide. Find the length of its diagonal.`,
+                answer: String(c), answerDisplay: `$${c}\\text{ cm}$`,
+                worked: `$d = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} = ${c}\\text{ cm}$`,
+                diagram: { type: 'right-triangle', a, b, c, missing: 'c' } };
+        }
+        // distance between two grid points whose offsets are the triple legs
+        const x1 = ri(rng, -4, 2), y1 = ri(rng, -4, 2);
+        const x2 = x1 + a, y2 = y1 + b;
+        return { clue: `Find the distance between the points $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
+            answer: String(c), answerDisplay: `$${c}$ units`,
+            worked: `$d = \\sqrt{(${x2}-${x1})^2 + (${y2}-${y1})^2} = \\sqrt{${a}^2 + ${b}^2} = ${c}$`,
+            diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true } };
+    }
+
+    // --- Hard: applied, two-step, distance, and irrational (rounded). ---
+    const fam = ri(rng, 0, 3);
+    if (fam === 0) {
+        // applied: ladder against a wall (find the height reached)
+        const [a, b, c] = _pythagTriple(rng, 5);
+        return { clue: `A $${c}\\text{ m}$ ladder leans against a wall with its base $${a}\\text{ m}$ from the wall. How high up the wall does it reach?`,
+            answer: String(b), answerDisplay: `$${b}\\text{ m}$`,
+            worked: `$h = \\sqrt{${c}^2 - ${a}^2} = \\sqrt{${c * c - a * a}} = ${b}\\text{ m}$`,
+            diagram: { type: 'right-triangle', a, b, c, missing: 'b' } };
+    }
+    if (fam === 1) {
+        // two-step: find perimeter or area of the right triangle
+        const [a, b, c] = _pythagTriple(rng, 5);
+        if (rng() < 0.5) {
+            const P = a + b + c;
+            return { clue: `A right-angled triangle has shorter sides $${a}\\text{ cm}$ and $${b}\\text{ cm}$. Find its perimeter.`,
+                answer: String(P), answerDisplay: `$${P}\\text{ cm}$`,
+                worked: `$c = \\sqrt{${a}^2 + ${b}^2} = ${c}$, so $P = ${a} + ${b} + ${c} = ${P}\\text{ cm}$`,
+                diagram: { type: 'right-triangle', a, b, c, missing: 'c' } };
+        }
+        const A = a * b / 2;
+        return { clue: `A right-angled triangle has hypotenuse $${c}\\text{ cm}$ and one shorter side $${a}\\text{ cm}$. Find its area.`,
+            answer: String(A), answerDisplay: `$${A}\\text{ cm}^2$`,
+            worked: `$b = \\sqrt{${c}^2 - ${a}^2} = ${b}$, so $A = \\tfrac{1}{2}\\times${a}\\times${b} = ${A}\\text{ cm}^2$`,
+            diagram: { type: 'right-triangle', a, b, c, missing: 'b' } };
+    }
+    if (fam === 2) {
+        // distance between two points (larger offsets allowed)
+        const [a, b, c] = _pythagTriple(rng, 5);
+        const x1 = ri(rng, -5, 1), y1 = ri(rng, -5, 1);
+        const x2 = x1 + a, y2 = y1 + b;
+        return { clue: `Find the distance between the points $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
+            answer: String(c), answerDisplay: `$${c}$ units`,
+            worked: `$d = \\sqrt{(${x2}-${x1})^2 + (${y2}-${y1})^2} = \\sqrt{${a}^2 + ${b}^2} = ${c}$`,
+            diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true } };
+    }
+    // irrational hypotenuse, rounded to 1 dp
+    const a = ri(rng, 4, 12), b = ri(rng, 4, 14);
+    const hr = Math.round(Math.sqrt(a * a + b * b) * 10) / 10;
+    return { clue: `A right-angled triangle has the two shorter sides $${a}\\text{ cm}$ and $${b}\\text{ cm}$. Find the hypotenuse, correct to 1 decimal place.`,
+        answer: String(hr), answerDisplay: `$${hr}\\text{ cm}$`,
+        worked: `$c = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} \\approx ${hr}\\text{ cm}$`,
+        diagram: { type: 'right-triangle', a, b, c: hr, missing: 'c' } };
 }
 
 // ---- Properties of Geometrical Figures: angle relationships (S4)

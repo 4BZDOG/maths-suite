@@ -37,6 +37,10 @@ test('Statistics: mean/median/mode/range answers match recomputed values', () =>
         for (let seed = 1; seed <= 200; seed++) {
             const qs = gen({ topic: 'Statistics', difficulty: diff, count: 8, seed });
             for (const q of qs) {
+                // Frequency-table mean is a weighted mean over two lists — it has
+                // its own test below; skip it here so parseDataList doesn't treat
+                // the (unweighted) value list as a plain dataset.
+                if (/frequenc/i.test(q.clue)) continue;
                 const data = parseDataList(q.clue);
                 if (!data) continue;
                 let expected = null;
@@ -96,4 +100,23 @@ test('Statistics "missing value given mean": missing = mean·n − sum(known)', 
         }
     }
     assert.ok(checked > 10, `only ${checked} missing-value questions exercised`);
+});
+
+test('Statistics frequency-table mean: mean = Σfx ÷ Σf', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 250; seed++) {
+        const qs = gen({ topic: 'Statistics', difficulty: 'Hard', count: 8, seed });
+        for (const q of qs) {
+            const m = q.clue.match(/values \$([^$]+)\$ occurring with frequencies \$([^$]+)\$/);
+            if (!m) continue;
+            const vals = m[1].split(',').map(Number);
+            const freqs = m[2].split(',').map(Number);
+            const sumF = freqs.reduce((a, b) => a + b, 0);
+            const sumFX = vals.reduce((s, v, i) => s + v * freqs[i], 0);
+            assert.ok(approxEqual(Number(q.answer), sumFX / sumF),
+                `seed${seed}: freq-mean answer ${q.answer} ≠ ${sumFX / sumF} | "${q.clue.slice(0, 80)}…"`);
+            checked++;
+        }
+    }
+    assert.ok(checked > 30, `only ${checked} frequency-table-mean questions verified`);
 });
