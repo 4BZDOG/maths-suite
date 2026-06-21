@@ -13,10 +13,10 @@
 //       return;
 //   }
 // =============================================================
-import { TIER, FEATURE, TIER_FEATURES, FREE_LIMITS, PRICING, GROUPS } from './config.js';
+import { TIER, FEATURE, TIER_FEATURES, FREE_LIMITS, PRICING, GROUPS, ADMIN_KEY } from './config.js';
 import { getSession, setSession, clearSession, setAdminSession } from './session.js';
 
-export { TIER, FEATURE, FREE_LIMITS, PRICING, GROUPS };
+export { TIER, FEATURE, FREE_LIMITS, PRICING, GROUPS, ADMIN_KEY };
 
 // ---- Core access functions ----------------------------------
 
