@@ -108,6 +108,50 @@ test('Equations: substitution questions yield integer solutions', () => {
     assert.ok(n > 100, `only ${n} substitution questions generated`);
 });
 
+// ---- Inequalities: recompute the solution boundary independently ----
+test('Equations: linear-inequality solutions match recomputed boundaries', () => {
+    let checked = 0;
+    for (const diff of DIFFS) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = genStage5({ topic: TOPIC, difficulty: diff, count: 6, seed,
+                subOpsFilter: { [TOPIC]: ['inequalities'] } });
+            for (const q of qs) {
+                const eqn = [...q.clue.matchAll(/\$([^$]+)\$/g)].map(m => m[1])
+                    .find(s => /[<>]/.test(s));
+                if (!eqn) continue;
+                const a = String(q.answer), L = `${diff}/seed${seed}: "${eqn}" → ${a}`;
+                let m;
+                // compound:  lo < a·v + b < hi
+                if ((m = eqn.match(/^(\d+) < (\d+)([a-z]) \+ (\d+) < (\d+)$/))) {
+                    const [, lo, ac, v, b, hi] = m;
+                    assert.equal(a, `${(lo - b) / ac}<${v}<${(hi - b) / ac}`, L);
+                    checked++; continue;
+                }
+                // sign-flip:  −a·v + b </> c   →  v flips
+                if ((m = eqn.match(/^-(\d+)([a-z]) \+ (\d+) ([<>]) (-?\d+)$/))) {
+                    const [, ac, v, b, sign, c] = m;
+                    const flip = sign === '<' ? '>' : '<';
+                    assert.equal(a, `${v}${flip}${(b - c) / ac}`, L);
+                    checked++; continue;
+                }
+                // subtraction:  a·v − b </> c
+                if ((m = eqn.match(/^(\d+)([a-z]) - (\d+) ([<>]) (-?\d+)$/))) {
+                    const [, ac, v, b, sign, c] = m;
+                    assert.equal(a, `${v}${sign}${(Number(c) + Number(b)) / ac}`, L);
+                    checked++; continue;
+                }
+                // addition:  a·v + b </> c
+                if ((m = eqn.match(/^(\d+)([a-z]) \+ (\d+) ([<>]) (-?\d+)$/))) {
+                    const [, ac, v, b, sign, c] = m;
+                    assert.equal(a, `${v}${sign}${(c - b) / ac}`, L);
+                    checked++; continue;
+                }
+            }
+        }
+    }
+    assert.ok(checked > 150, `only ${checked} inequality questions verified`);
+});
+
 // ---- Stage gating: inequalities & simultaneous are Stage 5 only ----
 test('Equations: inequalities & simultaneous are Stage 5 only', () => {
     for (let seed = 1; seed <= 40; seed++) {

@@ -7,7 +7,7 @@
 // =============================================================
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gen, DIFFS, approxEqual, parseDataList } from '../_helpers.mjs';
+import { gen, genStage5, DIFFS, approxEqual, parseDataList } from '../_helpers.mjs';
 
 function mean(arr) { return arr.reduce((a, b) => a + b, 0) / arr.length; }
 function median(arr) {
@@ -119,4 +119,38 @@ test('Statistics frequency-table mean: mean = Σfx ÷ Σf', () => {
         }
     }
     assert.ok(checked > 30, `only ${checked} frequency-table-mean questions verified`);
+});
+
+test('Statistics (Stage 5) bivariate: predictions match the line of best fit', () => {
+    let checked = 0;
+    for (const diff of ['Medium', 'Hard']) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = genStage5({ topic: 'Statistics', difficulty: diff, count: 6, seed,
+                subOpsFilter: { Statistics: ['bivariate'] } });
+            for (const q of qs) {
+                const eq = q.clue.match(/y = (-?\d+)x(?: ([+-]) (\d+))?/);
+                if (!eq) continue;
+                const m = Number(eq[1]);
+                const c = eq[2] ? (eq[2] === '+' ? Number(eq[3]) : -Number(eq[3])) : 0;
+                const a = Number(q.answer);
+                const L = `${diff}/seed${seed}: "${q.clue.slice(0, 80)}…" → ${q.answer}`;
+                let mm;
+                if (/y-intercept|when \$x = 0\$/.test(q.clue)) {
+                    assert.ok(approxEqual(a, c), L); checked++; continue;
+                }
+                if (/change for each|gradient/.test(q.clue)) {
+                    assert.ok(approxEqual(a, m), L); checked++; continue;
+                }
+                if ((mm = q.clue.match(/find \$x\$ when \$y = (-?\d+)\$|value of \$x\$ gives \$y = (-?\d+)\$/i))) {
+                    const y = Number(mm[1] ?? mm[2]);
+                    assert.ok(approxEqual(a, (y - c) / m), L); checked++; continue;
+                }
+                if ((mm = q.clue.match(/when \$x = (\d+)\$|for \$x = (\d+)\$/))) {
+                    const x = Number(mm[1] ?? mm[2]);
+                    assert.ok(approxEqual(a, m * x + c), L); checked++; continue;
+                }
+            }
+        }
+    }
+    assert.ok(checked > 150, `only ${checked} bivariate questions verified`);
 });
