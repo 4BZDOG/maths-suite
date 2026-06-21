@@ -154,3 +154,42 @@ test('Statistics (Stage 5) bivariate: predictions match the line of best fit', (
     }
     assert.ok(checked > 150, `only ${checked} bivariate questions verified`);
 });
+
+test('Statistics (Stage 5) five-number-summary: every statistic matches', () => {
+    // Generator uses even n (8/10/12) → halves split cleanly at n/2.
+    function five(data) {
+        const s = [...data].sort((a, b) => a - b), n = s.length, mid = n / 2;
+        const lower = s.slice(0, mid), upper = s.slice(mid);
+        const half = (arr) => arr.length % 2
+            ? arr[(arr.length - 1) / 2]
+            : (arr[arr.length / 2 - 1] + arr[arr.length / 2]) / 2;
+        const q1 = half(lower), q3 = half(upper);
+        return { min: s[0], max: s[n - 1], med: (s[mid - 1] + s[mid]) / 2,
+            q1, q3, range: s[n - 1] - s[0], iqr: q3 - q1 };
+    }
+    let checked = 0;
+    for (const diff of DIFFS) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = genStage5({ topic: 'Statistics', difficulty: diff, count: 6, seed,
+                subOpsFilter: { Statistics: ['five-number-summary'] } });
+            for (const q of qs) {
+                const data = parseDataList(q.clue);
+                if (!data) continue;
+                const f = five(data), a = Number(q.answer), c = q.clue;
+                let exp = null;
+                if (/interquartile|IQR/.test(c)) exp = f.iqr;
+                else if (/Q1|lower quartile/.test(c)) exp = f.q1;
+                else if (/Q3|upper quartile/.test(c)) exp = f.q3;
+                else if (/median/.test(c)) exp = f.med;
+                else if (/minimum/.test(c)) exp = f.min;
+                else if (/maximum/.test(c)) exp = f.max;
+                else if (/range/.test(c)) exp = f.range;
+                if (exp === null) continue;
+                assert.ok(approxEqual(a, exp),
+                    `${diff}/seed${seed}: "${c.slice(0, 70)}…" → ${a} (expected ${exp})`);
+                checked++;
+            }
+        }
+    }
+    assert.ok(checked > 250, `only ${checked} five-number-summary questions verified`);
+});

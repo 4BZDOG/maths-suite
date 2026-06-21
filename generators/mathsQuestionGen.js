@@ -3170,14 +3170,27 @@ function _genAlgebraOp(rng, diff, op) {
 
     if (op === 'surds-simplify') {
         const sv = rc(rng, ['Simplify:', 'Simplify the surd:']);
+        // Hard: rationalise the denominator  a/√n = a√n / n
+        if (diff === 'Hard' && rng() < 0.4) {
+            const n = rc(rng, [2, 3, 5, 7]);
+            const a = rc(rng, [1, 2, 3, 4, 5, 6].filter(v => gcd(v, n) === 1));
+            return { clue: `Rationalise the denominator:\n$\\dfrac{${a}}{\\sqrt{${n}}}$`,
+                answer: `${a}√${n}/${n}`, answerDisplay: `$\\dfrac{${a}\\sqrt{${n}}}{${n}}$`,
+                worked: `$\\dfrac{${a}}{\\sqrt{${n}}} \\times \\dfrac{\\sqrt{${n}}}{\\sqrt{${n}}} = \\dfrac{${a}\\sqrt{${n}}}{${n}}$` };
+        }
         // Difficulty scaling: Easy k=2-3, Medium k=2-5, Hard k=3-7
         const [kLo, kHi, nPool] = diff === 'Easy'
             ? [2, 3, [2, 3, 5]]
             : diff === 'Medium'
             ? [2, 5, [2, 3, 5, 6, 7]]
             : [3, 7, [2, 3, 5, 6, 7, 10, 11]];
-        const k = ri(rng, kLo, kHi), n = rc(rng, nPool);
-        const radicand = k * k * n;
+        const k = ri(rng, kLo, kHi), n = rc(rng, nPool), radicand = k * k * n;
+        // Medium/Hard: sometimes carry an outer coefficient  c·√(k²n) = (c·k)√n
+        if (diff !== 'Easy' && rng() < 0.4) {
+            const c = ri(rng, 2, 4);
+            return { clue: `${sv}\n$${c}\\sqrt{${radicand}}$`, answer: `${c * k}√${n}`, answerDisplay: `$${c * k}\\sqrt{${n}}$`,
+                worked: `$${c}\\sqrt{${radicand}} = ${c} \\times ${k}\\sqrt{${n}} = ${c * k}\\sqrt{${n}}$` };
+        }
         return { clue: `${sv}\n$\\sqrt{${radicand}}$`, answer: `${k}√${n}`, answerDisplay: `$${k}\\sqrt{${n}}$` };
     }
 
@@ -3377,6 +3390,16 @@ function _genFactoriseHCF(rng, diff) {
 // ---- 4. Factorise a common bracket / by grouping -----------
 function _genFactoriseBracket(rng, diff) {
     if (diff === 'Hard') {
+        if (rng() < 0.5) {
+            // Grouping with a coefficient: (px + m)(y + n)
+            //   = p·xy + p·n·x + m·y + m·n
+            const p = ri(rng, 2, 4);
+            const m = ri(rng, 1, 6) * (rng() < 0.5 ? -1 : 1);
+            const n = ri(rng, 1, 6) * (rng() < 0.5 ? -1 : 1);
+            const clue = _polyLatex([{ c: p, v: 'xy' }, { c: p * n, v: 'x' }, { c: m, v: 'y' }, { c: m * n, v: '' }]);
+            const ans = `(${_polyLatex([{ c: p, v: 'x' }, { c: m, v: '' }])})(${_polyLatex([{ c: 1, v: 'y' }, { c: n, v: '' }])})`;
+            return _mkFactorAns(clue, ans, `$\\text{Group in pairs and factor}: \\; ${ans}$`);
+        }
         // Grouping: (x + m)(y + n) = xy + n·x + m·y + m·n  (four terms)
         const x = 'x', y = 'y';
         const m = ri(rng, 1, 6) * (rng() < 0.5 ? -1 : 1);
@@ -3385,6 +3408,17 @@ function _genFactoriseBracket(rng, diff) {
         const ans = `(${_polyLatex([{ c: 1, v: x }, { c: m, v: '' }])})(${_polyLatex([{ c: 1, v: y }, { c: n, v: '' }])})`;
         return _mkFactorAns(clue, ans,
             `$${x}(${_polyLatex([{ c: 1, v: y }, { c: n, v: '' }])}) ${m < 0 ? '-' : '+'} ${Math.abs(m)}(${_polyLatex([{ c: 1, v: y }, { c: n, v: '' }])}) = ${ans}$`);
+    }
+    const piece2 = (t, B) => `${t.v === '' ? Math.abs(t.c) : (t.c < 0 ? '-' : '') + (Math.abs(t.c) === 1 ? t.v : `${Math.abs(t.c)}${t.v}`)}(${B})`;
+    if (diff === 'Medium' && rng() < 0.5) {
+        // Three-term common bracket:  P(B) + Q(B) ± R(B) = (B)(P + Q ± R)
+        const v2 = rc(rng, _ALG_VARS), v1 = _otherVar(rng, v2), v3 = _otherVar(rng, v1, v2);
+        const nB = ri(rng, 2, 7) * (rng() < 0.5 ? -1 : 1);
+        const B = _polyLatex([{ c: 1, v: v2 }, { c: nB, v: '' }]);
+        const t1 = { c: 1, v: v1 }, t2 = { c: 1, v: v3 }, t3 = { c: ri(rng, 2, 7) * (rng() < 0.5 ? -1 : 1), v: '' };
+        const clue = `${piece2(t1, B)} + ${piece2(t2, B)} ${t3.c < 0 ? '-' : '+'} ${piece2({ c: Math.abs(t3.c), v: '' }, B)}`;
+        const ans = `(${B})(${_polyLatex([t1, t2, t3])})`;
+        return _mkFactorAns(clue, ans, `$\\text{Common factor } (${B}): \\; ${ans}$`);
     }
     // Easy / Medium: a visible common bracket  P(B) ± Q(B) = (B)(P ± Q)
     const v2 = rc(rng, _ALG_VARS);
@@ -3492,7 +3526,13 @@ function _genStatisticsS5Op(rng, diff, op) {
         else if (choice === 'min') { ans = data[0]; clueQ = 'Find the **minimum** value'; }
         else if (choice === 'max') { ans = data[n - 1]; clueQ = 'Find the **maximum** value'; }
         else { ans = data[n - 1] - data[0]; clueQ = 'Find the **range**'; }
-        return { clue: `${clueQ} of: $${data.join(', ')}$`, answer: String(ans) };
+        const dctx = rc(rng, DATA_CONTEXTS);
+        const clue = rc(rng, [
+            `${clueQ} of: $${data.join(', ')}$`,
+            `A survey recorded ${dctx} of $${data.join(', ')}$. ${clueQ}.`,
+            `For the ${dctx} $${data.join(', ')}$, ${clueQ.replace(/^Find /, 'find ')}.`,
+        ]);
+        return { clue, answer: String(ans) };
     }
 
     if (op === 'bivariate') {
