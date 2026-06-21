@@ -154,6 +154,42 @@ function _drawTriAnglesDiagramPDF(doc, { a1, a2, a3, missing }, x0, y0, w, h, ps
     doc.text(a3Label, C.x, C.y + _LBL_OFFSET + 2.5 * ps, { align: 'center' });
 }
 
+function _drawGeneralTrianglePDF(doc, { sides = {}, angles = {}, missing }, x0, y0, w, h, ps, font) {
+    const triW = w * 0.72, triH = h * 0.62;
+    const cx = x0 + w / 2, by = y0 + h - 5 * ps;
+    const A = { x: cx - triW / 2, y: by };
+    const B = { x: cx + triW / 2, y: by };
+    const C = { x: cx - triW / 2 + triW * 0.32, y: by - triH };   // scalene apex
+    const cen = { x: (A.x + B.x + C.x) / 3, y: (A.y + B.y + C.y) / 3 };
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    _triLines(doc, [A, B, C], 'FD');
+
+    doc.setFontSize(8 * ps);
+    const sideLbl = (key, p, q) => {
+        const val = key === missing ? '?' : (sides[key] != null ? sides[key] : null);
+        if (val == null) return;
+        const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
+        let ox = mx - cen.x, oy = my - cen.y;
+        const L = Math.hypot(ox, oy) || 1; ox /= L; oy /= L;
+        doc.setFont(font, key === missing ? 'bold' : 'normal');
+        doc.setTextColor(...(key === missing ? _MC : _LC));
+        doc.text(`${key} = ${val}`, mx + ox * (_LBL_OFFSET + 1.5), my + oy * (_LBL_OFFSET + 1.5) + 1.0 * ps, { align: 'center' });
+    };
+    const angLbl = (key, vtx) => {
+        if (angles[key] == null) return;
+        let ox = cen.x - vtx.x, oy = cen.y - vtx.y;
+        const L = Math.hypot(ox, oy) || 1; ox /= L; oy /= L;
+        doc.setFont(font, 'normal');
+        doc.setTextColor(..._LC);
+        doc.text(`${angles[key]}°`, vtx.x + ox * 6, vtx.y + oy * 6 + 1.0 * ps, { align: 'center' });
+    };
+    sideLbl('a', B, C); sideLbl('b', A, C); sideLbl('c', A, B);
+    angLbl('A', A); angLbl('B', B); angLbl('C', C);
+}
+
 function _drawTriAreaDiagramPDF(doc, { base, height }, x0, y0, w, h, ps, font) {
     const triW = w * 0.70;
     const ratio = height / base;
@@ -753,6 +789,7 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
         case 'rectangle':            _drawRectDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'right-triangle':       _drawRightTriDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'triangle-angles':      _drawTriAnglesDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'general-triangle':     _drawGeneralTrianglePDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'triangle-area':        _drawTriAreaDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'circle':               _drawCircleDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'parallelogram':        _drawParallelogramDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;

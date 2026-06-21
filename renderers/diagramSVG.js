@@ -179,6 +179,46 @@ function _triangleAngles({ a1, a2, a3, missing }) {
     return _svg(VW, VH, inner);
 }
 
+// ─── General (non-right) triangle for the sine / cosine rule ─────────────────
+// diagram: { type:'general-triangle', sides:{a,b,c}, angles:{A,B,C}, missing:'b'|'c' }
+// Sides a/b/c are opposite vertices A/B/C. Any side/angle left null is unlabelled;
+// the `missing` side is drawn as "?". Not to scale (standard for sine/cosine rule).
+function _generalTriangle({ sides = {}, angles = {}, missing }) {
+    const VW = 200, VH = 132;
+    const A = { x: 26, y: 110 };       // bottom-left
+    const B = { x: 174, y: 110 };      // bottom-right
+    const C = { x: 72, y: 20 };        // apex (shifted left → scalene)
+    const cen = { x: (A.x + B.x + C.x) / 3, y: (A.y + B.y + C.y) / 3 };
+
+    const sideLabel = (key, p, q) => {
+        const val = key === missing ? '?' : (sides[key] != null ? sides[key] : null);
+        if (val == null) return '';
+        const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
+        let ox = mx - cen.x, oy = my - cen.y;
+        const L = Math.hypot(ox, oy) || 1; ox /= L; oy /= L;
+        return _t(mx + ox * 16, my + oy * 16 + 4, `${key} = ${val}`,
+            { anchor: 'middle', missing: key === missing, size: 11 });
+    };
+    const angLabel = (key, vtx) => {
+        if (angles[key] == null) return '';
+        let ox = cen.x - vtx.x, oy = cen.y - vtx.y;
+        const L = Math.hypot(ox, oy) || 1; ox /= L; oy /= L;
+        return _t(vtx.x + ox * 24, vtx.y + oy * 24 + 4, `${angles[key]}°`, { anchor: 'middle', size: 10 });
+    };
+
+    const inner =
+        `<polygon points="${A.x},${A.y} ${B.x},${B.y} ${C.x},${C.y}" ` +
+        `fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
+        (angles.A != null ? _angleArc(A.x, A.y, B.x, B.y, C.x, C.y, 15) : '') +
+        (angles.B != null ? _angleArc(B.x, B.y, A.x, A.y, C.x, C.y, 15) : '') +
+        (angles.C != null ? _angleArc(C.x, C.y, A.x, A.y, B.x, B.y, 14) : '') +
+        angLabel('A', A) + angLabel('B', B) + angLabel('C', C) +
+        // side a = B–C, side b = A–C, side c = A–B
+        sideLabel('a', B, C) + sideLabel('b', A, C) + sideLabel('c', A, B);
+
+    return _svg(VW, VH, inner);
+}
+
 // ─── Triangle Area (base × height / 2) ───────────────────────────────────────
 // diagram: { type:'triangle-area', base, height }
 function _triangleArea({ base, height }) {
@@ -767,6 +807,7 @@ export function renderDiagramSVG(diagram) {
         case 'rectangle':           return _rectangle(diagram);
         case 'right-triangle':      return _rightTriangle(diagram);
         case 'triangle-angles':     return _triangleAngles(diagram);
+        case 'general-triangle':    return _generalTriangle(diagram);
         case 'triangle-area':       return _triangleArea(diagram);
         case 'circle':              return _circle(diagram);
         case 'right-triangle-trig': return _rightTriangleTrig(diagram);
