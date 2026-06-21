@@ -3632,13 +3632,15 @@ function _genGeometryS5Op(rng, diff, op) {
         const _u = 'm';
         const v = l1 * w1 * h1 + l2 * w2 * h2;
         const vWorked = `$V = ${l1} \\times ${w1} \\times ${h1} + ${l2} \\times ${w2} \\times ${h2} = ${l1*w1*h1} + ${l2*w2*h2} = ${v}$ m³`;
+        const cvDiagram = { type: 'composite-prism', a: { l: l1, w: w1, h: h1 }, b: { l: l2, w: w2, h: h2 } };
         // ~35% chance: a two-step "volume then cost" applied problem.
         if (rng() < 0.35) {
             const cost = rc(rng, [40, 50, 60, 75, 80, 100]);
             const total = v * cost;
             const ph2 = `A garden bed is built from two rectangular sections, $${l1}$ m × $${w1}$ m × $${h1}$ m and $${l2}$ m × $${w2}$ m × $${h2}$ m. Soil costs $\\$${cost}$ per cubic metre. Find the *total cost* to fill it.`;
             return { clue: ph2, answer: String(total), answerDisplay: `$${money(total)}`,
-                worked: `${vWorked.replace('$ m³', '$ m³,')} cost $= ${v} \\times ${cost} = \\$${money(total)}$` };
+                worked: `${vWorked.replace('$ m³', '$ m³,')} cost $= ${v} \\times ${cost} = \\$${money(total)}$`,
+                diagram: cvDiagram };
         }
         // ~40% chance: an applied real-world volume context.
         if (rng() < 0.4) {
@@ -3646,13 +3648,13 @@ function _genGeometryS5Op(rng, diff, op) {
                 `A concrete step is formed from two rectangular blocks, $${l1}$ m × $${w1}$ m × $${h1}$ m and $${l2}$ m × $${w2}$ m × $${h2}$ m. Find the *volume of concrete* needed.`,
                 `A raised garden bed has two rectangular sections, $${l1}$ m × $${w1}$ m × $${h1}$ m and $${l2}$ m × $${w2}$ m × $${h2}$ m. How many cubic metres of soil are needed to fill it?`,
             ]);
-            return { clue: ph3, answer: String(v), answerDisplay: `${v} m³`, worked: vWorked };
+            return { clue: ph3, answer: String(v), answerDisplay: `${v} m³`, worked: vWorked, diagram: cvDiagram };
         }
         const ph = rc(rng, [
             `A composite solid consists of two rectangular prisms. Prism A: $${l1}$ m × $${w1}$ m × $${h1}$ m. Prism B: $${l2}$ m × $${w2}$ m × $${h2}$ m. Find the *total volume*.`,
             `Find the *combined volume* of two rectangular prisms: Prism 1 has dimensions $${l1}\\times${w1}\\times${h1}$ m and Prism 2 has dimensions $${l2}\\times${w2}\\times${h2}$ m.`,
         ]);
-        return { clue: ph, answer: String(v), answerDisplay: `${v} m³`, worked: vWorked };
+        return { clue: ph, answer: String(v), answerDisplay: `${v} m³`, worked: vWorked, diagram: cvDiagram };
     }
 
     if (op === 'similar-triangles') {

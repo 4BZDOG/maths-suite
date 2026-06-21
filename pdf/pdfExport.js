@@ -190,6 +190,52 @@ function _drawGeneralTrianglePDF(doc, { sides = {}, angles = {}, missing }, x0, 
     angLbl('A', A); angLbl('B', B); angLbl('C', C);
 }
 
+function _obliqueBoxPDF(doc, x, y, wPx, hPx, d, e, dims, name, ps, font) {
+    const FTL = [x, y], FTR = [x + wPx, y], FBR = [x + wPx, y + hPx], FBL = [x, y + hPx];
+    const BTL = [x + d, y - e], BTR = [x + wPx + d, y - e];
+    const BBR = [x + wPx + d, y + hPx - e], BBL = [x + d, y + hPx - e];
+    const L = (p, q) => doc.line(p[0], p[1], q[0], q[1]);
+
+    doc.setDrawColor(..._GC);
+    doc.setFillColor(..._GCF);
+    doc.setLineWidth(_STROKE_W);
+    doc.rect(x, y, wPx, hPx, 'FD');                  // front face (filled)
+    L(FTL, BTL); L(FTR, BTR); L(BTL, BTR);           // top face edges
+    L(FBR, BBR); L(BTR, BBR);                         // right face edges
+
+    doc.setLineWidth(_AUX_W);
+    doc.setLineDashPattern([0.6, 0.6], 0);
+    L(BBL, BTL); L(BBL, BBR); L(BBL, FBL);           // hidden edges (dashed)
+    doc.setLineDashPattern([], 0);
+    doc.setLineWidth(_STROKE_W);
+
+    doc.setFont(font, 'normal');
+    doc.setFontSize(7 * ps);
+    doc.setTextColor(..._LC);
+    doc.text(`${dims.l}`, (FBL[0] + FBR[0]) / 2, FBL[1] + _LBL_OFFSET + 0.5 * ps, { align: 'center' });
+    doc.text(`${dims.h}`, FTL[0] - _LBL_OFFSET, (FTL[1] + FBL[1]) / 2 + ps, { align: 'right' });
+    doc.text(`${dims.w}`, (FTR[0] + BTR[0]) / 2 + _LBL_OFFSET, (FTR[1] + BTR[1]) / 2, { align: 'left' });
+    if (name) { doc.setFontSize(8 * ps); doc.text(name, (FTL[0] + FBR[0]) / 2, (FTL[1] + FBR[1]) / 2 + ps, { align: 'center' }); }
+}
+
+function _drawCompositePrismPDF(doc, { a, b }, x0, y0, w, h, ps, font) {
+    const cells = [{ d: a, name: 'A', fx: 0.06 }, { d: b, name: 'B', fx: 0.54 }];
+    const cellW = w * 0.40, cellH = h * 0.60;
+    const need = (d) => ({ w: d.l + 0.45 * d.w, h: d.h + 0.45 * d.w });
+    let sc = Infinity;
+    for (const c of cells) { const n = need(c.d); sc = Math.min(sc, cellW / n.w, cellH / n.h); }
+    sc = Math.max(0.8, sc);
+    for (const c of cells) {
+        const d = c.d;
+        const wPx = d.l * sc, hPx = d.h * sc, depth = 0.45 * d.w * sc, e = depth * 0.72;
+        const x = x0 + w * c.fx + 4 * ps, baseY = y0 + h - 6 * ps;
+        _obliqueBoxPDF(doc, x, baseY - hPx, wPx, hPx, depth, e, d, c.name, ps, font);
+        doc.setFontSize(6.5 * ps);
+        doc.setTextColor(..._LC);
+        doc.text(`Prism ${c.name}`, x + wPx / 2, y0 + h - 1.5 * ps, { align: 'center' });
+    }
+}
+
 function _drawTriAreaDiagramPDF(doc, { base, height }, x0, y0, w, h, ps, font) {
     const triW = w * 0.70;
     const ratio = height / base;
@@ -790,6 +836,7 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
         case 'right-triangle':       _drawRightTriDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'triangle-angles':      _drawTriAnglesDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'general-triangle':     _drawGeneralTrianglePDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'composite-prism':      _drawCompositePrismPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'triangle-area':        _drawTriAreaDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'circle':               _drawCircleDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'parallelogram':        _drawParallelogramDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;

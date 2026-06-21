@@ -219,6 +219,48 @@ function _generalTriangle({ sides = {}, angles = {}, missing }) {
     return _svg(VW, VH, inner);
 }
 
+// ─── Oblique (cabinet-projection) rectangular box, with l/w/h labels ─────────
+// Front face is l wide × h tall; the depth direction carries w. Hidden edges
+// (those meeting the rear-bottom-left corner) are drawn dashed.
+function _obliqueBox(x, y, wPx, hPx, d, e, dims, name) {
+    const FTL = [x, y], FTR = [x + wPx, y], FBR = [x + wPx, y + hPx], FBL = [x, y + hPx];
+    const BTL = [x + d, y - e], BTR = [x + wPx + d, y - e];
+    const BBR = [x + wPx + d, y + hPx - e], BBL = [x + d, y + hPx - e];
+    const poly = (pts) => `<polygon points="${pts.map(p => p.join(',')).join(' ')}" ` +
+        `fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="1.8" stroke-linejoin="round"/>`;
+    const line = (p, q, dash) => `<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" ` +
+        `stroke="${GC}" stroke-width="1.3"${dash ? ' stroke-dasharray="3 2" opacity="0.55"' : ''}/>`;
+    let s = '';
+    s += line(BBL, BTL, true) + line(BBL, BBR, true) + line(BBL, FBL, true);   // hidden edges
+    s += poly([FTL, FTR, FBR, FBL]) + poly([FTL, FTR, BTR, BTL]) + poly([FTR, FBR, BBR, BTR]);
+    s += _t((FBL[0] + FBR[0]) / 2, FBL[1] + 12, `${dims.l}`, { size: 9 });
+    s += _t(FTL[0] - 6, (FTL[1] + FBL[1]) / 2 + 3, `${dims.h}`, { anchor: 'end', size: 9 });
+    s += _t((FTR[0] + BTR[0]) / 2 + 6, (FTR[1] + BTR[1]) / 2 - 1, `${dims.w}`, { anchor: 'start', size: 9 });
+    if (name) s += _t((FTL[0] + FBR[0]) / 2, (FTL[1] + FBR[1]) / 2 + 3, name, { size: 11 });
+    return s;
+}
+
+// ─── Composite solid: two rectangular prisms (for combined-volume questions) ──
+// diagram: { type:'composite-prism', a:{l,w,h}, b:{l,w,h} }  (not to scale)
+function _compositePrism({ a, b }) {
+    const VW = 250, VH = 142;
+    const cells = [{ d: a, x: 16, name: 'A' }, { d: b, x: 138, name: 'B' }];
+    const cellW = 96, cellH = 100;
+    const need = (d) => ({ w: d.l + 0.45 * d.w, h: d.h + 0.45 * d.w });
+    let sc = Infinity;
+    for (const c of cells) { const n = need(c.d); sc = Math.min(sc, (cellW - 26) / n.w, (cellH - 22) / n.h); }
+    sc = Math.max(3, Math.min(sc, 11));
+    let inner = '';
+    for (const c of cells) {
+        const d = c.d;
+        const wPx = d.l * sc, hPx = d.h * sc, depth = 0.45 * d.w * sc, e = depth * 0.72;
+        const x = c.x + 12, baseY = VH - 24;
+        inner += _obliqueBox(x, baseY - hPx, wPx, hPx, depth, e, d, c.name);
+        inner += _t(c.x + 12 + wPx / 2, VH - 7, `Prism ${c.name}`, { size: 9, opacity: 0.8 });
+    }
+    return _svg(VW, VH, inner);
+}
+
 // ─── Triangle Area (base × height / 2) ───────────────────────────────────────
 // diagram: { type:'triangle-area', base, height }
 function _triangleArea({ base, height }) {
@@ -808,6 +850,7 @@ export function renderDiagramSVG(diagram) {
         case 'right-triangle':      return _rightTriangle(diagram);
         case 'triangle-angles':     return _triangleAngles(diagram);
         case 'general-triangle':    return _generalTriangle(diagram);
+        case 'composite-prism':     return _compositePrism(diagram);
         case 'triangle-area':       return _triangleArea(diagram);
         case 'circle':              return _circle(diagram);
         case 'right-triangle-trig': return _rightTriangleTrig(diagram);
