@@ -9,7 +9,7 @@
 // =============================================================
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gen, DIFFS, approxEqual } from '../_helpers.mjs';
+import { gen, genStage5, DIFFS, approxEqual, checkStructure } from '../_helpers.mjs';
 
 // Pull all "$<number>$" inline-math spans (numbers only, may be decimals).
 function nums(clue) {
@@ -109,4 +109,31 @@ test('Geometry: structural answers (area/perimeter/Pythagoras/angles) match reco
         }
     }
     assert.ok(checked > 100, `only ${checked} geometry questions verified`);
+});
+
+// ---- Stage 5 composite-volume: combined volume + composite-prism diagram ----
+test('Geometry (Stage 5) composite-volume: volume matches the two prisms & carries a diagram', () => {
+    let checked = 0;
+    for (const diff of DIFFS) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = genStage5({ topic: 'Geometry', difficulty: diff, count: 6, seed,
+                subOpsFilter: { Geometry: ['composite-volume'] } });
+            for (const q of qs) {
+                checkStructure(q, `composite-volume/${diff}/seed${seed}`, assert);
+                assert.equal(q.diagram?.type, 'composite-prism',
+                    `${diff}/seed${seed}: missing composite-prism diagram`);
+                const { a, b } = q.diagram;
+                const vol = a.l * a.w * a.h + b.l * b.w * b.h;
+                const ans = Number(q.answer), c = q.clue;
+                const L = `${diff}/seed${seed}: "${c.slice(0, 70)}…" → ${q.answer}`;
+                if (/per cubic metre|costs/.test(c)) {
+                    const cm = c.match(/\\\$(\d+)\$ per cubic metre/);
+                    if (cm) { assert.ok(approxEqual(ans, vol * Number(cm[1])), L); checked++; }
+                } else {
+                    assert.ok(approxEqual(ans, vol), L); checked++;
+                }
+            }
+        }
+    }
+    assert.ok(checked > 200, `only ${checked} composite-volume questions verified`);
 });
