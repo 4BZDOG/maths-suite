@@ -2058,14 +2058,40 @@ function genEquations(rng, diff, allowedOps) {
             worked: `$${aa}${v} + ${b} = ${cc} \\times ${d} = ${cc * d}$, $${aa}${v} = ${cc * d - b}$, so $${v} = ${x}$` };
     }
 
-    // -------- linear inequalities (Stage 5): ax + b </> c --------
+    // -------- linear inequalities (Stage 5) --------
     if (op === 'inequalities') {
-        const a = ri(rng, 2, 6), x = ri(rng, 1, 9), b = ri(rng, 1, 12);
-        const c = a * x + b;
-        const lt = rng() < 0.5, sign = lt ? '<' : '>';
-        return { clue: `${rc(rng, ['Solve the inequality:', 'Solve:'])}\n$${a}${v} + ${b} ${sign} ${c}$`,
-            answer: `${v}${sign}${x}`, answerDisplay: `$${v} ${sign} ${x}$`,
-            worked: `$${a}${v} ${sign} ${c} - ${b} = ${c - b}$, so $${v} ${sign} ${x}$` };
+        if (diff === 'Easy') {
+            const a = ri(rng, 2, 6), x = ri(rng, 1, 9), b = ri(rng, 1, 12);
+            const c = a * x + b;
+            const lt = rng() < 0.5, sign = lt ? '<' : '>';
+            return { clue: `${rc(rng, ['Solve the inequality:', 'Solve:'])}\n$${a}${v} + ${b} ${sign} ${c}$`,
+                answer: `${v}${sign}${x}`, answerDisplay: `$${v} ${sign} ${x}$`,
+                worked: `$${a}${v} ${sign} ${c} - ${b} = ${c - b}$, so $${v} ${sign} ${x}$` };
+        }
+        if (diff === 'Medium') {
+            const a = ri(rng, 2, 6), x = ri(rng, 1, 9), b = ri(rng, 1, 12);
+            if (rng() < 0.5) {
+                // subtraction: a·v − b </> c
+                const c = a * x - b;
+                const lt = rng() < 0.5, sign = lt ? '<' : '>';
+                return { clue: `Solve:\n$${a}${v} - ${b} ${sign} ${c}$`,
+                    answer: `${v}${sign}${x}`, answerDisplay: `$${v} ${sign} ${x}$`,
+                    worked: `$${a}${v} ${sign} ${c} + ${b} = ${c + b}$, so $${v} ${sign} ${x}$` };
+            }
+            // dividing by a negative reverses the inequality: −a·v + b </> c
+            const c = -a * x + b;
+            const lt = rng() < 0.5, sign = lt ? '<' : '>', flip = lt ? '>' : '<';
+            return { clue: `Solve:\n$-${a}${v} + ${b} ${sign} ${c}$`,
+                answer: `${v}${flip}${x}`, answerDisplay: `$${v} ${flip} ${x}$`,
+                worked: `$-${a}${v} ${sign} ${c - b}$; dividing by $-${a}$ reverses the sign, so $${v} ${flip} ${x}$` };
+        }
+        // Hard: compound inequality  lo < a·v + b < hi
+        const a = ri(rng, 2, 5), b = ri(rng, 1, 8);
+        const xl = ri(rng, 1, 5), xh = xl + ri(rng, 2, 5);
+        const lo = a * xl + b, hi = a * xh + b;
+        return { clue: `Solve the inequality:\n$${lo} < ${a}${v} + ${b} < ${hi}$`,
+            answer: `${xl}<${v}<${xh}`, answerDisplay: `$${xl} < ${v} < ${xh}$`,
+            worked: `Subtract ${b}: $${lo - b} < ${a}${v} < ${hi - b}$; divide by ${a}: $${xl} < ${v} < ${xh}$` };
     }
 
     return null;
@@ -2982,11 +3008,21 @@ function _genAlgebraOp(rng, diff, op) {
 
     if (op === 'expand') {
         if (diff === 'Easy') {
+            if (rng() < 0.4) {
+                // perfect square (x + a)^2 = x² + 2a·x + a²
+                const a = ri(rng, 1, 7), mid = 2 * a, last = a * a;
+                return { clue: `${verb}\n$(x + ${a})^2$`, answer: `x²+${mid}x+${last}`, answerDisplay: `$x^2 + ${mid}x + ${last}$` };
+            }
             const a = ri(rng, 1, 7), b = ri(rng, 1, 7);
             const mid = a + b, last = a * b;
             return { clue: `${verb}\n$(x + ${a})(x + ${b})$`, answer: `x²+${mid}x+${last}`, answerDisplay: `$x^2 + ${mid}x + ${last}$` };
         }
         if (diff === 'Medium') {
+            if (rng() < 0.4) {
+                // difference of two squares (x + a)(x − a) = x² − a²
+                const a = ri(rng, 2, 9);
+                return { clue: `${verb}\n$(x + ${a})(x - ${a})$`, answer: `x²-${a * a}`, answerDisplay: `$x^2 - ${a * a}$` };
+            }
             const a = ri(rng, 1, 7), b = ri(rng, 1, 7);
             const mid = a - b, last = -a * b;
             const midPart  = mid === 0 ? '' : (mid > 0 ? `+${mid}x` : `${mid}x`);
@@ -2995,7 +3031,13 @@ function _genAlgebraOp(rng, diff, op) {
             const lDisp = last >= 0 ? ` + ${last}` : ` ${last}`;
             return { clue: `${verb}\n$(x + ${a})(x - ${b})$`, answer: `x²${midPart}${lStr}`, answerDisplay: `$x^2${midDisp}${lDisp}$` };
         }
-        // Hard: (ax + b)(cx + d)
+        // Hard: (ax + b)(cx + d) or a perfect square (ax + b)²
+        if (rng() < 0.4) {
+            const a = ri(rng, 2, 5), b = ri(rng, 1, 6);
+            const lead = a * a, mid = 2 * a * b, last = b * b;
+            return { clue: `${rc(rng, ['Expand:', 'Expand and simplify:'])}\n$(${a}x + ${b})^2$`,
+                answer: `${lead}x²+${mid}x+${last}`, answerDisplay: `$${lead}x^2 + ${mid}x + ${last}$` };
+        }
         const a = ri(rng, 2, 4), b = ri(rng, 1, 6), c = ri(rng, 2, 4), d = ri(rng, 1, 6);
         const lead = a * c, mid2 = a * d + b * c, last2 = b * d;
         const m2Str = mid2 >= 0 ? `+${mid2}` : `${mid2}`;
@@ -3464,8 +3506,17 @@ function _genStatisticsS5Op(rng, diff, op) {
 
         // Easy: predict y only. Medium/Hard also draw from reverse-prediction
         // and gradient/intercept interpretation for variety.
-        const variant = diff === 'Easy' ? 0 : ri(rng, 0, 2);
+        const variant = diff === 'Easy' ? 0 : ri(rng, 0, 3);
 
+        if (variant === 3) {
+            // interpret the y-intercept (value of y when x = 0)
+            const ph = rc(rng, [
+                `A line of best fit is $y = ${m}x${cStr}$. What does the model predict for $y$ when $x = 0$ (the $y$-intercept)?`,
+                `State the $y$-intercept of the line of best fit $y = ${m}x${cStr}$.`,
+            ]);
+            return { clue: ph, answer: String(c), answerDisplay: `$${c}$`,
+                worked: `At $x = 0$, $y = ${m}(0)${cStr} = ${c}$.` };
+        }
         if (variant === 1) {
             // Reverse: given y, find x. x is an integer by construction.
             const ph = rc(rng, [
@@ -3593,6 +3644,15 @@ function _genFinancialS5Op(rng, diff, op) {
                 `Using straight-line depreciation, find the annual loss on $\\$${P}$ at $${r}\\%$ p.a.`,
             ]);
             return { clue: ph, answer: String(annualLoss), answerDisplay: `$${money(annualLoss)}` };
+        }
+        if (diff === 'Medium' && rng() < 0.5) {
+            // Straight-line book value after t years: V = P − (P·r%)·t
+            const annualLoss = P * r / 100, V = P - annualLoss * t;
+            const ph = rc(rng, [
+                `A vehicle worth $\\$${P}$ depreciates by $${r}\\%$ of its *original* value each year (straight-line). Find its value after $${t}$ year${t > 1 ? 's' : ''}.`,
+                `Using straight-line depreciation at $${r}\\%$ p.a. of the original price, find the value of a $\\$${P}$ asset after $${t}$ year${t > 1 ? 's' : ''}.`,
+            ]);
+            return { clue: ph, answer: String(V), answerDisplay: `$${money(V)}` };
         }
         // Reducing balance: V = P(1-r/100)^t
         const V = round(P * Math.pow(1 - r / 100, t), 2);
@@ -5097,68 +5157,63 @@ function genIndices(rng, diff, allowedOps) {
     if (op === 'indices-zero') {
         if (diff === 'Easy') {
             const base = ri(rng, 2, 10);
-            return {
-                clue: `${verb}\n$${base}^0$`,
-                answer: '1',
-                answerDisplay: '$1$',
-                worked: `Any non-zero number to the power $0$ equals $1$.`,
-            };
+            if (rng() < 0.5) {
+                // zero index inside a product: a^0 × b = b
+                const b2 = ri(rng, 2, 10);
+                return { clue: `${verb}\n$${base}^0 \\times ${b2}$`, answer: String(b2), answerDisplay: `$${b2}$`,
+                    worked: `$${base}^0 \\times ${b2} = 1 \\times ${b2} = ${b2}$` };
+            }
+            return { clue: `${verb}\n$${base}^0$`, answer: '1', answerDisplay: '$1$',
+                worked: `Any non-zero number to the power $0$ equals $1$.` };
         }
         if (diff === 'Medium') {
-            const base = ri(rng, 2, 20);
-            const extra = ri(rng, 1, 5);
-            const ans = Math.pow(base, 0) + extra;
-            return {
-                clue: `${verb}\n$${base}^0 + ${extra}$`,
-                answer: String(ans),
-                answerDisplay: `$${ans}$`,
-                worked: `$${base}^0 + ${extra} = 1 + ${extra} = ${ans}$`,
-            };
+            const base = ri(rng, 2, 20), extra = ri(rng, 1, 5);
+            if (rng() < 0.5) {
+                // two zero-index terms: a^0 + b^0 + k = 2 + k
+                const b2 = ri(rng, 2, 20), ans = 2 + extra;
+                return { clue: `${verb}\n$${base}^0 + ${b2}^0 + ${extra}$`, answer: String(ans), answerDisplay: `$${ans}$`,
+                    worked: `$1 + 1 + ${extra} = ${ans}$` };
+            }
+            const ans = 1 + extra;
+            return { clue: `${verb}\n$${base}^0 + ${extra}$`, answer: String(ans), answerDisplay: `$${ans}$`,
+                worked: `$${base}^0 + ${extra} = 1 + ${extra} = ${ans}$` };
         }
         // Hard
-        const base = ri(rng, 2, 10);
-        const k = ri(rng, 2, 6);
-        const ans = k;
-        return {
-            clue: `${verb}\n$${k} \\times ${base}^0$`,
-            answer: String(ans),
-            answerDisplay: `$${ans}$`,
-            worked: `$${k} \\times ${base}^0 = ${k} \\times 1 = ${ans}$`,
-        };
+        const base = ri(rng, 2, 10), k = ri(rng, 3, 8);
+        if (rng() < 0.5) {
+            const j = ri(rng, 1, k - 1);
+            return { clue: `${verb}\n$${k} \\times ${base}^0 - ${j}$`, answer: String(k - j), answerDisplay: `$${k - j}$`,
+                worked: `$${k} \\times 1 - ${j} = ${k - j}$` };
+        }
+        return { clue: `${verb}\n$${k} \\times ${base}^0$`, answer: String(k), answerDisplay: `$${k}$`,
+            worked: `$${k} \\times ${base}^0 = ${k} \\times 1 = ${k}$` };
     }
 
-    // indices-negative: a^(-n) = 1/a^n
+    // indices-negative: a^(-n) = 1/a^n, plus reciprocal-base evaluation
     if (diff === 'Easy') {
-        const base = ri(rng, 2, 4), n = 1;
-        const denom = Math.pow(base, n);
-        return {
-            clue: `${verb}\n$${base}^{-${n}}$`,
-            answer: `1/${denom}`,
-            answerDisplay: `$\\frac{1}{${denom}}$`,
-            worked: `$${base}^{-${n}} = \\frac{1}{${base}^${n}} = \\frac{1}{${denom}}$`,
-        };
+        const base = ri(rng, 2, 4);
+        if (rng() < 0.5) {
+            // reciprocal base: (1/a)^(-1) = a
+            return { clue: `${verb}\n$\\left(\\frac{1}{${base}}\\right)^{-1}$`, answer: String(base), answerDisplay: `$${base}$`,
+                worked: `$\\left(\\frac{1}{${base}}\\right)^{-1} = ${base}$` };
+        }
+        return { clue: `${verb}\n$${base}^{-1}$`, answer: `1/${base}`, answerDisplay: `$\\frac{1}{${base}}$`,
+            worked: `$${base}^{-1} = \\frac{1}{${base}}$` };
     }
     if (diff === 'Medium') {
-        const base = ri(rng, 2, 5), n = ri(rng, 1, 3);
-        const denom = Math.pow(base, n);
-        return {
-            clue: `${verb}\n$${base}^{-${n}}$`,
-            answer: `1/${denom}`,
-            answerDisplay: `$\\frac{1}{${denom}}$`,
-            worked: `$${base}^{-${n}} = \\frac{1}{${base}^${n}} = \\frac{1}{${denom}}$`,
-        };
+        const base = ri(rng, 2, 5), n = ri(rng, 1, 3), denom = Math.pow(base, n);
+        return { clue: `${verb}\n$${base}^{-${n}}$`, answer: `1/${denom}`, answerDisplay: `$\\frac{1}{${denom}}$`,
+            worked: `$${base}^{-${n}} = \\frac{1}{${base}^${n}} = \\frac{1}{${denom}}$` };
     }
-    // Hard: express as fraction and evaluate
-    const base = ri(rng, 2, 6), n = ri(rng, 2, 3);
-    const denom = Math.pow(base, n);
-    const k = ri(rng, 2, 5);
-    const ans = k * denom;
-    return {
-        clue: `Find the value of $${k} \\div ${base}^{-${n}}$`,
-        answer: String(ans),
-        answerDisplay: `$${ans}$`,
-        worked: `$${k} \\div ${base}^{-${n}} = ${k} \\times ${base}^{${n}} = ${k} \\times ${denom} = ${ans}$`,
-    };
+    // Hard: reciprocal-base power (1/a)^(-n) = a^n, or k ÷ a^(-n) = k·a^n
+    const base = ri(rng, 2, 6), n = ri(rng, 2, 3), denom = Math.pow(base, n);
+    if (rng() < 0.5) {
+        return { clue: `${verb}\n$\\left(\\frac{1}{${base}}\\right)^{-${n}}$`, answer: String(denom), answerDisplay: `$${denom}$`,
+            worked: `$\\left(\\frac{1}{${base}}\\right)^{-${n}} = ${base}^{${n}} = ${denom}$` };
+    }
+    const k = ri(rng, 2, 5), ans = k * denom;
+    return { clue: `Find the value of $${k} \\div ${base}^{-${n}}$`, answer: String(ans), answerDisplay: `$${ans}$`,
+        worked: `$${k} \\div ${base}^{-${n}} = ${k} \\times ${base}^{${n}} = ${k} \\times ${denom} = ${ans}$` };
 }
 
 // ============================================================

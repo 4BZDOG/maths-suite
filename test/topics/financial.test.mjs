@@ -7,7 +7,7 @@
 // =============================================================
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gen, DIFFS, approxEqual } from '../_helpers.mjs';
+import { gen, genStage5, DIFFS, approxEqual } from '../_helpers.mjs';
 
 const RE_DOLLAR = /\$\\\$(\d+(?:\.\d+)?)\$/g;     // matches "$\$123$" → 123
 const RE_PCT    = /\$(\d+(?:\.\d+)?)\\%\$/g;       // matches "$10\%$" → 10
@@ -127,4 +127,29 @@ test('Financial (Hard): inverse simple interest — find rate / find time', () =
         }
     }
     assert.ok(checked > 10, `only ${checked} inverse-SI questions verified`);
+});
+
+// ---- Depreciation (Stage 5): straight-line book value ----
+// V = P − (P·r%)·t for the "original value each year (straight-line)" form.
+test('Financial Maths: straight-line depreciation book value matches', () => {
+    let checked = 0;
+    for (const diff of ['Medium', 'Hard']) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = genStage5({ topic: 'Financial Maths', difficulty: diff, count: 6, seed,
+                subOpsFilter: { 'Financial Maths': ['depreciation'] } });
+            for (const q of qs) {
+                if (!/original.*value each year \(straight-line\)|straight-line depreciation.*original/.test(q.clue)) continue;
+                const P = dollars(q.clue)[0];
+                const r = pcts(q.clue)[0];
+                const tm = q.clue.match(/after \$(\d+)\$ year/);
+                if (P == null || r == null || !tm) continue;
+                const t = Number(tm[1]);
+                const expected = P - (P * r / 100) * t;
+                assert.ok(approxEqual(Number(q.answer), expected),
+                    `${diff}/seed${seed}: "${q.clue.slice(0, 80)}…" → ${q.answer} (expected ${expected})`);
+                checked++;
+            }
+        }
+    }
+    assert.ok(checked > 20, `only ${checked} straight-line depreciation questions verified`);
 });
