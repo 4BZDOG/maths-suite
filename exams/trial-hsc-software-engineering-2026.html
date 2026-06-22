@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trial HSC Software Engineering Examination 2026</title>
+<style>
+  /* ---------- Page / print setup ---------- */
+  @page {
+    size: A4;
+    margin: 18mm 16mm 20mm 16mm;
+    @bottom-center { content: "Software Engineering — Trial HSC 2026"; }
+  }
+
+  :root {
+    --ink: #111;
+    --muted: #444;
+    --rule: #999;
+    --light: #f4f4f4;
+    --accent: #1a1a1a;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: "Times New Roman", Georgia, serif;
+    color: var(--ink);
+    line-height: 1.4;
+    font-size: 11.5pt;
+    margin: 0;
+    background: #fff;
+  }
+
+  /* On screen, frame the paper like a sheet */
+  @media screen {
+    body { background: #e9e9e9; }
+    .sheet {
+      max-width: 800px;
+      margin: 24px auto;
+      background: #fff;
+      padding: 28mm 22mm;
+      box-shadow: 0 2px 14px rgba(0,0,0,.18);
+    }
+  }
+  @media print {
+    .sheet { padding: 0; }
+    .no-print { display: none !important; }
+  }
+
+  h1, h2, h3, h4 { font-family: Arial, Helvetica, sans-serif; }
+
+  /* ---------- Cover ---------- */
+  .cover {
+    text-align: center;
+    border: 2px solid var(--ink);
+    padding: 22px 18px;
+    margin-bottom: 26px;
+  }
+  .cover .org { font-size: 10.5pt; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .cover h1 { font-size: 20pt; margin: 12px 0 4px; line-height: 1.2; }
+  .cover .year { font-size: 14pt; font-weight: bold; }
+  .cover .meta {
+    margin-top: 18px;
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11pt;
+  }
+  .cover .meta div span { display: block; font-weight: bold; font-size: 13pt; }
+
+  .gen-instructions {
+    border: 1px solid var(--rule);
+    padding: 12px 16px;
+    margin-bottom: 24px;
+  }
+  .gen-instructions h3 { margin: 0 0 8px; font-size: 11pt; text-transform: uppercase; letter-spacing: .06em; }
+  .gen-instructions ul { margin: 0; padding-left: 20px; }
+
+  /* ---------- Section headers ---------- */
+  .section-head {
+    border-top: 3px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+    padding: 8px 0;
+    margin: 28px 0 6px;
+    page-break-before: always;
+  }
+  .section-head:first-of-type { page-break-before: avoid; }
+  .section-head h2 { margin: 0; font-size: 15pt; }
+  .section-instructions {
+    background: var(--light);
+    border-left: 3px solid var(--ink);
+    padding: 8px 14px;
+    margin-bottom: 18px;
+    font-size: 10.5pt;
+  }
+  .section-instructions ul { margin: 0; padding-left: 20px; }
+
+  /* ---------- Questions ---------- */
+  .q {
+    margin: 0 0 18px;
+    page-break-inside: avoid;
+  }
+  .q .qhead {
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: bold;
+    font-size: 11.5pt;
+    margin-bottom: 4px;
+  }
+  .q .marks { font-weight: normal; font-style: italic; color: var(--muted); float: right; }
+  .q p { margin: 6px 0; }
+
+  /* MCQ options */
+  ol.mcq {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+  }
+  ol.mcq li {
+    margin: 3px 0;
+    padding-left: 26px;
+    text-indent: -26px;
+  }
+  ol.mcq .lab { display: inline-block; width: 22px; font-weight: bold; }
+
+  .scenario {
+    background: var(--light);
+    border: 1px solid var(--rule);
+    padding: 10px 14px;
+    margin: 8px 0;
+    font-size: 10.5pt;
+  }
+  .scenario .title { font-weight: bold; font-family: Arial, Helvetica, sans-serif; display: block; margin-bottom: 4px; }
+
+  /* Code blocks */
+  pre {
+    font-family: "Courier New", Consolas, monospace;
+    font-size: 10pt;
+    background: #f7f7f7;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 8px 12px;
+    margin: 8px 0;
+    white-space: pre-wrap;
+    page-break-inside: avoid;
+  }
+
+  /* Tables */
+  table.dd {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 8.5pt;
+    margin: 10px 0;
+  }
+  table.dd th, table.dd td {
+    border: 1px solid var(--rule);
+    padding: 4px 6px;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.dd th { background: var(--light); font-family: Arial, Helvetica, sans-serif; }
+  table.dd .blank { background: #fffbe6; font-weight: bold; text-align: center; }
+
+  /* Diagram placeholders */
+  .diagram {
+    border: 1.5px dashed #888;
+    background: repeating-linear-gradient(45deg,#fafafa,#fafafa 10px,#f0f0f0 10px,#f0f0f0 20px);
+    text-align: center;
+    color: #555;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10pt;
+    padding: 28px 16px;
+    margin: 12px 0;
+  }
+  .diagram strong { display: block; font-size: 11pt; margin-bottom: 4px; color: #333; }
+
+  /* Answer lines */
+  .lines {
+    margin: 8px 0 4px;
+    background-image: repeating-linear-gradient(transparent, transparent 23px, #cfcfcf 23px, #cfcfcf 24px);
+    background-size: 100% 24px;
+  }
+  .lines.h3 { height: 72px; }
+  .lines.h4 { height: 96px; }
+  .lines.h6 { height: 144px; }
+  .lines.h8 { height: 192px; }
+  .lines.h10 { height: 240px; }
+
+  .part { margin: 10px 0; }
+  .part .plabel { font-weight: bold; }
+
+  .end {
+    text-align: center;
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: bold;
+    letter-spacing: .15em;
+    border-top: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+    padding: 10px;
+    margin: 30px 0;
+  }
+
+  /* Mapping table */
+  table.map {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 8.5pt;
+    margin: 10px 0;
+  }
+  table.map th, table.map td {
+    border: 1px solid var(--rule);
+    padding: 3px 5px;
+    text-align: left;
+  }
+  table.map th { background: var(--light); font-family: Arial, Helvetica, sans-serif; }
+  table.map code { font-size: 8pt; }
+
+  .appendix { page-break-before: always; }
+  .appendix h2 { font-size: 14pt; border-bottom: 2px solid var(--ink); padding-bottom: 4px; }
+
+  .print-bar {
+    position: sticky; top: 0; z-index: 10;
+    background: #1a1a1a; color: #fff; text-align: center;
+    padding: 10px; font-family: Arial, sans-serif;
+  }
+  .print-bar button {
+    font-size: 13px; padding: 6px 18px; cursor: pointer;
+    border: 0; border-radius: 4px; background: #fff; color: #1a1a1a; font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar no-print">
+  <button onclick="window.print()">🖨 Print / Save as PDF</button>
+</div>
+
+<div class="sheet">
+
+  <!-- ===================== COVER ===================== -->
+  <div class="cover">
+    <div class="org">Trial Higher School Certificate Examination</div>
+    <h1>Software Engineering</h1>
+    <div class="year">2026</div>
+    <div class="meta">
+      <div>Total marks<span>80</span></div>
+      <div>Time allowed<span>2 h 30 min</span></div>
+      <div>Reading time<span>5 minutes</span></div>
+    </div>
+  </div>
+
+  <div class="gen-instructions">
+    <h3>General Instructions</h3>
+    <ul>
+      <li>Reading time — 5 minutes.</li>
+      <li>Working time — 2 hours and 30 minutes.</li>
+      <li>Write using black pen.</li>
+      <li>Write your student number at the top of every page of your response booklet.</li>
+      <li>For Section I, record your answer (A, B, C or D) for each question in the spaces provided.</li>
+      <li>For Sections II and III, write your responses in the designated line blocks, or in the separate writing booklet provided.</li>
+      <li>Show all working where applicable.</li>
+    </ul>
+  </div>
+
+  <div class="gen-instructions">
+    <h3>Total marks — 80</h3>
+    <ul>
+      <li><strong>Section I</strong> — 20 marks · Multiple choice · Allow about 30 minutes.</li>
+      <li><strong>Section II</strong> — 30 marks · Short answer · Allow about 50 minutes.</li>
+      <li><strong>Section III</strong> — 30 marks · Extended response · Allow about 60 minutes.</li>
+    </ul>
+  </div>
+
+  <!-- ===================== SECTION I ===================== -->
+  <div class="section-head"><h2>Section I — Multiple Choice (20 marks)</h2></div>
+  <div class="section-instructions">
+    <ul>
+      <li>Attempt Questions 1–20.</li>
+      <li>Allow about 30 minutes for this section.</li>
+      <li>Select the alternative A, B, C or D that best answers the question.</li>
+      <li>1 mark each.</li>
+    </ul>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 1</div>
+    <p>Which of the following BEST describes the purpose of input validation in secure software development?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>To encrypt data before it is transmitted over the network</li>
+      <li><span class="lab">B.</span>To ensure that user-supplied data conforms to expected formats before processing</li>
+      <li><span class="lab">C.</span>To compress data so it uses less storage space</li>
+      <li><span class="lab">D.</span>To convert data from one programming language to another</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 2</div>
+    <p>A company uses a phased implementation method to roll out a new payroll system. Which of the following BEST describes this approach?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>The old and new systems run simultaneously until the new system is verified</li>
+      <li><span class="lab">B.</span>The new system replaces the old system immediately across the entire organisation</li>
+      <li><span class="lab">C.</span>The new system is introduced in stages, one module or department at a time</li>
+      <li><span class="lab">D.</span>A small group of users tests the new system before it is deployed to all users</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 3</div>
+    <p>What is the output of this code? Consider the following Python code fragment:</p>
+<pre>x = 10
+y = 3
+
+print(x &gt; y)
+print(x == y)</pre>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>True, True</li>
+      <li><span class="lab">B.</span>True, False</li>
+      <li><span class="lab">C.</span>False, True</li>
+      <li><span class="lab">D.</span>10, 3</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 4</div>
+    <p>Which of the following protocols is responsible for resolving domain names to IP addresses?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>FTP</li>
+      <li><span class="lab">B.</span>SMTP</li>
+      <li><span class="lab">C.</span>DNS</li>
+      <li><span class="lab">D.</span>TCP/IP</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 5</div>
+    <p>A machine learning model is trained using a dataset where each record includes both the input features and the correct output label. Which type of learning does this represent?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>Unsupervised learning</li>
+      <li><span class="lab">B.</span>Semi-supervised learning</li>
+      <li><span class="lab">C.</span>Reinforcement learning</li>
+      <li><span class="lab">D.</span>Supervised learning</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 6</div>
+    <p>Which SQL clause is used to arrange the results of a query in a specified order?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>GROUP BY</li>
+      <li><span class="lab">B.</span>WHERE</li>
+      <li><span class="lab">C.</span>ORDER BY</li>
+      <li><span class="lab">D.</span>SELECT</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 7</div>
+    <p>In a structure chart, what does a filled circle on a connecting line between two subroutines indicate?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>Data is being passed as a parameter</li>
+      <li><span class="lab">B.</span>A flag or control variable is being passed</li>
+      <li><span class="lab">C.</span>The subroutine is executed repeatedly</li>
+      <li><span class="lab">D.</span>The subroutine is optional</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 8</div>
+    <p>An attacker injects a malicious script into a comment field on a website. When other users view the page, the script executes in their browsers. Which vulnerability does this exploit?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>Cross-site request forgery (CSRF)</li>
+      <li><span class="lab">B.</span>Race conditions</li>
+      <li><span class="lab">C.</span>Cross-site scripting (XSS)</li>
+      <li><span class="lab">D.</span>Invalid forwarding and redirecting</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 9</div>
+    <p>What is the output of the following Python code?</p>
+<pre>total = 0
+for i in range(1, 4):
+    total = total + i
+print(total)</pre>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>3</li>
+      <li><span class="lab">B.</span>6</li>
+      <li><span class="lab">C.</span>10</li>
+      <li><span class="lab">D.</span>4</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 10</div>
+    <p>Which of the following BEST describes the difference between the Waterfall and Agile development approaches?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>Waterfall uses iterative sprints; Agile follows a sequential process</li>
+      <li><span class="lab">B.</span>Waterfall requires extensive documentation; Agile emphasises working software over documentation</li>
+      <li><span class="lab">C.</span>Waterfall is used only for small projects; Agile is used only for large projects</li>
+      <li><span class="lab">D.</span>Waterfall does not include testing; Agile includes testing at every stage</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 11</div>
+    <p>Consider the following CSS code fragment:</p>
+<pre>p {
+    color: blue;
+    font-size: 16px;
+}
+#intro {
+    color: green;
+    font-weight: bold;
+}</pre>
+    <p>A webpage contains the following HTML element:</p>
+<pre>&lt;p id="intro"&gt;Welcome to our site&lt;/p&gt;</pre>
+    <p>What is the appearance of this text?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>Blue text, 16px, normal weight</li>
+      <li><span class="lab">B.</span>Green text, 16px, bold</li>
+      <li><span class="lab">C.</span>Blue text, default size, bold</li>
+      <li><span class="lab">D.</span>Green text, default size, normal weight</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 12</div>
+    <p>Which of the following is a characteristic of Object-Relational Mapping (ORM) rather than SQL?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>Tables can be joined to enhance searching</li>
+      <li><span class="lab">B.</span>Code is focused on object manipulation</li>
+      <li><span class="lab">C.</span>Queries are written in a standardised language</li>
+      <li><span class="lab">D.</span>Data is stored in normalised relational tables</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 13</div>
+    <p>What does the term 'sandboxing' refer to in the context of secure software development?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>Running untrusted code in an isolated environment to limit potential damage</li>
+      <li><span class="lab">B.</span>Encrypting all user data before it is stored in a database</li>
+      <li><span class="lab">C.</span>Using version control to track changes in source code</li>
+      <li><span class="lab">D.</span>Testing software on multiple operating systems simultaneously</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 14</div>
+    <p>Which stage of the MLOps lifecycle involves data wrangling and feature engineering?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>Design</li>
+      <li><span class="lab">B.</span>Model Development</li>
+      <li><span class="lab">C.</span>Operations</li>
+      <li><span class="lab">D.</span>Deployment</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 15</div>
+    <p>In a neural network, what is the primary function of "back propagation" or "backward chaining" during the training cycle?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>To accept binary input signals at the input layer</li>
+      <li><span class="lab">B.</span>To iteratively adjust internal weightings and threshold values</li>
+      <li><span class="lab">C.</span>To display the output produced by the network</li>
+      <li><span class="lab">D.</span>To convert data into a format suitable for the hidden layer</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 16</div>
+    <p>A Gantt chart for a software project shows Task B starting only after Task A is complete. What does this represent?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>A milestone</li>
+      <li><span class="lab">B.</span>Resource allocation</li>
+      <li><span class="lab">C.</span>A dependency</li>
+      <li><span class="lab">D.</span>Percentage completion</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 17</div>
+    <p>What is the primary purpose of HTTPS compared to HTTP?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>To increase the speed of data transmission</li>
+      <li><span class="lab">B.</span>To compress web page content for faster loading</li>
+      <li><span class="lab">C.</span>To encrypt data transmitted between the browser and the web server</li>
+      <li><span class="lab">D.</span>To allow multiple users to access a website simultaneously</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 18</div>
+    <p>Which of the following pseudocode structures represents a post-test loop?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>WHILE condition is true ... ENDWHILE</li>
+      <li><span class="lab">B.</span>FOR variable = start TO finish ... NEXT variable</li>
+      <li><span class="lab">C.</span>REPEAT ... UNTIL condition is true</li>
+      <li><span class="lab">D.</span>IF condition THEN ... ENDIF</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 19</div>
+    <p>A software developer conducts penetration testing on a web application. What is the PRIMARY purpose of this activity?</p>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>To review source code for syntax errors</li>
+      <li><span class="lab">B.</span>To simulate real-world attacks and identify exploitable vulnerabilities</li>
+      <li><span class="lab">C.</span>To verify that the user interface meets design specifications</li>
+      <li><span class="lab">D.</span>To measure the application's response time under heavy load</li>
+    </ol>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 20</div>
+    <p>What is the output of this code?</p>
+<pre>def greet(name):
+    return "Hello " + name
+print(greet("Sam"))</pre>
+    <ol class="mcq">
+      <li><span class="lab">A.</span>Hello</li>
+      <li><span class="lab">B.</span>Hello Sam</li>
+      <li><span class="lab">C.</span>greet Sam</li>
+      <li><span class="lab">D.</span>An error occurs</li>
+    </ol>
+  </div>
+
+  <!-- ===================== SECTION II ===================== -->
+  <div class="section-head"><h2>Section II — Short Answer (30 marks)</h2></div>
+  <div class="section-instructions">
+    <ul>
+      <li>Attempt Questions 21–27.</li>
+      <li>Allow about 50 minutes for this section.</li>
+      <li>Show all working where applicable.</li>
+    </ul>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 21 <span class="marks">(3 marks)</span></div>
+    <div class="scenario">
+      <span class="title">School Enrolment System</span>
+      A school is developing a centralised digital Student Enrolment System to transition from paper-based records to a relational database. This system stores administrative information for each student, including a unique, strictly formatted identification code and their date of birth. To prevent administrative errors and ensure database integrity at the point of entry, the database administrator is designing a formal data dictionary. This dictionary defines precise data representation types, byte storage allocations, character display limits, and field validation rules. These rules prevent invalid inputs — such as impossible birth dates or incorrectly formatted identification numbers — from corrupting the system's relational tables.
+    </div>
+    <table class="dd">
+      <thead>
+        <tr>
+          <th>Field Name</th><th>Data Type</th><th>Format / Template</th><th>Storage Size</th><th>Display Length</th><th>Description</th><th>Example</th><th>Validation / Constraint</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>StudentID</strong></td><td>String</td><td>XXNNNN</td><td>6 bytes</td><td>6</td><td>Unique identifier for each student</td><td>AB1234</td><td class="blank">(i)</td></tr>
+        <tr><td><strong>FirstName</strong></td><td>String</td><td>Letters only</td><td>30 bytes</td><td>30</td><td>Student's given name</td><td>Samantha</td><td>Cannot be empty (not null)</td></tr>
+        <tr><td><strong>LastName</strong></td><td>String</td><td>Letters only</td><td>50 bytes</td><td>50</td><td>Student's family name</td><td>Nguyen</td><td>Cannot be empty (not null)</td></tr>
+        <tr><td class="blank">(ii)</td><td>Date and Time</td><td class="blank">(iii)</td><td>4 bytes</td><td>10</td><td>Date of birth of student</td><td>2007/05/15</td><td>Valid date less than today</td></tr>
+        <tr><td><strong>Gender</strong></td><td>Character</td><td>X</td><td>1 byte</td><td>1</td><td>Registered gender of the student</td><td>F</td><td>Must be 'M', 'F', or 'X'</td></tr>
+        <tr><td><strong>YearGroup</strong></td><td>Integer</td><td>NN</td><td>2 bytes</td><td>2</td><td>Current high school year level</td><td>11</td><td>Range from 7 to 12 inclusive</td></tr>
+        <tr><td><strong>IsEnrolled</strong></td><td>Boolean</td><td>True/False</td><td>1 byte</td><td>5</td><td>Active school enrolment status</td><td>True</td><td>Logical binary (True/False)</td></tr>
+      </tbody>
+    </table>
+    <p>Complete the missing entries (i), (ii) and (iii) in the data dictionary above.</p>
+    <div class="part"><span class="plabel">(i)</span><div class="lines h3"></div></div>
+    <div class="part"><span class="plabel">(ii)</span><div class="lines h3"></div></div>
+    <div class="part"><span class="plabel">(iii)</span><div class="lines h3"></div></div>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 22 <span class="marks">(4 marks)</span></div>
+    <div class="scenario">
+      <span class="title">Bookshop Relational Database Schema</span>
+      <ul style="margin:4px 0;">
+        <li>Books(<u>BookID</u> PK, Title, Price, AuthorID FK, CategoryID FK)</li>
+        <li>Authors(<u>AuthorID</u> PK, FirstName, LastName)</li>
+        <li>Categories(<u>CategoryID</u> PK, CategoryName)</li>
+      </ul>
+    </div>
+    <div class="part"><span class="plabel">(a)</span> Write an SQL query to display the title and price of all books where the price is greater than $25.00, ordered by price in descending order. <em>(2 marks)</em>
+      <div class="lines h4"></div>
+    </div>
+    <div class="part"><span class="plabel">(b)</span> Write an SQL query to display the total number of books in the Books table. <em>(2 marks)</em>
+      <div class="lines h4"></div>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 23 <span class="marks">(5 marks)</span></div>
+    <div class="scenario">
+      <span class="title">Patient Records System</span>
+      A software development team is building a web-based Patient Records System for a multi-branch medical clinic. The platform stores highly sensitive Personally Identifiable Information (PII), including patient medical histories, clinical diagnoses, and prescriptions. It is accessed concurrently by doctors, administrative personnel, and patients. Because medical data is highly regulated under strict privacy legislation, the developers must prioritise security throughout the development lifecycle.
+      <br><br>
+      This requires designing the system to enforce strict read/write authorisation rules, protect data from unauthorised tampering, ensure high system availability so doctors can access critical files during clinical emergencies, and establish secure repository controls to prevent source code leaks or unauthorised modifications during development.
+    </div>
+    <div class="part"><span class="plabel">(a)</span> Explain how the principles of confidentiality, integrity and availability apply to the design of this system. <em>(3 marks)</em>
+      <div class="lines h6"></div>
+    </div>
+    <div class="part"><span class="plabel">(b)</span> Describe TWO strategies the developers could use to manage the security of the programming code during development. <em>(2 marks)</em>
+      <div class="lines h4"></div>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 24 <span class="marks">(4 marks)</span></div>
+    <p>The following pseudocode and flowchart both represent the same algorithm.</p>
+<pre>BEGIN FindMax
+  numbers = [14, 7, 23, 9, 18]
+  max = numbers[0]
+  FOR i = 1 TO 4 STEP 1
+    IF numbers[i] GREATER THAN max THEN
+      max = numbers[i]
+    ENDIF
+  NEXT i
+  Display max
+END FindMax</pre>
+    <div class="diagram"><strong>Diagram — Question 24 Flowchart</strong>FindMax loop structure (initialise → iterate → compare → update → display).</div>
+    <div class="part"><span class="plabel">(a)</span> Trace the execution of this algorithm and state the final output. <em>(2 marks)</em>
+      <div class="lines h4"></div>
+    </div>
+    <div class="part"><span class="plabel">(b)</span> Rewrite this algorithm in Python. <em>(2 marks)</em>
+      <div class="lines h6"></div>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 25 <span class="marks">(5 marks)</span></div>
+    <div class="scenario">
+      <span class="title">Progressive Web App (PWA)</span>
+      A web developer is building a Progressive Web App (PWA) to allow customers of a local restaurant to browse a live digital menu, place food orders, and complete card payments online. The system's architecture separates user-facing frontend interfaces from server-side database engines.
+      <br><br>
+      When a customer interacts with the frontend client, their actions trigger real-time background processes. These processes validate transactional data, communicate with external payment gateways, update the physical kitchen staff terminal, and modify the restaurant's menu databases.
+      <br><br>
+      The logical flow of this data — and how external entities interact with the system processes — is modelled using a Level 1 Data Flow Diagram during the initial design phase.
+    </div>
+    <div class="diagram"><strong>Diagram — Question 25 Level 1 Data Flow Diagram</strong>Entities: Customer, Restaurant Staff · Processes: Place Order, Process Payment · Data stores: D1 Menu, D2 Orders.</div>
+    <div class="part"><span class="plabel">(a)</span> Describe the role of BOTH the client-side (front-end) and server-side (back-end) components in a web development system. <em>(2 marks)</em>
+      <div class="lines h4"></div>
+    </div>
+    <div class="part"><span class="plabel">(b)</span> Explain the contribution of back-end web development to the success of a web application. Refer to at least TWO of: web server software, web framework, databases, libraries. <em>(3 marks)</em>
+      <div class="lines h6"></div>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 26 <span class="marks">(4 marks)</span></div>
+    <div class="scenario">
+      <span class="title">Customer Churn ML Model</span>
+      A subscription-based telecommunications provider wants to predict customer 'churn' (identifying whether a customer is likely to cancel their service or remain with the provider). The desired output is strictly binary: either the customer churns (represented as 1) or remains active (represented as 0).
+      <br><br>
+      The software engineering team originally attempted to develop a predictive machine learning model using a standard linear regression algorithm. However, because linear regression outputs an unbounded, continuous straight line extending to positive and negative infinity, the team has had difficulty mapping the output to a clear probability score between 0 and 1. They must now re-evaluate their mathematical model to find an algorithm optimised for binary classification tasks.
+    </div>
+    <div class="part"><span class="plabel">(a)</span> Distinguish between artificial intelligence (AI) and machine learning (ML). <em>(2 marks)</em>
+      <div class="lines h4"></div>
+    </div>
+    <div class="part"><span class="plabel">(b)</span> Explain why logistic regression would be more appropriate than linear regression for predicting customer churn. <em>(2 marks)</em>
+      <div class="lines h4"></div>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 27 <span class="marks">(5 marks)</span></div>
+    <p>A teacher records a class's test marks in a list:</p>
+<pre>marks = [55, 72, 48, 90, 63]</pre>
+    <div class="part"><span class="plabel">(a)</span> Write a Python function <code>calculate_average(marks)</code> that returns the average (mean) of the marks in the list. <em>(2 marks)</em>
+      <div class="lines h6"></div>
+    </div>
+    <div class="part"><span class="plabel">(b)</span> Write a Python function <code>count_passes(marks)</code> that returns the number of marks that are 50 or greater. <em>(2 marks)</em>
+      <div class="lines h6"></div>
+    </div>
+    <div class="part"><span class="plabel">(c)</span> Using the list above, call both functions and print the average and the number of passes. <em>(1 mark)</em>
+      <div class="lines h3"></div>
+    </div>
+  </div>
+
+  <!-- ===================== SECTION III ===================== -->
+  <div class="section-head"><h2>Section III — Extended Response (30 marks)</h2></div>
+  <div class="section-instructions">
+    <ul>
+      <li>Attempt Questions 28–30.</li>
+      <li>Allow about 60 minutes for this section.</li>
+      <li>Clearly communicate your understanding using appropriate terminology.</li>
+    </ul>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 28 <span class="marks">(8 marks)</span></div>
+    <div class="scenario">
+      <span class="title">Web-Based Patient Registration</span>
+      A healthcare provider is deploying a public-facing, web-based patient registration form. This form collects sensitive personal data, including patient names, dates of birth, email addresses, and Medicare numbers. Because this web interface is directly exposed to the internet, it is vulnerable to malicious inputs like SQL Injection and Cross-Site Scripting (XSS).
+      <br><br>
+      To safeguard patient confidentiality and prevent database corruption, the engineering team is adopting a 'Privacy by Design' framework and establishing a strict input-handling posture. The first line of defence is strict input processing. This involves validating input structures (such as executing syntax checks via the email validation flowchart) to reject malformed data, and sanitising inputs before they reach the application layer to strip or neutralise executable scripts.
+    </div>
+    <div class="diagram"><strong>Diagram — Question 28 Flowchart</strong>Email validation logic (check for exactly one '@' and at least one '.' after the '@').</div>
+    <div class="part"><span class="plabel">(a)</span> Using the logic in the flowchart, write a Python function <code>validate_email(email)</code> that checks if the email contains exactly one '@' and at least one '.' after the '@', returning True if valid and False otherwise. <em>(2 marks)</em>
+      <div class="lines h6"></div>
+    </div>
+    <div class="part"><span class="plabel">(b)</span> Explain how input validation and sanitisation work together to protect this system from malicious input. Provide an example of each in the context of the patient registration form. <em>(3 marks)</em>
+      <div class="lines h6"></div>
+    </div>
+    <div class="part"><span class="plabel">(c)</span> Describe how the 'privacy by design' approach should be applied when developing this system. Refer to at least TWO of: proactive not reactive, embed privacy into design, respect for user privacy. <em>(3 marks)</em>
+      <div class="lines h6"></div>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 29 <span class="marks">(10 marks)</span></div>
+    <div class="scenario">
+      <span class="title">QuickRoute Logistics ML Forecasting</span>
+      QuickRoute Logistics operates a last-mile delivery network and is experiencing a high volume of customer complaints due to highly inaccurate delivery estimates. To resolve this, the engineering team is building a machine learning solution to predict precise, real-time arrival estimates.
+      <br><br>
+      The system must process complex and multi-dimensional historical parameters, including total travel distance (a continuous numerical value), live traffic density (varying from light to gridlock), real-time weather forecasts (rain, snow, or clear), and the specific time of day (to account for peak commute hours).
+      <br><br>
+      Because these environmental variables interact in complex, non-linear ways, selecting the correct algorithm is critical. The developers utilise a structured decision tree to decide whether a standard Linear Regression model, a non-linear Polynomial Regression model, or a Classification algorithm is best suited for predicting the continuous time output.
+      <br><br>
+      Once deployed, this model must be maintained through a formal MLOps (Machine Learning Operations) lifecycle to prevent 'model drift' over time, while also being monitored for dataset source and human design biases that could skew delivery estimates in specific geographic regions.
+    </div>
+    <div class="diagram"><strong>Diagram — Question 29 Decision Tree</strong>Model-selection decision tree (Linear vs Polynomial Regression vs Classification).</div>
+    <div class="part"><span class="plabel">(a)</span> Using the decision tree, explain which regression model would be most appropriate for predicting delivery times assuming the relationship between parameters is non-linear. Justify your choice. <em>(2 marks)</em>
+      <div class="lines h4"></div>
+    </div>
+    <div class="part"><span class="plabel">(b)</span> After training, the model produced the following rule for predicting delivery time (in minutes) from distance (in km):
+      <pre>predicted_time = 5 + (1.5 × distance)</pre>
+      Write Python code that:
+      <ul style="margin:4px 0;">
+        <li>stores the distances [4, 8, 12] in a list,</li>
+        <li>uses the rule above to calculate the predicted delivery time for each distance, and</li>
+        <li>prints each distance with its predicted delivery time. <em>(3 marks)</em></li>
+      </ul>
+      <div class="lines h8"></div>
+    </div>
+    <div class="part"><span class="plabel">(c)</span> Describe the three stages of the MLOps lifecycle and explain how each stage would apply to the development and deployment of this delivery prediction model. <em>(3 marks)</em>
+      <div class="diagram"><strong>Diagram — Question 29 MLOps Lifecycle</strong>Design → Model Development → Operations.</div>
+      <div class="lines h6"></div>
+    </div>
+    <div class="part"><span class="plabel">(d)</span> Assess the potential impact of human and dataset source bias in the development of this machine learning solution. Provide at least TWO specific examples. <em>(2 marks)</em>
+      <div class="lines h4"></div>
+    </div>
+  </div>
+
+  <div class="q">
+    <div class="qhead">Question 30 <span class="marks">(12 marks)</span></div>
+    <div class="scenario">
+      <span class="title">Retail Inventory Management</span>
+      A retail conglomerate requires a new web-based Inventory Management System to coordinate stock control across 100 nationwide stores. The system must reliably serve three core stakeholder groups:
+      <ol style="margin:6px 0;">
+        <li><strong>Store Managers</strong>, who need real-time interfaces to query local stock levels, submit urgent reorder requests, and generate localised sales reports.</li>
+        <li><strong>Suppliers</strong>, who receive automated purchase orders from the system and must submit shipping and delivery details in return.</li>
+        <li><strong>Head Office Executives</strong>, who use the system to push updated national reorder policies and retrieve aggregated corporate sales reports.</li>
+      </ol>
+      The project has a fixed launch deadline but a highly fluid set of feature requirements from the individual store managers. The engineering team is deciding between a traditional Waterfall methodology, a fully iterative Agile approach, or a hybrid 'WAgile' framework to manage the development lifecycle.
+      <br><br>
+      To map the system's external boundaries, data inputs, and outputs during the initial analysis phase, the team has drafted a Context-Level Data Flow Diagram (Level 0 DFD). This model will serve as the foundation for decomposing the system into a more detailed Level 1 DFD during the system design phase.
+    </div>
+    <div class="diagram"><strong>Diagram — Question 30 Context Diagram (Level 0 DFD)</strong>Single central process with external entities: Store Managers, Suppliers, Head Office Executives.</div>
+    <div class="part"><span class="plabel">(a)</span> Compare the Waterfall and Agile software development approaches. Discuss the advantages and disadvantages of each in the context of this project. <em>(3 marks)</em>
+      <div class="lines h6"></div>
+    </div>
+    <div class="part"><span class="plabel">(b)</span> The team decides to use the WAgile approach. Explain how this hybrid model could be applied during the development lifecycle of the inventory system. <em>(2 marks)</em>
+      <div class="lines h6"></div>
+    </div>
+    <div class="part"><span class="plabel">(c)</span> Using the context diagram as a reference, draw a Level 1 data flow diagram for the inventory management system. This explodes the single process from Level 0 into its primary functional modules. <em>(3 marks)</em>
+      <ul style="margin:4px 0;">
+        <li>Process 1.0 — Inventory Tracking: Updates stock levels, handles item additions or removals.</li>
+        <li>Process 2.0 — Order Management: Processes sales from customers and generates purchase orders for suppliers.</li>
+        <li>Process 3.0 — Reporting: Pulls data from records to generate stock and sales reports.</li>
+        <li>Data Stores: Item Database, Supplier Database, Sales Records.</li>
+      </ul>
+      <div class="diagram" style="height:200px;"><strong>Draw your Level 1 DFD in this space</strong></div>
+    </div>
+    <div class="part"><span class="plabel">(d)</span> Explain the benefits of collaboration in the development of this system. Consider various points of view, delegation of tasks based on expertise, and the quality of the final solution. <em>(2 marks)</em>
+      <div class="lines h4"></div>
+    </div>
+    <div class="part"><span class="plabel">(e)</span> Describe how the team should quality assure the software engineering solution throughout the project. Include reference to defining quality criteria, continual checking, and legal compliance requirements. <em>(2 marks)</em>
+      <div class="lines h4"></div>
+    </div>
+  </div>
+
+  <div class="end">End of Examination</div>
+
+  <!-- ===================== APPENDIX: SYLLABUS MAPPING ===================== -->
+  <div class="appendix">
+    <h2>Appendix — Syllabus Mapping Table</h2>
+    <p style="font-size:9.5pt;">Based on the 2022 NSW NESA Year 12 Software Engineering Syllabus (implemented from 2024, with the first HSC in 2025/2026). <em>Marker reference only — not for distribution to candidates.</em></p>
+    <table class="map">
+      <thead>
+        <tr><th>Q#</th><th>Focus Area / Topic</th><th>Sub-topic</th><th>Marks</th><th>Outcome(s)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Q1</td><td>Secure Software Architecture</td><td>Input handling, validation &amp; defensive mechanisms</td><td>1</td><td><code>SE-12-07</code></td></tr>
+        <tr><td>Q2</td><td>Software Engineering Project</td><td>System implementation &amp; deployment strategies</td><td>1</td><td><code>SE-12-01</code></td></tr>
+        <tr><td>Q3</td><td>Programming Fundamentals</td><td>Relational operators, coding syntax &amp; basic logic</td><td>1</td><td><code>SE-12-02</code></td></tr>
+        <tr><td>Q4</td><td>Programming for the Web</td><td>Domain Name System (DNS) &amp; address resolution</td><td>1</td><td><code>SE-12-03</code></td></tr>
+        <tr><td>Q5</td><td>Software Automation</td><td>Machine Learning paradigms (Supervised Learning)</td><td>1</td><td><code>SE-12-03</code></td></tr>
+        <tr><td>Q6</td><td>Programming for the Web</td><td>Relational databases and SQL</td><td>1</td><td><code>SE-12-02</code></td></tr>
+        <tr><td>Q7</td><td>Software Engineering Project</td><td>Algorithmic modeling tools (Structure Charts)</td><td>1</td><td><code>SE-12-06</code></td></tr>
+        <tr><td>Q8</td><td>Secure Software Architecture</td><td>Web security risks and vulnerabilities (XSS)</td><td>1</td><td><code>SE-12-07</code></td></tr>
+        <tr><td>Q9</td><td>Programming Fundamentals</td><td>Loop structures, definite loops, algorithm tracing</td><td>1</td><td><code>SE-12-02</code></td></tr>
+        <tr><td>Q10</td><td>Software Engineering Project</td><td>Software development approaches (Waterfall vs Agile)</td><td>1</td><td><code>SE-12-01</code></td></tr>
+        <tr><td>Q11</td><td>Programming for the Web</td><td>Frontend elements, CSS specificity</td><td>1</td><td><code>SE-12-02</code></td></tr>
+        <tr><td>Q12</td><td>Programming for the Web</td><td>Database interaction concepts (ORM vs SQL)</td><td>1</td><td><code>SE-12-02</code></td></tr>
+        <tr><td>Q13</td><td>Secure Software Architecture</td><td>Safe testing &amp; sandboxing environments</td><td>1</td><td><code>SE-12-07</code></td></tr>
+        <tr><td>Q14</td><td>Software Automation</td><td>Data pipeline stages in MLOps lifecycle</td><td>1</td><td><code>SE-12-03</code></td></tr>
+        <tr><td>Q15</td><td>Software Automation</td><td>Deep learning training cycles, weight refinement</td><td>1</td><td><code>SE-12-03</code></td></tr>
+        <tr><td>Q16</td><td>Software Engineering Project</td><td>Project schedules, task dependency identification</td><td>1</td><td><code>SE-12-06</code></td></tr>
+        <tr><td>Q17</td><td>Programming for the Web</td><td>Secure communication web protocols (HTTPS)</td><td>1</td><td><code>SE-12-03</code></td></tr>
+        <tr><td>Q18</td><td>Programming Fundamentals</td><td>Control structures and loop types (Post-Test)</td><td>1</td><td><code>SE-12-02</code></td></tr>
+        <tr><td>Q19</td><td>Secure Software Architecture</td><td>Threat modeling, penetration testing</td><td>1</td><td><code>SE-12-07</code></td></tr>
+        <tr><td>Q20</td><td>Programming Fundamentals</td><td>Defining functions and scope, evaluating output</td><td>1</td><td><code>SE-12-02</code>, <code>SE-12-08</code></td></tr>
+        <tr><td>Q21</td><td>Software Engineering Project</td><td>Structured schema documentation (Data Dictionary)</td><td>3</td><td><code>SE-12-06</code></td></tr>
+        <tr><td>Q22a</td><td>Programming for the Web</td><td>Database query with filtering and sorting</td><td>2</td><td><code>SE-12-02</code>, <code>SE-12-06</code></td></tr>
+        <tr><td>Q22b</td><td>Programming for the Web</td><td>Database query with aggregates</td><td>2</td><td><code>SE-12-02</code>, <code>SE-12-06</code></td></tr>
+        <tr><td>Q23a</td><td>Secure Software Architecture</td><td>Security principles (CIA)</td><td>3</td><td><code>SE-12-04</code>, <code>SE-12-07</code></td></tr>
+        <tr><td>Q23b</td><td>Secure Software Architecture</td><td>Source control mechanisms and secure environments</td><td>2</td><td><code>SE-12-04</code>, <code>SE-12-07</code></td></tr>
+        <tr><td>Q24a</td><td>Programming Fundamentals</td><td>Algorithm execution tracing (Desk check)</td><td>2</td><td><code>SE-12-02</code>, <code>SE-12-08</code></td></tr>
+        <tr><td>Q24b</td><td>Programming Fundamentals</td><td>Program design conversion (Pseudocode to Python)</td><td>2</td><td><code>SE-12-02</code>, <code>SE-12-08</code></td></tr>
+        <tr><td>Q25a</td><td>Programming for the Web</td><td>Frontend client vs backend server-side dynamics</td><td>2</td><td><code>SE-12-02</code>, <code>SE-12-03</code></td></tr>
+        <tr><td>Q25b</td><td>Programming for the Web</td><td>Backend technologies evaluation</td><td>3</td><td><code>SE-12-02</code>, <code>SE-12-03</code></td></tr>
+        <tr><td>Q26a</td><td>Software Automation</td><td>Automation taxonomy definition (AI vs ML)</td><td>2</td><td><code>SE-12-03</code></td></tr>
+        <tr><td>Q26b</td><td>Software Automation</td><td>Regression types, model selection for binary outputs</td><td>2</td><td><code>SE-12-03</code></td></tr>
+        <tr><td>Q27a</td><td>Programming Fundamentals</td><td>Writing standard algorithms (mean)</td><td>2</td><td><code>SE-12-02</code>, <code>SE-12-08</code></td></tr>
+        <tr><td>Q27b</td><td>Programming Fundamentals</td><td>Linear iteration with selection bounds</td><td>2</td><td><code>SE-12-02</code>, <code>SE-12-08</code></td></tr>
+        <tr><td>Q27c</td><td>Programming Fundamentals</td><td>Execution structures, function handling in main scope</td><td>1</td><td><code>SE-12-02</code>, <code>SE-12-08</code></td></tr>
+        <tr><td>Q28a</td><td>Secure Software Architecture</td><td>Coding validation structures from logical flows</td><td>2</td><td><code>SE-12-04</code>, <code>SE-12-07</code></td></tr>
+        <tr><td>Q28b</td><td>Secure Software Architecture</td><td>Validation vs Sanitisation</td><td>3</td><td><code>SE-12-04</code>, <code>SE-12-07</code></td></tr>
+        <tr><td>Q28c</td><td>Secure Software Architecture</td><td>Development design compliance, privacy</td><td>3</td><td><code>SE-12-04</code>, <code>SE-12-07</code></td></tr>
+        <tr><td>Q29a</td><td>Software Automation</td><td>Decision map traversal for model choice</td><td>2</td><td><code>SE-12-02</code>, <code>SE-12-03</code>, <code>SE-12-05</code></td></tr>
+        <tr><td>Q29b</td><td>Software Automation</td><td>Implementation of regression models</td><td>3</td><td><code>SE-12-02</code>, <code>SE-12-03</code>, <code>SE-12-05</code></td></tr>
+        <tr><td>Q29c</td><td>Software Automation</td><td>Systems Operations (MLOps lifecycle)</td><td>3</td><td><code>SE-12-02</code>, <code>SE-12-03</code>, <code>SE-12-05</code></td></tr>
+        <tr><td>Q29d</td><td>Software Automation</td><td>Ethical evaluation (Human &amp; collection bias)</td><td>2</td><td><code>SE-12-02</code>, <code>SE-12-03</code>, <code>SE-12-05</code></td></tr>
+        <tr><td>Q30a</td><td>Software Engineering Project</td><td>Managing project models, comparing dev paths</td><td>3</td><td><code>SE-12-01</code>, <code>SE-12-05</code>, <code>SE-12-06</code>, <code>SE-12-09</code></td></tr>
+        <tr><td>Q30b</td><td>Software Engineering Project</td><td>Hybrid project management methods (WAgile)</td><td>2</td><td><code>SE-12-01</code>, <code>SE-12-05</code>, <code>SE-12-06</code>, <code>SE-12-09</code></td></tr>
+        <tr><td>Q30c</td><td>Software Engineering Project</td><td>Process decomposition and Level 1 DFD creation</td><td>3</td><td><code>SE-12-01</code>, <code>SE-12-05</code>, <code>SE-12-06</code>, <code>SE-12-09</code></td></tr>
+        <tr><td>Q30d</td><td>Software Engineering Project</td><td>Collaboration strategies, expertise delegation</td><td>2</td><td><code>SE-12-01</code>, <code>SE-12-05</code>, <code>SE-12-06</code>, <code>SE-12-09</code></td></tr>
+        <tr><td>Q30e</td><td>Software Engineering Project</td><td>Quality metrics planning, legality assessment</td><td>2</td><td><code>SE-12-01</code>, <code>SE-12-05</code>, <code>SE-12-06</code>, <code>SE-12-09</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:20px;">Editorial Corrections Applied to This Paper</h3>
+    <ol style="font-size:9.5pt;">
+      <li><strong>Question 7</strong> — original option B typo "eag" corrected to "flag" (now reads "A flag or control variable is being passed").</li>
+      <li><strong>Question 25</strong> — diagram relabelled from "Level 0 Data Flow Diagram (Context Diagram)" to "Level 1 Data Flow Diagram", since it shows multiple processes and data stores.</li>
+      <li><strong>Question 29</strong> — decision-tree section header corrected from "DECSION TREE" to "DECISION TREE".</li>
+      <li><strong>Hardcopy formatting</strong> — online Google Form metadata (e.g. "Mark only one oval", "Dropdown", "Jump to a question") removed; candidates write in the designated line blocks or separate booklet.</li>
+    </ol>
+  </div>
+
+</div>
+</body>
+</html>
