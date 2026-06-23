@@ -72,6 +72,32 @@ test('Equations: solve-type solutions satisfy the equation', () => {
     assert.ok(checked > 200, `only ${checked} solve equations back-checked`);
 });
 
+// ---- quadratic x² = a : ±root satisfies a·root² = c -------------
+test('Equations quadratic-square: ± root satisfies the equation', () => {
+    let checked = 0;
+    for (const diff of DIFFS) {
+        for (let seed = 1; seed <= 150; seed++) {
+            const qs = generateMathsQuestions({
+                subTopic: TOPIC, difficulty: diff, count: 8, seed, stage: 'Stage 4',
+                subOpsFilter: { [TOPIC]: ['quadratic-square'] },
+            });
+            for (const q of qs) {
+                const am = String(q.answer).match(/^±(\d+)$/);
+                if (!am) continue;
+                const root = +am[1];
+                const em = q.clue.match(/\$(\d*)([a-z])\^2 = (\d+)\$/);
+                assert.ok(em, `${diff}/seed${seed}: no x²=a span in "${q.clue}"`);
+                const a = em[1] === '' ? 1 : +em[1];
+                const c = +em[3];
+                assert.equal(a * root * root, c,
+                    `${diff}/seed${seed}: ${q.clue} answer ±${root}`);
+                checked++;
+            }
+        }
+    }
+    assert.ok(checked > 30, `only ${checked} quadratic-square questions verified`);
+});
+
 // ---- worked solution terminates at the stated answer -----------
 test('Equations: worked solution ends at the stated answer', () => {
     for (const diff of DIFFS) {

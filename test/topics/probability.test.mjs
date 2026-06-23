@@ -76,3 +76,40 @@ test('Probability complementary: P(not E) = 1 − P(E)', () => {
     }
     assert.ok(checked > 30, `only ${checked} complementary-probability questions verified`);
 });
+
+test('Probability experimental: relative frequency / expected count match the table', () => {
+    let checked = 0;
+    for (const diff of DIFFS) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = gen({
+                topic: 'Probability', difficulty: diff, count: 8, seed,
+                subOpsFilter: { Probability: ['experimental'] },
+            });
+            for (const q of qs) {
+                const tm = q.clue.match(/repeated \$(\d+)\$ times/);
+                if (!tm) continue;
+                const total = +tm[1];
+                const pairs = [...q.clue.matchAll(/([A-Za-z0-9]+): \$(\d+)\$/g)].map(m => [m[1], +m[2]]);
+                const tgt = q.clue.match(/"([^"]+)"/);
+                if (!tgt) continue;
+                const found = pairs.find(p => p[0] === tgt[1]);
+                if (!found) continue;
+                const fav = found[1];
+                if (/expect/.test(q.clue)) {
+                    const nm = q.clue.match(/next \$(\d+)\$ trials/);
+                    if (!nm) continue;
+                    assert.equal(Number(q.answer), Math.round((fav / total) * (+nm[1])),
+                        `${diff}/seed${seed}: expected-count mismatch | "${q.clue.slice(0, 80)}…"`);
+                } else {
+                    const [en, ed] = simplified(fav, total);
+                    const parsed = parseFracAnswer(q.answer);
+                    assert.ok(parsed, `unparseable experimental answer "${q.answer}"`);
+                    assert.equal(`${parsed[0]}/${parsed[1]}`, `${en}/${ed}`,
+                        `${diff}/seed${seed}: rel-freq ${fav}/${total} → ${parsed[0]}/${parsed[1]} (expected ${en}/${ed})`);
+                }
+                checked++;
+            }
+        }
+    }
+    assert.ok(checked > 30, `only ${checked} experimental-probability questions verified`);
+});
