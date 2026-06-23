@@ -131,6 +131,7 @@ export const SUB_OPS = {
     'Statistics': [
         { key: 'mean-median', label: 'Mean / Median' },
         { key: 'mode-range',  label: 'Mode / Range' },
+        { key: 'stem-leaf',   label: 'Stem-and-leaf plot' },
         { key: 'iqr',         label: 'Interquartile range' },
         // Stage 5
         { key: 'five-number-summary', label: 'Five-number summary', stages: ['Stage 5'] },
@@ -163,6 +164,7 @@ export const SUB_OPS = {
     ],
     'Probability': [
         { key: 'theoretical',   label: 'Theoretical probability' },
+        { key: 'experimental',  label: 'Experimental / relative frequency' },
         { key: 'complementary', label: 'Complementary events' },
         { key: 'multi-event',   label: 'Multi-event / Mutually exclusive' },
     ],
@@ -184,6 +186,9 @@ export const SUB_OPS = {
         { key: 'indices-multiply', label: 'Multiply (same base)' },
         { key: 'indices-divide',   label: 'Divide (same base)' },
         { key: 'indices-power',    label: 'Power of a power' },
+        { key: 'primes',           label: 'Primes / prime factorisation' },
+        { key: 'hcf-lcm',          label: 'HCF and LCM' },
+        { key: 'divisibility',     label: 'Divisibility tests' },
         { key: 'indices-zero',     label: 'Zero index',  stages: ['Stage 5'] },
         { key: 'indices-negative', label: 'Negative index', stages: ['Stage 5'] },
     ],
@@ -202,12 +207,14 @@ export const SUB_OPS = {
         { key: 'brackets',     label: 'With brackets' },
         { key: 'fractions',    label: 'With fractions' },
         { key: 'substitution', label: 'With substitution' },
+        { key: 'quadratic-square', label: 'Solve x² = a' },
         // Stage 5: Equations and Inequalities
         { key: 'inequalities', label: 'Linear inequalities',     stages: ['Stage 5'] },
         { key: 'simultaneous', label: 'Simultaneous equations',  stages: ['Stage 5'] },
     ],
     'Linear Relationships': [
         { key: 'plot-line',         label: 'Plot points on y = mx + c' },
+        { key: 'pattern-rule',      label: 'Number pattern rule' },
         { key: 'gradient-two-points', label: 'Gradient from two points' },
         { key: 'midpoint',          label: 'Midpoint of two points' },
         { key: 'intercepts',        label: 'Find intercepts' },
@@ -1870,7 +1877,7 @@ function _genAlgebraCore(rng, diff, allowedOps) {
 // ============================================================
 function genEquations(rng, diff, allowedOps) {
     const ALL = ['one-step', 'two-step', 'both-sides', 'brackets', 'substitution',
-                 'fractions', 'inequalities', 'simultaneous'];
+                 'fractions', 'quadratic-square', 'inequalities', 'simultaneous'];
     const pool = ALL.filter(k => !allowedOps || allowedOps.includes(k));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
@@ -1880,6 +1887,29 @@ function genEquations(rng, diff, allowedOps) {
     const sv = rc(rng, _solveVerbsFor(v));
     // render "+ n" / "- |n|" so a negative constant never prints as "+ -5"
     const pm = (n) => n < 0 ? `- ${-n}` : `+ ${n}`;
+
+    // -------- quadratic of the form x² = a  (MA4-EQU-C-01: ax² = c) --------
+    if (op === 'quadratic-square') {
+        const root = ri(rng, 2, diff === 'Easy' ? 9 : 12); // perfect square → exact ±root
+        if (diff === 'Hard') {
+            // a x² = c  →  x² = c/a  (choose a so c/a is a perfect square)
+            const a = ri(rng, 2, 5);
+            const c = a * root * root;
+            return {
+                clue: `${sv}\n$${a}${v}^2 = ${c}$`,
+                answer: `±${root}`,
+                answerDisplay: `$${v} = \\pm ${root}$`,
+                worked: `$${v}^2 = \\dfrac{${c}}{${a}} = ${root * root}$, so $${v} = \\pm\\sqrt{${root * root}} = \\pm ${root}$`,
+            };
+        }
+        const sq = root * root;
+        return {
+            clue: `${sv}\n$${v}^2 = ${sq}$`,
+            answer: `±${root}`,
+            answerDisplay: `$${v} = \\pm ${root}$`,
+            worked: `$${v} = \\pm\\sqrt{${sq}} = \\pm ${root}$ (a positive and a negative root)`,
+        };
+    }
 
     // -------- one-step:  x + a = b,  ax = b,  x/a = b --------
     if (op === 'one-step') {
@@ -2097,19 +2127,63 @@ function genEquations(rng, diff, allowedOps) {
     return null;
 }
 
+// Build a stem-and-leaf plot question (MA4-DAT-C-01). The full dataset is
+// recoverable from the rendered plot, and an odd count keeps the median exact.
+function _genStemLeaf(rng, diff, _depth = 0) {
+    if (_depth > 30) return null;
+    const n = diff === 'Easy' ? 9 : diff === 'Medium' ? 11 : 13;
+    const hi = diff === 'Easy' ? 49 : 69;
+    const data = Array.from({ length: n }, () => ri(rng, 10, hi)).sort((a, b) => a - b);
+    const stems = {};
+    for (const v of data) { const s = Math.floor(v / 10); (stems[s] ||= []).push(v % 10); }
+    const stemKeys = Object.keys(stems).map(Number).sort((a, b) => a - b);
+    // Plain-text rows (no LaTeX) so the plot renders identically in the HTML
+    // preview and the PDF text converter.
+    const rows = stemKeys.map(s => `${s} | ${stems[s].join(' ')}`).join('\n');
+    const k0 = stemKeys[0], leaf0 = stems[k0][0];
+    const keyLine = `Key: ${k0} | ${leaf0} = ${k0 * 10 + leaf0}`;
+
+    const median = data[(n - 1) / 2];
+    const range = data[n - 1] - data[0];
+    // unique mode (rebuild on a tie so the answer is well defined)
+    const counts = {};
+    for (const v of data) counts[v] = (counts[v] || 0) + 1;
+    const maxC = Math.max(...Object.values(counts));
+    const modes = Object.keys(counts).filter(k => counts[k] === maxC).map(Number);
+
+    const ctx = rc(rng, DATA_CONTEXTS);
+    const want = diff === 'Easy'
+        ? rc(rng, ['median', 'range'])
+        : rc(rng, ['median', 'range', 'mode']);
+    if (want === 'mode' && modes.length !== 1) return _genStemLeaf(rng, diff, _depth + 1);
+
+    const stem = `The stem-and-leaf plot shows ${ctx}. Find the *${want}*.`;
+    const clue = `${stem}\n${rows}\n${keyLine}`;
+    const ans = want === 'median' ? median : want === 'range' ? range : modes[0];
+    const worked = want === 'median'
+        ? `With $${n}$ ordered values, the median is the middle (${(n + 1) / 2}th) value $= ${median}$.`
+        : want === 'range'
+            ? `$\\text{range} = ${data[n - 1]} - ${data[0]} = ${range}$`
+            : `The most frequent value is $${modes[0]}$ (appears $${maxC}$ times).`;
+    return { clue, answer: String(ans), answerDisplay: `$${ans}$`, worked, notes: 'Statistics' };
+}
+
 // ============================================================
 // STATISTICS (Stage 4 core)
 // ============================================================
 function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
     if (_depth > 30) return null;
     const maps = {
-        Easy:   { 'mean-median': [0, 1], 'mode-range': [2, 3] },
-        Medium: { 'mode-range': [0, 1], 'mean-median': [2, 3, 4] },
-        Hard:   { 'iqr': [0], 'mean-median': [1, 2, 3, 5], 'mode-range': [4] },
+        Easy:   { 'mean-median': [0, 1], 'mode-range': [2, 3], 'stem-leaf': [6] },
+        Medium: { 'mode-range': [0, 1], 'mean-median': [2, 3, 4], 'stem-leaf': [6] },
+        Hard:   { 'iqr': [0], 'mean-median': [1, 2, 3, 5], 'mode-range': [4], 'stem-leaf': [6] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
     const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : diff === 'Medium' ? 4 : 5);
     if (type === -1) return null;
+    // stem-and-leaf plot (MA4-DAT-C-01) — handled before the per-difficulty
+    // branches since it shares one builder across Easy/Medium/Hard.
+    if (type === 6) return _genStemLeaf(rng, diff, _depth);
 
     const ctx = rc(rng, DATA_CONTEXTS);
     // Real-world narrative wrappers (30% chance per question)
@@ -2614,11 +2688,11 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
         Easy:   { 'area-perimeter': [0, 1, 3], 'angles': [2] },
-        Medium: { 'area-perimeter': [0, 5, 6], 'pythagoras': [1], 'angles': [2, 3, 4] },
-        Hard:   { 'circles': [0, 2, 5], 'pythagoras': [1], 'area-perimeter': [6, 7], 'angles': [3, 4] },
+        Medium: { 'area-perimeter': [0, 5, 6, 7], 'pythagoras': [1], 'angles': [2, 3, 4] },
+        Hard:   { 'circles': [0, 2, 5, 9], 'pythagoras': [1], 'area-perimeter': [6, 7, 8], 'angles': [3, 4] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
-    const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : 7);
+    const type = _pickType(rng, filtered, diff === 'Easy' ? 3 : diff === 'Medium' ? 7 : 9);
     if (type === -1) return null;
 
     if (diff === 'Easy') {
@@ -2808,6 +2882,22 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             ]);
             return { clue: ph3, answer: String(l3 * w3), answerDisplay: `${l3 * w3} ${u3}²`, worked: `$l = ${P3} \\div 2 - ${w3} = ${l3}$. $A = ${l3} \\times ${w3} = ${l3 * w3}$ ${u3}²` };
         }
+        if (type === 7) {
+            // rhombus / kite area from diagonals: A = ½ d₁ d₂
+            const shape = rc(rng, ['rhombus', 'kite']);
+            let d1 = ri(rng, 4, 16), d2 = ri(rng, 4, 16);
+            if ((d1 * d2) % 2 !== 0) d2 += 1;
+            const ans = (d1 * d2) / 2;
+            const u = _geoUnit(Math.max(d1, d2));
+            const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
+            const pf = fOn ? ' Use $A = \\frac{1}{2} d_1 d_2$.' : '';
+            const ph = rc(rng, [
+                `Find the *area* of a ${shape} with diagonals $${d1}$ ${u} and $${d2}$ ${u}.${pf}`,
+                `A ${shape} has diagonals of $${d1}$ ${u} and $${d2}$ ${u}. Calculate its area.${pf}`,
+                `Calculate the *area* of a ${shape}: diagonals $${d1}$ ${u} and $${d2}$ ${u}.${pf}`,
+            ]);
+            return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, worked: `$A = \\frac{1}{2} \\times ${d1} \\times ${d2} = ${ans}$ ${u}²` };
+        }
         // type 6: parallelogram — find base given area and height (inverse)
         const h6 = ri(rng, 3, 12), b6 = ri(rng, 4, 15);
         const area6 = b6 * h6;
@@ -2968,6 +3058,42 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `A triangle with base $${b4}$ ${u4} has area $${area4}$ ${u4}². Determine the *perpendicular height*.${pf4}`,
         ]);
         return { clue: ph4, answer: String(h4), answerDisplay: `${h4} ${u4}`, worked: `$h = 2 \\times ${area4} \\div ${b4} = ${2 * area4} \\div ${b4} = ${h4}$ ${u4}` };
+    }
+    if (type === 8) {
+        // rhombus / kite area from diagonals (larger): A = ½ d₁ d₂
+        const shape = rc(rng, ['rhombus', 'kite']);
+        let d1 = ri(rng, 8, 30), d2 = ri(rng, 8, 30);
+        if ((d1 * d2) % 2 !== 0) d2 += 1;
+        const ans = (d1 * d2) / 2;
+        const u = _geoUnit(Math.max(d1, d2));
+        const fOn = opts.showFormulas?.['area-perimeter']?.[diff.toLowerCase()];
+        const pf = fOn ? ' Use $A = \\frac{1}{2} d_1 d_2$.' : '';
+        const ph = rc(rng, [
+            `Find the *area* of a ${shape} with diagonals $${d1}$ ${u} and $${d2}$ ${u}.${pf}`,
+            `A ${shape} has diagonals $${d1}$ ${u} and $${d2}$ ${u}. Calculate its area.${pf}`,
+            `Calculate the *area* of a ${shape}: diagonals $${d1}$ ${u} and $${d2}$ ${u}.${pf}`,
+        ]);
+        return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, worked: `$A = \\frac{1}{2} \\times ${d1} \\times ${d2} = ${ans}$ ${u}²` };
+    }
+    if (type === 9) {
+        // sector of a circle: area = (θ/360)·πr², arc length = (θ/360)·2πr
+        const theta = rc(rng, [30, 45, 60, 90, 120, 180, 270]);
+        const r = ri(rng, 3, 14);
+        const u = _geoUnit(r);
+        if (rng() < 0.5) {
+            const ans = round((theta / 360) * 2 * 3.14 * r, 2);
+            const ph = rc(rng, [
+                `A sector has radius $${r}$ ${u} and a centre angle of $${theta}$°. Find its *arc length*. Use $\\pi \\approx 3.14$.`,
+                `Find the *arc length* of a sector with radius $${r}$ ${u} and angle $${theta}$°. Use $\\pi \\approx 3.14$.`,
+            ]);
+            return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, worked: `$\\ell = \\frac{${theta}}{360} \\times 2\\pi r \\approx \\frac{${theta}}{360} \\times 2 \\times 3.14 \\times ${r} = ${ans}$ ${u}` };
+        }
+        const ans = round((theta / 360) * 3.14 * r * r, 2);
+        const ph = rc(rng, [
+            `A sector has radius $${r}$ ${u} and a centre angle of $${theta}$°. Find its *area*. Use $\\pi \\approx 3.14$.`,
+            `Find the *area* of a sector with radius $${r}$ ${u} and angle $${theta}$°. Use $\\pi \\approx 3.14$.`,
+        ]);
+        return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, worked: `$A = \\frac{${theta}}{360} \\times \\pi r^2 \\approx \\frac{${theta}}{360} \\times 3.14 \\times ${r}^2 = ${ans}$ ${u}²` };
     }
     // type 7: composite shape — rectangle + triangle or two rectangles
     const compForm = ri(rng, 0, 1);
@@ -4172,10 +4298,43 @@ function genNonLinear(rng, diff, allowedOps) {
 // PROBABILITY
 // ============================================================
 function genProbability(rng, diff, allowedOps) {
-    const OPS = ['theoretical', 'complementary', 'multi-event'];
+    const OPS = ['theoretical', 'experimental', 'complementary', 'multi-event'];
     const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
+
+    // ---- experimental / relative frequency (MA4-PRO-C-01) ----
+    if (op === 'experimental') {
+        const outcomes = diff === 'Easy'
+            ? [['Heads', 'Tails'], ['Win', 'Lose'], ['Red', 'Blue']]
+            : [['Red', 'Blue', 'Green'], ['1', '2', '3', '4'], ['A', 'B', 'C', 'D']];
+        const labels = rc(rng, outcomes);
+        const lo = diff === 'Easy' ? 3 : diff === 'Medium' ? 8 : 12;
+        const hi = diff === 'Easy' ? 20 : diff === 'Medium' ? 50 : 90;
+        const freqs = labels.map(() => ri(rng, lo, hi));
+        const total = freqs.reduce((a, b) => a + b, 0);
+        const i = ri(rng, 0, labels.length - 1);
+        const fav = freqs[i];
+        const tableRows = labels.map((l, k) => `${l}: $${freqs[k]}$`).join(', ');
+        if (diff !== 'Easy' && rng() < 0.5) {
+            // expected count in N further trials using the relative frequency
+            const N = ri(rng, 2, 6) * 100;
+            const expected = Math.round((fav / total) * N);
+            return {
+                clue: `An experiment was repeated $${total}$ times with these results — ${tableRows}. Based on this, how many times would you *expect* "${labels[i]}" in the next $${N}$ trials?`,
+                answer: String(expected),
+                answerDisplay: `$${expected}$`,
+                worked: `Relative frequency $= \\frac{${fav}}{${total}}$, so expected $= \\frac{${fav}}{${total}} \\times ${N} \\approx ${expected}$`,
+            };
+        }
+        const s = simplify(fav, total);
+        return {
+            clue: `An experiment was repeated $${total}$ times with these results — ${tableRows}. Find the *relative frequency* (experimental probability) of "${labels[i]}".`,
+            answer: fracStr(s.n, s.d),
+            answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+            worked: `Relative frequency $= \\frac{\\text{frequency}}{\\text{total}} = \\frac{${fav}}{${total}} = \\frac{${s.n}}{${s.d}}$`,
+        };
+    }
 
     if (op === 'theoretical') {
         if (diff === 'Easy') {
@@ -4882,6 +5041,7 @@ function genRatiosRates(rng, diff, allowedOps) {
 // ============================================================
 function genIndices(rng, diff, allowedOps) {
     const OPS = ['indices-evaluate', 'indices-multiply', 'indices-divide', 'indices-power',
+                 'primes', 'hcf-lcm', 'divisibility',
                  'indices-zero', 'indices-negative'];
     const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
     if (pool.length === 0) return null;
@@ -5243,6 +5403,105 @@ function genIndices(rng, diff, allowedOps) {
             worked: `$${k} \\times ${base}^0 = ${k} \\times 1 = ${k}$` };
     }
 
+    // ---- Number properties (MA4-IND-C-01): primes / HCF·LCM / divisibility ----
+    if (op === 'primes') {
+        // Trial-division prime factorisation → [{p, e}, …]
+        const factorise = (n) => {
+            const f = []; let m = n;
+            for (let p = 2; p * p <= m; p++) {
+                if (m % p === 0) { let e = 0; while (m % p === 0) { m /= p; e++; } f.push({ p, e }); }
+            }
+            if (m > 1) f.push({ p: m, e: 1 });
+            return f;
+        };
+        const isPrime = (n) => n >= 2 && factorise(n).length === 1 && factorise(n)[0].e === 1;
+        const idxForm = (f, sep) =>
+            f.map(({ p, e }) => e === 1 ? `${p}` : `${p}${sep === 'tex' ? `^{${e}}` : `^${e}`}`)
+             .join(sep === 'tex' ? ' \\times ' : '×');
+
+        if (diff === 'Easy' && rng() < 0.5) {
+            // classify prime vs composite
+            const n = ri(rng, 2, 40);
+            const prime = isPrime(n);
+            return {
+                clue: `Is $${n}$ a *prime* or *composite* number?`,
+                answer: prime ? 'prime' : 'composite',
+                answerDisplay: prime ? 'prime' : 'composite',
+                worked: prime
+                    ? `$${n}$ has no factors other than $1$ and itself, so it is prime.`
+                    : `$${n} = ${idxForm(factorise(n), 'tex')}$, so it has factors other than $1$ and itself — composite.`,
+            };
+        }
+        // prime factorisation in index form
+        const lo = diff === 'Easy' ? 12 : diff === 'Medium' ? 40 : 120;
+        const hi = diff === 'Easy' ? 60 : diff === 'Medium' ? 200 : 600;
+        let n = ri(rng, lo, hi);
+        while (isPrime(n)) n = ri(rng, lo, hi); // need a composite to factorise
+        const f = factorise(n);
+        return {
+            clue: `Express $${n}$ as a product of its *prime factors* (use index notation).`,
+            answer: idxForm(f, 'plain'),
+            answerDisplay: `$${n} = ${idxForm(f, 'tex')}$`,
+            worked: `$${n} = ${idxForm(f, 'tex')}$`,
+        };
+    }
+
+    if (op === 'hcf-lcm') {
+        const lo = diff === 'Easy' ? 4 : diff === 'Medium' ? 6 : 8;
+        const hi = diff === 'Easy' ? 20 : diff === 'Medium' ? 40 : 60;
+        const a = ri(rng, lo, hi), b = ri(rng, lo, hi);
+        if (diff === 'Hard' && rng() < 0.6) {
+            // three numbers
+            const c = ri(rng, lo, hi);
+            const H = gcd(gcd(a, b), c), L = lcm(lcm(a, b), c);
+            const wantHCF = rng() < 0.5;
+            return wantHCF
+                ? { clue: `Find the *highest common factor* (HCF) of $${a}$, $${b}$ and $${c}$.`,
+                    answer: String(H), answerDisplay: `$${H}$`,
+                    worked: `$\\text{HCF}(${a}, ${b}, ${c}) = ${H}$` }
+                : { clue: `Find the *lowest common multiple* (LCM) of $${a}$, $${b}$ and $${c}$.`,
+                    answer: String(L), answerDisplay: `$${L}$`,
+                    worked: `$\\text{LCM}(${a}, ${b}, ${c}) = ${L}$` };
+        }
+        const H = gcd(a, b), L = lcm(a, b);
+        const wantHCF = rng() < 0.5;
+        return wantHCF
+            ? { clue: `Find the *highest common factor* (HCF) of $${a}$ and $${b}$.`,
+                answer: String(H), answerDisplay: `$${H}$`,
+                worked: `$\\text{HCF}(${a}, ${b}) = ${H}$` }
+            : { clue: `Find the *lowest common multiple* (LCM) of $${a}$ and $${b}$.`,
+                answer: String(L), answerDisplay: `$${L}$`,
+                worked: `$\\text{LCM}(${a}, ${b}) = ${L}$` };
+    }
+
+    if (op === 'divisibility') {
+        const RULES = {
+            2:  'the last digit is even',
+            3:  'the digit sum is divisible by 3',
+            4:  'the last two digits form a number divisible by 4',
+            5:  'the last digit is 0 or 5',
+            6:  'it is divisible by both 2 and 3',
+            8:  'the last three digits form a number divisible by 8',
+            9:  'the digit sum is divisible by 9',
+            10: 'the last digit is 0',
+        };
+        const divisors = diff === 'Easy' ? [2, 5, 10] : diff === 'Medium' ? [2, 3, 4, 5, 9, 10] : [3, 4, 6, 8, 9];
+        const d = rc(rng, divisors);
+        const lo = diff === 'Easy' ? 20 : diff === 'Medium' ? 100 : 1000;
+        const hi = diff === 'Easy' ? 200 : diff === 'Medium' ? 2000 : 99999;
+        const n = ri(rng, lo, hi);
+        const yes = n % d === 0;
+        const digitSum = String(n).split('').reduce((s, c) => s + Number(c), 0);
+        let evidence = '';
+        if (d === 3 || d === 9) evidence = ` (digit sum $= ${digitSum}$)`;
+        return {
+            clue: `Is $${n}$ divisible by $${d}$? Use a divisibility test (answer Yes or No).`,
+            answer: yes ? 'Yes' : 'No',
+            answerDisplay: yes ? 'Yes' : 'No',
+            worked: `A number is divisible by $${d}$ when ${RULES[d]}${evidence}. Therefore $${n}$ is ${yes ? '' : 'not '}divisible by $${d}$.`,
+        };
+    }
+
     // indices-negative: a^(-n) = 1/a^n, plus reciprocal-base evaluation
     if (diff === 'Easy') {
         const base = ri(rng, 2, 4);
@@ -5496,11 +5755,46 @@ function _linEqStr(m, c) {
 }
 
 function genLinear(rng, diff, allowedOps) {
-    const OPS = ['plot-line', 'gradient-two-points', 'midpoint', 'intercepts',
+    const OPS = ['plot-line', 'pattern-rule', 'gradient-two-points', 'midpoint', 'intercepts',
                  'distance', 'equation-from-gp'];
     const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
+
+    // ---- number-pattern rule  T = an + b  (MA4-LIN-C-01) ----
+    if (op === 'pattern-rule') {
+        const a = ri(rng, 2, diff === 'Easy' ? 4 : 6);            // common difference
+        const b = diff === 'Easy' ? ri(rng, 0, 4) : ri(rng, -3, 6); // first-term offset
+        const term = (n) => a * n + b;
+        const fmtRule = (a === 1 ? 'n' : `${a}n`) + (b === 0 ? '' : b > 0 ? ` + ${b}` : ` - ${-b}`);
+        const seq = [1, 2, 3, 4].map(term);
+        // Easy: matchstick/toothpick context (the guide's hexagon style)
+        if (diff === 'Easy' && rng() < 0.5) {
+            const shape = rc(rng, ['squares', 'triangles', 'hexagons']);
+            return {
+                clue: `A pattern of ${shape} is made from matchsticks. 1 shape uses $${term(1)}$, 2 use $${term(2)}$, 3 use $${term(3)}$. Write a rule for the number of matchsticks $T$ for $n$ shapes.`,
+                answer: `T=${fmtRule}`,
+                answerDisplay: `$T = ${fmtRule}$`,
+                worked: `Each extra shape adds $${a}$ matchsticks, so $T = ${fmtRule}$ (check: $n=1 \\Rightarrow ${term(1)}$).`,
+            };
+        }
+        if (diff === 'Hard') {
+            // ask for a specific later term using the rule
+            const n = ri(rng, 8, 20);
+            return {
+                clue: `A number pattern begins $${seq[0]}, ${seq[1]}, ${seq[2]}, ${seq[3]}, \\dots$ Find the value of the $${n}$th term.`,
+                answer: String(term(n)),
+                answerDisplay: `$${term(n)}$`,
+                worked: `Rule: $T_n = ${fmtRule}$. $T_{${n}} = ${a} \\times ${n}${b === 0 ? '' : b > 0 ? ` + ${b}` : ` - ${-b}`} = ${term(n)}$`,
+            };
+        }
+        return {
+            clue: `Write a rule for the $n$th term of the pattern $${seq[0]}, ${seq[1]}, ${seq[2]}, ${seq[3]}, \\dots$`,
+            answer: `T=${fmtRule}`,
+            answerDisplay: `$T_n = ${fmtRule}$`,
+            worked: `Common difference $= ${a}$, so $T_n = ${a}n${b === 0 ? '' : b > 0 ? ` + ${b}` : ` - ${-b}`} = ${fmtRule}$`,
+        };
+    }
 
     if (op === 'plot-line') {
         if (diff === 'Easy') {

@@ -137,3 +137,42 @@ test('Geometry (Stage 5) composite-volume: volume matches the two prisms & carri
     }
     assert.ok(checked > 200, `only ${checked} composite-volume questions verified`);
 });
+
+// ---- rhombus / kite area: A = ½ d₁ d₂ -------------------------
+test('Geometry rhombus/kite: area = ½ d₁ d₂', () => {
+    let checked = 0;
+    for (const diff of ['Medium', 'Hard']) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = gen({ topic: 'Geometry', difficulty: diff, count: 8, seed,
+                subOpsFilter: { Geometry: ['area-perimeter'] } });
+            for (const q of qs) {
+                if (!/rhombus|kite/.test(q.clue) || !/diagonals/.test(q.clue)) continue;
+                const [d1, d2] = nums(q.clue);
+                assert.equal(Number(q.answer), (d1 * d2) / 2,
+                    `${diff}/seed${seed}: "${q.clue}" → ${q.answer}`);
+                checked++;
+            }
+        }
+    }
+    assert.ok(checked > 20, `only ${checked} rhombus/kite questions verified`);
+});
+
+// ---- circle sector: area = θ/360·πr², arc = θ/360·2πr ---------
+test('Geometry sector: area / arc length match (π ≈ 3.14)', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 300; seed++) {
+        const qs = gen({ topic: 'Geometry', difficulty: 'Hard', count: 8, seed,
+            subOpsFilter: { Geometry: ['circles'] } });
+        for (const q of qs) {
+            if (!/sector/.test(q.clue)) continue;
+            const [r, theta] = nums(q.clue);
+            const expected = /arc length/.test(q.clue)
+                ? Math.round((theta / 360) * 2 * 3.14 * r * 100) / 100
+                : Math.round((theta / 360) * 3.14 * r * r * 100) / 100;
+            assert.ok(approxEqual(Number(q.answer), expected),
+                `seed${seed}: "${q.clue}" → ${q.answer} (expected ${expected})`);
+            checked++;
+        }
+    }
+    assert.ok(checked > 20, `only ${checked} sector questions verified`);
+});

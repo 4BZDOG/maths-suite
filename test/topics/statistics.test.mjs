@@ -104,7 +104,7 @@ test('Statistics "missing value given mean": missing = mean·n − sum(known)', 
 
 test('Statistics frequency-table mean: mean = Σfx ÷ Σf', () => {
     let checked = 0;
-    for (let seed = 1; seed <= 250; seed++) {
+    for (let seed = 1; seed <= 350; seed++) {
         const qs = gen({ topic: 'Statistics', difficulty: 'Hard', count: 8, seed });
         for (const q of qs) {
             const m = q.clue.match(/values \$([^$]+)\$ occurring with frequencies \$([^$]+)\$/);
@@ -192,4 +192,38 @@ test('Statistics (Stage 5) five-number-summary: every statistic matches', () => 
         }
     }
     assert.ok(checked > 250, `only ${checked} five-number-summary questions verified`);
+});
+
+test('Statistics stem-and-leaf: median/range/mode match the plotted data', () => {
+    let checked = 0;
+    for (const diff of DIFFS) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = gen({ topic: 'Statistics', difficulty: diff, count: 8, seed,
+                subOpsFilter: { Statistics: ['stem-leaf'] } });
+            for (const q of qs) {
+                const wm = q.clue.match(/Find the \*(median|range|mode)\*/);
+                if (!wm) continue;
+                const data = [];
+                for (const line of q.clue.split('\n')) {
+                    const lm = line.match(/^(\d+) \| ([\d ]+)$/);
+                    if (!lm) continue;
+                    for (const leaf of lm[2].trim().split(/\s+/)) data.push((+lm[1]) * 10 + (+leaf));
+                }
+                data.sort((a, b) => a - b);
+                let exp;
+                if (wm[1] === 'median') exp = data[(data.length - 1) / 2];
+                else if (wm[1] === 'range') exp = data[data.length - 1] - data[0];
+                else {
+                    const c = {};
+                    for (const v of data) c[v] = (c[v] || 0) + 1;
+                    const mx = Math.max(...Object.values(c));
+                    exp = Number(Object.keys(c).find(k => c[k] === mx));
+                }
+                assert.equal(Number(q.answer), exp,
+                    `${diff}/seed${seed}: ${wm[1]} → ${q.answer} (expected ${exp})`);
+                checked++;
+            }
+        }
+    }
+    assert.ok(checked > 30, `only ${checked} stem-leaf questions verified`);
 });

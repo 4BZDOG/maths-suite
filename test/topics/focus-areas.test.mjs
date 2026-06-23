@@ -346,3 +346,116 @@ test('Props of Figures Hard: fourth angle = 360 − sum of other three', () => {
     }
     assert.ok(checked > 10, `only ${checked} quad-angle questions verified`);
 });
+
+// ---- Indices: number properties (MA4-IND-C-01) ---------------
+function _gcd(a, b) { return b === 0 ? a : _gcd(b, a % b); }
+function _isPrime(n) {
+    if (n < 2) return false;
+    for (let p = 2; p * p <= n; p++) if (n % p === 0) return false;
+    return true;
+}
+
+test('Indices primes: factorisation re-multiplies to N; classification correct', () => {
+    let checked = 0;
+    for (const diff of DIFFS) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = gen({ topic: 'Indices', difficulty: diff, count: 8, seed,
+                subOpsFilter: { Indices: ['primes'] } });
+            for (const q of qs) {
+                let m;
+                if ((m = q.clue.match(/Express \$(\d+)\$/))) {
+                    const N = +m[1];
+                    const prod = String(q.answer).split('×').reduce((acc, t) => {
+                        const f = t.match(/^(\d+)(?:\^(\d+))?$/);
+                        return acc * Math.pow(+f[1], f[2] ? +f[2] : 1);
+                    }, 1);
+                    assert.equal(prod, N, `${diff}/seed${seed}: ${q.answer} ≠ ${N}`);
+                    checked++;
+                } else if ((m = q.clue.match(/Is \$(\d+)\$ a \*?prime/))) {
+                    assert.equal(q.answer, _isPrime(+m[1]) ? 'prime' : 'composite',
+                        `${diff}/seed${seed}: ${q.clue}`);
+                    checked++;
+                }
+            }
+        }
+    }
+    assert.ok(checked > 30, `only ${checked} prime questions verified`);
+});
+
+test('Indices hcf-lcm: answers match gcd / lcm of the listed numbers', () => {
+    let checked = 0;
+    for (const diff of DIFFS) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = gen({ topic: 'Indices', difficulty: diff, count: 8, seed,
+                subOpsFilter: { Indices: ['hcf-lcm'] } });
+            for (const q of qs) {
+                const isHCF = /highest common factor/i.test(q.clue);
+                const isLCM = /lowest common multiple/i.test(q.clue);
+                if (!isHCF && !isLCM) continue;
+                const ns = [...q.clue.matchAll(/\$(\d+)\$/g)].map(m => +m[1]);
+                const expected = isHCF
+                    ? ns.reduce((a, b) => _gcd(a, b))
+                    : ns.reduce((a, b) => (a * b) / _gcd(a, b));
+                assert.equal(Number(q.answer), expected,
+                    `${diff}/seed${seed}: ${q.clue} → ${q.answer} (expected ${expected})`);
+                checked++;
+            }
+        }
+    }
+    assert.ok(checked > 30, `only ${checked} hcf/lcm questions verified`);
+});
+
+test('Indices divisibility: Yes/No matches N mod D', () => {
+    let checked = 0;
+    for (const diff of DIFFS) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = gen({ topic: 'Indices', difficulty: diff, count: 8, seed,
+                subOpsFilter: { Indices: ['divisibility'] } });
+            for (const q of qs) {
+                const m = q.clue.match(/Is \$(\d+)\$ divisible by \$(\d+)\$/);
+                if (!m) continue;
+                assert.equal(q.answer, (+m[1]) % (+m[2]) === 0 ? 'Yes' : 'No',
+                    `${diff}/seed${seed}: ${q.clue} → ${q.answer}`);
+                checked++;
+            }
+        }
+    }
+    assert.ok(checked > 30, `only ${checked} divisibility questions verified`);
+});
+
+// ---- Linear Relationships: number-pattern rule (MA4-LIN-C-01) -
+function _seqFromClue(clue) {
+    let m = clue.match(/\$([\d,\s]+),\s*\\dots\$/);
+    if (m) return m[1].split(',').map(s => +s.trim()).filter(Number.isFinite);
+    m = clue.match(/uses \$(\d+)\$, 2 use \$(\d+)\$, 3 use \$(\d+)\$/);
+    if (m) return [+m[1], +m[2], +m[3]];
+    return null;
+}
+
+test('Linear pattern-rule: rule / nth term reproduce the listed terms', () => {
+    let checked = 0;
+    for (const diff of DIFFS) {
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = gen({ topic: 'Linear Relationships', difficulty: diff, count: 8, seed,
+                subOpsFilter: { 'Linear Relationships': ['pattern-rule'] } });
+            for (const q of qs) {
+                const seq = _seqFromClue(q.clue);
+                if (!seq || seq.length < 2) continue;
+                const a = seq[1] - seq[0], b = seq[0] - a;
+                const rm = String(q.answer).replace(/\s/g, '').match(/^T=(\d+)n([+-]\d+)?$/);
+                if (rm) {
+                    assert.equal(+rm[1], a, `${diff}/seed${seed}: gradient ${q.answer}`);
+                    assert.equal(rm[2] ? +rm[2] : 0, b, `${diff}/seed${seed}: offset ${q.answer}`);
+                    checked++;
+                } else if (/^\d+$/.test(String(q.answer))) {
+                    const nm = q.clue.match(/\$(\d+)\$th term/);
+                    if (!nm) continue;
+                    assert.equal(Number(q.answer), a * (+nm[1]) + b,
+                        `${diff}/seed${seed}: nth term ${q.clue}`);
+                    checked++;
+                }
+            }
+        }
+    }
+    assert.ok(checked > 30, `only ${checked} pattern-rule questions verified`);
+});
