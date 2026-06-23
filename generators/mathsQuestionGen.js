@@ -2175,7 +2175,7 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
     if (_depth > 30) return null;
     const maps = {
         Easy:   { 'mean-median': [0, 1], 'mode-range': [2, 3], 'stem-leaf': [6] },
-        Medium: { 'mode-range': [0, 1], 'mean-median': [2, 3, 4], 'stem-leaf': [6] },
+        Medium: { 'mode-range': [0, 1], 'mean-median': [2, 3, 4], 'iqr': [5], 'stem-leaf': [6] },
         Hard:   { 'iqr': [0], 'mean-median': [1, 2, 3, 5], 'mode-range': [4], 'stem-leaf': [6] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
@@ -2361,6 +2361,20 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
                     `The *mean* of these values is $${mean3}$: $${display3}$. What is the missing value?${pf3}`,
                 ]);
             return { clue: ph3, answer: String(missing3), worked: `$\\text{missing} = ${mean3} \\times ${n3} - (${known3.join(' + ')}) = ${missing3}$` };
+        }
+        if (type === 5) {
+            // interquartile range on an 8-value set (clean odd-length halves)
+            const data = Array.from({ length: 8 }, () => ri(rng, 1, 25)).sort((a, b) => a - b);
+            const lower = data.slice(0, 4), upper = data.slice(4);
+            const q1 = (lower[1] + lower[2]) / 2, q3 = (upper[1] + upper[2]) / 2;
+            const iqr = q3 - q1;
+            if (iqr <= 0) return _genStatisticsCore(rng, diff, allowedOps, _depth + 1, opts);
+            const ph = rc(rng, [
+                `Find the *interquartile range* of: $${data.join(', ')}$`,
+                `Calculate the *IQR* of these ${ctx}: $${data.join(', ')}$`,
+                `The ${ctx} are $${data.join(', ')}$. Find the *interquartile range*.`,
+            ]);
+            return { clue: ph, answer: String(iqr), worked: `$Q_1 = ${q1},\\; Q_3 = ${q3},\\; \\text{IQR} = ${q3} - ${q1} = ${iqr}$` };
         }
         // type 4: median of even-count dataset (requires averaging middle two)
         const n4 = rc(rng, [6, 8]);
@@ -2684,11 +2698,39 @@ function _geoUnit(maxVal) {
     return 'km';
 }
 
+// Compact circle area/circumference question for the Easy & Medium bands
+// (the Hard band has its own richer circle types). π ≈ 3.14, answers to 2 dp.
+function _circleQuestion(rng, diff, opts) {
+    const r = ri(rng, 2, diff === 'Easy' ? 9 : 14);
+    const u = _geoUnit(r);
+    const fOn = opts.showFormulas?.['circles']?.[diff.toLowerCase()];
+    if (rng() < 0.5) {
+        const ans = round(3.14 * r * r, 2);
+        const pf = fOn ? ' Use $A = \\pi r^2$.' : '';
+        const ph = rc(rng, [
+            `Find the *area* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+            `Calculate the *area* of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+        ]);
+        return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`,
+            worked: `$A = \\pi r^2 \\approx 3.14 \\times ${r}^2 = ${ans}$ ${u}²`,
+            diagram: { type: 'circle', r, missing: 'area' } };
+    }
+    const ans = round(2 * 3.14 * r, 2);
+    const pf = fOn ? ' Use $C = 2\\pi r$.' : '';
+    const ph = rc(rng, [
+        `Find the *circumference* of a circle with radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+        `Calculate the *circumference* of a circle of radius $${r}$ ${u}. Use $\\pi \\approx 3.14$.${pf}`,
+    ]);
+    return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`,
+        worked: `$C = 2\\pi r \\approx 2 \\times 3.14 \\times ${r} = ${ans}$ ${u}`,
+        diagram: { type: 'circle', r, missing: 'circumference' } };
+}
+
 function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
     if (_depth > 20) return null;
     const maps = {
-        Easy:   { 'area-perimeter': [0, 1, 3], 'angles': [2] },
-        Medium: { 'area-perimeter': [0, 5, 6, 7], 'pythagoras': [1], 'angles': [2, 3, 4] },
+        Easy:   { 'area-perimeter': [0, 1, 3], 'angles': [2], 'circles': [4] },
+        Medium: { 'area-perimeter': [0, 5, 6, 7], 'pythagoras': [1], 'angles': [2, 3, 4], 'circles': [8] },
         Hard:   { 'circles': [0, 2, 5, 9], 'pythagoras': [1], 'area-perimeter': [6, 7, 8], 'angles': [3, 4] },
     };
     const filtered = _filterTypes(maps[diff], allowedOps);
@@ -2768,6 +2810,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             ]);
             return { clue: ph, answer: String(2 * (l + w)), answerDisplay: `${2 * (l + w)} ${u}`, worked: `$P = 2(${l} + ${w}) = 2 \\times ${l + w} = ${2 * (l + w)}$ ${u}`, diagram: { type: 'rectangle', l, w, missing: 'perimeter' } };
         }
+        if (type === 4) return _circleQuestion(rng, diff, opts);
         // type 3: find length given area and width (no diagram)
         const w2 = ri(rng, 2, 10), l2 = ri(rng, w2 + 1, 15);
         const area2 = l2 * w2;
@@ -2896,8 +2939,9 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `A ${shape} has diagonals of $${d1}$ ${u} and $${d2}$ ${u}. Calculate its area.${pf}`,
                 `Calculate the *area* of a ${shape}: diagonals $${d1}$ ${u} and $${d2}$ ${u}.${pf}`,
             ]);
-            return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, worked: `$A = \\frac{1}{2} \\times ${d1} \\times ${d2} = ${ans}$ ${u}²` };
+            return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, worked: `$A = \\frac{1}{2} \\times ${d1} \\times ${d2} = ${ans}$ ${u}²`, diagram: { type: shape, d1, d2, missing: 'area' } };
         }
+        if (type === 8) return _circleQuestion(rng, diff, opts);
         // type 6: parallelogram — find base given area and height (inverse)
         const h6 = ri(rng, 3, 12), b6 = ri(rng, 4, 15);
         const area6 = b6 * h6;
@@ -3073,7 +3117,7 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
             `A ${shape} has diagonals $${d1}$ ${u} and $${d2}$ ${u}. Calculate its area.${pf}`,
             `Calculate the *area* of a ${shape}: diagonals $${d1}$ ${u} and $${d2}$ ${u}.${pf}`,
         ]);
-        return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, worked: `$A = \\frac{1}{2} \\times ${d1} \\times ${d2} = ${ans}$ ${u}²` };
+        return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, worked: `$A = \\frac{1}{2} \\times ${d1} \\times ${d2} = ${ans}$ ${u}²`, diagram: { type: shape, d1, d2, missing: 'area' } };
     }
     if (type === 9) {
         // sector of a circle: area = (θ/360)·πr², arc length = (θ/360)·2πr
@@ -3086,14 +3130,14 @@ function _genGeometryCore(rng, diff, allowedOps, opts = {}, _depth = 0) {
                 `A sector has radius $${r}$ ${u} and a centre angle of $${theta}$°. Find its *arc length*. Use $\\pi \\approx 3.14$.`,
                 `Find the *arc length* of a sector with radius $${r}$ ${u} and angle $${theta}$°. Use $\\pi \\approx 3.14$.`,
             ]);
-            return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, worked: `$\\ell = \\frac{${theta}}{360} \\times 2\\pi r \\approx \\frac{${theta}}{360} \\times 2 \\times 3.14 \\times ${r} = ${ans}$ ${u}` };
+            return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}`, worked: `$\\ell = \\frac{${theta}}{360} \\times 2\\pi r \\approx \\frac{${theta}}{360} \\times 2 \\times 3.14 \\times ${r} = ${ans}$ ${u}`, diagram: { type: 'sector', r, theta, missing: 'arc' } };
         }
         const ans = round((theta / 360) * 3.14 * r * r, 2);
         const ph = rc(rng, [
             `A sector has radius $${r}$ ${u} and a centre angle of $${theta}$°. Find its *area*. Use $\\pi \\approx 3.14$.`,
             `Find the *area* of a sector with radius $${r}$ ${u} and angle $${theta}$°. Use $\\pi \\approx 3.14$.`,
         ]);
-        return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, worked: `$A = \\frac{${theta}}{360} \\times \\pi r^2 \\approx \\frac{${theta}}{360} \\times 3.14 \\times ${r}^2 = ${ans}$ ${u}²` };
+        return { clue: ph, answer: String(ans), answerDisplay: `${ans} ${u}²`, unit: `${u}²`, worked: `$A = \\frac{${theta}}{360} \\times \\pi r^2 \\approx \\frac{${theta}}{360} \\times 3.14 \\times ${r}^2 = ${ans}$ ${u}²`, diagram: { type: 'sector', r, theta, missing: 'area' } };
     }
     // type 7: composite shape — rectangle + triangle or two rectangles
     const compForm = ri(rng, 0, 1);

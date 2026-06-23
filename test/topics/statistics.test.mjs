@@ -227,3 +227,21 @@ test('Statistics stem-and-leaf: median/range/mode match the plotted data', () =>
     }
     assert.ok(checked > 30, `only ${checked} stem-leaf questions verified`);
 });
+
+test('Statistics IQR: now also generates at Medium and matches Q3 − Q1', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 250; seed++) {
+        const qs = gen({ topic: 'Statistics', difficulty: 'Medium', count: 8, seed,
+            subOpsFilter: { Statistics: ['iqr'] } });
+        for (const q of qs) {
+            if (!/interquartile|\bIQR\b/i.test(q.clue)) continue;
+            const data = parseDataList(q.clue);
+            if (!data) continue;
+            const [q1, q3] = quartiles(data);
+            assert.ok(approxEqual(Number(q.answer), q3 - q1),
+                `Medium/seed${seed}: IQR → ${q.answer} (expected ${q3 - q1})`);
+            checked++;
+        }
+    }
+    assert.ok(checked > 20, `only ${checked} Medium IQR questions verified`);
+});

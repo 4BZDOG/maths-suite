@@ -327,6 +327,84 @@ function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
     doc.text(hintText, labelX, cy + 1.5 * ps + 4.5 * ps, { align: 'left' });
 }
 
+function _drawRhombusKiteDiagramPDF(doc, { type, d1, d2 }, x0, y0, w, h, ps, font) {
+    const maxW = w * 0.5, maxH = h * 0.6;
+    const hw = Math.max(7, Math.min(maxW, d1 * 1.1 * ps));   // half horizontal diagonal
+    const hh = Math.max(6, Math.min(maxH, d2 * 1.1 * ps));   // half vertical diagonal
+    const cx = x0 + w * 0.40;
+    const cy = y0 + h / 2;
+    // Kite: cross-point above centre so the lower spike is longer.
+    const topY = cy - hh;
+    const botY = type === 'kite' ? cy + hh * 1.5 : cy + hh;
+    const crossY = type === 'kite' ? cy - hh * 0.1 : cy;
+
+    const top = [cx, topY], bot = [cx, botY], left = [cx - hw, crossY], right = [cx + hw, crossY];
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    doc.lines([[right[0] - top[0], right[1] - top[1]], [bot[0] - right[0], bot[1] - right[1]],
+        [left[0] - bot[0], left[1] - bot[1]]], top[0], top[1], [1, 1], 'FD', true);
+
+    // Dashed diagonals
+    doc.setLineDashPattern([1.2, 1.2], 0);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_AUX_W);
+    doc.line(left[0], left[1], right[0], right[1]);
+    doc.line(top[0], top[1], bot[0], bot[1]);
+    doc.setLineDashPattern([], 0);
+
+    doc.setFontSize(8 * ps);
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    doc.text(`d1 = ${d1}`, (cx + right[0]) / 2, crossY - _LBL_OFFSET, { align: 'center' });
+    doc.text(`d2 = ${d2}`, cx + _LBL_OFFSET, (topY + botY) / 2, { align: 'left' });
+
+    doc.setFont(font, 'bold');
+    doc.setFontSize(9.5 * ps);
+    doc.setTextColor(..._MC);
+    doc.text('A = ?', right[0] + _LBL_OFFSET + 2 * ps, cy + 1.5 * ps, { align: 'left' });
+}
+
+function _drawSectorDiagramPDF(doc, { r, theta, missing }, x0, y0, w, h, ps, font) {
+    const maxR = Math.min(w * 0.35, h * 0.5);
+    const rPx = Math.max(11, Math.min(maxR, r * 2 * ps));
+    const cx = x0 + w * 0.40;
+    const cy = y0 + h / 2 + 1 * ps;
+
+    // Build the wedge as centre → arc points → centre (closed polygon).
+    const a1 = (theta * Math.PI) / 180;
+    const steps = Math.max(6, Math.round(theta / 15));
+    const pts = [[cx, cy]];
+    for (let i = 0; i <= steps; i++) {
+        const a = (a1 * i) / steps;
+        pts.push([cx + rPx * Math.cos(a), cy - rPx * Math.sin(a)]);
+    }
+    const rel = [];
+    for (let i = 1; i < pts.length; i++) rel.push([pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]]);
+
+    doc.setFillColor(..._GCF);
+    doc.setDrawColor(..._GC);
+    doc.setLineWidth(_STROKE_W);
+    doc.lines(rel, pts[0][0], pts[0][1], [1, 1], 'FD', true);
+
+    // Centre dot
+    doc.setFillColor(..._GC);
+    doc.circle(cx, cy, 0.8, 'F');
+
+    doc.setFontSize(8 * ps);
+    doc.setFont(font, 'normal');
+    doc.setTextColor(..._LC);
+    doc.text(`r = ${r}`, cx + rPx / 2, cy + _LBL_OFFSET + 3 * ps, { align: 'center' });
+    doc.text(`${theta} deg`, cx + 2 * ps, cy - 2 * ps, { align: 'left' });
+
+    const missText = missing === 'arc' ? 'L = ?' : 'A = ?';
+    doc.setFont(font, 'bold');
+    doc.setFontSize(9.5 * ps);
+    doc.setTextColor(..._MC);
+    doc.text(missText, cx + rPx + _LBL_OFFSET + 2 * ps, cy + 1.5 * ps, { align: 'left' });
+}
+
 function _drawParallelogramDiagramPDF(doc, { base, height, missing }, x0, y0, w, h, ps, font) {
     const maxW = w * 0.72, maxH = h * 0.58;
     const dw = Math.max(14, Math.min(maxW, base * 2.2 * ps));
@@ -859,6 +937,9 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
         case 'right-triangle-trig':   _drawRightTriangleTrigPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'parabola':              _drawParabolaPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'number-plane':          _drawNumberPlanePDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'rhombus':               _drawRhombusKiteDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'kite':                  _drawRhombusKiteDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'sector':                _drawSectorDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
     }
     // Restore defaults
     doc.setLineDashPattern([], 0);
