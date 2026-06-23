@@ -150,6 +150,8 @@ test('Geometry rhombus/kite: area = ½ d₁ d₂', () => {
                 const [d1, d2] = nums(q.clue);
                 assert.equal(Number(q.answer), (d1 * d2) / 2,
                     `${diff}/seed${seed}: "${q.clue}" → ${q.answer}`);
+                assert.ok(q.diagram && (q.diagram.type === 'rhombus' || q.diagram.type === 'kite'),
+                    `${diff}/seed${seed}: missing rhombus/kite diagram`);
                 checked++;
             }
         }
@@ -171,8 +173,32 @@ test('Geometry sector: area / arc length match (π ≈ 3.14)', () => {
                 : Math.round((theta / 360) * 3.14 * r * r * 100) / 100;
             assert.ok(approxEqual(Number(q.answer), expected),
                 `seed${seed}: "${q.clue}" → ${q.answer} (expected ${expected})`);
+            assert.equal(q.diagram?.type, 'sector', `seed${seed}: missing sector diagram`);
             checked++;
         }
     }
     assert.ok(checked > 20, `only ${checked} sector questions verified`);
+});
+
+// ---- circles now also generate at Easy & Medium (π ≈ 3.14) ----
+test('Geometry circles: available at Easy/Medium with valid area/circumference', () => {
+    for (const diff of ['Easy', 'Medium']) {
+        let checked = 0;
+        for (let seed = 1; seed <= 200; seed++) {
+            const qs = gen({ topic: 'Geometry', difficulty: diff, count: 8, seed,
+                subOpsFilter: { Geometry: ['circles'] } });
+            for (const q of qs) {
+                if (!/circle/.test(q.clue) || /sector/.test(q.clue)) continue;
+                const [r] = nums(q.clue);
+                const expected = /circumference/.test(q.clue)
+                    ? Math.round(2 * 3.14 * r * 100) / 100
+                    : Math.round(3.14 * r * r * 100) / 100;
+                assert.ok(approxEqual(Number(q.answer), expected),
+                    `${diff}/seed${seed}: "${q.clue}" → ${q.answer} (expected ${expected})`);
+                assert.equal(q.diagram?.type, 'circle', `${diff}/seed${seed}: missing circle diagram`);
+                checked++;
+            }
+        }
+        assert.ok(checked > 20, `${diff}: only ${checked} circle questions verified`);
+    }
 });

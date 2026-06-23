@@ -848,6 +848,76 @@ function _numberPlane({ pts, line, mid, tri }) {
     return _svg(VW, VH, inner);
 }
 
+// ─── Rhombus / Kite (area from diagonals) ────────────────────────────────────
+// diagram: { type:'rhombus'|'kite', d1, d2, missing:'area' }
+// d1 = horizontal diagonal, d2 = vertical diagonal. The two diagonals are drawn
+// dashed; for a kite the horizontal diagonal sits below centre (longer lower
+// part) to read as a kite rather than a rhombus.
+function _quadDiagonals({ type, d1, d2 }) {
+    const VW = 220, VH = 138;
+    const cx = 88, cy = VH / 2;
+    const hw = Math.max(28, Math.min(56, d1 * 3));   // half horizontal extent
+    const hh = Math.max(24, Math.min(52, d2 * 3));   // half vertical extent
+    // Kite: cross-point is above centre so the lower spike is longer.
+    const topY = cy - hh;
+    const botY = type === 'kite' ? cy + hh * 1.5 : cy + hh;
+    const crossY = type === 'kite' ? cy - hh * 0.1 : cy;
+
+    const top = { x: cx, y: topY };
+    const bot = { x: cx, y: botY };
+    const left = { x: cx - hw, y: crossY };
+    const right = { x: cx + hw, y: crossY };
+
+    const inner =
+        `<polygon points="${top.x},${top.y} ${right.x},${right.y} ${bot.x},${bot.y} ${left.x},${left.y}" ` +
+        `fill="currentColor" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
+        // Diagonals (dashed)
+        `<line x1="${left.x}" y1="${left.y}" x2="${right.x}" y2="${right.y}" stroke="${GC}" stroke-width="1.3" stroke-dasharray="4,3" opacity="0.85"/>` +
+        `<line x1="${top.x}" y1="${top.y}" x2="${bot.x}" y2="${bot.y}" stroke="${GC}" stroke-width="1.3" stroke-dasharray="4,3" opacity="0.85"/>` +
+        // Diagonal labels
+        _t((cx + right.x) / 2, crossY - 5, `d₁ = ${d1}`, { size: 10 }) +
+        _t(cx + 8, (topY + botY) / 2, `d₂ = ${d2}`, { anchor: 'start', size: 10 }) +
+        // Missing area label to the right
+        _t(right.x + 16, cy - 6, 'A = ?', { anchor: 'start', missing: true, size: 14 }) +
+        _t(right.x + 16, cy + 12, 'A = ½d₁d₂', { anchor: 'start', size: 9, opacity: 0.7 });
+
+    return _svg(VW, VH, inner);
+}
+
+// ─── Circle sector (area / arc length) ───────────────────────────────────────
+// diagram: { type:'sector', r, theta, missing:'area'|'arc' }
+function _sector({ r, theta, missing }) {
+    const VW = 216, VH = 140;
+    const cx = 78, cy = 78;
+    const rPx = Math.min(58, Math.max(40, r * 4));
+    // Sweep the sector from angle 0 (pointing right) upward by theta degrees
+    // (drawn CCW in maths terms → negative y in SVG).
+    const a0 = 0, a1 = (theta * Math.PI) / 180;
+    const p0 = { x: cx + rPx * Math.cos(a0), y: cy - rPx * Math.sin(a0) };
+    const p1 = { x: cx + rPx * Math.cos(a1), y: cy - rPx * Math.sin(a1) };
+    const largeArc = theta > 180 ? 1 : 0;
+
+    const missText = missing === 'arc' ? 'ℓ = ?' : 'A = ?';
+    const hintText = missing === 'arc' ? 'ℓ = θ/360·2πr' : 'A = θ/360·πr²';
+
+    const inner =
+        // Sector wedge (sweep flag 0 → CCW in SVG y-down coords)
+        `<path d="M ${cx},${cy} L ${p0.x.toFixed(1)},${p0.y.toFixed(1)} ` +
+        `A ${rPx},${rPx} 0 ${largeArc},0 ${p1.x.toFixed(1)},${p1.y.toFixed(1)} Z" ` +
+        `fill="currentColor" fill-opacity="0.08" stroke="${GC}" stroke-width="2"/>` +
+        // Centre dot
+        `<circle cx="${cx}" cy="${cy}" r="2.6" fill="${GC}"/>` +
+        // Radius label along the bottom radius
+        _t(cx + rPx / 2, cy + 13, `r = ${r}`, { size: 10 }) +
+        // Angle label near the centre
+        _t(cx + 16, cy - 7, `${theta}°`, { anchor: 'start', size: 10 }) +
+        // Missing value + hint to the right
+        _t(cx + rPx + 18, cy - 6, missText, { anchor: 'start', missing: true, size: 14 }) +
+        _t(cx + rPx + 18, cy + 12, hintText, { anchor: 'start', size: 8, opacity: 0.7 });
+
+    return _svg(VW, VH, inner);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 export function renderDiagramSVG(diagram) {
     if (!diagram) return '';
@@ -867,6 +937,9 @@ export function renderDiagramSVG(diagram) {
         case 'straight-line-angles':    return _straightLineAngles(diagram);
         case 'vertically-opposite':     return _verticallyOpposite(diagram);
         case 'number-plane':            return _numberPlane(diagram);
+        case 'rhombus':                 return _quadDiagonals(diagram);
+        case 'kite':                    return _quadDiagonals(diagram);
+        case 'sector':                  return _sector(diagram);
         default: return '';
     }
 }
