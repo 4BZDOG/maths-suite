@@ -741,6 +741,102 @@ function _niceStepPDF(span, target = 5) {
     return 10 * pow;
 }
 
+// Shared Cartesian frame for PDF graph diagrams. Equal x/y scale; returns
+// mappers, plot bounds and draws the grid + axes.
+function _coordFramePDF(doc, xMin, xMax, yMin, yMax, x0, y0, w, h, ps, font) {
+    const padBox = 5;
+    const pL0 = x0 + padBox + 2, pR0 = x0 + w - padBox;
+    const pT0 = y0 + padBox - 2, pB0 = y0 + h - padBox;
+    const availW = pR0 - pL0, availH = pB0 - pT0;
+    const unit = Math.min(availW / (xMax - xMin), availH / (yMax - yMin));
+    const drawW = (xMax - xMin) * unit, drawH = (yMax - yMin) * unit;
+    const plL = pL0 + (availW - drawW) / 2, plT = pT0 + (availH - drawH) / 2;
+    const plR = plL + drawW, plB = plT + drawH;
+    const mapX = x => plL + (x - xMin) * unit;
+    const mapY = y => plB - (y - yMin) * unit;
+    doc.setDrawColor(205, 210, 220); doc.setLineWidth(0.2);
+    doc.rect(plL, plT, drawW, drawH, 'S');
+    doc.setFontSize(5 * ps); doc.setFont(font, 'normal');
+    const xStep = Math.max(1, Math.round(_niceStepPDF(xMax - xMin)));
+    const yStep = Math.max(1, Math.round(_niceStepPDF(yMax - yMin)));
+    for (let xv = Math.ceil(xMin / xStep) * xStep; xv <= xMax; xv += xStep) {
+        const gx = mapX(xv);
+        if (gx < plL + 1.5 || gx > plR - 0.5) continue;
+        doc.setDrawColor(228, 231, 238); doc.setLineWidth(0.12); doc.line(gx, plT, gx, plB);
+        if (Math.round(xv) !== 0) { doc.setTextColor(120, 128, 140); doc.text(String(Math.round(xv)), gx, plB + 3, { align: 'center' }); }
+    }
+    for (let yv = Math.ceil(yMin / yStep) * yStep; yv <= yMax; yv += yStep) {
+        const gy = mapY(yv);
+        if (gy < plT + 1 || gy > plB - 0.5) continue;
+        doc.setDrawColor(228, 231, 238); doc.setLineWidth(0.12); doc.line(plL, gy, plR, gy);
+        if (Math.round(yv) !== 0) { doc.setTextColor(120, 128, 140); doc.text(String(Math.round(yv)), plL - 1, gy + 0.8, { align: 'right' }); }
+    }
+    doc.setDrawColor(120, 128, 140); doc.setLineWidth(0.3);
+    if (xMin < 0 && xMax > 0) { const ax = mapX(0); doc.line(ax, plT, ax, plB); }
+    if (yMin < 0 && yMax > 0) { const ay = mapY(0); doc.line(plL, ay, plR, ay); }
+    return { mapX, mapY, plL, plT, plR, plB, unit };
+}
+
+function _drawCoordCirclePDF(doc, { h: ch, k, r }, x0, y0, w, h, ps, font) {
+    const f = _coordFramePDF(doc, ch - r - 1, ch + r + 1, k - r - 1, k + r + 1, x0, y0, w, h, ps, font);
+    doc.setDrawColor(..._GC); doc.setFillColor(..._GCF); doc.setLineWidth(0.6);
+    doc.circle(f.mapX(ch), f.mapY(k), r * f.unit, 'FD');
+    doc.setFillColor(..._MC); doc.circle(f.mapX(ch), f.mapY(k), 1, 'F');
+    doc.setFontSize(6 * ps); doc.setFont(font, 'bold'); doc.setTextColor(..._MC);
+    doc.text(`(${ch}, ${k})`, f.mapX(ch) + 1.6, f.mapY(k) - 1.4, { align: 'left' });
+}
+
+function _drawSemicirclePDF(doc, { a }, x0, y0, w, h, ps, font) {
+    const f = _coordFramePDF(doc, -a - 1, a + 1, -1, a + 1, x0, y0, w, h, ps, font);
+    // upper semicircle as a polyline
+    doc.setDrawColor(..._GC); doc.setLineWidth(0.6);
+    const pts = [];
+    for (let i = 0; i <= 48; i++) { const x = -a + (2 * a * i) / 48; pts.push([f.mapX(x), f.mapY(Math.sqrt(Math.max(0, a * a - x * x)))]); }
+    for (let i = 1; i < pts.length; i++) doc.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
+    doc.setFillColor(..._MC);
+    doc.circle(f.mapX(-a), f.mapY(0), 1, 'F'); doc.circle(f.mapX(a), f.mapY(0), 1, 'F');
+}
+
+function _drawHyperbolaPDF(doc, { a, h: hh, k }, x0, y0, w, h, ps, font) {
+    const span = 6;
+    const f = _coordFramePDF(doc, hh - span, hh + span, k - span, k + span, x0, y0, w, h, ps, font);
+    // dashed asymptotes
+    doc.setDrawColor(..._MC); doc.setLineWidth(0.3); doc.setLineDashPattern([1, 1], 0);
+    doc.line(f.mapX(hh), f.plT, f.mapX(hh), f.plB);
+    doc.line(f.plL, f.mapY(k), f.plR, f.mapY(k));
+    doc.setLineDashPattern([], 0);
+    doc.setDrawColor(..._GC); doc.setLineWidth(0.6);
+    for (const dir of [-1, 1]) {
+        let prev = null;
+        for (let i = 1; i <= 40; i++) {
+            const dx = dir * (i / 40) * span; if (Math.abs(dx) < 0.18) { prev = null; continue; }
+            const x = hh + dx, y = a / (x - hh) + k;
+            if (y < k - span || y > k + span) { prev = null; continue; }
+            const cur = [f.mapX(x), f.mapY(y)];
+            if (prev) doc.line(prev[0], prev[1], cur[0], cur[1]);
+            prev = cur;
+        }
+    }
+}
+
+function _drawNetworkPDF(doc, { degrees, edges }, x0, y0, w, h, ps, font) {
+    const n = degrees.length;
+    const cx = x0 + w / 2, cy = y0 + h / 2, R = Math.min(w, h) / 2 - 7;
+    const pos = degrees.map((_, i) => {
+        const ang = -Math.PI / 2 + (2 * Math.PI * i) / n;
+        return { x: cx + R * Math.cos(ang), y: cy + R * Math.sin(ang), ang };
+    });
+    doc.setDrawColor(..._GC); doc.setLineWidth(0.4);
+    for (const [a, b] of edges) doc.line(pos[a].x, pos[a].y, pos[b].x, pos[b].y);
+    doc.setDrawColor(..._GC); doc.setFillColor(255, 255, 255); doc.setLineWidth(0.5);
+    doc.setFontSize(6 * ps); doc.setFont(font, 'bold');
+    for (let i = 0; i < n; i++) {
+        doc.circle(pos[i].x, pos[i].y, 1.7, 'FD');
+        doc.setTextColor(..._MC);
+        doc.text(String(degrees[i]), cx + (R + 4.5) * Math.cos(pos[i].ang), cy + (R + 4.5) * Math.sin(pos[i].ang) + 1, { align: 'center' });
+    }
+}
+
 function _drawParabolaPDF(doc, { h: ph, k, a }, x0, y0, w, h, ps, font) {
     a = a || 1;
     // Plot rectangle inside the cell (leave room for edge labels).
@@ -940,6 +1036,10 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
         case 'rhombus':               _drawRhombusKiteDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'kite':                  _drawRhombusKiteDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'sector':                _drawSectorDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'coord-circle':          _drawCoordCirclePDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'semicircle':            _drawSemicirclePDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'hyperbola':             _drawHyperbolaPDF(doc, diagram, x0, y0, w, h, ps, font); break;
+        case 'network':               _drawNetworkPDF(doc, diagram, x0, y0, w, h, ps, font); break;
     }
     // Restore defaults
     doc.setLineDashPattern([], 0);

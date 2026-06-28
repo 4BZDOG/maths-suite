@@ -7784,6 +7784,42 @@ function genProperties(rng, diff, allowedOps, opts = {}) {
 // ============================================================
 
 // ---- Networks: Euler's formula, degree sum, Eulerian trails ----
+// Realise a degree sequence as a simple graph (Havel–Hakimi). Returns an edge
+// list [[i,j],…] with vertex i having the requested degree, or null if the
+// sequence is not graphical.
+function _realiseGraph(deg) {
+    const nodes = deg.map((d, i) => ({ d, i }));
+    const edges = [];
+    for (;;) {
+        nodes.sort((a, b) => b.d - a.d);
+        if (nodes[0].d === 0) return edges;
+        const v = nodes[0], need = v.d;
+        if (need > nodes.length - 1) return null;
+        v.d = 0;
+        for (let j = 1; j <= need; j++) {
+            if (nodes[j].d <= 0) return null;
+            nodes[j].d -= 1;
+            edges.push([v.i, nodes[j].i]);
+        }
+    }
+}
+// True if the graph on n vertices with the given edges is connected.
+function _graphConnected(n, edges) {
+    if (n === 0) return false;
+    const adj = Array.from({ length: n }, () => []);
+    for (const [a, b] of edges) { adj[a].push(b); adj[b].push(a); }
+    const seen = new Set([0]); const stack = [0];
+    while (stack.length) { const v = stack.pop(); for (const w of adj[v]) if (!seen.has(w)) { seen.add(w); stack.push(w); } }
+    return seen.size === n;
+}
+// Build a {type:'network'} diagram for a degree list, or undefined if the
+// sequence can't be drawn as a connected simple graph.
+function _networkDiagram(degrees) {
+    const edges = _realiseGraph(degrees);
+    if (!edges || !_graphConnected(degrees.length, edges)) return undefined;
+    return { type: 'network', degrees: [...degrees], edges };
+}
+
 function genNetworks(rng, diff, allowedOps) {
     const OPS = ['euler', 'degree-sum', 'euler-trail'];
     const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
@@ -7823,9 +7859,12 @@ function genNetworks(rng, diff, allowedOps) {
                 answer: String(2 * E), answerDisplay: `$${2 * E}$`,
                 worked: `Sum of degrees $= 2 \\times \\text{edges} = 2 \\times ${E} = ${2 * E}$` };
         }
-        return { clue: `The vertices of a network have degrees $${degrees.join(', ')}$. How many *edges* does the network have?`,
-            answer: String(E), answerDisplay: `$${E}$`,
-            worked: `Edges $= \\tfrac{1}{2}\\sum\\deg = \\tfrac{1}{2}(${sum}) = ${E}$` };
+        const dgm = _networkDiagram(degrees);
+        const clue = dgm
+            ? `The network drawn below has the vertex degrees shown. How many *edges* does it have?`
+            : `The vertices of a network have degrees $${degrees.join(', ')}$. How many *edges* does the network have?`;
+        return { clue, answer: String(E), answerDisplay: `$${E}$`,
+            worked: `Edges $= \\tfrac{1}{2}\\sum\\deg = \\tfrac{1}{2}(${sum}) = ${E}$`, diagram: dgm };
     }
 
     // euler-trail: classify by the count of odd-degree vertices
@@ -7839,9 +7878,13 @@ function genNetworks(rng, diff, allowedOps) {
     for (let i = degrees.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [degrees[i], degrees[j]] = [degrees[j], degrees[i]]; }
     const odd = degrees.filter(d => d % 2 === 1).length;
     const ans = odd === 0 ? 'Eulerian circuit' : odd === 2 ? 'Eulerian trail' : 'neither';
-    return { clue: `A connected network has vertices of degree $${degrees.join(', ')}$. Does it have an *Eulerian circuit*, an *Eulerian trail*, or *neither*?`,
-        answer: ans, answerDisplay: ans,
-        worked: `It has $${odd}$ odd-degree vertices ⇒ ${odd === 0 ? '0 odd ⇒ Eulerian circuit' : odd === 2 ? '2 odd ⇒ Eulerian trail' : 'more than 2 odd ⇒ neither'}.` };
+    const dgm = _networkDiagram(degrees);
+    const clue = dgm
+        ? `For the connected network drawn below, does it have an *Eulerian circuit*, an *Eulerian trail*, or *neither*?`
+        : `A connected network has vertices of degree $${degrees.join(', ')}$. Does it have an *Eulerian circuit*, an *Eulerian trail*, or *neither*?`;
+    return { clue, answer: ans, answerDisplay: ans,
+        worked: `It has $${odd}$ odd-degree vertices ⇒ ${odd === 0 ? '0 odd ⇒ Eulerian circuit' : odd === 2 ? '2 odd ⇒ Eulerian trail' : 'more than 2 odd ⇒ neither'}.`,
+        diagram: dgm };
 }
 
 // ---- Polynomials: degree, remainder theorem, factor theorem ----
@@ -7996,13 +8039,15 @@ function genFunctions(rng, diff, allowedOps) {
             return { clue: `State the *${wantRange ? 'range' : 'domain'}* of $f(x) = \\sqrt{${a * a} - x^2}$.`,
                 answer: wantRange ? `0<=y<=${a}` : `-${a}<=x<=${a}`,
                 answerDisplay: wantRange ? `$0 \\le y \\le ${a}$` : `$-${a} \\le x \\le ${a}$`,
-                worked: wantRange ? `The semicircle reaches from $0$ up to $${a}$.` : `Need $${a * a} - x^2 \\ge 0 \\Rightarrow -${a} \\le x \\le ${a}$.` };
+                worked: wantRange ? `The semicircle reaches from $0$ up to $${a}$.` : `Need $${a * a} - x^2 \\ge 0 \\Rightarrow -${a} \\le x \\le ${a}$.`,
+                diagram: { type: 'semicircle', a } };
         }
         // y = 1/(x − h): domain x ≠ h, range y ≠ 0
         const h = ri(rng, -4, 4);
         return { clue: `State the *domain* of $f(x) = \\dfrac{1}{x ${sgn(-h)}}$.`,
             answer: `x≠${h}`, answerDisplay: `$x \\ne ${h}$`,
-            worked: `The denominator is zero at $x = ${h}$, so $x \\ne ${h}$.` };
+            worked: `The denominator is zero at $x = ${h}$, so $x \\ne ${h}$.`,
+            diagram: { type: 'hyperbola', a: 1, h, k: 0 } };
     }
 
     if (op === 'circle') {
@@ -8010,14 +8055,15 @@ function genFunctions(rng, diff, allowedOps) {
         const h = ri(rng, -4, 4), k = ri(rng, -4, 4), r = ri(rng, 2, 6);
         const D = -2 * h, E = -2 * k, F = h * h + k * k - r * r;
         const eqn = `x^2 + y^2 ${sgn(D)}x ${sgn(E)}y ${sgn(F)} = 0`;
+        const diagram = { type: 'coord-circle', h, k, r };
         if (rng() < 0.5) {
             return { clue: `Find the *centre* of the circle $${eqn}$ (complete the square).`,
                 answer: `(${h},${k})`, answerDisplay: `$(${h}, ${k})$`,
-                worked: `Centre $= (-\\tfrac{D}{2}, -\\tfrac{E}{2}) = (${h}, ${k})$.` };
+                worked: `Centre $= (-\\tfrac{D}{2}, -\\tfrac{E}{2}) = (${h}, ${k})$.`, diagram };
         }
         return { clue: `Find the *radius* of the circle $${eqn}$ (complete the square).`,
             answer: String(r), answerDisplay: `$${r}$`,
-            worked: `$r = \\sqrt{(\\tfrac{D}{2})^2 + (\\tfrac{E}{2})^2 - F} = \\sqrt{${h * h} + ${k * k} - (${F})} = ${r}$.` };
+            worked: `$r = \\sqrt{(\\tfrac{D}{2})^2 + (\\tfrac{E}{2})^2 - F} = \\sqrt{${h * h} + ${k * k} - (${F})} = ${r}$.`, diagram };
     }
 
     // hyperbola y = a/(x − h) + k: asymptotes x = h, y = k
@@ -8027,7 +8073,8 @@ function genFunctions(rng, diff, allowedOps) {
     return { clue: `State the *${wantV ? 'vertical' : 'horizontal'} asymptote* of $y = ${body}$.`,
         answer: wantV ? `x=${h}` : `y=${k}`,
         answerDisplay: wantV ? `$x = ${h}$` : `$y = ${k}$`,
-        worked: wantV ? `Vertical asymptote where the denominator is zero: $x = ${h}$.` : `Horizontal asymptote at the vertical shift: $y = ${k}$.` };
+        worked: wantV ? `Vertical asymptote where the denominator is zero: $x = ${h}$.` : `Horizontal asymptote at the vertical shift: $y = ${k}$.`,
+        diagram: { type: 'hyperbola', a, h, k } };
 }
 
 const GENERATORS = {

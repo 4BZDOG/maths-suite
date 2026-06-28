@@ -40,6 +40,14 @@ const SAMPLES = [
     ['number-plane (midpoint)',   { type: 'number-plane', pts: [[-6, -4], [4, 8]], line: true, mid: true }],
     ['number-plane (distance)',   { type: 'number-plane', pts: [[-3, -2], [4, 22]], line: true }],
     ['number-plane (axes triangle)', { type: 'number-plane', pts: [[4, 0], [0, 8]], line: true, tri: true }],
+    ['rhombus (area)',            { type: 'rhombus', d1: 10, d2: 6, missing: 'area' }],
+    ['kite (area)',               { type: 'kite', d1: 8, d2: 12, missing: 'area' }],
+    ['sector (area)',             { type: 'sector', r: 6, theta: 120, missing: 'area' }],
+    ['sector (arc)',              { type: 'sector', r: 5, theta: 270, missing: 'arc' }],
+    ['coord-circle (2,-1,r3)',    { type: 'coord-circle', h: 2, k: -1, r: 3 }],
+    ['semicircle (a=4)',          { type: 'semicircle', a: 4 }],
+    ['hyperbola (a2,h1,k-2)',     { type: 'hyperbola', a: 2, h: 1, k: -2 }],
+    ['network (3,3,2,2)',         { type: 'network', degrees: [3, 3, 2, 2], edges: [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3]] }],
 ];
 
 const card = (label, diagram) => `
