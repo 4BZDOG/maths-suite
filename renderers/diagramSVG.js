@@ -918,6 +918,116 @@ function _sector({ r, theta, missing }) {
     return _svg(VW, VH, inner);
 }
 
+// ─── Shared coordinate frame (grid + axes + mappers) ─────────────────────────
+// Equal x/y scale so circles read true; axes drawn only where the origin is in
+// view. Returns the background SVG plus pixel mappers and plot bounds.
+function _coordFrame(xMin, xMax, yMin, yMax, VW, VH, m = 16) {
+    const availW = VW - 2 * m, availH = VH - 2 * m;
+    const unit = Math.min(availW / (xMax - xMin), availH / (yMax - yMin));
+    const drawW = (xMax - xMin) * unit, drawH = (yMax - yMin) * unit;
+    const plL = m + (availW - drawW) / 2, plT = m + (availH - drawH) / 2;
+    const plR = plL + drawW, plB = plT + drawH;
+    const mapX = x => plL + (x - xMin) * unit;
+    const mapY = y => plB - (y - yMin) * unit;
+    let bg = `<rect x="${plL.toFixed(1)}" y="${plT.toFixed(1)}" width="${drawW.toFixed(1)}" height="${drawH.toFixed(1)}" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.18"/>`;
+    const xStep = Math.max(1, Math.round(_niceStep(xMax - xMin)));
+    const yStep = Math.max(1, Math.round(_niceStep(yMax - yMin)));
+    for (let xv = Math.ceil(xMin / xStep) * xStep; xv <= xMax; xv += xStep) {
+        const gx = mapX(xv);
+        if (gx < plL + 3 || gx > plR - 1) continue;
+        bg += `<line x1="${gx.toFixed(1)}" y1="${plT.toFixed(1)}" x2="${gx.toFixed(1)}" y2="${plB.toFixed(1)}" stroke="currentColor" stroke-width="0.5" opacity="0.1"/>`;
+        if (Math.round(xv) !== 0) bg += _t(gx, plB + 10, String(Math.round(xv)), { size: 7, opacity: 0.6 });
+    }
+    for (let yv = Math.ceil(yMin / yStep) * yStep; yv <= yMax; yv += yStep) {
+        const gy = mapY(yv);
+        if (gy < plT + 1 || gy > plB - 3) continue;
+        bg += `<line x1="${plL.toFixed(1)}" y1="${gy.toFixed(1)}" x2="${plR.toFixed(1)}" y2="${gy.toFixed(1)}" stroke="currentColor" stroke-width="0.5" opacity="0.1"/>`;
+        if (Math.round(yv) !== 0) bg += _t(plL - 4, gy + 2.4, String(Math.round(yv)), { anchor: 'end', size: 7, opacity: 0.6 });
+    }
+    if (xMin < 0 && xMax > 0) { const ax = mapX(0); bg += `<line x1="${ax.toFixed(1)}" y1="${plT.toFixed(1)}" x2="${ax.toFixed(1)}" y2="${plB.toFixed(1)}" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>`; }
+    if (yMin < 0 && yMax > 0) { const ay = mapY(0); bg += `<line x1="${plL.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${plR.toFixed(1)}" y2="${ay.toFixed(1)}" stroke="currentColor" stroke-width="1.2" opacity="0.5"/>`; }
+    bg += _t(plR - 2, plB - 3, 'x', { anchor: 'end', size: 9, opacity: 0.7 }) +
+        _t(plL + 3, plT + 8, 'y', { anchor: 'start', size: 9, opacity: 0.7 });
+    return { bg, mapX, mapY, plL, plT, plR, plB, unit };
+}
+
+// ─── Circle on the Cartesian plane (centre (h,k), radius r) ──────────────────
+function _coordCircle({ h, k, r }) {
+    const VW = 178, VH = 150;
+    const f = _coordFrame(h - r - 1, h + r + 1, k - r - 1, k + r + 1, VW, VH);
+    const cx = f.mapX(h), cy = f.mapY(k), rPx = r * f.unit;
+    const inner = f.bg +
+        `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${rPx.toFixed(1)}" fill="${GC}" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
+        `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="2.4" fill="${MC}"/>` +
+        _t(cx + 5, cy - 5, `(${h}, ${k})`, { anchor: 'start', missing: true, size: 9 });
+    return _svg(VW, VH, inner);
+}
+
+// ─── Upper semicircle y = √(a² − x²) ─────────────────────────────────────────
+function _semicircle({ a }) {
+    const VW = 178, VH = 150;
+    const f = _coordFrame(-a - 1, a + 1, -1, a + 1, VW, VH);
+    const lx = f.mapX(-a), rx = f.mapX(a), midY = f.mapY(0), rPx = a * f.unit;
+    // SVG arc from (−a,0) to (a,0) bulging upward
+    const inner = f.bg +
+        `<path d="M ${lx.toFixed(1)},${midY.toFixed(1)} A ${rPx.toFixed(1)},${rPx.toFixed(1)} 0 0,1 ${rx.toFixed(1)},${midY.toFixed(1)}" fill="${GC}" fill-opacity="0.07" stroke="${GC}" stroke-width="2"/>` +
+        `<circle cx="${lx.toFixed(1)}" cy="${midY.toFixed(1)}" r="2.6" fill="${MC}"/>` +
+        `<circle cx="${rx.toFixed(1)}" cy="${midY.toFixed(1)}" r="2.6" fill="${MC}"/>` +
+        _t(f.mapX(0), f.mapY(a) - 5, `r = ${a}`, { size: 9, opacity: 0.8 });
+    return _svg(VW, VH, inner);
+}
+
+// ─── Hyperbola y = a/(x − h) + k with dashed asymptotes ──────────────────────
+function _hyperbola({ a, h, k }) {
+    const VW = 178, VH = 150;
+    const span = 6;
+    const f = _coordFrame(h - span, h + span, k - span, k + span, VW, VH);
+    const axV = f.mapX(h), ayH = f.mapY(k);
+    let branches = '';
+    for (const dir of [-1, 1]) {
+        const pts = [];
+        for (let i = 1; i <= 40; i++) {
+            const dx = dir * (i / 40) * span;
+            const x = h + dx;
+            if (Math.abs(dx) < 0.18) continue;          // skip near the vertical asymptote
+            const y = a / (x - h) + k;
+            if (y < k - span || y > k + span) continue;
+            pts.push(`${f.mapX(x).toFixed(1)},${f.mapY(y).toFixed(1)}`);
+        }
+        if (pts.length > 1) branches += `<polyline points="${pts.join(' ')}" fill="none" stroke="${GC}" stroke-width="2" stroke-linejoin="round"/>`;
+    }
+    const inner = f.bg +
+        `<line x1="${axV.toFixed(1)}" y1="${f.plT.toFixed(1)}" x2="${axV.toFixed(1)}" y2="${f.plB.toFixed(1)}" stroke="${MC}" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.8"/>` +
+        `<line x1="${f.plL.toFixed(1)}" y1="${ayH.toFixed(1)}" x2="${f.plR.toFixed(1)}" y2="${ayH.toFixed(1)}" stroke="${MC}" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.8"/>` +
+        branches +
+        _t(axV + 3, f.plT + 9, `x = ${h}`, { anchor: 'start', missing: true, size: 8 }) +
+        _t(f.plR - 3, ayH - 4, `y = ${k}`, { anchor: 'end', missing: true, size: 8 });
+    return _svg(VW, VH, inner);
+}
+
+// ─── Network (graph): vertices on a circle, edges, degree labels ─────────────
+function _network({ degrees, edges }) {
+    const VW = 180, VH = 150;
+    const n = degrees.length;
+    const cx = VW / 2, cy = VH / 2 + 4, R = Math.min(VW, VH) / 2 - 22;
+    const pos = degrees.map((_, i) => {
+        const ang = -Math.PI / 2 + (2 * Math.PI * i) / n;     // start at top
+        return { x: cx + R * Math.cos(ang), y: cy + R * Math.sin(ang), ang };
+    });
+    let inner = '';
+    for (const [a, b] of edges) {
+        inner += `<line x1="${pos[a].x.toFixed(1)}" y1="${pos[a].y.toFixed(1)}" x2="${pos[b].x.toFixed(1)}" y2="${pos[b].y.toFixed(1)}" stroke="${GC}" stroke-width="1.6" opacity="0.85"/>`;
+    }
+    for (let i = 0; i < n; i++) {
+        const p = pos[i];
+        inner += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="white" stroke="${GC}" stroke-width="2"/>`;
+        // degree label pushed radially outward from the centre
+        const lx = cx + (R + 13) * Math.cos(p.ang), ly = cy + (R + 13) * Math.sin(p.ang);
+        inner += _t(lx, ly + 3, String(degrees[i]), { size: 10, missing: true });
+    }
+    return _svg(VW, VH, inner);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 export function renderDiagramSVG(diagram) {
     if (!diagram) return '';
@@ -940,6 +1050,10 @@ export function renderDiagramSVG(diagram) {
         case 'rhombus':                 return _quadDiagonals(diagram);
         case 'kite':                    return _quadDiagonals(diagram);
         case 'sector':                  return _sector(diagram);
+        case 'coord-circle':            return _coordCircle(diagram);
+        case 'semicircle':              return _semicircle(diagram);
+        case 'hyperbola':               return _hyperbola(diagram);
+        case 'network':                 return _network(diagram);
         default: return '';
     }
 }

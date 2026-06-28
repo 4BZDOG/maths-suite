@@ -67,16 +67,18 @@ test('Networks degree/edges & Eulerian classification are correct', () => {
                 const qs = genStage5({ topic: 'Networks', difficulty: diff, count: 4, seed,
                     subOpsFilter: { Networks: [op] } });
                 for (const q of qs) {
+                    // degree list lives in the clue, or in the diagram when one is drawn
+                    const fromClue = (re) => { const m = q.clue.match(re); return m ? m[1].split(',').map(Number) : null; };
                     if (op === 'degree-sum') {
                         if (/sum of the degrees/.test(q.clue)) {
                             const E = nums(q.clue)[0];
                             assert.equal(Number(q.answer), 2 * E, `${diff}/seed${seed}: ${q.clue}`);
                         } else {
-                            const list = q.clue.match(/degrees \$([\d, ]+)\$/)[1].split(',').map(Number);
+                            const list = q.diagram ? q.diagram.degrees : fromClue(/degrees \$([\d, ]+)\$/);
                             assert.equal(Number(q.answer), list.reduce((x, y) => x + y, 0) / 2, `${diff}/seed${seed}: ${q.clue}`);
                         }
                     } else {
-                        const list = q.clue.match(/degree \$([\d, ]+)\$/)[1].split(',').map(Number);
+                        const list = q.diagram ? q.diagram.degrees : fromClue(/degree \$([\d, ]+)\$/);
                         const odd = list.filter(d => d % 2 === 1).length;
                         const exp = odd === 0 ? 'Eulerian circuit' : odd === 2 ? 'Eulerian trail' : 'neither';
                         assert.equal(q.answer, exp, `${diff}/seed${seed}: ${q.clue}`);
@@ -146,6 +148,57 @@ test('Logarithms: evaluate / solve answers are correct', () => {
         }
     }
     assert.ok(checked > 40, `only ${checked} logarithm questions verified`);
+});
+
+test('Networks: attached graph diagram realises the stated degree sequence', () => {
+    let checked = 0;
+    for (const diff of DIFFS) {
+        for (let seed = 1; seed <= 150; seed++) {
+            for (const op of ['degree-sum', 'euler-trail']) {
+                const qs = genStage5({ topic: 'Networks', difficulty: diff, count: 4, seed,
+                    subOpsFilter: { Networks: [op] } });
+                for (const q of qs) {
+                    if (!q.diagram || q.diagram.type !== 'network') continue;
+                    const { degrees, edges } = q.diagram;
+                    const deg = degrees.map(() => 0);
+                    for (const [a, b] of edges) { deg[a]++; deg[b]++; assert.ok(a !== b, 'self-loop'); }
+                    assert.deepEqual(deg, degrees, `${diff}/seed${seed}: edges don't realise degrees`);
+                    checked++;
+                }
+            }
+        }
+    }
+    assert.ok(checked > 20, `only ${checked} network diagrams verified`);
+});
+
+test('Functions: graph diagrams carry parameters consistent with the answer', () => {
+    let checked = 0;
+    for (const diff of DIFFS) {
+        for (let seed = 1; seed <= 120; seed++) {
+            for (const op of ['circle', 'hyperbola']) {
+                const qs = genStage5({ topic: 'Functions', difficulty: diff, count: 4, seed,
+                    subOpsFilter: { Functions: [op] } });
+                for (const q of qs) {
+                    if (!q.diagram) continue;
+                    if (q.diagram.type === 'coord-circle') {
+                        // the displayed equation must expand to this centre/radius
+                        const em = q.clue.match(/x\^2 \+ y\^2 ([+-]) (\d+)x ([+-]) (\d+)y ([+-]) (\d+) = 0/);
+                        if (!em) continue;
+                        const D = (em[1] === '-' ? -1 : 1) * +em[2], E = (em[3] === '-' ? -1 : 1) * +em[4], F = (em[5] === '-' ? -1 : 1) * +em[6];
+                        assert.ok(approxEqual(q.diagram.h, -D / 2)); assert.ok(approxEqual(q.diagram.k, -E / 2));
+                        assert.ok(approxEqual(q.diagram.r, Math.sqrt(q.diagram.h ** 2 + q.diagram.k ** 2 - F)));
+                        checked++;
+                    } else if (q.diagram.type === 'hyperbola') {
+                        const asy = q.answer.match(/^([xy])=(-?\d+)$/);
+                        if (asy) assert.equal(asy[1] === 'x' ? q.diagram.h : q.diagram.k, Number(asy[2]),
+                            `${diff}/seed${seed}: asymptote ${q.answer} vs diagram`);
+                        checked++;
+                    }
+                }
+            }
+        }
+    }
+    assert.ok(checked > 20, `only ${checked} function diagrams verified`);
 });
 
 test('Functions: f(k) evaluation and circle centre/radius are correct', () => {
