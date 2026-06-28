@@ -36,6 +36,10 @@ export const TOPIC_STRAND_MAP = {
     'Linear Relationships':     'Number and Algebra',
     'Non-linear Relationships': 'Number and Algebra',
     'Variation & Rates of Change': 'Number and Algebra',
+    'Networks':                 'Number and Algebra',
+    'Polynomials':              'Number and Algebra',
+    'Logarithms':               'Number and Algebra',
+    'Functions':                'Number and Algebra',
     // Measurement and Space
     'Length':                   'Measurement and Space',
     'Area':                     'Measurement and Space',
@@ -79,6 +83,8 @@ export const STAGE_TOPICS = {
         'Area', 'Volume', 'Properties of Geometrical Figures', 'Trigonometry',
         // Statistics and Probability
         'Data Classification and Visualisation', 'Statistics', 'Probability',
+        // Stage 5 Path new topics (only generate when Path content is enabled)
+        'Networks', 'Polynomials', 'Logarithms', 'Functions',
     ],
 };
 
@@ -276,6 +282,30 @@ export const STAGE_OUTCOMES = {
                 statement: 'simplifies, adds, subtracts, multiplies and divides surds, and rationalises denominators',
                 pathway: 'path',
             },
+            {
+                code: 'MA5-NET-P-01',
+                contentLabel: 'Networks',
+                statement: 'solves problems using vertices, edges and faces of networks, and applies Euler’s formula and Eulerian trails',
+                pathway: 'path',
+            },
+            {
+                code: 'MA5-POL-P-01',
+                contentLabel: 'Polynomials',
+                statement: 'applies the remainder and factor theorems, divides polynomials and sketches polynomial graphs',
+                pathway: 'path',
+            },
+            {
+                code: 'MA5-LOG-P-01',
+                contentLabel: 'Logarithms',
+                statement: 'establishes and applies the laws of logarithms to evaluate expressions and solve exponential and logarithmic equations',
+                pathway: 'path',
+            },
+            {
+                code: 'MA5-FNC-P-01',
+                contentLabel: 'Functions and other graphs',
+                statement: 'uses function notation, determines domain and range, and sketches circles, hyperbolas and other non-linear relationships',
+                pathway: 'path',
+            },
         ],
     },
 };
@@ -470,6 +500,23 @@ export const TOPIC_OUTCOME_MAP = {
             // Linear/Non-linear relationships outcomes at Stage 5.
             'Stage 5': ['MA5-LIN-C-01', 'MA5-NLR-C-01'],
         },
+    },
+    // ── Stage 5 Path new topics ──────────────────────────────────────────
+    'Networks': {
+        displayName: 'Networks',
+        outcomes: { 'Stage 5': ['MA5-NET-P-01'] },
+    },
+    'Polynomials': {
+        displayName: 'Polynomials',
+        outcomes: { 'Stage 5': ['MA5-POL-P-01'] },
+    },
+    'Logarithms': {
+        displayName: 'Logarithms',
+        outcomes: { 'Stage 5': ['MA5-LOG-P-01'] },
+    },
+    'Functions': {
+        displayName: 'Functions and Graphs',
+        outcomes: { 'Stage 5': ['MA5-FNC-P-01'] },
     },
 };
 
