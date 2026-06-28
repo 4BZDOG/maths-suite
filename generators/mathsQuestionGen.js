@@ -292,6 +292,28 @@ export const SUB_OPS = {
         { key: 'graph-choice',    label: 'Choosing a display' },
         { key: 'data-type',       label: 'Categorical / numerical' },
     ],
+    // ─── Stage 5 Path new topics (all pathway:'path') ──────────────────
+    'Networks': [
+        { key: 'euler',       label: "Euler's formula",  stages: ['Stage 5'], pathway: 'path' },
+        { key: 'degree-sum',  label: 'Degree / edges',   stages: ['Stage 5'], pathway: 'path' },
+        { key: 'euler-trail', label: 'Eulerian trails',  stages: ['Stage 5'], pathway: 'path' },
+    ],
+    'Polynomials': [
+        { key: 'degree',         label: 'Degree / coefficients', stages: ['Stage 5'], pathway: 'path' },
+        { key: 'remainder',      label: 'Remainder theorem',     stages: ['Stage 5'], pathway: 'path' },
+        { key: 'factor-theorem', label: 'Factor theorem',        stages: ['Stage 5'], pathway: 'path' },
+    ],
+    'Logarithms': [
+        { key: 'evaluate', label: 'Evaluate logarithms', stages: ['Stage 5'], pathway: 'path' },
+        { key: 'laws',     label: 'Logarithm laws',      stages: ['Stage 5'], pathway: 'path' },
+        { key: 'solve',    label: 'Solve log / index equations', stages: ['Stage 5'], pathway: 'path' },
+    ],
+    'Functions': [
+        { key: 'evaluate',     label: 'Function notation',   stages: ['Stage 5'], pathway: 'path' },
+        { key: 'domain-range', label: 'Domain & range',      stages: ['Stage 5'], pathway: 'path' },
+        { key: 'circle',       label: 'Circle (complete square)', stages: ['Stage 5'], pathway: 'path' },
+        { key: 'hyperbola',    label: 'Hyperbola asymptotes', stages: ['Stage 5'], pathway: 'path' },
+    ],
 };
 
 // Helper: check if a sub-op is allowed (null = all allowed)
@@ -7755,6 +7777,259 @@ function genProperties(rng, diff, allowedOps, opts = {}) {
 // ============================================================
 // DISPATCH table
 // ============================================================
+// ============================================================
+// STAGE 5 PATH new topics: Networks, Polynomials, Logarithms,
+// Functions. Every sub-op is pathway:'path' (see SUB_OPS), so they
+// only generate when "Include Path content" is enabled.
+// ============================================================
+
+// ---- Networks: Euler's formula, degree sum, Eulerian trails ----
+function genNetworks(rng, diff, allowedOps) {
+    const OPS = ['euler', 'degree-sum', 'euler-trail'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+
+    if (op === 'euler') {
+        // V + F - E = 2 for a connected planar graph
+        const V = ri(rng, 4, diff === 'Easy' ? 7 : 10);
+        const E = ri(rng, V - 1 + (diff === 'Easy' ? 1 : 2), V + (diff === 'Hard' ? 8 : 5));
+        const F = 2 - V + E;
+        const ask = diff === 'Hard' ? rc(rng, ['F', 'V', 'E']) : 'F';
+        if (ask === 'V') {
+            return { clue: `A connected planar graph has $${E}$ edges and $${F}$ faces. Use Euler's formula to find the number of *vertices*.`,
+                answer: String(V), answerDisplay: `$${V}$`,
+                worked: `$V = 2 - F + E = 2 - ${F} + ${E} = ${V}$` };
+        }
+        if (ask === 'E') {
+            return { clue: `A connected planar graph has $${V}$ vertices and $${F}$ faces. Use Euler's formula to find the number of *edges*.`,
+                answer: String(E), answerDisplay: `$${E}$`,
+                worked: `$E = V + F - 2 = ${V} + ${F} - 2 = ${E}$` };
+        }
+        return { clue: `A connected planar graph has $${V}$ vertices and $${E}$ edges. Use Euler's formula $V + F - E = 2$ to find the number of *faces*.`,
+            answer: String(F), answerDisplay: `$${F}$`,
+            worked: `$F = 2 - V + E = 2 - ${V} + ${E} = ${F}$` };
+    }
+
+    if (op === 'degree-sum') {
+        // sum of degrees = 2 × edges (handshaking lemma)
+        const n = diff === 'Easy' ? 4 : diff === 'Medium' ? 5 : 6;
+        const degrees = Array.from({ length: n }, () => ri(rng, 1, 5));
+        let sum = degrees.reduce((a, b) => a + b, 0);
+        if (sum % 2 !== 0) { degrees[0] += 1; sum += 1; }   // even sum ⇒ whole edges
+        const E = sum / 2;
+        if (diff === 'Easy') {
+            return { clue: `A network has $${E}$ edges. What is the *sum of the degrees* of all its vertices?`,
+                answer: String(2 * E), answerDisplay: `$${2 * E}$`,
+                worked: `Sum of degrees $= 2 \\times \\text{edges} = 2 \\times ${E} = ${2 * E}$` };
+        }
+        return { clue: `The vertices of a network have degrees $${degrees.join(', ')}$. How many *edges* does the network have?`,
+            answer: String(E), answerDisplay: `$${E}$`,
+            worked: `Edges $= \\tfrac{1}{2}\\sum\\deg = \\tfrac{1}{2}(${sum}) = ${E}$` };
+    }
+
+    // euler-trail: classify by the count of odd-degree vertices
+    const n = diff === 'Easy' ? 4 : ri(rng, 4, 6);
+    const kind = rc(rng, ['circuit', 'trail', 'neither']);
+    // build a degree list with the required number of odd-degree vertices
+    const oddCount = kind === 'circuit' ? 0 : kind === 'trail' ? 2 : 4;
+    const degrees = [];
+    for (let i = 0; i < n; i++) degrees.push(i < oddCount ? ri(rng, 1, 2) * 2 - 1 : ri(rng, 1, 3) * 2);
+    // shuffle
+    for (let i = degrees.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [degrees[i], degrees[j]] = [degrees[j], degrees[i]]; }
+    const odd = degrees.filter(d => d % 2 === 1).length;
+    const ans = odd === 0 ? 'Eulerian circuit' : odd === 2 ? 'Eulerian trail' : 'neither';
+    return { clue: `A connected network has vertices of degree $${degrees.join(', ')}$. Does it have an *Eulerian circuit*, an *Eulerian trail*, or *neither*?`,
+        answer: ans, answerDisplay: ans,
+        worked: `It has $${odd}$ odd-degree vertices ⇒ ${odd === 0 ? '0 odd ⇒ Eulerian circuit' : odd === 2 ? '2 odd ⇒ Eulerian trail' : 'more than 2 odd ⇒ neither'}.` };
+}
+
+// ---- Polynomials: degree, remainder theorem, factor theorem ----
+function genPolynomials(rng, diff, allowedOps) {
+    const OPS = ['degree', 'remainder', 'factor-theorem'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+    // Clean term: drops zero terms and "1" coefficients on x-powers.
+    const _term = (coef, suffix) => {
+        if (coef === 0) return '';
+        const sign = coef < 0 ? ' - ' : ' + ';
+        const mag = Math.abs(coef);
+        const num = (suffix && mag === 1) ? '' : mag;
+        return `${sign}${num}${suffix}`;
+    };
+    const _poly = (a, b, c, d) => `${a === 1 ? '' : a === -1 ? '-' : a}x^3${_term(b, 'x^2')}${_term(c, 'x')}${_term(d, '')}`;
+    // P(x) = ax³ + bx² + cx + d
+    const a = ri(rng, 1, diff === 'Easy' ? 2 : 4), b = ri(rng, -4, 4), c = ri(rng, -5, 5), d = ri(rng, -6, 6);
+    const poly = _poly(a, b, c, d);
+    const P = (x) => a * x ** 3 + b * x ** 2 + c * x + d;
+
+    if (op === 'degree') {
+        const ask = rc(rng, ['degree', 'leading coefficient', 'constant term']);
+        const ans = ask === 'degree' ? 3 : ask === 'leading coefficient' ? a : d;
+        return { clue: `For the polynomial $P(x) = ${poly}$, state the *${ask}*.`,
+            answer: String(ans), answerDisplay: `$${ans}$`,
+            worked: ask === 'degree' ? `The highest power is $x^3$, so the degree is $3$.`
+                : ask === 'leading coefficient' ? `The coefficient of the highest power is $${a}$.`
+                : `The constant term is $${d}$.` };
+    }
+
+    if (op === 'remainder') {
+        const k = ri(rng, -3, 3) || 2;
+        const rem = P(k);
+        const div = k < 0 ? `(x + ${-k})` : `(x - ${k})`;
+        return { clue: `Find the remainder when $P(x) = ${poly}$ is divided by $${div}$ (use the remainder theorem).`,
+            answer: String(rem), answerDisplay: `$${rem}$`,
+            worked: `Remainder $= P(${k}) = ${rem}$.` };
+    }
+
+    // factor-theorem: is (x-k) a factor?  (x-k) is a factor ⇔ P(k)=0
+    const makeFactor = rng() < 0.5;
+    let k = ri(rng, -3, 3) || 2, dd = d;
+    if (makeFactor) {
+        // adjust the constant so that P(k) = 0
+        dd = d - P(k);
+    }
+    const Pk = a * k ** 3 + b * k ** 2 + c * k + dd;
+    const poly2 = _poly(a, b, c, dd);
+    const div = k < 0 ? `(x + ${-k})` : `(x - ${k})`;
+    return { clue: `Is $${div}$ a *factor* of $P(x) = ${poly2}$? (Yes/No, using the factor theorem.)`,
+        answer: Pk === 0 ? 'Yes' : 'No', answerDisplay: Pk === 0 ? 'Yes' : 'No',
+        worked: Pk === 0
+            ? `$P(${k}) = 0$, so $${div}$ is a factor.`
+            : `$P(${k}) = ${Pk} \\ne 0$, so $${div}$ is not a factor.` };
+}
+
+// ---- Logarithms: evaluate, log laws, solve equations ----
+function genLogarithms(rng, diff, allowedOps) {
+    const OPS = ['evaluate', 'laws', 'solve'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+
+    if (op === 'evaluate') {
+        const base = rc(rng, [2, 3, 5, 10]);
+        if (diff === 'Hard') {
+            // log_b(b^m) + log_c(c^-n)  → m - n
+            const c2 = rc(rng, [2, 3, 5].filter(x => x !== base));
+            const m = ri(rng, 2, 4), n = ri(rng, 1, 3);
+            return { clue: `Evaluate $\\log_{${base}}(${base ** m}) + \\log_{${c2}}\\left(\\frac{1}{${c2 ** n}}\\right)$.`,
+                answer: String(m - n), answerDisplay: `$${m - n}$`,
+                worked: `$\\log_{${base}}(${base ** m}) = ${m}$ and $\\log_{${c2}}(${c2}^{-${n}}) = -${n}$, sum $= ${m - n}$.` };
+        }
+        const m = ri(rng, 2, diff === 'Easy' ? 4 : 6);
+        const neg = diff !== 'Easy' && rng() < 0.4;
+        if (neg) {
+            return { clue: `Evaluate $\\log_{${base}}\\left(\\frac{1}{${base ** m}}\\right)$.`,
+                answer: String(-m), answerDisplay: `$${-m}$`,
+                worked: `$\\frac{1}{${base ** m}} = ${base}^{-${m}}$, so the value is $-${m}$.` };
+        }
+        return { clue: `Evaluate $\\log_{${base}}(${base ** m})$.`,
+            answer: String(m), answerDisplay: `$${m}$`,
+            worked: `$${base}^{${m}} = ${base ** m}$, so $\\log_{${base}}(${base ** m}) = ${m}$.` };
+    }
+
+    if (op === 'laws') {
+        // log_b(m) + log_b(n) = log_b(mn); choose so the product is a power of b → integer
+        const base = rc(rng, [2, 3, 5]);
+        const i = ri(rng, 1, 3), j = ri(rng, 1, 3);
+        const m = base ** i, n = base ** j;
+        if (rng() < 0.5) {
+            return { clue: `Evaluate $\\log_{${base}}(${m}) + \\log_{${base}}(${n})$ using the log laws.`,
+                answer: String(i + j), answerDisplay: `$${i + j}$`,
+                worked: `$\\log_{${base}}(${m} \\times ${n}) = \\log_{${base}}(${m * n}) = ${i + j}$.` };
+        }
+        const bigger = Math.max(i, j), smaller = Math.min(i, j);
+        return { clue: `Evaluate $\\log_{${base}}(${base ** bigger}) - \\log_{${base}}(${base ** smaller})$ using the log laws.`,
+            answer: String(bigger - smaller), answerDisplay: `$${bigger - smaller}$`,
+            worked: `$\\log_{${base}}\\left(\\frac{${base ** bigger}}{${base ** smaller}}\\right) = \\log_{${base}}(${base ** (bigger - smaller)}) = ${bigger - smaller}$.` };
+    }
+
+    // solve
+    const base = rc(rng, [2, 3, 5]);
+    if (diff === 'Hard') {
+        // log_b(x) + log_b(x - k) = 2  →  x(x-k) = b²  → quadratic with a positive root
+        const k = ri(rng, 1, 4);
+        const target = base * base;
+        // x² - kx - target = 0 ; pick base so the positive root is an integer
+        const disc = k * k + 4 * target;
+        const root = (k + Math.sqrt(disc)) / 2;
+        if (!Number.isInteger(root)) return genLogarithms(rng, diff, allowedOps);
+        return { clue: `Solve for $x$: $\\log_{${base}}(x) + \\log_{${base}}(x - ${k}) = 2$.`,
+            answer: String(root), answerDisplay: `$x = ${root}$`,
+            worked: `$x(x - ${k}) = ${base}^2 = ${target} \\Rightarrow x = ${root}$ (reject the negative root).` };
+    }
+    if (rng() < 0.5) {
+        const x = ri(rng, 2, 5);
+        return { clue: `Solve for $x$: $${base}^x = ${base ** x}$.`,
+            answer: String(x), answerDisplay: `$x = ${x}$`,
+            worked: `$${base}^x = ${base}^{${x}} \\Rightarrow x = ${x}$.` };
+    }
+    const n = ri(rng, 2, 4);
+    return { clue: `Solve for $x$: $\\log_{${base}}(x) = ${n}$.`,
+        answer: String(base ** n), answerDisplay: `$x = ${base ** n}$`,
+        worked: `$x = ${base}^{${n}} = ${base ** n}$.` };
+}
+
+// ---- Functions: notation, domain/range, circles, hyperbolas ----
+function genFunctions(rng, diff, allowedOps) {
+    const OPS = ['evaluate', 'domain-range', 'circle', 'hyperbola'];
+    const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
+    if (pool.length === 0) return null;
+    const op = rc(rng, pool);
+    const sgn = (k) => k < 0 ? `- ${-k}` : `+ ${k}`;
+
+    if (op === 'evaluate') {
+        const a = ri(rng, 1, 3), b = ri(rng, -4, 4), c = ri(rng, -5, 5);
+        const k = ri(rng, -3, 3);
+        const val = a * k * k + b * k + c;
+        return { clue: `If $f(x) = ${a === 1 ? '' : a}x^2 ${sgn(b)}x ${sgn(c)}$, evaluate $f(${k})$.`,
+            answer: String(val), answerDisplay: `$${val}$`,
+            worked: `$f(${k}) = ${a}(${k})^2 ${sgn(b)}(${k}) ${sgn(c)} = ${val}$.` };
+    }
+
+    if (op === 'domain-range') {
+        const a = ri(rng, 2, 6);
+        if (rng() < 0.5) {
+            // y = √(a² − x²): domain −a ≤ x ≤ a, range 0 ≤ y ≤ a
+            const wantRange = rng() < 0.5;
+            return { clue: `State the *${wantRange ? 'range' : 'domain'}* of $f(x) = \\sqrt{${a * a} - x^2}$.`,
+                answer: wantRange ? `0<=y<=${a}` : `-${a}<=x<=${a}`,
+                answerDisplay: wantRange ? `$0 \\le y \\le ${a}$` : `$-${a} \\le x \\le ${a}$`,
+                worked: wantRange ? `The semicircle reaches from $0$ up to $${a}$.` : `Need $${a * a} - x^2 \\ge 0 \\Rightarrow -${a} \\le x \\le ${a}$.` };
+        }
+        // y = 1/(x − h): domain x ≠ h, range y ≠ 0
+        const h = ri(rng, -4, 4);
+        return { clue: `State the *domain* of $f(x) = \\dfrac{1}{x ${sgn(-h)}}$.`,
+            answer: `x≠${h}`, answerDisplay: `$x \\ne ${h}$`,
+            worked: `The denominator is zero at $x = ${h}$, so $x \\ne ${h}$.` };
+    }
+
+    if (op === 'circle') {
+        // (x−h)² + (y−k)² = r² ⇒ x²+y²+Dx+Ey+F=0
+        const h = ri(rng, -4, 4), k = ri(rng, -4, 4), r = ri(rng, 2, 6);
+        const D = -2 * h, E = -2 * k, F = h * h + k * k - r * r;
+        const eqn = `x^2 + y^2 ${sgn(D)}x ${sgn(E)}y ${sgn(F)} = 0`;
+        if (rng() < 0.5) {
+            return { clue: `Find the *centre* of the circle $${eqn}$ (complete the square).`,
+                answer: `(${h},${k})`, answerDisplay: `$(${h}, ${k})$`,
+                worked: `Centre $= (-\\tfrac{D}{2}, -\\tfrac{E}{2}) = (${h}, ${k})$.` };
+        }
+        return { clue: `Find the *radius* of the circle $${eqn}$ (complete the square).`,
+            answer: String(r), answerDisplay: `$${r}$`,
+            worked: `$r = \\sqrt{(\\tfrac{D}{2})^2 + (\\tfrac{E}{2})^2 - F} = \\sqrt{${h * h} + ${k * k} - (${F})} = ${r}$.` };
+    }
+
+    // hyperbola y = a/(x − h) + k: asymptotes x = h, y = k
+    const a = ri(rng, 1, 6), h = ri(rng, -4, 4), k = ri(rng, -4, 4);
+    const wantV = rng() < 0.5;
+    const body = `\\dfrac{${a}}{x ${sgn(-h)}} ${sgn(k)}`;
+    return { clue: `State the *${wantV ? 'vertical' : 'horizontal'} asymptote* of $y = ${body}$.`,
+        answer: wantV ? `x=${h}` : `y=${k}`,
+        answerDisplay: wantV ? `$x = ${h}$` : `$y = ${k}$`,
+        worked: wantV ? `Vertical asymptote where the denominator is zero: $x = ${h}$.` : `Horizontal asymptote at the vertical shift: $y = ${k}$.` };
+}
+
 const GENERATORS = {
     'Integers':                 genIntegers,
     'Decimals':                 genDecimals,
@@ -7785,6 +8060,11 @@ const GENERATORS = {
     "Pythagoras' Theorem":              genPythagoras,
     // Statistics & Probability focus areas
     'Data Classification and Visualisation': genDataViz,
+    // Stage 5 Path new topics
+    'Networks':                 genNetworks,
+    'Polynomials':              genPolynomials,
+    'Logarithms':               genLogarithms,
+    'Functions':                genFunctions,
 };
 
 // Map generator sub-topic → clue bank topic field
@@ -7814,6 +8094,10 @@ const TOPIC_MAP = {
     'Time':                             'Geometry',
     "Pythagoras' Theorem":              'Geometry',
     'Data Classification and Visualisation': 'Statistics',
+    'Networks':                 'Algebra',
+    'Polynomials':              'Algebra',
+    'Logarithms':               'Algebra',
+    'Functions':                'Algebra',
 };
 
 const ALL_SUBTOPICS = Object.keys(GENERATORS);
