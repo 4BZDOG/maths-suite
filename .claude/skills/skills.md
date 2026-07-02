@@ -70,10 +70,11 @@ When porting:
 - Repo-specific skills: `maths-suite/.claude/skills/maths-suite-dev.md`
   (note: predates the auto cache-bust build — trust CLAUDE.md where they
   conflict) and `puzzle-suite/.claude/commands/puzzle-dev.md`.
-- Privacy of docs differs: maths-suite's Pages deploy stages only runtime
-  files, so `.claude/` and internal notes stay private. puzzle-suite's
-  deploy currently uploads the **whole repo root** to Pages — internal docs
-  are publicly reachable there until `deploy.yml` is tightened.
+- Both Pages deploys stage only runtime files (`puzzle-suite.html`,
+  `index.html`, `puzzle-suite.css`, `bundle.js`, `.nojekyll`) into a `dist/`
+  folder before publishing, so `.claude/`, `CLAUDE.md`, and other internal
+  docs stay private. When adding a new runtime asset, add it to the "Stage
+  deployable files" step in the relevant `deploy.yml`.
 
 ## Deployment reminders
 
