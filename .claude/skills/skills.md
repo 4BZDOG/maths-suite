@@ -41,12 +41,15 @@ read that for deep work. This file is the map between them.
 
 ## Key divergence: the build
 
-- **maths-suite**: `bash build.sh` does everything — esbuild + SRI stamping +
-  automatic cache-bust into `bundle.js?v=…`. **No manual `?v=N` bump.**
-  `bundle.js` is gitignored. Offline: `SKIP_SRI=1 bash build.sh`.
-- **puzzle-suite**: `bash build.sh` only bundles. You **must manually bump**
-  `?v=N` in the last `<script>` tag of `puzzle-suite.html`. `bundle.js` is
-  committed.
+Both `bash build.sh` scripts bundle with esbuild and auto-stamp a content-hash
+into `bundle.js?v=…` — no manual `?v=N` bump needed in either repo.
+
+- **maths-suite** additionally stamps SRI hashes for CDN tags
+  (`tools/stamp-sri.mjs`, needs network; `SKIP_SRI=1 bash build.sh` to skip
+  offline). `bundle.js` is gitignored — not committed.
+- **puzzle-suite** has no SRI stamping yet (its one CDN tag, Font Awesome, is
+  unpinned — a candidate to port next). `bundle.js` **is** committed, which is
+  redundant with CI rebuilding it on every deploy but currently harmless.
 
 Serve either with `python3 -m http.server 8082` → `/puzzle-suite.html`.
 
