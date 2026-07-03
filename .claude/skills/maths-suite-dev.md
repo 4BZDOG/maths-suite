@@ -16,18 +16,17 @@ category: project
 
 ```bash
 # 1. Edit source files
-# 2. Rebuild bundle
+# 2. Rebuild bundle (also stamps SRI hashes + a fresh cache-bust hash automatically)
 bash build.sh
+# offline: SKIP_SRI=1 bash build.sh
 
-# 3. Bump cache-bust version in puzzle-suite.html line ~461
-#    <script src="bundle.js?v=N">  →  increment N
-
-# 4. Serve and verify
+# 3. Serve and verify
 python3 -m http.server 8082
 # http://localhost:8082/puzzle-suite.html
 ```
 
-Always bump `?v=N` after every rebuild — `http.server` caches aggressively.
+No manual `?v=N` bump needed — `build.sh` stamps `<script src="bundle.js?v=…">`
+with a content hash on every run.
 
 ---
 
@@ -41,7 +40,7 @@ Always bump `?v=N` after every rebuild — `http.server` caches aggressively.
 | Renderers | `renderers/*.js` | Write HTML strings to DOM |
 | PDF drawers | `pdf/pdfDraw*.js` | Imperatively draw to jsPDF |
 | UI modules | `ui/*.js` | One-time setup + toggle actions |
-| Generators | `generators/mathsQuestionGen.js` | Seeded PRNG, 9 topics |
+| Generators | `generators/mathsQuestionGen.js` | Seeded PRNG, 13 topics |
 | Orchestrator | `main.js` | Init, window API, routing |
 | Feature gates | `payments/access.js` + `payments/config.js` | `hasFeature()`, tier/group system |
 | Payments | `payments/stripe.js` + `stripe-worker/index.js` | Stripe Checkout + Cloudflare Worker |
@@ -70,13 +69,14 @@ Always bump `?v=N` after every rebuild — `http.server` caches aggressively.
 
 4. **`puzzle-suite.html`** — add the DOM control with matching `id`.
 
-5. **`main.js`** — add an update function, then export it in **both** blocks:
+5. **`main.js`** — add an update function, then add it to the `window._puzzleApp`
+   object (~line 1404):
    ```js
-   // window.fnName block (Object.assign target):
-   window.updateMyNewSetting = updateMyNewSetting;
-   // window._puzzleApp object:
    window._puzzleApp = { ..., updateMyNewSetting };
    ```
+   `Object.assign(window, window._puzzleApp)` right after that object
+   (~line 1471) propagates every entry onto `window.fnName` automatically —
+   nothing else to export.
 
 6. **`main.js` init sequence** — call after `applyStateToDOM()`.
 
@@ -267,10 +267,9 @@ window.location = url ───────────────────�
    Listen for: `customer.subscription.updated`, `customer.subscription.deleted`,
    `invoice.payment_succeeded`, `invoice.payment_failed`.
 
-5. Rebuild and bump the bundle version:
+5. Rebuild — `build.sh` stamps the cache-bust hash automatically:
    ```bash
    bash build.sh
-   # bump ?v=N in puzzle-suite.html
    ```
 
 ---
@@ -328,9 +327,9 @@ Layers in ascending specificity: `base → layout → components → pages → u
 
 | Gotcha | Fix |
 |---|---|
-| Old bundle after JS change | Rebuild (`bash build.sh`) **and** bump `?v=N` |
+| Old bundle after JS change | Rebuild (`bash build.sh`) — it stamps `?v=` automatically |
 | Setting not persisted on refresh | Ensure `syncSettingsFromDOM()` reads it and `applyStateToDOM()` restores it |
-| New function works in console but not HTML `onclick` | Add to **both** `window.fnName` and `window._puzzleApp` in `main.js` |
+| New function works in console but not HTML `onclick` | Not added to the `window._puzzleApp` object in `main.js` — `Object.assign` won't propagate what isn't there |
 | Dark-mode override not applying | Move CSS rule to `@layer components`, not `@layer base` |
 | Toggle change ignored in preview | Confirm the toggle's `id` matches the `syncSettingsFromDOM()` read |
 | `innerText` returns `""` inside `<details>` | Use `.value` / `.checked` (as `syncSettingsFromDOM()` does) |
@@ -348,8 +347,8 @@ Layers in ascending specificity: `base → layout → components → pages → u
 | Task | File |
 |---|---|
 | Add state setting | `core/state.js` — defaults, `syncSettingsFromDOM()`, `applyStateToDOM()` |
-| Export new function | `main.js` — `window._puzzleApp` block (~line 826), then `Object.assign(window, ...)` |
-| Init sequence | `main.js` — `window.addEventListener('load', ...)` (~line 887) |
+| Export new function | `main.js` — `window._puzzleApp` object (~line 1404); `Object.assign(window, ...)` (~line 1471) propagates it automatically |
+| Init sequence | `main.js` — `window.addEventListener('load', ...)` (~line 1476) |
 | PDF orchestration | `pdf/pdfExport.js` |
 | PDF context object | `pdf/pdfExport.js` → `buildCtx()` |
 | PDF shared utils | `pdf/pdfHelpers.js` → `drawText()`, `hasEmoji()`, `drawHeader()` |

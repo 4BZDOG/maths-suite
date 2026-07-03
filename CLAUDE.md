@@ -72,7 +72,7 @@ maths-suite/
 │   └── dropZone.js            # Drag-and-drop .json config import
 │
 ├── generators/
-│   └── mathsQuestionGen.js    # Seeded PRNG (Mulberry32), 13 topics × 2–8 sub-ops (~2691 lines)
+│   └── mathsQuestionGen.js    # Seeded PRNG (Mulberry32), 13 topics × 2–8 sub-ops (~8270 lines)
 │
 ├── import-export/
 │   └── exportConfig.js        # downloadConfig() — saves state as .json
@@ -137,7 +137,7 @@ and `applyStateToDOM()` (see "Adding a New Setting").
 | State → DOM | `applyStateToDOM(saved)` | Once at init (restores saved session) |
 
 ### Window API (`main.js`)
-All functions exposed both as `window.fnName` (for HTML `onclick`/`oninput`) and on `window._puzzleApp` (~line 1214). When adding a new function, add it to BOTH export blocks.
+All public functions are added to the `window._puzzleApp` object (~line 1404); a single `Object.assign(window, window._puzzleApp)` (~line 1471) right after it copies every entry onto `window.fnName` too, so HTML `onclick`/`oninput` handlers and programmatic access both work from one export point. When adding a new function, add it only to the `window._puzzleApp` object.
 
 **Key exported functions:**
 - `generateAll()` — Main generation trigger
@@ -317,7 +317,7 @@ signature check in `pdfFonts.js` guards what gets registered.
 - **`updatePageScales()` calls `renderActivePage()`**: it only re-renders the active page. After navigation, `showPage(n)` calls `renderActivePage()` automatically.
 - **`saveState()` is debounced 500 ms**: for sliders that need to immediately read state (e.g., `updatePageScales()`), always call `syncSettingsFromDOM()` first.
 - **Stale state on toggle changes**: `renderActivePage()` calls `syncSettingsFromDOM()` at the start so toggle/checkbox changes take effect immediately without waiting for the 500ms debounce.
-- **Both window export blocks**: any new function in `main.js` must be added to BOTH the `window.fnName` block and the `window._puzzleApp` object (~line 1214).
+- **Window export**: any new public function in `main.js` must be added to the `window._puzzleApp` object (~line 1404) — `Object.assign(window, window._puzzleApp)` right after it (~line 1471) propagates it to `window.fnName` automatically. No separate block to update.
 - **Answer key cap**: answer key trims to only the cap-to-1-page visible questions. Do not pass the full question list to the key renderer.
 
 ## Adding a New Setting
@@ -325,7 +325,7 @@ signature check in `pdfFonts.js` guards what gets registered.
 2. Add read in `syncSettingsFromDOM()`
 3. Add restore in `applyStateToDOM()`
 4. Add DOM control in `puzzle-suite.html`
-5. Add update function in `main.js`; export on both `window` and `window._puzzleApp`
+5. Add update function in `main.js`; add it to the `window._puzzleApp` object (propagates to `window.fnName` automatically)
 6. Call in init sequence in `main.js` (after `applyStateToDOM`)
 7. If affects PDF, pass via `cfg` (which is `state.settings`) or add to `buildCtx()` return
 
