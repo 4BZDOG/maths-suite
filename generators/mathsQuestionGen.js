@@ -282,9 +282,10 @@ export const SUB_OPS = {
         { key: 'zones',    label: 'Time zones' },
     ],
     "Pythagoras' Theorem": [
-        { key: 'identify',   label: 'Identify & define the theorem' },
-        { key: 'pythagoras', label: 'Find a side' },
-        { key: 'triads',     label: 'Prove Pythagorean triads' },
+        { key: 'identify',    label: 'Identify & define the theorem' },
+        { key: 'hypotenuse',  label: 'Finding the Hypotenuse' },
+        { key: 'short-side',  label: 'Finding a short side' },
+        { key: 'triads',      label: 'Prove Pythagorean triads' },
     ],
     // ─── Statistics & Probability focus areas (NESA structure) ──────────
     'Data Classification and Visualisation': [
@@ -7659,11 +7660,12 @@ function genDataViz(rng, diff, allowedOps) {
 
 // ---- Pythagoras' Theorem ----
 // A fresh integer triple every call (Euclid's formula) instead of a fixed list
-// of 8, plus several question families across 3 sub-ops:
+// of 8, plus several question families across 4 sub-ops:
 //   'identify'   — state the theorem, or name the hypotenuse from a diagram.
-//   'pythagoras' — "Find a side" (hypotenuse, shorter side, rectangle
-//                  diagonal, distance between points, applied ladder,
-//                  two-step perimeter/area).
+//   'hypotenuse' — find c (rectangle diagonal, distance between points,
+//                  two-step perimeter, irrational/rounded). Easy also has a
+//                  context-free "square, add, root" warm-up.
+//   'short-side' — find a or b (applied ladder, two-step area).
 //   'triads'     — verify whether 3 given side lengths satisfy a²+b²=c².
 function _pythagTriple(rng, maxM) {
     // m > n > 0 → a = m²−n², b = 2mn, c = m²+n² is always a Pythagorean triple.
@@ -7707,23 +7709,46 @@ function _genPythagTriad(rng) {
         worked: `$${a}^2 + ${b}^2 = ${a * a + b * b}$ and $${c}^2 = ${c * c}$ — ${isTriad ? 'equal, so it is a Pythagorean triad.' : 'not equal, so it is not a Pythagorean triad.'}` };
 }
 
-function genPythagoras(rng, diff, allowedOps) {
-    const wantIdentify = !allowedOps || allowedOps.includes('identify');
-    const wantFind      = !allowedOps || allowedOps.includes('pythagoras');
-    const wantTriads    = !allowedOps || allowedOps.includes('triads');
-    if (!wantIdentify && !wantFind && !wantTriads) return null;
+// Two numbers whose squares sum to a non-perfect-square, for the rounded
+// "square, add, root" warm-up. Retries a bounded number of times rather than
+// recursing, since a fallback pair is always available.
+function _pythagRoundedPair(rng) {
+    for (let t = 0; t < 20; t++) {
+        const a = ri(rng, 2, 10), b = ri(rng, 2, 10);
+        const root = Math.sqrt(a * a + b * b);
+        if (!Number.isInteger(root)) return [a, b, root];
+    }
+    return [2, 3, Math.sqrt(13)];
+}
 
-    const families = [];
-    if (wantIdentify) families.push('identify');
-    if (wantTriads)   families.push('triads');
-    if (wantFind)     families.push('find');
-    const family = rc(rng, families);
-
-    if (family === 'identify') return _genPythagIdentify(rng);
-    if (family === 'triads')   return _genPythagTriad(rng);
-
-    // --- 'find a side' — Easy: hypotenuse from a small triple, with a diagram. ---
+// 'hypotenuse': find the hypotenuse, c = √(a²+b²). Easy also includes a
+// context-free "square, add, root" warm-up (half exact, half needing
+// rounding) before the triangle-context version.
+function _genPythagHypotenuse(rng, diff) {
     if (diff === 'Easy') {
+        if (rng() < 0.5) {
+            // Pure computation warm-up: no triangle framing, just the arithmetic
+            // that finding a hypotenuse boils down to.
+            if (rng() < 0.5) {
+                const [a, b, c] = _pythagTriple(rng, 3);
+                const ph = rc(rng, [
+                    `Calculate $\\sqrt{${a}^2 + ${b}^2}$.`,
+                    `Find the value of $\\sqrt{${a}^2 + ${b}^2}$.`,
+                    `Square $${a}$ and $${b}$, add the results, then find the square root.`,
+                ]);
+                return { clue: ph, answer: String(c), answerDisplay: `${c}`,
+                    worked: `$\\sqrt{${a}^2+${b}^2} = \\sqrt{${a * a + b * b}} = ${c}$` };
+            }
+            const [a, b, root] = _pythagRoundedPair(rng);
+            const r = Math.round(root * 10) / 10;
+            const ph = rc(rng, [
+                `Calculate $\\sqrt{${a}^2 + ${b}^2}$, correct to 1 decimal place.`,
+                `Find the value of $\\sqrt{${a}^2 + ${b}^2}$, correct to 1 decimal place.`,
+                `Square $${a}$ and $${b}$, add the results, then find the square root, correct to 1 decimal place.`,
+            ]);
+            return { clue: ph, answer: String(r), answerDisplay: `${r}`,
+                worked: `$\\sqrt{${a}^2+${b}^2} = \\sqrt{${a * a + b * b}} \\approx ${r}$` };
+        }
         const [a, b, c] = _pythagTriple(rng, 3);
         return { clue: `Find the hypotenuse of a right-angled triangle with the two shorter sides $${a}\\text{ cm}$ and $${b}\\text{ cm}$.`,
             answer: String(c), answerDisplay: `$${c}\\text{ cm}$`,
@@ -7731,10 +7756,9 @@ function genPythagoras(rng, diff, allowedOps) {
             diagram: { type: 'right-triangle', a, b, c, missing: 'c' } };
     }
 
-    // --- Medium: hypotenuse, shorter side, rectangle diagonal, distance. ---
     if (diff === 'Medium') {
         const [a, b, c] = _pythagTriple(rng, 4);
-        const fam = ri(rng, 0, 3);
+        const fam = ri(rng, 0, 2);
         if (fam === 0) {
             return { clue: `Find the hypotenuse of a right-angled triangle with the two shorter sides $${a}\\text{ cm}$ and $${b}\\text{ cm}$.`,
                 answer: String(c), answerDisplay: `$${c}\\text{ cm}$`,
@@ -7742,12 +7766,6 @@ function genPythagoras(rng, diff, allowedOps) {
                 diagram: { type: 'right-triangle', a, b, c, missing: 'c' } };
         }
         if (fam === 1) {
-            return { clue: `A right-angled triangle has hypotenuse $${c}\\text{ cm}$ and one shorter side $${a}\\text{ cm}$. Find the length of the other side.`,
-                answer: String(b), answerDisplay: `$${b}\\text{ cm}$`,
-                worked: `$b = \\sqrt{${c}^2 - ${a}^2} = \\sqrt{${c * c - a * a}} = ${b}\\text{ cm}$`,
-                diagram: { type: 'right-triangle', a, b, c, missing: 'b' } };
-        }
-        if (fam === 2) {
             return { clue: `A rectangle is $${a}\\text{ cm}$ long and $${b}\\text{ cm}$ wide. Find the length of its diagonal.`,
                 answer: String(c), answerDisplay: `$${c}\\text{ cm}$`,
                 worked: `$d = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} = ${c}\\text{ cm}$`,
@@ -7762,35 +7780,17 @@ function genPythagoras(rng, diff, allowedOps) {
             diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true } };
     }
 
-    // --- Hard: applied, two-step, distance, and irrational (rounded). ---
-    const fam = ri(rng, 0, 3);
+    // Hard: two-step perimeter, distance (larger offsets), irrational (rounded).
+    const [a, b, c] = _pythagTriple(rng, 5);
+    const fam = ri(rng, 0, 2);
     if (fam === 0) {
-        // applied: ladder against a wall (find the height reached)
-        const [a, b, c] = _pythagTriple(rng, 5);
-        return { clue: `A $${c}\\text{ m}$ ladder leans against a wall with its base $${a}\\text{ m}$ from the wall. How high up the wall does it reach?`,
-            answer: String(b), answerDisplay: `$${b}\\text{ m}$`,
-            worked: `$h = \\sqrt{${c}^2 - ${a}^2} = \\sqrt{${c * c - a * a}} = ${b}\\text{ m}$`,
-            diagram: { type: 'right-triangle', a, b, c, missing: 'b' } };
+        const P = a + b + c;
+        return { clue: `A right-angled triangle has shorter sides $${a}\\text{ cm}$ and $${b}\\text{ cm}$. Find its perimeter.`,
+            answer: String(P), answerDisplay: `$${P}\\text{ cm}$`,
+            worked: `$c = \\sqrt{${a}^2 + ${b}^2} = ${c}$, so $P = ${a} + ${b} + ${c} = ${P}\\text{ cm}$`,
+            diagram: { type: 'right-triangle', a, b, c, missing: 'c' } };
     }
     if (fam === 1) {
-        // two-step: find perimeter or area of the right triangle
-        const [a, b, c] = _pythagTriple(rng, 5);
-        if (rng() < 0.5) {
-            const P = a + b + c;
-            return { clue: `A right-angled triangle has shorter sides $${a}\\text{ cm}$ and $${b}\\text{ cm}$. Find its perimeter.`,
-                answer: String(P), answerDisplay: `$${P}\\text{ cm}$`,
-                worked: `$c = \\sqrt{${a}^2 + ${b}^2} = ${c}$, so $P = ${a} + ${b} + ${c} = ${P}\\text{ cm}$`,
-                diagram: { type: 'right-triangle', a, b, c, missing: 'c' } };
-        }
-        const A = a * b / 2;
-        return { clue: `A right-angled triangle has hypotenuse $${c}\\text{ cm}$ and one shorter side $${a}\\text{ cm}$. Find its area.`,
-            answer: String(A), answerDisplay: `$${A}\\text{ cm}^2$`,
-            worked: `$b = \\sqrt{${c}^2 - ${a}^2} = ${b}$, so $A = \\tfrac{1}{2}\\times${a}\\times${b} = ${A}\\text{ cm}^2$`,
-            diagram: { type: 'right-triangle', a, b, c, missing: 'b' } };
-    }
-    if (fam === 2) {
-        // distance between two points (larger offsets allowed)
-        const [a, b, c] = _pythagTriple(rng, 5);
         const x1 = ri(rng, -5, 1), y1 = ri(rng, -5, 1);
         const x2 = x1 + a, y2 = y1 + b;
         return { clue: `Find the distance between the points $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
@@ -7799,12 +7799,65 @@ function genPythagoras(rng, diff, allowedOps) {
             diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true } };
     }
     // irrational hypotenuse, rounded to 1 dp
-    const a = ri(rng, 4, 12), b = ri(rng, 4, 14);
-    const hr = Math.round(Math.sqrt(a * a + b * b) * 10) / 10;
-    return { clue: `A right-angled triangle has the two shorter sides $${a}\\text{ cm}$ and $${b}\\text{ cm}$. Find the hypotenuse, correct to 1 decimal place.`,
+    const ia = ri(rng, 4, 12), ib = ri(rng, 4, 14);
+    const hr = Math.round(Math.sqrt(ia * ia + ib * ib) * 10) / 10;
+    return { clue: `A right-angled triangle has the two shorter sides $${ia}\\text{ cm}$ and $${ib}\\text{ cm}$. Find the hypotenuse, correct to 1 decimal place.`,
         answer: String(hr), answerDisplay: `$${hr}\\text{ cm}$`,
-        worked: `$c = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} \\approx ${hr}\\text{ cm}$`,
-        diagram: { type: 'right-triangle', a, b, c: hr, missing: 'c' } };
+        worked: `$c = \\sqrt{${ia}^2 + ${ib}^2} = \\sqrt{${ia * ia + ib * ib}} \\approx ${hr}\\text{ cm}$`,
+        diagram: { type: 'right-triangle', a: ia, b: ib, c: hr, missing: 'c' } };
+}
+
+// 'short-side': find a leg, b = √(c²-a²).
+function _genPythagShortSide(rng, diff) {
+    if (diff === 'Easy') {
+        const [a, b, c] = _pythagTriple(rng, 3);
+        return { clue: `A right-angled triangle has hypotenuse $${c}\\text{ cm}$ and one shorter side $${a}\\text{ cm}$. Find the length of the other side.`,
+            answer: String(b), answerDisplay: `$${b}\\text{ cm}$`,
+            worked: `$b = \\sqrt{${c}^2 - ${a}^2} = \\sqrt{${c * c - a * a}} = ${b}\\text{ cm}$`,
+            diagram: { type: 'right-triangle', a, b, c, missing: 'b' } };
+    }
+
+    if (diff === 'Medium') {
+        const [a, b, c] = _pythagTriple(rng, 4);
+        return { clue: `A right-angled triangle has hypotenuse $${c}\\text{ cm}$ and one shorter side $${a}\\text{ cm}$. Find the length of the other side.`,
+            answer: String(b), answerDisplay: `$${b}\\text{ cm}$`,
+            worked: `$b = \\sqrt{${c}^2 - ${a}^2} = \\sqrt{${c * c - a * a}} = ${b}\\text{ cm}$`,
+            diagram: { type: 'right-triangle', a, b, c, missing: 'b' } };
+    }
+
+    // Hard: applied ladder problem, or a two-step area problem.
+    const [a, b, c] = _pythagTriple(rng, 5);
+    if (rng() < 0.5) {
+        return { clue: `A $${c}\\text{ m}$ ladder leans against a wall with its base $${a}\\text{ m}$ from the wall. How high up the wall does it reach?`,
+            answer: String(b), answerDisplay: `$${b}\\text{ m}$`,
+            worked: `$h = \\sqrt{${c}^2 - ${a}^2} = \\sqrt{${c * c - a * a}} = ${b}\\text{ m}$`,
+            diagram: { type: 'right-triangle', a, b, c, missing: 'b' } };
+    }
+    const A = a * b / 2;
+    return { clue: `A right-angled triangle has hypotenuse $${c}\\text{ cm}$ and one shorter side $${a}\\text{ cm}$. Find its area.`,
+        answer: String(A), answerDisplay: `$${A}\\text{ cm}^2$`,
+        worked: `$b = \\sqrt{${c}^2 - ${a}^2} = ${b}$, so $A = \\tfrac{1}{2}\\times${a}\\times${b} = ${A}\\text{ cm}^2$`,
+        diagram: { type: 'right-triangle', a, b, c, missing: 'b' } };
+}
+
+function genPythagoras(rng, diff, allowedOps) {
+    const wantIdentify   = !allowedOps || allowedOps.includes('identify');
+    const wantHypotenuse = !allowedOps || allowedOps.includes('hypotenuse');
+    const wantShortSide  = !allowedOps || allowedOps.includes('short-side');
+    const wantTriads     = !allowedOps || allowedOps.includes('triads');
+    if (!wantIdentify && !wantHypotenuse && !wantShortSide && !wantTriads) return null;
+
+    const families = [];
+    if (wantIdentify)   families.push('identify');
+    if (wantHypotenuse) families.push('hypotenuse');
+    if (wantShortSide)  families.push('short-side');
+    if (wantTriads)      families.push('triads');
+    const family = rc(rng, families);
+
+    if (family === 'identify')    return _genPythagIdentify(rng);
+    if (family === 'triads')      return _genPythagTriad(rng);
+    if (family === 'hypotenuse')  return _genPythagHypotenuse(rng, diff);
+    return _genPythagShortSide(rng, diff);
 }
 
 // ---- Properties of Geometrical Figures: angle relationships (S4)
