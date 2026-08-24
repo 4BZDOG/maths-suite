@@ -114,22 +114,29 @@ const _CARET_RE = /\^\(/;
 // drawSup() remaps those to the ASCII spellings in _WINANSI_MAP as it draws, so
 // every symbol prints as something correct instead of disappearing. (The
 // superscript glyphs are handled separately above — they stay raised, not ASCII.)
+// √ is the one exception: rather than spell it out as "sqrt", it's drawn as a
+// small vector tick (see _drawRadical below) — real vector strokes need no font
+// glyph at all, so the actual radical symbol survives even though the font can't
+// render it as text.
 const _SYMBOL_RE = /[π≈≤≥≠√∞θαβγ∠→□]/;
 const _needsRich = s => _SUP_RE.test(s || '') || _CARET_RE.test(s || '') || _SYMBOL_RE.test(s || '');
 
 /** True when the string contains a superscript glyph or a "^(…)" caret run. */
 export function hasSuperscript(s) { return _SUP_RE.test(s || '') || _CARET_RE.test(s || ''); }
 
-// Split a string into consecutive { sup, text } runs: Unicode superscript glyphs
-// are de-superscripted back to ASCII, "^(inner)" caret fallbacks contribute their
-// inner text as a superscript run, and out-of-subset symbols are remapped to
-// their ASCII spelling so they survive the font subset.
+// Split a string into consecutive { sup, text } or { radical: true } runs:
+// Unicode superscript glyphs are de-superscripted back to ASCII, "^(inner)"
+// caret fallbacks contribute their inner text as a superscript run, √ becomes
+// its own standalone radical run (drawn as vector strokes, not text), and
+// other out-of-subset symbols are remapped to their ASCII spelling so they
+// survive the font subset.
 function _superscriptRuns(s) {
     const runs = [];
     let buf = '', sup = false;
+    const flush = () => { if (buf) { runs.push({ sup, text: buf }); buf = ''; } };
     const push = (isSup, text) => {
         if (isSup === sup) { buf += text; }
-        else { if (buf) runs.push({ sup, text: buf }); buf = text; sup = isSup; }
+        else { flush(); sup = isSup; buf = text; }
     };
     for (let i = 0; i < s.length; i++) {
         const ch = s[i];
@@ -137,12 +144,44 @@ function _superscriptRuns(s) {
             const close = s.indexOf(')', i + 2);
             if (close !== -1) { push(true, s.slice(i + 2, close)); i = close; continue; }
         }
+        if (ch === '√') { flush(); runs.push({ radical: true }); continue; }
         const isSup = _SUP_RE.test(ch);
         if (isSup) { push(true, _SUP_DOWN[ch] || ch); }
         else       { push(false, ch in _WINANSI_MAP ? _WINANSI_MAP[ch] : ch); }
     }
-    if (buf) runs.push({ sup, text: buf });
+    flush();
     return runs;
+}
+
+// ─── Vector radical (√) mark ─────────────────────────────────────────────────
+// Drawn as 2 strokes (short dip, then a rise) forming the left "tick" of a
+// radical sign — legible on its own ahead of the "(…)" that already wraps the
+// radicand, without needing a font glyph or a full vinculum overline.
+function _radicalWidth(fontSizePt) {
+    return fontSizePt * 0.352778 * 0.40; // pt → mm, tuned to the stroke geometry below
+}
+
+function _currentDrawColor(doc) {
+    try {
+        const c = doc.getTextColor();
+        if (typeof c === 'string') {
+            const hex = c.replace('#', '');
+            if (hex.length === 6) {
+                return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+            }
+        }
+    } catch (_e) { /* fall through to default */ }
+    return [15, 23, 42]; // matches the app's default clue/answer text colour
+}
+
+function _drawRadical(doc, x, y, fontSizePt) {
+    const h = fontSizePt * 0.352778; // pt → mm, matches the "latin" subset's cap height
+    const [r, g, b] = _currentDrawColor(doc);
+    doc.setDrawColor(r, g, b);
+    doc.setLineWidth(Math.max(0.11, h * 0.06));
+    doc.line(x,            y - h * 0.20, x + h * 0.12, y + h * 0.06);
+    doc.line(x + h * 0.12, y + h * 0.06, x + h * 0.34, y - h * 0.62);
+    return x + _radicalWidth(fontSizePt);
 }
 
 // Superscript glyphs render at 70% size; the raised runs sit ~32% of the cap
@@ -160,7 +199,9 @@ export function measureSup(doc, text, fontSizePt) {
     if (!_needsRich(text)) return doc.getTextWidth(text);
     let w = 0;
     for (const run of _superscriptRuns(text)) {
-        if (run.sup) {
+        if (run.radical) {
+            w += _radicalWidth(fontSizePt);
+        } else if (run.sup) {
             doc.setFontSize(fontSizePt * _SUP_SCALE);
             w += doc.getTextWidth(run.text);
             doc.setFontSize(fontSizePt);
@@ -183,7 +224,9 @@ export function drawSup(doc, text, x, y, fontSizePt) {
     const rise = fontSizePt * _SUP_RISE;
     let cx = x;
     for (const run of _superscriptRuns(text)) {
-        if (run.sup) {
+        if (run.radical) {
+            cx = _drawRadical(doc, cx, y, fontSizePt);
+        } else if (run.sup) {
             doc.setFontSize(fontSizePt * _SUP_SCALE);
             doc.text(run.text, cx, y - rise);
             cx += doc.getTextWidth(run.text);
