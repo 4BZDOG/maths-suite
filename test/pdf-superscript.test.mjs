@@ -5,24 +5,34 @@
 // only carries ¹²³ (Latin-1); the U+2070 block (⁰⁴⁵⁶⁷⁸⁹ⁿ) is absent, so an
 // exponent like x⁶ or 5⁰ silently vanished in the PDF answer key. drawSup()
 // renders every exponent as a smaller, RAISED ASCII glyph (always present in
-// the subset) instead of trusting the superscript codepoints. These tests lock
-// that in: no Unicode superscript glyph may reach doc.text(), and the exponent
-// digit must be drawn smaller and above the baseline.
+// the subset) instead of trusting the superscript codepoints, and draws √ as
+// real vector strokes rather than a font glyph (also missing from the subset).
+// These tests lock that in: no Unicode superscript glyph may reach doc.text(),
+// the exponent digit must be drawn smaller and above the baseline, and √ must
+// never be spelled out as the literal word "sqrt".
 // =============================================================
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { drawSup, measureSup, hasSuperscript, latexToText } from '../pdf/pdfHelpers.js';
 import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
 
-// Minimal jsPDF stand-in: records every text() call with the active font size.
+// Minimal jsPDF stand-in: records every text() call with the active font size,
+// plus every line() call (drawSup draws √ as vector strokes, not text, since
+// the embedded font subset has no √ glyph — see _drawRadical in pdfHelpers.js).
 function mockDoc() {
     const calls = [];
+    const lines = [];
     let size = 10;
     return {
         calls,
+        lines,
         setFontSize(s) { size = s; },
         getTextWidth(t) { return t.length * size * 0.5; },
         text(t, x, y) { calls.push({ t, x, y, size }); },
+        getTextColor() { return '#0f172a'; },
+        setDrawColor() {},
+        setLineWidth() {},
+        line(x1, y1, x2, y2) { lines.push({ x1, y1, x2, y2 }); },
     };
 }
 
@@ -92,12 +102,14 @@ test('the "^(?)" missing-index fallback renders as a raised "?" — never a lite
 
 // The fontsource "latin" subset is also missing every non-Latin-1 math symbol
 // (√ π θ ∠ ≈ ≤ ≥ ≠ ∞ → □) and the combining macron, so they vanished in the PDF
-// too — an answer of 2√(3) printed as "2(3)". drawSup must remap them to ASCII.
+// too — an answer of 2√(3) printed as "2(3)". drawSup must remap them to ASCII —
+// except √, which is drawn as real vector strokes (_drawRadical) instead of the
+// ASCII word "sqrt", since a genuine radical symbol is available with no font
+// glyph needed at all. Either way, none of these ever reach doc.text() as-is.
 const OUT_OF_SUBSET = /[√π≈≤≥≠∞θαβγ∠→□]/;
 
 test('drawSup remaps out-of-subset math symbols to ASCII (none reach the page)', () => {
     const cases = [
-        ['$2\\sqrt{3}$',          '2sqrt(3)'],   // was rendering as "2(3)" — wrong answer!
         ['$\\theta = 12.7$°',     'theta = 12.7°'],
         ['$\\pi \\approx 3.14$',  'pi ~ 3.14'],
         ['$\\angle A = 60$°',     'angle A = 60°'],
@@ -112,6 +124,30 @@ test('drawSup remaps out-of-subset math symbols to ASCII (none reach the page)',
         assert.equal(drawn, expected, `${input} → ${JSON.stringify(drawn)} (expected ${JSON.stringify(expected)})`);
         assert.ok(!OUT_OF_SUBSET.test(drawn), `out-of-subset glyph survived: ${drawn}`);
     }
+});
+
+test('drawSup draws √ as a real vector radical, not the ASCII word "sqrt"', () => {
+    // Regression: √ used to be spelled out as the literal word "sqrt" (a
+    // readability compromise for a missing glyph). It's now drawn as an actual
+    // radical mark — 2 line strokes — positioned between the surrounding text.
+    const doc = mockDoc();
+    const text = latexToText('$2\\sqrt{3}$');   // "2√(3)"
+    const endX = drawSup(doc, text, 0, 100, 10);
+
+    const drawn = doc.calls.map(c => c.t).join('');
+    assert.equal(drawn, '2(3)', `expected the radical itself to be drawn as vector lines, not text: got "${drawn}"`);
+    assert.ok(!/sqrt/i.test(drawn), `√ was spelled out as ASCII text instead of drawn as a symbol: "${drawn}"`);
+    assert.equal(doc.lines.length, 2, `expected 2 line strokes for the radical mark, got ${doc.lines.length}`);
+
+    // The radical's strokes must sit between the "2" and the "(3)" — not
+    // overlapping either, and not off at the wrong end of the string.
+    const twoCall  = doc.calls.find(c => c.t === '2');
+    const parenCall = doc.calls.find(c => c.t === '(3)');
+    assert.ok(twoCall && parenCall, 'both surrounding text runs were drawn');
+    const radicalX = doc.lines[0].x1;
+    assert.ok(radicalX >= twoCall.x, 'radical starts at or after the "2"');
+    assert.ok(parenCall.x >= radicalX, 'radical is drawn before the "(3)"');
+    assert.equal(endX, parenCall.x + doc.getTextWidth('(3)'), 'final advance accounts for the radical width');
 });
 
 test('no generated field leaves an out-of-subset glyph on the page after drawSup', () => {
