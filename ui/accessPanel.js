@@ -16,7 +16,7 @@ import {
     clearFeatureOverrides,
     getCurrentTier,
 } from '../payments/access.js';
-import { esc } from '../renderers/htmlUtils.js';
+import { esc, escJsAttr } from '../renderers/htmlUtils.js';
 
 const OVERLAY_ID = 'access-panel-overlay';
 
@@ -111,7 +111,7 @@ function _renderBody() {
     html += `<div class="acp-group-btns">`;
     for (const [id, group] of Object.entries(GROUPS)) {
         const active = activeGroup === id ? ' active' : '';
-        html += `<button class="acp-group-btn${active}" data-group-id="${esc(id)}" onclick="applyGroupPreset('${esc(id)}')" title="${esc(group.description)}">${esc(group.label)}</button>`;
+        html += `<button class="acp-group-btn${active}" data-group-id="${esc(id)}" onclick="applyGroupPreset('${escJsAttr(id)}')" title="${esc(group.description)}">${esc(group.label)}</button>`;
     }
     html += `</div>`;
     html += `</div>`;
