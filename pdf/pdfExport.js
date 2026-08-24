@@ -1231,7 +1231,7 @@ function _convertMathAtomic(clue, open, close) {
  * @param {number} lineH  Line height (mm)
  * @returns {number}  Final baseline Y after last drawn character
  */
-function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, lineH) {
+export function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, lineH) {
     // Multi-line clues (stem\nequation[\nequation2]) — draw stem, then each
     // equation line indented on its own line with a full lineH gap.
     const nlIdx = (clue || '').indexOf('\n');
@@ -1240,7 +1240,23 @@ function _drawClueInline(doc, clue, x, y, maxW, fontSizePt, pdfFont, color, line
         const eqs  = clue.slice(nlIdx + 1).split('\n');
         let curY = _drawClueInline(doc, stem, x, y, maxW, fontSizePt, pdfFont, color, lineH);
         for (const eq of eqs) {
-            curY = _drawClueInline(doc, eq.trim(), x + 2, curY + lineH, maxW - 2, fontSizePt, pdfFont, color, lineH);
+            const trimmed = eq.trim();
+            const nextY = curY + lineH;
+            if (hasFraction(trimmed)) {
+                // An equation-only line carrying \frac{}{} is itself exactly the
+                // single-line fraction clue drawFractionClue already stacks
+                // correctly (numerator / bar / denominator) — it only stayed
+                // unreached before because the *whole* "stem\nequation" clue
+                // never counted as single-line at the call site, so it fell
+                // through to plain text and flattened to "t/9" instead of a
+                // stacked fraction. Use the real reported footprint (not the
+                // fixed lineH) to place whatever comes next, or the diagram/
+                // working section below would collide with the denominator.
+                const r = drawFractionClue(doc, trimmed, x + 2, nextY, { fontSizePt, pdfFont, color });
+                curY = nextY + r.belowBaseline;
+            } else {
+                curY = _drawClueInline(doc, trimmed, x + 2, nextY, maxW - 2, fontSizePt, pdfFont, color, lineH);
+            }
         }
         return curY;
     }
@@ -1445,9 +1461,17 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
         const clueText   = latexToText(item.clue || '');
         const clueLines  = doc.splitTextToSize(clueText, colW - 14);
         const isFraction = hasFraction(item.clue) && clueLines.length === 1;
+        // Multi-line clues (e.g. "Solve:\n$\dfrac{t}{9}=12$") can't take the
+        // single-line isFraction path above, but _drawClueInline still stacks
+        // any fraction-bearing equation line — each such line needs ~3
+        // line-heights (numerator+bar+denominator) instead of 1, same as the
+        // single-line case, or the diagram/working section below would
+        // overlap the denominator.
+        const extraFractionLines = isFraction ? 0
+            : (item.clue || '').split('\n').filter(l => hasFraction(l)).length;
         const clueBlockH = isFraction
             ? 3 * 4.5 * pScale
-            : clueLines.length * 4.5 * pScale;
+            : (clueLines.length + extraFractionLines * 2) * 4.5 * pScale;
 
         const workingCount = item.difficulty === 'Hard' ? 3 : item.difficulty === 'Medium' ? 2 : 1;
         // Use item.notes (specific sub-topic key) for outcome lookup — item.topic is broad category
