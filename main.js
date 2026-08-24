@@ -2,7 +2,7 @@
 // main.js — Application entry point (Maths Question Sets Edition)
 // =============================================================
 import { state, ALL_SUBTOPICS, SUB_OPS, setGeneratedSets, setActivePage, applyStateToDOM, syncSettingsFromDOM, topicSlug, sanitizeImportedState } from './core/state.js';
-import { esc } from './renderers/htmlUtils.js';
+import { esc, escJsAttr } from './renderers/htmlUtils.js';
 import { getOutcomesForTopics, getTopicsForOutcomeCodes, getTopicsForStage, STAGE_OUTCOMES, STRANDS, TOPIC_STRAND_MAP } from './core/outcomes.js';
 import { pushHistory, undo, redo } from './core/history.js';
 import { saveState, loadRawState, hardReset } from './core/storage.js';
@@ -967,17 +967,6 @@ function _updateTopicWarnings(sets) {
     });
 }
 
-// Escape a string for safe embedding inside a single-quoted JS string literal
-// within an inline HTML event-handler attribute, e.g. onclick="fn('${_jsAttr(x)}')".
-// Topic/strand/sub-op names come from our own syllabus data (not user input),
-// but names containing an apostrophe — e.g. "Pythagoras' Theorem" — previously
-// broke these handlers outright (the unescaped quote terminated the JS string
-// early, throwing "SyntaxError: missing ) after argument list" on every click,
-// so the topic could never actually be selected despite the checkbox looking checked).
-function _jsAttr(str) {
-    return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-}
-
 function _buildSubOpsPanels() {
     const stageTopics = getTopicsForStage(state.stage);
     stageTopics.forEach(t => {
@@ -1000,7 +989,7 @@ function _buildSubOpsPanels() {
                     : '';
                 return `<label class="sub-op-row">
                     <input type="checkbox" id="subop-${topicId}-${op.key}" ${checked ? 'checked' : ''}
-                           onchange="toggleSubOp('${_jsAttr(t)}', '${_jsAttr(op.key)}')">
+                           onchange="toggleSubOp('${escJsAttr(t)}', '${escJsAttr(op.key)}')">
                     <span class="sub-op-name"><i class="fas fa-angle-right sub-op-icon"></i><span>${op.label}</span>${pathBadge}</span>
                 </label>`;
             };
@@ -1076,7 +1065,7 @@ function renderTopicTogglesByStrand() {
         const collapsed = _collapsedStrands.has(strand);
         html += `<div class="strand-group${collapsed ? ' collapsed' : ''}" data-strand="${_strandSlug(strand)}">`
               + `<button type="button" class="strand-heading" aria-expanded="${collapsed ? 'false' : 'true'}" `
-              + `onclick="toggleStrandCollapse('${_jsAttr(strand)}')">`
+              + `onclick="toggleStrandCollapse('${escJsAttr(strand)}')">`
               + `<i class="strand-chevron fas fa-chevron-down" aria-hidden="true"></i>${strand}`
               + `<span class="strand-count" id="strand-count-${_strandSlug(strand)}" `
               + `title="${sel} of ${topicsInStrand.length} topics selected in this strand">`
@@ -1103,12 +1092,12 @@ function renderTopicTogglesByStrand() {
             html += `<div class="topic-group">
                 <label class="topic-toggle-row">
                     <input type="checkbox" id="topic-${topicId}" ${checked}
-                           onchange="toggleTopic('${_jsAttr(t)}')">
+                           onchange="toggleTopic('${escJsAttr(t)}')">
                     <span class="topic-toggle-name"><i class="${meta.icon} topic-icon"></i>${meta.label}</span>
                     ${chipHtml}
                     <span class="topic-qcount" id="topic-qcount-${topicId}" hidden></span>
                     <span class="sub-op-badge" id="sub-badge-${topicId}" hidden></span>
-                    <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('${_jsAttr(t)}')">
+                    <button class="topic-expand-btn" onclick="event.preventDefault();toggleTopicExpand('${escJsAttr(t)}')">
                         <i class="fas fa-chevron-down"></i>
                     </button>
                 </label>

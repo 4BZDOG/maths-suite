@@ -8,6 +8,17 @@ export function esc(str) {
         .replace(/"/g, '&quot;');
 }
 
+// Escape a string for safe embedding inside a single-quoted JS string literal
+// within an inline HTML event-handler attribute, e.g. onclick="fn('${escJsAttr(x)}')".
+// esc() alone is NOT sufficient here — it never escapes apostrophes, so a value
+// containing one (e.g. a topic name like "Pythagoras' Theorem") terminates the
+// JS string literal early and throws "SyntaxError: missing ) after argument
+// list" on every click, silently breaking the handler (see main.js's _jsAttr,
+// which fixed the same bug for the topic-toggle checkboxes).
+export function escJsAttr(str) {
+    return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
 // Two-stage verb detection so emphasis is consistent across clue styles:
 //   1. VERB_PHRASE_RE — short prefix terminated by ": " (e.g. "Calculate:",
 //      "Find $x$:"). Excludes '*' so we never collide with inline italics.
