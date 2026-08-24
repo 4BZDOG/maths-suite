@@ -282,7 +282,9 @@ export const SUB_OPS = {
         { key: 'zones',    label: 'Time zones' },
     ],
     "Pythagoras' Theorem": [
+        { key: 'identify',   label: 'Identify & define the theorem' },
         { key: 'pythagoras', label: 'Find a side' },
+        { key: 'triads',     label: 'Prove Pythagorean triads' },
     ],
     // ─── Statistics & Probability focus areas (NESA structure) ──────────
     'Data Classification and Visualisation': [
@@ -7657,8 +7659,12 @@ function genDataViz(rng, diff, allowedOps) {
 
 // ---- Pythagoras' Theorem ----
 // A fresh integer triple every call (Euclid's formula) instead of a fixed list
-// of 8, plus several question families (hypotenuse, shorter side, rectangle
-// diagonal, distance between points, applied ladder, two-step perimeter/area).
+// of 8, plus several question families across 3 sub-ops:
+//   'identify'   — state the theorem, or name the hypotenuse from a diagram.
+//   'pythagoras' — "Find a side" (hypotenuse, shorter side, rectangle
+//                  diagonal, distance between points, applied ladder,
+//                  two-step perimeter/area).
+//   'triads'     — verify whether 3 given side lengths satisfy a²+b²=c².
 function _pythagTriple(rng, maxM) {
     // m > n > 0 → a = m²−n², b = 2mn, c = m²+n² is always a Pythagorean triple.
     for (let t = 0; t < 30; t++) {
@@ -7671,10 +7677,52 @@ function _pythagTriple(rng, maxM) {
     return [3, 4, 5];
 }
 
-function genPythagoras(rng, diff, allowedOps) {
-    if (allowedOps && !allowedOps.includes('pythagoras')) return null;
+// 'identify': state the theorem as an equation, or name the hypotenuse from
+// a (genuine) right-triangle diagram. No difficulty tiering — both are
+// introductory, conceptual checks appropriate at any level.
+function _genPythagIdentify(rng) {
+    if (rng() < 0.5) {
+        return { clue: `State Pythagoras' theorem as an equation, using $a$ and $b$ for the two shorter sides and $c$ for the hypotenuse.`,
+            answer: 'a²+b²=c²', answerDisplay: '$a^2+b^2=c^2$',
+            worked: `Pythagoras' theorem: $a^2+b^2=c^2$.` };
+    }
+    const [a, b, c] = _pythagTriple(rng, 4);
+    return { clue: `In the right-angled triangle shown, which side is the hypotenuse?`,
+        answer: 'hypotenuse', answerDisplay: 'hypotenuse',
+        worked: `The hypotenuse is the longest side — the one opposite the right angle.`,
+        diagram: { type: 'right-triangle', a, b, c, missing: null } };
+}
 
-    // --- Easy: find the hypotenuse from a small triple, with a diagram. ---
+// 'triads': verify a²+b²=c² for 3 given side lengths. Roughly half the time
+// perturb c so a genuine "No" case exists too — always computed live, never
+// assumed, so a wrong perturbation can never silently produce a false "Yes".
+// No diagram: a right-angle diagram would visually assert the very fact
+// (is this a right triangle?) the question asks the student to determine.
+function _genPythagTriad(rng) {
+    let [a, b, c] = _pythagTriple(rng, 5);
+    if (rng() < 0.5) c += ri(rng, 1, 2);
+    const isTriad = a * a + b * b === c * c;
+    return { clue: `Determine whether a triangle with sides $${a}\\text{ cm}$, $${b}\\text{ cm}$ and $${c}\\text{ cm}$ satisfies Pythagoras' theorem (i.e. is $(${a}, ${b}, ${c})$ a Pythagorean triad?).`,
+        answer: isTriad ? 'Yes' : 'No', answerDisplay: isTriad ? 'Yes' : 'No',
+        worked: `$${a}^2 + ${b}^2 = ${a * a + b * b}$ and $${c}^2 = ${c * c}$ — ${isTriad ? 'equal, so it is a Pythagorean triad.' : 'not equal, so it is not a Pythagorean triad.'}` };
+}
+
+function genPythagoras(rng, diff, allowedOps) {
+    const wantIdentify = !allowedOps || allowedOps.includes('identify');
+    const wantFind      = !allowedOps || allowedOps.includes('pythagoras');
+    const wantTriads    = !allowedOps || allowedOps.includes('triads');
+    if (!wantIdentify && !wantFind && !wantTriads) return null;
+
+    const families = [];
+    if (wantIdentify) families.push('identify');
+    if (wantTriads)   families.push('triads');
+    if (wantFind)     families.push('find');
+    const family = rc(rng, families);
+
+    if (family === 'identify') return _genPythagIdentify(rng);
+    if (family === 'triads')   return _genPythagTriad(rng);
+
+    // --- 'find a side' — Easy: hypotenuse from a small triple, with a diagram. ---
     if (diff === 'Easy') {
         const [a, b, c] = _pythagTriple(rng, 3);
         return { clue: `Find the hypotenuse of a right-angled triangle with the two shorter sides $${a}\\text{ cm}$ and $${b}\\text{ cm}$.`,
