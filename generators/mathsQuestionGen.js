@@ -21,6 +21,19 @@ function ri(rng, min, max) { return Math.floor(rng() * (max - min + 1)) + min; }
 function rc(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
 function round(n, dp) { const f = Math.pow(10, dp); return Math.round(n * f) / f; }
 
+// Round a value given as an integer scaled by 10^(dp+1) down to `dp` decimal
+// places, half-up, using exact integer arithmetic — and report the deciding
+// digit alongside it. Doing this on the float breaks both halves of a rounding
+// question: Math.floor(40.358 * 10000) % 10 is 9 (the double is 40.35799999…),
+// so the key printed "4th d.p. 9 ≥ 5, round up" for a trailing 0; and
+// Math.round(2.0115 * 1000) is 2011, rounding a deciding 5 *down* against the
+// stated rule. Keeping it in integers keeps answer and explanation in step.
+function roundHalfUp(scaled, dp) {
+    const deciding = scaled % 10;
+    const answer = (Math.floor(scaled / 10) + (deciding >= 5 ? 1 : 0)) / Math.pow(10, dp);
+    return { deciding, answer: answer.toFixed(dp), dir: deciding >= 5 ? '≥ 5, round up' : '< 5, round down' };
+}
+
 // Format a number as a 2-decimal-place currency string. Used in answerDisplay
 // so dollar amounts always render as "$17.40" (not "$17.4").
 function money(n) { return Number(n).toFixed(2); }
@@ -1141,28 +1154,28 @@ function genRounding(rng, diff, allowedOps) {
             return { clue: ph, answer: String(ans), worked: `$${n} \\to ${ans}$ (tens digit $${dM0}$ ${dirM0})` };
         }
         if (type === 1) {
-            const n = ri(rng, 100, 9999) / 100;
+            const scaled1 = ri(rng, 100, 9999);
+            const n = scaled1 / 100;
             const display = n.toFixed(2);
-            const deciding1 = Math.floor(n * 100) % 10;
-            const dir1dp = deciding1 >= 5 ? '≥ 5, round up' : '< 5, round down';
+            const { deciding: deciding1, answer: ans1dp, dir: dir1dp } = roundHalfUp(scaled1, 1);
             const ph = rc(rng, [
                 `Round $${display}$ to *1 decimal place*`,
                 `Write $${display}$ correct to *1 decimal place*`,
                 `Express $${display}$ to *1 decimal place*`,
             ]);
-            return { clue: ph, answer: round(n, 1).toFixed(1), worked: `$${display} \\to ${round(n, 1).toFixed(1)}$ (2nd d.p. digit $${deciding1}$ ${dir1dp})` };
+            return { clue: ph, answer: ans1dp, worked: `$${display} \\to ${ans1dp}$ (2nd d.p. digit $${deciding1}$ ${dir1dp})` };
         }
         if (type === 2) {
-            const n = ri(rng, 1000, 99999) / 1000;
+            const scaled2 = ri(rng, 1000, 99999);
+            const n = scaled2 / 1000;
             const display = n.toFixed(3);
-            const deciding2 = Math.floor(n * 1000) % 10;
-            const dir2dp = deciding2 >= 5 ? '≥ 5, round up' : '< 5, round down';
+            const { deciding: deciding2, answer: ans2dp, dir: dir2dp } = roundHalfUp(scaled2, 2);
             const ph = rc(rng, [
                 `Round $${display}$ to *2 decimal places*`,
                 `Write $${display}$ correct to *2 decimal places*`,
                 `Express $${display}$ to 2 d.p.`,
             ]);
-            return { clue: ph, answer: round(n, 2).toFixed(2), worked: `$${display} \\to ${round(n, 2).toFixed(2)}$ (3rd d.p. digit $${deciding2}$ ${dir2dp})` };
+            return { clue: ph, answer: ans2dp, worked: `$${display} \\to ${ans2dp}$ (3rd d.p. digit $${deciding2}$ ${dir2dp})` };
         }
         if (type === 4) {
             // Estimation by rounding each factor to the nearest 10, then multiplying.
@@ -1240,16 +1253,16 @@ function genRounding(rng, diff, allowedOps) {
         // round to 3 or 4 decimal places (the source value carries one extra place)
         const dp = rc(rng, [3, 4]);
         const denom = Math.pow(10, dp + 1);
-        const n = ri(rng, denom, denom * 100 - 1) / denom;
+        const scaledDp = ri(rng, denom, denom * 100 - 1);
+        const n = scaledDp / denom;
         const display = n.toFixed(dp + 1);
-        const decidingDp = Math.floor(n * denom) % 10;
-        const dirDp = decidingDp >= 5 ? '≥ 5, round up' : '< 5, round down';
+        const { deciding: decidingDp, answer: ansDp, dir: dirDp } = roundHalfUp(scaledDp, dp);
         const ph = rc(rng, [
             `Round $${display}$ to ${dp} decimal places`,
             `Express $${display}$ correct to ${dp} decimal places`,
             `Write $${display}$ to ${dp} d.p.`,
         ]);
-        return { clue: ph, answer: round(n, dp).toFixed(dp), worked: `$${display} \\to ${round(n, dp).toFixed(dp)}$ (${dp + 1}th d.p. $${decidingDp}$ ${dirDp})` };
+        return { clue: ph, answer: ansDp, worked: `$${display} \\to ${ansDp}$ (${dp + 1}th d.p. digit $${decidingDp}$ ${dirDp})` };
     }
     if (type === 2) {
         const sigFigs = rc(rng, [1, 2]);

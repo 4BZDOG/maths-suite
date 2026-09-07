@@ -144,3 +144,48 @@ test('latexToText: markdown emphasis markers are stripped (not leaked as raw ast
         assert.ok(!/\*/.test(actual), `emphasis markers leaked: ${actual}`);
     }
 });
+
+test('latexToText: a mixed number keeps the whole part separate from the fraction', () => {
+    // Regression: "$2\frac{2}{63}$" converted to "22/63" — the answer key for
+    // "Evaluate 3 8/9 − 1 6/7" printed 22/63 instead of 2 2/63. Any digit sitting
+    // directly in front of a \frac is a mixed number and needs a gap.
+    const cases = [
+        [String.raw`$2\frac{2}{63}$`,                        '2 2/63'],
+        [String.raw`$2\frac{2}{3}$`,                         '2 2/3'],
+        [String.raw`$2\dfrac{2}{3}$`,                        '2 2/3'],
+        [String.raw`Evaluate $3\frac{8}{9} - 1\frac{6}{7}$`, 'Evaluate 3 8/9 - 1 6/7'],
+        [String.raw`$\frac{1}{2}$`,                          '1/2'],   // plain fraction unchanged
+    ];
+    for (const [input, expected] of cases) {
+        const actual = latexToText(input);
+        assert.equal(actual, expected,
+            `latexToText(${JSON.stringify(input)}) → ${JSON.stringify(actual)} (expected ${JSON.stringify(expected)})`);
+    }
+});
+
+test('latexToText: no generated mixed number collapses into a single fraction', () => {
+    // Every "W\frac{N}{D}" in a generated field must survive as "W N/D".
+    const MIXED = /(\d+)\s*\\d?frac\s*\{(\d+)\}\s*\{(\d+)\}/g;
+    const offenders = [];
+    for (const topic of ALL_TOPICS) {
+        for (const diff of ['Easy', 'Medium', 'Hard']) {
+            for (let seed = 1; seed <= 80; seed++) {
+                let qs;
+                try { qs = gen(topic, diff, seed); } catch { continue; }
+                for (const q of qs) {
+                    for (const field of ['clue', 'answer', 'answerDisplay', 'worked']) {
+                        const v = String(q[field] ?? '');
+                        const out = latexToText(v);
+                        for (const [, whole, num, den] of v.matchAll(MIXED)) {
+                            if (!out.includes(`${whole} ${num}/${den}`)) {
+                                offenders.push(`${topic}/${diff} ${field}: ${v} → ${out}`);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert.equal(offenders.length, 0,
+        `mixed number collapsed during conversion:\n  ${offenders.slice(0, 8).join('\n  ')}`);
+});
