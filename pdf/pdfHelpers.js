@@ -281,6 +281,12 @@ function _parseLatex(s) {
         // Square root: \sqrt{x} → √(x)
         .replace(/\\sqrt\{([^}]+)\}/g, '√($1)')
         .replace(/\\sqrt\s+(\S+)/g,    '√$1')
+        // Mixed numbers: "2\frac{2}{63}" must keep a gap between the whole number
+        // and the numerator, or the \frac rule below collapses it to "22/63" and
+        // the answer key prints a completely different value. Insert the space
+        // *before* the \frac rule so both clues ("Evaluate 3 8/9 - 1 6/7") and
+        // answers ("2 2/63") read correctly.
+        .replace(/(\d)\s*\\frac(\s*\{)/g, '$1 \\frac$2')
         // Fractions: \frac{a}{b} → a/b. The numerator/denominator may themselves
         // contain a braced group (an exponent, e.g. \frac{d^{8}}{d^{5}}), so the
         // capture must allow one level of nesting — a plain [^}]+ stops at the
