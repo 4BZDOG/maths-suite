@@ -2181,6 +2181,7 @@ export async function exportPDF() {
             if (!sets) continue;
 
             const setIndicator = count > 1 ? `SET ${i + 1}` : '';
+            const pagesBeforeSet = isFirstPage ? 0 : doc.getNumberOfPages();
 
             const addPage = () => {
                 if (!isFirstPage) doc.addPage();
@@ -2257,6 +2258,21 @@ export async function exportPDF() {
                     drawKeyPage(ctx, keySets, sy, ps, exportId, keyStartNums);
                 }
             }
+
+            // Back-to-back printing: a blank page keeps the next set on a fresh sheet.
+            // 'odd' pads only sets with an odd page count; 'always' adds one after every set.
+            // Never after the final set (nothing follows it).
+            if (i < count - 1 && !isFirstPage) {
+                const setPages = doc.getNumberOfPages() - pagesBeforeSet;
+                const mode = cfg.blankPageMode || 'off';
+                if (mode === 'always' || (mode === 'odd' && setPages % 2 === 1)) {
+                    doc.addPage();
+                    doc.setFont(ctx.pdfFont || 'helvetica', 'normal');
+                    doc.setFontSize(7);
+                    doc.setTextColor(200, 200, 200);
+                    doc.text('This page is intentionally left blank', PAGE_WIDTH / 2, PAGE_HEIGHT - MARGIN, { align: 'center' });
+                }
+            }
         }
 
         if (T) T.innerText = 'Saving PDF...';
@@ -2265,10 +2281,7 @@ export async function exportPDF() {
 
         doc.save(filename + '.pdf');
 
-        const pagesPerDiff = state.questionsPerSet || 1;
-        const diffPagesPerCopy = ['easy', 'medium', 'hard'].filter(t => selectedPages.includes(t)).length * pagesPerDiff;
-        const keyPagesPerCopy = selectedPages.includes('key') ? 1 : 0;
-        const totalPages = count * (diffPagesPerCopy + keyPagesPerCopy);
+        const totalPages = doc.getNumberOfPages();
         const copyMsg = count === 1 ? '1 copy' : `${count} copies`;
         const pageMsg = totalPages === 1 ? '1 page' : `${totalPages} pages`;
         showToast(`Exported ${copyMsg} · ${pageMsg}`, 'success');

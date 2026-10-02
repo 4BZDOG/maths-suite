@@ -85,6 +85,7 @@ export const state = {
         scales:          { easy: 1, medium: 1, hard: 1, key: 1 },
         titleScale:      1,
         paperSize:       'a4',
+        blankPageMode:   'off',   // 'off' | 'odd' (pad odd sets) | 'always' — back-to-back printing
         showAnswerKey:   true,
         showExportId:    true,
         showTopic:             false,
@@ -154,6 +155,7 @@ export function syncSettingsFromDOM() {
     };
     s.titleScale     = parseFloat(getVal('titleScale', s.titleScale));
     s.paperSize      = getVal('paperSize', s.paperSize);
+    s.blankPageMode  = getVal('blankPageMode', s.blankPageMode);
     s.showAnswerKey  = getChk('showAnswerKey', s.showAnswerKey);
     s.showExportId   = getChk('showExportId', s.showExportId);
     s.showTopic             = getChk('psShowTopic',            s.showTopic);
@@ -321,6 +323,7 @@ export function applyStateToDOM(s) {
 
     setVal('titleScale',  cfg.titleScale);
     setVal('paperSize',   cfg.paperSize);
+    setVal('blankPageMode', cfg.blankPageMode || 'off');
     setChk('showAnswerKey', cfg.showAnswerKey);
     setChk('showExportId',  cfg.showExportId);
 
