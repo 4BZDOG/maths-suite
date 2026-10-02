@@ -7720,11 +7720,38 @@ function genVolume(rng, diff, allowedOps) {
     const op = rc(rng, pool);
     const solid = (kind, dims, find, extra) => ({ type: 'solid', kind, dims, find, ...extra });
 
-    // cone: V = ⅓πr²h, left in terms of π (r²h divisible by 3 → integer coeff)
+    // cone: V = ⅓πr²h (r²h divisible by 3 → integer coefficient of π). Easy: radius + height in terms of π;
+    // Medium: diameter given, or a numeric answer with π ≈ 3.14; Hard: find the height from the volume,
+    // or the slant height by Pythagoras.
     if (op === 'cone') {
-        let r = ri(rng, 2, 9), h = ri(rng, 2, 12);
-        while ((r * r * h) % 3 !== 0) h += 1;
-        const coeff = r * r * h / 3;
+        const nicePair = (rLo, rHi, hLo, hHi) => { const r = ri(rng, rLo, rHi); let h = ri(rng, hLo, hHi); while ((r * r * h) % 3 !== 0) h += 1; return [r, h]; };
+        if (diff === 'Hard') {
+            if (rng() < 0.5) {
+                const [r, h] = nicePair(3, 9, 3, 12), coeff = r * r * h / 3;
+                return { clue: `A cone has volume $${coeff}\\pi\\text{ cm}^3$ and base radius $${r}\\text{ cm}$. Find its perpendicular height.`,
+                    answer: String(h), answerDisplay: `$${h}\\text{ cm}$`,
+                    worked: `$${coeff}\\pi = \\tfrac{1}{3}\\pi (${r})^2 h \\Rightarrow h = \\dfrac{3 \\times ${coeff}}{${r * r}} = ${h}\\text{ cm}$`,
+                    diagram: solid('cone', { r, h }, 'h', { given: `V = ${coeff}π cm³`, givenP: `V = ${coeff} pi cm³` }) };
+            }
+            const [r, h, l] = rc(rng, [[3, 4, 5], [6, 8, 10], [5, 12, 13], [9, 12, 15], [8, 15, 17]]);
+            return { clue: `A cone has base radius $${r}\\text{ cm}$ and perpendicular height $${h}\\text{ cm}$. Find its *slant height*.`,
+                answer: String(l), answerDisplay: `$${l}\\text{ cm}$`,
+                worked: `$l = \\sqrt{r^2 + h^2} = \\sqrt{${r}^2 + ${h}^2} = \\sqrt{${r * r + h * h}} = ${l}\\text{ cm}$` };
+        }
+        if (diff === 'Medium') {
+            const [r, h] = nicePair(2, 7, 3, 12), coeff = r * r * h / 3;
+            if (rng() < 0.5) {
+                return { clue: `A cone has a base diameter of $${2 * r}\\text{ cm}$ and a perpendicular height of $${h}\\text{ cm}$. Find its volume, leaving your answer in terms of $\\pi$.`,
+                    answer: `${coeff}π`, answerDisplay: `$${coeff}\\pi\\text{ cm}^3$`,
+                    worked: `$r = ${2 * r} \\div 2 = ${r}$; $V = \\tfrac{1}{3}\\pi (${r})^2(${h}) = ${coeff}\\pi\\text{ cm}^3$` };
+            }
+            const num = Math.round(3.14 * coeff * 10) / 10;
+            return { clue: `Find the volume of a cone with base radius $${r}\\text{ cm}$ and perpendicular height $${h}\\text{ cm}$. Use $\\pi \\approx 3.14$ and round to 1 decimal place.`,
+                answer: String(num), answerDisplay: `$${num}\\text{ cm}^3$`,
+                worked: `$V = \\tfrac{1}{3}\\pi r^2 h \\approx \\tfrac{1}{3} \\times 3.14 \\times ${r * r} \\times ${h} = ${num}\\text{ cm}^3$`,
+                diagram: solid('cone', { r, h }, 'V') };
+        }
+        const [r, h] = nicePair(2, 9, 2, 12), coeff = r * r * h / 3;
         return { clue: `Find the volume of a cone with base radius $${r}\\text{ cm}$ and perpendicular height $${h}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
             answer: `${coeff}π`, answerDisplay: `$${coeff}\\pi\\text{ cm}^3$`,
             worked: `$V = \\tfrac{1}{3}\\pi r^2 h = \\tfrac{1}{3}\\pi (${r})^2(${h}) = ${coeff}\\pi\\text{ cm}^3$`,
@@ -7823,7 +7850,28 @@ function genVolume(rng, diff, allowedOps) {
             diagram: solid('prism', { l, w, h }, 'V') };
     }
 
+    // pyramid: Easy square base; Medium rectangular base; Hard find the height from the volume.
     if (op === 'pyramid') {
+        if (diff === 'Hard') {
+            const s0 = ri(rng, 3, 9); let h = ri(rng, 3, 12); while ((s0 * s0 * h) % 3 !== 0) h += 1;
+            const V = s0 * s0 * h / 3;
+            return { clue: `A square pyramid has base side $${s0}\\text{ cm}$ and volume $${V}\\text{ cm}^3$. Find its perpendicular height.`,
+                answer: String(h), answerDisplay: `$${h}\\text{ cm}$`,
+                worked: `$${V} = \\tfrac{1}{3} \\times ${s0 * s0} \\times h \\Rightarrow h = \\dfrac{3 \\times ${V}}{${s0 * s0}} = ${h}\\text{ cm}$`,
+                diagram: solid('pyramid', { s: s0, h }, 'h', { given: `V = ${V} cm³` }) };
+        }
+        if (diff === 'Medium') {
+            let l = ri(rng, 3, 10), w = ri(rng, 2, 9); if (w === l) w += 1;
+            let h = ri(rng, 3, 12); while ((l * w * h) % 3 !== 0) h += 1;
+            const V = l * w * h / 3;
+            return { clue: rc(rng, [
+                    `A pyramid has a rectangular base $${l}\\text{ cm}$ by $${w}\\text{ cm}$ and a perpendicular height of $${h}\\text{ cm}$. Find its volume.`,
+                    `Find the volume of a rectangular-based pyramid with base $${l}\\text{ cm} \\times ${w}\\text{ cm}$ and perpendicular height $${h}\\text{ cm}$.`,
+                ]),
+                answer: String(V), answerDisplay: `$${V}\\text{ cm}^3$`,
+                worked: `$V = \\tfrac{1}{3} \\times ${l} \\times ${w} \\times ${h} = ${V}\\text{ cm}^3$`,
+                diagram: solid('pyramid', { l, w, h }, 'V') };
+        }
         const base = ri(rng, 2, 9), h0 = ri(rng, 3, 12), baseArea = base * base;
         const h = (baseArea * h0) % 3 === 0 ? h0 : h0 + (3 - (baseArea * h0) % 3);
         const V = baseArea * h / 3;
@@ -7833,8 +7881,33 @@ function genVolume(rng, diff, allowedOps) {
             diagram: solid('pyramid', { s: base, h }, 'V') };
     }
 
-    // sphere: V = 4/3 π r^3, leave in terms of π (r a multiple of 3 → integer coeff)
+    // sphere: V = 4/3 π r³ (r a multiple of 3 → integer coefficient of π).
+    // Easy: radius; Medium: diameter, or numeric with π ≈ 3.14; Hard: hemisphere, or find the radius from the volume.
     const r = rc(rng, [3, 6, 9]), coeff = 4 * r * r * r / 3;
+    if (diff === 'Hard') {
+        if (rng() < 0.5) {
+            const hc = 2 * r * r * r / 3;
+            return { clue: `Find the volume of a hemisphere with radius $${r}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
+                answer: `${hc}π`, answerDisplay: `$${hc}\\pi\\text{ cm}^3$`,
+                worked: `$V = \\tfrac{1}{2} \\times \\tfrac{4}{3}\\pi r^3 = \\tfrac{2}{3}\\pi \\times ${r * r * r} = ${hc}\\pi\\text{ cm}^3$` };
+        }
+        return { clue: `A sphere has volume $${coeff}\\pi\\text{ cm}^3$. Find its radius.`,
+            answer: String(r), answerDisplay: `$${r}\\text{ cm}$`,
+            worked: `$${coeff}\\pi = \\tfrac{4}{3}\\pi r^3 \\Rightarrow r^3 = \\dfrac{3 \\times ${coeff}}{4} = ${r * r * r} \\Rightarrow r = ${r}\\text{ cm}$`,
+            diagram: solid('sphere', { r }, 'r', { given: `V = ${coeff}π cm³`, givenP: `V = ${coeff} pi cm³` }) };
+    }
+    if (diff === 'Medium') {
+        if (rng() < 0.5) {
+            return { clue: `A sphere has a diameter of $${2 * r}\\text{ cm}$. Find its volume, leaving your answer in terms of $\\pi$.`,
+                answer: `${coeff}π`, answerDisplay: `$${coeff}\\pi\\text{ cm}^3$`,
+                worked: `$r = ${2 * r} \\div 2 = ${r}$; $V = \\tfrac{4}{3}\\pi (${r})^3 = ${coeff}\\pi\\text{ cm}^3$` };
+        }
+        const num = Math.round(3.14 * coeff * 10) / 10;
+        return { clue: `Find the volume of a sphere with radius $${r}\\text{ cm}$. Use $\\pi \\approx 3.14$ and round to 1 decimal place.`,
+            answer: String(num), answerDisplay: `$${num}\\text{ cm}^3$`,
+            worked: `$V = \\tfrac{4}{3}\\pi r^3 \\approx \\tfrac{4}{3} \\times 3.14 \\times ${r * r * r} = ${num}\\text{ cm}^3$`,
+            diagram: solid('sphere', { r }, 'V') };
+    }
     return { clue: `Find the volume of a sphere with radius $${r}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
         answer: `${coeff}π`, answerDisplay: `$${coeff}\\pi\\text{ cm}^3$`,
         worked: `$V = \\tfrac{4}{3}\\pi r^3 = \\tfrac{4}{3}\\pi \\times ${r * r * r} = ${coeff}\\pi\\text{ cm}^3$`,

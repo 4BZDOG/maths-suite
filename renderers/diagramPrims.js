@@ -163,15 +163,17 @@ function solidPrims({ kind, dims = {}, unit = 'cm', find, given, givenP, hint = 
         items.push(line([cx, cy], [cx + R, cy], { dash: true, sw: 1.3 }), circle(cx, cy, 2.2, { fill: 'g', stroke: 'g', sw: 0 }));
         T(cx + R / 2, cy + 32, 'r');
     } else if (kind === 'pyramid') {
-        const { s } = dims;
-        const bw = 86, dx = 32, dy = 20, x = 36, yb = 128;
-        const Hp = Math.max(52, Math.min(92, bw * (dims.h / s) * 0.9));
+        // square base (dims.s) or rectangular base (dims.l × dims.w)
+        const bl = dims.l ?? dims.s, bd = dims.w ?? dims.s, rect = dims.l != null;
+        const bw = 70, dx = 28 * Math.max(0.6, Math.min(1.1, bd / bl)), dy = 18, x = 30, yb = 128;
+        const Hp = Math.max(52, Math.min(92, bw * (dims.h / bl) * 0.9));
         const A = [x, yb], B = [x + bw, yb], C = [x + bw + dx, yb - dy], D = [x + dx, yb - dy];
         const O = [(A[0] + C[0]) / 2, (A[1] + C[1]) / 2], P = [O[0], O[1] - Hp];
         items.push(line(P, D, { dash: true, op: 0.55 }), line(D, A, { dash: true, op: 0.55 }), line(D, C, { dash: true, op: 0.55 }));
         items.push(poly([P, A, B]), poly([P, B, C]));
         items.push(line(P, O, { dash: true, sw: 1.2, op: 0.8 }), circle(O[0], O[1], 1.6, { fill: 'g', stroke: 'g', sw: 0 }));
-        T((A[0] + B[0]) / 2, yb + 14, 's');
+        T((A[0] + B[0]) / 2, yb + 14, rect ? 'l' : 's');
+        if (rect) T((B[0] + C[0]) / 2 + 6, (B[1] + C[1]) / 2 + 12, 'w', { anchor: 'start' });
         items.push(line([A[0] - 14, P[1]], [P[0], P[1]], { stroke: 'f', sw: 1, dash: true }), line([A[0] - 14, O[1]], [O[0], O[1]], { stroke: 'f', sw: 1, dash: true }));
         items.push(...dimV(A[0] - 14, P[1], O[1], lab('h').s, lab('h')));
     } else {
