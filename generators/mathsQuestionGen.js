@@ -19,6 +19,76 @@ function mulberry32(seed) {
 
 function ri(rng, min, max) { return Math.floor(rng() * (max - min + 1)) + min; }
 function rc(rng, arr) { return arr[Math.floor(rng() * arr.length)]; }
+
+// ── Text-quality helpers ─────────────────────────────────────────────────────
+// Given names for word problems. Varied backgrounds, short, no gendered pronoun is
+// ever needed because problems repeat the name instead of using "he"/"she".
+const NAMES = ['Mia', 'Liam', 'Aarav', 'Chloe', 'Noah', 'Priya', 'Jack', 'Zara', 'Ethan', 'Amelia', 'Kai', 'Sofia',
+    'Omar', 'Lucy', 'Wei', 'Isla', 'Tom', 'Hana', 'Oliver', 'Grace', 'Dylan', 'Anika', 'Leo', 'Maya', 'Ravi', 'Ella'];
+
+// "Fresh" random pick: like rc() but avoids re-using an item from the same pool until the
+// pool is exhausted, so one worksheet doesn't repeat the same context (pizza, pizza, pizza).
+// Costs exactly one rng() call, same as rc(), so seeds stay deterministic.
+const _freshUsed = new Map();
+function rcFresh(rng, arr, key) {
+    const k = key || arr.map(String).join('|').slice(0, 80);
+    let used = _freshUsed.get(k);
+    if (!used) { used = new Set(); _freshUsed.set(k, used); }
+    let idx = [];
+    for (let i = 0; i < arr.length; i++) if (!used.has(i)) idx.push(i);
+    if (idx.length === 0) { used.clear(); idx = arr.map((_, i) => i); }
+    const pick = idx[Math.floor(rng() * idx.length)];
+    used.add(pick);
+    return arr[pick];
+}
+const pickName = (rng) => rcFresh(rng, NAMES, 'names');
+function resetFresh() { _freshUsed.clear(); }
+
+// Build "3x^2 - x + 4" from [[coef, 'x^2'], [coef, 'x'], [coef, '']]: zero terms vanish and a
+// coefficient of 1 is implicit, so a generated polynomial reads the way a teacher would write it.
+function polyStr(terms) {
+    let out = '';
+    for (const [c, v] of terms) {
+        if (c === 0) continue;
+        const mag = Math.abs(c);
+        const body = v ? (mag === 1 ? v : `${mag}${v}`) : String(mag);
+        out += out === '' ? (c < 0 ? `-${body}` : body) : ` ${c < 0 ? '-' : '+'} ${body}`;
+    }
+    return out || '0';
+}
+
+// Negative numbers get brackets when they follow a minus sign: 5 - (-3), never 5 - -3.
+const par = (n) => (n < 0 ? `(${n})` : `${n}`);
+
+// "1 hour" / "2 hours"
+function plural(n, one, many) { return `${n} ${n === 1 ? one : (many || one + 's')}`; }
+
+// Tidy maths spans so generated expressions read the way a teacher would write them:
+// no leading coefficient of 1 ("1x" → "x", "1\sqrt{5}" → "\sqrt{5}") and no "+ -3" ("x + -3" → "x - 3").
+function tidyMath(str) {
+    if (!str || str.indexOf('$') === -1) return str;
+    return str.replace(/\$([^$]*)\$/g, (_, inner) => '$' + inner
+        .replace(/(^|[^0-9A-Za-z.\\_^])1(?=[a-zA-Z](?![a-zA-Z])|\\(?:sqrt|pi|theta)\b)/g, '$1')
+        .replace(/\+\s*-\s*(?=\d)/g, '- ')
+        .replace(/-\s*-(\d+(?:\.\d+)?)/g, '- (-$1)')
+        .replace(/(^|[=+\-]\s*|\s)1(?=\()/g, '$1')
+        + '$');
+}
+
+// Prose clues end like sentences: "Round $4.7$ to the nearest whole number" → "… number.".
+// Left alone: prompts ending in ":" before an expression, bare expression lines, and anything
+// that already ends in . ? ! ) or a closing quote.
+function endPunct(clue) {
+    if (!clue) return clue;
+    const lines = clue.split('\n');
+    const t = lines[lines.length - 1].trimEnd();
+    if (!t.trim()) return clue;
+    if (/^\s*\$[^$]*\$\s*$/.test(t)) return clue;
+    if (/[.?:!)"'…]$/.test(t)) return clue;
+    if (/\$$/.test(t) && /:$/.test(t.replace(/\$[^$]*\$$/, '').trimEnd())) return clue;
+    lines[lines.length - 1] = t + '.';
+    return lines.join('\n');
+}
 function round(n, dp) { const f = Math.pow(10, dp); return Math.round(n * f) / f; }
 
 // Round a value given as an integer scaled by 10^(dp+1) down to `dp` decimal
@@ -62,7 +132,19 @@ function _solveVerbsFor(v) {
 }
 // Pairs [dependent, independent] for substitution questions
 const SUBST_PAIRS = [['y', 'x'], ['A', 't'], ['P', 'n'], ['C', 'm'], ['V', 'r'], ['h', 't'], ['d', 'n']];
-const DATA_CONTEXTS = ['scores', 'values', 'ages', 'heights (cm)', 'temperatures (°C)', 'distances (m)', 'results', 'times (s)', 'weights (kg)', 'prices ($)', 'marks', 'lengths (cm)', 'speeds (km/h)', 'rainfall (mm)', 'test results', 'heart rates (bpm)', 'goals scored', 'reaction times (ms)', 'quiz results', 'shoe sizes', 'sales figures', 'water usage (L)', 'step counts', 'hours slept', 'points earned'];
+// Data contexts grouped by how they are collected, so the story always fits the data
+// ("a nurse measures heart rates", never "a coach records prices").
+const DATA_MEASURED = ['heights (cm)', 'temperatures (°C)', 'distances (m)', 'times (s)', 'weights (kg)', 'lengths (cm)', 'speeds (km/h)', 'rainfall (mm)', 'heart rates (bpm)', 'reaction times (ms)', 'water usage (L)'];
+const DATA_SCORED = ['scores', 'marks', 'test results', 'quiz results', 'results', 'goals scored', 'points earned'];
+const DATA_COUNTED = ['ages', 'shoe sizes', 'step counts', 'hours slept', 'sales figures', 'prices (in dollars)', 'values'];
+const DATA_CONTEXTS = [...DATA_MEASURED, ...DATA_SCORED, ...DATA_COUNTED];
+const DATA_INTRO = {
+    measured: ['A scientist measures', 'A student measures', 'A technician records'],
+    scored:   ['A teacher records', 'A coach records', 'A class records'],
+    counted:  ['A survey collects', 'Students record', 'A shopkeeper records'],
+};
+const dataKind = (ctx) => DATA_MEASURED.includes(ctx) ? 'measured' : DATA_SCORED.includes(ctx) ? 'scored' : 'counted';
+const dataIntro = (rng, ctx) => rc(rng, DATA_INTRO[dataKind(ctx)]);
 
 function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
 function lcm(a, b) { return (a * b) / gcd(a, b); }
@@ -2425,24 +2507,24 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
     // Real-world narrative wrappers (30% chance per question)
     const STAT_STORIES = {
         mean: [
-            (data, ctx) => `A teacher records ${ctx} of $${data.join(', ')}$. Find the *mean*.`,
+            (data, ctx) => `${dataIntro(rng, ctx)} ${ctx} of $${data.join(', ')}$. Find the *mean*.`,
             (data, ctx) => `The ${ctx} for a week are $${data.join(', ')}$. Calculate the *mean*.`,
-            (data, ctx) => `A scientist measures ${ctx} of $${data.join(', ')}$. What is the *mean*?`,
+            (data, ctx) => `${dataIntro(rng, ctx)} ${ctx} of $${data.join(', ')}$. What is the *mean*?`,
             (data, ctx) => `In a class survey, the ${ctx} collected were $${data.join(', ')}$. Find the *mean*.`,
         ],
         median: [
-            (data, ctx) => `A coach records ${ctx} of $${data.join(', ')}$. Find the *median*.`,
+            (data, ctx) => `${dataIntro(rng, ctx)} ${ctx} of $${data.join(', ')}$. Find the *median*.`,
             (data, ctx) => `During a week, the ${ctx} were $${data.join(', ')}$. What is the *median*?`,
             (data, ctx) => `The ${ctx} measured in a study are $${data.join(', ')}$. Find the *median*.`,
         ],
         mode: [
-            (data, ctx) => `Customers rated a product with ${ctx} of $${data.join(', ')}$. Find the *mode*.`,
-            (data, ctx) => `A survey collected ${ctx} of $${data.join(', ')}$. What is the *mode*?`,
-            (data, ctx) => `Students recorded ${ctx} of $${data.join(', ')}$. Identify the *mode*.`,
+            (data, ctx) => `${dataIntro(rng, ctx)} ${ctx} of $${data.join(', ')}$. Find the *mode*.`,
+            (data, ctx) => `The ${ctx} collected were $${data.join(', ')}$. What is the *mode*?`,
+            (data, ctx) => `${dataIntro(rng, ctx)} ${ctx} of $${data.join(', ')}$. Identify the *mode*.`,
         ],
         range: [
             (data, ctx) => `The ${ctx} recorded over several days are $${data.join(', ')}$. Find the *range*.`,
-            (data, ctx) => `A nurse measures ${ctx} of $${data.join(', ')}$. Calculate the *range*.`,
+            (data, ctx) => `${dataIntro(rng, ctx)} ${ctx} of $${data.join(', ')}$. Calculate the *range*.`,
             (data, ctx) => `During an experiment the ${ctx} were $${data.join(', ')}$. What is the *range*?`,
         ],
     };
@@ -2587,8 +2669,8 @@ function _genStatisticsCore(rng, diff, allowedOps, _depth = 0, opts = {}) {
             const pf3 = fOn3 ? ' Use $\\overline{x} = \\text{sum} \\div n$.' : '';
             const ph3 = rng() < 0.3
                 ? rc(rng, [
-                    `A student scores ${ctx} of $${known3.join(', ')}$ and one unknown mark. The *mean* is $${mean3}$. Find the missing score.${pf3}`,
-                    `In ${n3} tests, ${n3 - 1} ${ctx} are $${known3.join(', ')}$. The *mean* is $${mean3}$. What is the missing result?${pf3}`,
+                    `${dataIntro(rng, ctx)} ${ctx} of $${known3.join(', ')}$ and one more value is missing. The *mean* is $${mean3}$. Find the missing value.${pf3}`,
+                    ...(dataKind(ctx) === 'scored' ? [`In ${n3} tests, ${n3 - 1} results are $${known3.join(', ')}$. The *mean* is $${mean3}$. What is the missing result?${pf3}`] : []),
                 ])
                 : rc(rng, [
                     `The *mean* of $${display3}$ is $${mean3}$. Find the missing value.${pf3}`,
@@ -3626,8 +3708,9 @@ function _genAlgebraOp(rng, diff, op) {
     if (op === 'simultaneous' && rng() < 0.3) {
         // Graphical solution: the intersection of two drawn lines.
         const x = ri(rng, -4, 4), y = ri(rng, -4, 4);
-        let m1 = ri(rng, -3, 3), m2 = ri(rng, -3, 3);
-        if (m1 === m2) m2 = m1 === 3 ? 1 : m1 + 1;
+        const SLOPES = [-3, -2, -1, 1, 2, 3];
+        let m1 = rc(rng, SLOPES), m2 = rc(rng, SLOPES);
+        if (m1 === m2) m2 = -m1;
         const c1 = y - m1 * x, c2 = y - m2 * x;
         if (Math.abs(c1) > 9 || Math.abs(c2) > 9) return _genAlgebraOp(rng, diff, op);
         const e1 = _linEqStr(m1, c1).full, e2 = _linEqStr(m2, c2).full;
@@ -5569,112 +5652,120 @@ function genRatiosRates(rng, diff, allowedOps) {
     }
 
     if (op === 'unit-rate') {
+        // A priced item or measured quantity. `per` is the singular unit the rate is quoted in, so the
+        // question asks for "cost per litre" / "cost per apple", never a generic "per item".
+        const unitCtx = (kind) => {
+            if (kind === 'petrol') { const q = rc(rng, [20, 25, 30, 40, 50]); const u = ri(rng, 178, 236) / 100; return { many: 'litres of petrol', per: 'litre', qty: q, price: round(q * u, 2) }; }
+            if (kind === 'flour')  { const q = rc(rng, [2, 4, 5, 8, 10]); return { many: 'kilograms of flour', per: 'kilogram', qty: q, price: q * ri(rng, 2, 4) + (rng() < 0.5 ? 0 : rc(rng, [1, 2, 3])) }; }
+            if (kind === 'fabric') { const q = rc(rng, [3, 4, 5, 6, 8]); return { many: 'metres of fabric', per: 'metre', qty: q, price: q * ri(rng, 5, 12) }; }
+            if (kind === 'water')  { const q = rc(rng, [6, 8, 12, 24]); return { many: 'bottles of water', per: 'bottle', qty: q, price: q * ri(rng, 1, 3) + rc(rng, [0, 0, 2, 3]) }; }
+            if (kind === 'apples') { const q = rc(rng, [3, 4, 6, 8, 12]); return { many: 'apples', per: 'apple', qty: q, price: q * ri(rng, 1, 2) + rc(rng, [0, 1, 2]) }; }
+            if (kind === 'oranges') { const q = rc(rng, [2, 3, 4, 5, 6]); return { many: 'oranges', per: 'orange', qty: q, price: q * ri(rng, 1, 2) + rc(rng, [0, 1]) }; }
+            if (kind === 'pencils') { const q = rc(rng, [5, 8, 10, 12, 20]); return { many: 'pencils', per: 'pencil', qty: q, price: q + rc(rng, [0, 2, 3, 5]) }; }
+            if (kind === 'stickers') { const q = rc(rng, [4, 5, 10, 20]); return { many: 'stickers', per: 'sticker', qty: q, price: q * ri(rng, 1, 3) }; }
+            const q = rc(rng, [3, 6, 12]); return { many: 'muffins', per: 'muffin', qty: q, price: q * ri(rng, 2, 4) };
+        };
+        // Every phrasing keeps "$qty$ <things> ... $\$price$" so the answer can be re-derived from the clue.
+        const rateClue = (c) => rcFresh(rng, [
+            `$${c.qty}$ ${c.many} cost $\\$${money(c.price)}$. Find the cost per ${c.per}.`,
+            `If $${c.qty}$ ${c.many} cost $\\$${money(c.price)}$, what is the *unit rate* (cost per ${c.per})?`,
+            `${pickName(rng)} pays $\\$${money(c.price)}$ for $${c.qty}$ ${c.many}. What is the cost of one ${c.per}?`,
+            `A shop sells $${c.qty}$ ${c.many} for $\\$${money(c.price)}$. How much is that per ${c.per}?`,
+        ], 'unit-rate-phrases');
+        const rateReturn = (c) => {
+            const unitPrice = round(c.price / c.qty, 2);
+            return { clue: rateClue(c), answer: String(unitPrice), answerDisplay: `$\\$${money(unitPrice)}$ per ${c.per}`,
+                worked: `$\\$${money(c.price)} \\div ${c.qty} = \\$${money(unitPrice)}$ per ${c.per}` };
+        };
+        // Best buy: compare the cost per 100 g / 100 mL.
+        const bestBuy = (range) => {
+            const prod = rc(rng, [{ n: 'cereal', u: 'g' }, { n: 'shampoo', u: 'mL' }, { n: 'detergent', u: 'mL' }, { n: 'rice', u: 'g' }, { n: 'juice', u: 'mL' }]);
+            const q1 = rc(rng, range.q1), q2 = rc(rng, range.q2);
+            const p1 = ri(rng, range.p[0], range.p[1]), p2 = ri(rng, range.p[0], range.p[1] + 6);
+            const r1 = p1 / q1, r2 = p2 / q2;
+            if (Math.abs(r1 - r2) < 1e-9) return null;
+            const better = r1 < r2 ? 'Pack A' : 'Pack B';
+            return { clue: `${prod.n[0].toUpperCase() + prod.n.slice(1)} comes in two sizes. Pack A: $${q1}$ ${prod.u} for $\\$${money(p1)}$. Pack B: $${q2}$ ${prod.u} for $\\$${money(p2)}$. Which is the *better buy*?`,
+                answer: better, answerDisplay: better,
+                worked: `Per $100$ ${prod.u}: A $= \\$${money(round(r1 * 100, 2))}$, B $= \\$${money(round(r2 * 100, 2))}$, so ${better} is cheaper.` };
+        };
+        const scaleQ = (hard) => {
+            const scaleReal = hard ? rc(rng, [25, 50, 100, 200, 500]) : rc(rng, [10, 20, 25, 50, 100]);
+            const drawCm = ri(rng, 3, hard ? 15 : 10);
+            const real = drawCm * scaleReal;
+            const km = hard && scaleReal >= 100;
+            const thing = rc(rng, ['road', 'river', 'bridge', 'track', 'path']);
+            return { clue: rc(rng, [
+                    `A map uses the scale $1$ cm $= ${scaleReal}$ m. A ${thing} measures $${drawCm}$ cm on the map. What is the *actual* length${km ? ' in kilometres' : ' in metres'}?`,
+                    `On a scale drawing $1$ cm represents $${scaleReal}$ m. A ${thing} is drawn as $${drawCm}$ cm. Find the *actual* length${km ? ' in kilometres' : ' in metres'}.`,
+                ]),
+                answer: String(km ? real / 1000 : real), answerDisplay: `${km ? real / 1000 : real} ${km ? 'km' : 'm'}`,
+                worked: `$${drawCm} \\times ${scaleReal} = ${real}$ m${km ? ` $= ${real / 1000}$ km` : ''}` };
+        };
         if (diff === 'Hard') {
-            // 30%: best buy with three packs or larger numbers
-            if (rng() < 0.3) {
-                const item = rc(rng, ['cereal (g)', 'shampoo (mL)', 'rice (kg)', 'detergent (mL)', 'juice (mL)']);
-                const q1 = rc(rng, [300, 500, 750, 1000, 1500]);
-                const q2 = rc(rng, [200, 400, 600, 800, 1200, 2000]);
-                const p1 = ri(rng, 3, 18), p2 = ri(rng, 4, 25);
-                const r1 = p1 / q1, r2 = p2 / q2;
-                if (r1 === r2) return genRatiosRates(rng, diff, allowedOps);
-                const cheaper = r1 < r2 ? 'Pack A' : 'Pack B';
-                const ph = `Pack A: $${q1}$ ${item} for $\\$${money(p1)}$. Pack B: $${q2}$ ${item} for $\\$${money(p2)}$. Which is the *better buy*?`;
-                return { clue: ph, answer: cheaper, answerDisplay: cheaper,
-                    worked: `$A: \\$${money(round(r1 * 1000, 2))}/\\text{kg}, B: \\$${money(round(r2 * 1000, 2))}/\\text{kg} \\Rightarrow ${cheaper}$` };
-            }
-            // 25%: scale drawing
-            if (rng() < 0.25) {
-                const scaleReal = rc(rng, [25, 50, 100, 200, 500]);
-                const drawCm = ri(rng, 3, 15);
-                const real = drawCm * scaleReal;
-                const unit = scaleReal >= 100 ? 'km' : 'm';
-                const realDisplay = scaleReal >= 100 ? real / 1000 : real;
-                const ph = rc(rng, [
-                    `A map uses the scale $1$ cm $= ${scaleReal}$ m. A road measures $${drawCm}$ cm on the map. What is the *actual* length in ${unit}?`,
-                    `On a scale drawing $1$ cm represents $${scaleReal}$ m. A river is drawn as $${drawCm}$ cm. Find the *actual* length in ${unit}.`,
-                ]);
-                return { clue: ph, answer: String(scaleReal >= 100 ? realDisplay : real), answerDisplay: `${scaleReal >= 100 ? realDisplay : real} ${unit}`,
-                    worked: `$${drawCm} \\times ${scaleReal} = ${real}$ m` };
-            }
-            // Complex unit rate
-            const HARD_CONTEXTS = [
-                { item: 'litres of petrol', price: ri(rng, 180, 250), qty: rc(rng, [15, 25, 30, 40, 50]) },
-                { item: 'kilograms of flour', price: ri(rng, 8, 30), qty: rc(rng, [2, 4, 5, 8, 10, 12]) },
-                { item: 'metres of fabric', price: ri(rng, 15, 60), qty: rc(rng, [3, 5, 6, 8, 10, 12]) },
-            ];
-            const ctx = rc(rng, HARD_CONTEXTS);
-            const unitPrice = round(ctx.price / ctx.qty, 2);
-            const ph = rc(rng, [
-                `$${ctx.qty}$ ${ctx.item} cost $\\$${ctx.price}$. Find the *unit rate*.`,
-                `If $${ctx.qty}$ ${ctx.item} cost $\\$${ctx.price}$, find the cost per unit.`,
-            ]);
-            return { clue: ph, answer: String(unitPrice), answerDisplay: `$\\$${money(unitPrice)}$`,
-                worked: `$\\$${ctx.price} \\div ${ctx.qty} = \\$${money(unitPrice)}$` };
+            const r = rng();
+            if (r < 0.3) { const bb = bestBuy({ q1: [300, 500, 750, 1000, 1500], q2: [200, 400, 600, 800, 1200, 2000], p: [3, 18] }); if (bb) return bb; }
+            else if (r < 0.52) return scaleQ(true);
+            return rateReturn(unitCtx(rc(rng, ['petrol', 'flour', 'fabric'])));
         }
         if (diff === 'Medium') {
-            // 25%: scale drawing
-            if (rng() < 0.25) {
-                const scaleReal = rc(rng, [10, 20, 25, 50, 100]);
-                const drawCm = ri(rng, 3, 10);
-                const real = drawCm * scaleReal;
-                const ph = `A map uses the scale $1$ cm $= ${scaleReal}$ m. A path measures $${drawCm}$ cm. What is the *actual* length?`;
-                return { clue: ph, answer: String(real), answerDisplay: `${real} m`,
-                    worked: `$${drawCm} \\times ${scaleReal} = ${real}$ m` };
-            }
-            // 30%: best buy
-            if (rng() < 0.3) {
-                const item = rc(rng, ['cereal (g)', 'shampoo (mL)', 'rice (g)', 'detergent (mL)']);
-                const q1 = rc(rng, [250, 500, 750, 1000]);
-                const q2 = rc(rng, [200, 400, 600, 800]);
-                const p1 = ri(rng, 2, 10), p2 = ri(rng, p1 + 1, p1 + 12);
-                const r1 = p1 / q1, r2 = p2 / q2;
-                if (r1 === r2) return genRatiosRates(rng, diff, allowedOps);
-                const cheaper = r1 < r2 ? 'Pack A' : 'Pack B';
-                const ph = `Pack A: $${q1}$ ${item} for $\\$${money(p1)}$. Pack B: $${q2}$ ${item} for $\\$${money(p2)}$. Which is the *better buy*?`;
-                return { clue: ph, answer: cheaper, answerDisplay: cheaper };
-            }
-            const MED_CONTEXTS = [
-                { item: 'apples', price: ri(rng, 4, 12), qty: ri(rng, 3, 8) * rc(rng, [2, 3]) },
-                { item: 'litres of petrol', price: ri(rng, 100, 200), qty: rc(rng, [10, 20, 25, 40]) },
-                { item: 'bottles of water', price: ri(rng, 6, 24), qty: rc(rng, [6, 8, 12, 24]) },
-                { item: 'pencils', price: ri(rng, 3, 15), qty: rc(rng, [5, 10, 12, 20]) },
-            ];
-            const ctx = rc(rng, MED_CONTEXTS);
-            const unitPrice = round(ctx.price / ctx.qty, 2);
-            const ph = rc(rng, [
-                `$${ctx.qty}$ ${ctx.item} cost $\\$${ctx.price}$. Find the cost per item.`,
-                `If $${ctx.qty}$ ${ctx.item} cost $\\$${ctx.price}$, what is the *unit rate*?`,
-            ]);
-            return { clue: ph, answer: String(unitPrice), answerDisplay: `$\\$${money(unitPrice)}$`,
-                worked: `$\\$${ctx.price} \\div ${ctx.qty} = \\$${money(unitPrice)}$` };
+            const r = rng();
+            if (r < 0.25) return scaleQ(false);
+            if (r < 0.5) { const bb = bestBuy({ q1: [250, 500, 750, 1000], q2: [200, 400, 600, 800], p: [2, 10] }); if (bb) return bb; }
+            return rateReturn(unitCtx(rc(rng, ['apples', 'petrol', 'water', 'pencils', 'muffins'])));
         }
-        // Easy
-        const EASY_CONTEXTS = [
-            { item: 'apples', price: ri(rng, 2, 6), qty: rc(rng, [2, 4, 5, 6]) },
-            { item: 'oranges', price: ri(rng, 3, 8), qty: rc(rng, [2, 3, 4, 5]) },
-            { item: 'pencils', price: ri(rng, 2, 8), qty: rc(rng, [4, 5, 8, 10]) },
-        ];
-        const ctx = rc(rng, EASY_CONTEXTS);
-        const unitPrice = round(ctx.price / ctx.qty, 2);
-        const ph = rc(rng, [
-            `$${ctx.qty}$ ${ctx.item} cost $\\$${ctx.price}$. Find the cost per item.`,
-            `If $${ctx.qty}$ ${ctx.item} costs $\\$${ctx.price}$, what is the *unit rate*?`,
-        ]);
-        return { clue: ph, answer: String(unitPrice), answerDisplay: `$\\$${money(unitPrice)}$`,
-            worked: `$\\$${ctx.price} \\div ${ctx.qty} = \\$${money(unitPrice)}$` };
+        return rateReturn(unitCtx(rc(rng, ['apples', 'oranges', 'pencils', 'stickers'])));
     }
 
     // op === 'speed'
-    const SPEED_CONTEXTS = [
-        { vehicle: 'car', unit: 'km/h' },
-        { vehicle: 'train', unit: 'km/h' },
-        { vehicle: 'cyclist', unit: 'km/h' },
-        { vehicle: 'bus', unit: 'km/h' },
-        { vehicle: 'truck', unit: 'km/h' },
-        { vehicle: 'runner', unit: 'km/h' },
+    // Each vehicle gets a believable speed range, so "a cyclist at 110 km/h" can't happen.
+    const VEHICLES = [
+        { v: 'car',       lo: 50, hi: 110, step: 10 },
+        { v: 'train',     lo: 60, hi: 140, step: 20 },
+        { v: 'bus',       lo: 40, hi: 80,  step: 10 },
+        { v: 'truck',     lo: 50, hi: 90,  step: 10 },
+        { v: 'cyclist',   lo: 10, hi: 30,  step: 5 },
+        { v: 'runner',    lo: 8,  hi: 16,  step: 2 },
+        { v: 'motorbike', lo: 60, hi: 100, step: 10 },
+        { v: 'ferry',     lo: 20, hi: 40,  step: 5 },
     ];
-    const ctx = rc(rng, SPEED_CONTEXTS);
+    const ctx = rcFresh(rng, VEHICLES, 'vehicles');
+    const pickSpeed = () => ctx.lo + ctx.step * ri(rng, 0, Math.floor((ctx.hi - ctx.lo) / ctx.step));
+    const hrs = (t) => `$${t}$ ${t === 1 ? 'hour' : 'hours'}`;
+
+    const kmhToMs = (kmh) => {
+        const ms = kmh / 3.6;
+        return { clue: rc(rng, [
+                `Convert $${kmh}$ km/h to *m/s*. ($1$ km/h $= \\frac{1}{3.6}$ m/s.)`,
+                `A ${ctx.v} travels at $${kmh}$ km/h. Express this speed in *m/s*.`,
+            ]), answer: String(ms), answerDisplay: `${ms} m/s`, worked: `$${kmh} \\div 3.6 = ${ms}$ m/s` };
+    };
+    // Each phrasing keeps the "d km in t hours" / "at s km/h for t hours" / "d km at s km/h" shapes.
+    const speedQ = (hard) => {
+        const t = hard ? rc(rng, [2, 3, 4, 5, 6, 8]) : ri(rng, 1, diff === 'Easy' ? 3 : 5);
+        const sp = pickSpeed(), d = sp * t;
+        return { clue: rc(rng, [
+                `A ${ctx.v} travels $${d}$ km in ${hrs(t)}. Find its speed.`,
+                `Find the speed of a ${ctx.v} that covers $${d}$ km in ${hrs(t)}.`,
+                `${pickName(rng)} records a ${ctx.v} travelling $${d}$ km in ${hrs(t)}. Find its average speed.`,
+            ]), answer: String(sp), answerDisplay: `${sp} km/h`, worked: `$s = ${d} \\div ${t} = ${sp}$ km/h` };
+    };
+    const distQ = (hard) => {
+        const sp = pickSpeed(), t = hard ? rc(rng, [2, 3, 4, 5, 2.5, 3.5]) : ri(rng, 1, diff === 'Easy' ? 3 : 4);
+        const d = sp * t;
+        return { clue: rc(rng, [
+                `A ${ctx.v} travels at $${sp}$ km/h for ${hrs(t)}. Find the distance.`,
+                `How far does a ${ctx.v} travel at $${sp}$ km/h for ${hrs(t)}?`,
+            ]), answer: String(d), answerDisplay: `${d} km`, worked: `$d = ${sp} \\times ${t} = ${d}$ km` };
+    };
+    const timeQ = (hard) => {
+        const sp = pickSpeed(), t = ri(rng, hard ? 2 : 1, hard ? 6 : 5), d = sp * t;
+        return { clue: rc(rng, [
+                `A ${ctx.v} travels $${d}$ km at $${sp}$ km/h. How long does the journey take?`,
+                `Find the *time* taken for a ${ctx.v} to travel $${d}$ km at $${sp}$ km/h.`,
+            ]), answer: String(t), answerDisplay: `${t} h`, worked: `$t = ${d} \\div ${sp} = ${t}$ h` };
+    };
+
     if (diff === 'Hard') {
         // 35%: combined-speed multi-step
         if (rng() < 0.35) {
@@ -5684,88 +5775,19 @@ function genRatiosRates(rng, diff, allowedOps) {
             const apart = opposite ? (s1 + s2) * t : Math.abs(s1 - s2) * t;
             const dirText = opposite ? 'in opposite directions' : 'in the same direction';
             const ph = rc(rng, [
-                `Two trains leave the same station ${dirText} at $${s1}$ km/h and $${s2}$ km/h. How far apart are they after $${t}$ hours?`,
-                `Two cars start together and travel ${dirText} at $${s1}$ km/h and $${s2}$ km/h. Find the distance between them after $${t}$ hours.`,
+                `Two trains leave the same station ${dirText} at $${s1}$ km/h and $${s2}$ km/h. How far apart are they after ${hrs(t)}?`,
+                `Two cars start together and travel ${dirText} at $${s1}$ km/h and $${s2}$ km/h. Find the distance between them after ${hrs(t)}.`,
             ]);
             return { clue: ph, answer: String(apart), answerDisplay: `${apart} km`,
-                worked: `$\\text{Relative speed} = ${opposite ? s1 + s2 : Math.abs(s1 - s2)}, \\; d = ${opposite ? s1 + s2 : Math.abs(s1 - s2)} \\times ${t} = ${apart}$ km` };
+                worked: `$\\text{Relative speed} = ${opposite ? s1 + s2 : Math.abs(s1 - s2)}, \; d = ${opposite ? s1 + s2 : Math.abs(s1 - s2)} \\times ${t} = ${apart}$ km` };
         }
-        // 25%: km/h ↔ m/s
-        if (rng() < 0.25) {
-            const kmh = rc(rng, [18, 36, 54, 72, 90, 108, 126, 144]);
-            const ms = kmh / 3.6;
-            const ph = rc(rng, [
-                `Convert $${kmh}$ km/h to *m/s*. ($1$ km/h $= \\frac{1}{3.6}$ m/s.)`,
-                `A ${ctx.vehicle} travels at $${kmh}$ km/h. Express this speed in *m/s*.`,
-            ]);
-            return { clue: ph, answer: String(ms), answerDisplay: `${ms} m/s`,
-                worked: `$${kmh} \\div 3.6 = ${ms}$ m/s` };
-        }
-        const findWhat = rc(rng, ['speed', 'distance', 'time']);
-        if (findWhat === 'speed') {
-            const t = rc(rng, [2, 3, 4, 5, 6, 8]);
-            const s = ri(rng, 5, 15) * 10;
-            const d = s * t;
-            const ph = `A ${ctx.vehicle} travels $${d}$ km in $${t}$ hours. Find its speed.`;
-            return { clue: ph, answer: String(s), answerDisplay: `${s} ${ctx.unit}`,
-                worked: `$s = ${d} \\div ${t} = ${s}$ km/h` };
-        }
-        if (findWhat === 'distance') {
-            const speed = ri(rng, 5, 14) * 10, time = rc(rng, [2, 3, 4, 5, 2.5, 3.5]);
-            const dist = speed * time;
-            const ph = `A ${ctx.vehicle} travels at $${speed}$ ${ctx.unit} for $${time}$ hours. Find the distance.`;
-            return { clue: ph, answer: String(dist), answerDisplay: `${dist} km`,
-                worked: `$d = ${speed} \\times ${time} = ${dist}$ km` };
-        }
-        const speed2 = ri(rng, 5, 14) * 10, dist2 = speed2 * ri(rng, 2, 6);
-        const time2 = dist2 / speed2;
-        const ph = `A ${ctx.vehicle} travels $${dist2}$ km at $${speed2}$ ${ctx.unit}. How long does the journey take?`;
-        return { clue: ph, answer: String(time2), answerDisplay: `${time2} h`,
-            worked: `$t = ${dist2} \\div ${speed2} = ${time2}$ h` };
+        if (rng() < 0.25) return kmhToMs(rc(rng, [18, 36, 54, 72, 90, 108, 126, 144]));
+        return rc(rng, [speedQ, distQ, timeQ])(true);
     }
     // Medium: km/h ↔ m/s conversion 20%
-    if (diff === 'Medium' && rng() < 0.2) {
-        const kmh = rc(rng, [18, 36, 54, 72, 90, 108]);
-        const ms = kmh / 3.6;
-        const ph = rc(rng, [
-            `Convert $${kmh}$ km/h to *m/s*. ($1$ km/h $= \\frac{1}{3.6}$ m/s.)`,
-            `A ${ctx.vehicle} travels at $${kmh}$ km/h. Express this speed in *m/s*.`,
-        ]);
-        return { clue: ph, answer: String(ms), answerDisplay: `${ms} m/s`,
-            worked: `$${kmh} \\div 3.6 = ${ms}$ m/s` };
-    }
-    const findWhat = rc(rng, diff === 'Easy' ? ['speed', 'distance'] : ['speed', 'distance', 'time']);
-    if (findWhat === 'speed') {
-        const maxDist = diff === 'Easy' ? 10 : 15;
-        const d = ri(rng, 2, maxDist) * 10, t = ri(rng, 1, diff === 'Easy' ? 3 : 5);
-        if (d % t !== 0) return genRatiosRates(rng, diff, allowedOps);
-        const s = d / t;
-        const ph = rc(rng, [
-            `A ${ctx.vehicle} travels $${d}$ km in $${t}$ hour${t > 1 ? 's' : ''}. Find its speed.`,
-            `Find the speed of a ${ctx.vehicle} that covers $${d}$ km in $${t}$ h.`,
-        ]);
-        return { clue: ph, answer: String(s), answerDisplay: `${s} ${ctx.unit}`,
-            worked: `$s = ${d} \\div ${t} = ${s}$ km/h` };
-    }
-    if (findWhat === 'distance') {
-        const speed = ri(rng, 3, diff === 'Easy' ? 8 : 12) * 10, time = ri(rng, 1, diff === 'Easy' ? 3 : 4);
-        const dist = speed * time;
-        const ph = rc(rng, [
-            `A ${ctx.vehicle} travels at $${speed}$ ${ctx.unit} for $${time}$ hour${time > 1 ? 's' : ''}. Find the distance.`,
-            `How far does a ${ctx.vehicle} travel at $${speed}$ ${ctx.unit} in $${time}$ h?`,
-        ]);
-        return { clue: ph, answer: String(dist), answerDisplay: `${dist} km`,
-            worked: `$d = ${speed} \\times ${time} = ${dist}$ km` };
-    }
-    // findWhat === 'time'
-    const speed2 = ri(rng, 4, 12) * 10, dist2 = speed2 * ri(rng, 1, 5);
-    const time2 = dist2 / speed2;
-    const ph = rc(rng, [
-        `A ${ctx.vehicle} travels $${dist2}$ km at $${speed2}$ ${ctx.unit}. How long does the journey take?`,
-        `Find the *time* taken for a ${ctx.vehicle} to travel $${dist2}$ km at $${speed2}$ ${ctx.unit}.`,
-    ]);
-    return { clue: ph, answer: String(time2), answerDisplay: `${time2} h`,
-        worked: `$t = ${dist2} \\div ${speed2} = ${time2}$ h` };
+    if (diff === 'Medium' && rng() < 0.2) return kmhToMs(rc(rng, [18, 36, 54, 72, 90, 108]));
+    const kind = rc(rng, diff === 'Easy' ? [speedQ, distQ] : [speedQ, distQ, timeQ]);
+    return kind(false);
 }
 
 // ============================================================
@@ -6733,7 +6755,7 @@ function genLinear(rng, diff, allowedOps) {
                 clue: `Find the *gradient* of the line through $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
                 answer: String(m),
                 answerDisplay: `$m = ${m}$`,
-                worked: `$m = \\frac{${y2} - ${y1}}{${x2} - ${x1}} = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
+                worked: `$m = \\frac{${y2} - ${par(y1)}}{${x2} - ${par(x1)}} = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
                 diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true },
             };
         }
@@ -6749,7 +6771,7 @@ function genLinear(rng, diff, allowedOps) {
                         clue: `Find the *gradient* of the line through $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
                         answer: String(m),
                         answerDisplay: `$m = ${m}$`,
-                        worked: `$m = \\frac{${y2} - ${y1}}{${x2} - ${x1}} = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
+                        worked: `$m = \\frac{${y2} - ${par(y1)}}{${x2} - ${par(x1)}} = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
                         diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true },
                     };
                 }
@@ -6768,7 +6790,7 @@ function genLinear(rng, diff, allowedOps) {
                 clue: `Find the *gradient* of the line through $(${x1}, ${y1})$ and $(${x2}, ${y1})$.`,
                 answer: '0',
                 answerDisplay: `$m = 0$`,
-                worked: `$m = \\frac{${y1} - ${y1}}{${x2} - ${x1}} = \\frac{0}{${x2 - x1}} = 0$`,
+                worked: `$m = \\frac{${y1} - ${par(y1)}}{${x2} - ${par(x1)}} = \\frac{0}{${x2 - x1}} = 0$`,
             };
         }
         // Hard
@@ -6783,7 +6805,7 @@ function genLinear(rng, diff, allowedOps) {
                 clue: `Find the *gradient* of the line through $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
                 answer: String(m),
                 answerDisplay: `$m = ${m}$`,
-                worked: `$m = \\frac{${y2} - ${y1}}{${x2} - ${x1}} = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
+                worked: `$m = \\frac{${y2} - ${par(y1)}}{${x2} - ${par(x1)}} = \\frac{${y2 - y1}}{${dx}} = ${m}$`,
             };
         }
         // Perpendicular gradient
@@ -6843,7 +6865,7 @@ function genLinear(rng, diff, allowedOps) {
             clue: `The *midpoint* of $AB$ is $(${mx}, ${my})$. If $A = (${ax}, ${ay})$, find $B$.`,
             answer: `(${bx},${by})`,
             answerDisplay: `$(${bx}, ${by})$`,
-            worked: `$B_x = 2(${mx}) - ${ax} = ${bx}$, $B_y = 2(${my}) - ${ay} = ${by}$`,
+            worked: `$B_x = 2(${mx}) - ${par(ax)} = ${bx}$, $B_y = 2(${my}) - ${par(ay)} = ${by}$`,
         };
     }
 
@@ -7072,7 +7094,7 @@ function genVariation(rng, diff, allowedOps) {
             if (type === 0) {
                 const k = ri(rng, 2, 6);
                 const x1 = ri(rng, 2, 5), y1 = k * x1;
-                const x2 = ri(rng, 2, 8);
+                let x2 = ri(rng, 2, 8); if (x2 === x1) x2 = x1 + 1;
                 const y2 = k * x2;
                 return {
                     clue: rc(rng, [
@@ -7088,7 +7110,7 @@ function genVariation(rng, diff, allowedOps) {
             if (type === 1) {
                 const k = ri(rng, 2, 6);
                 const x1 = ri(rng, 2, 6), y1 = k * x1;
-                const x2f = ri(rng, 2, 8);
+                let x2f = ri(rng, 2, 8); if (x2f === x1) x2f = x1 + 1;
                 const y2 = k * x2f;
                 return {
                     clue: rc(rng, [
@@ -7115,7 +7137,7 @@ function genVariation(rng, diff, allowedOps) {
             if (type === 0) {
                 const k = ri(rng, 3, 10);
                 const x1 = ri(rng, 2, 8), y1 = k * x1;
-                const x2 = ri(rng, 3, 12);
+                let x2 = ri(rng, 3, 12); if (x2 === x1) x2 = x1 + 1;
                 const y2 = k * x2;
                 return {
                     clue: rc(rng, [
@@ -7130,7 +7152,7 @@ function genVariation(rng, diff, allowedOps) {
             if (type === 1) {
                 const k = ri(rng, 3, 8);
                 const x1 = ri(rng, 2, 6), y1 = k * x1;
-                const x2 = ri(rng, 3, 10);
+                let x2 = ri(rng, 3, 10); if (x2 === x1) x2 = x1 + 1;
                 const y2 = k * x2;
                 return {
                     clue: `The cost $C$ varies directly with the number of items $n$. $${x1}$ items cost $\\$${y1}$. Find the cost of $${x2}$ items.`,
@@ -7142,7 +7164,7 @@ function genVariation(rng, diff, allowedOps) {
             if (type === 2) {
                 const k = ri(rng, 2, 5);
                 const w1 = ri(rng, 3, 8), ext1 = k * w1;
-                const w2 = ri(rng, 4, 12);
+                let w2 = ri(rng, 4, 12); if (w2 === w1) w2 = w1 + 1;
                 const ext2 = k * w2;
                 return {
                     clue: `A spring stretches in **direct proportion** to the weight applied. A $${w1}$ kg weight stretches it $${ext1}$ cm. How far does a $${w2}$ kg weight stretch it?`,
@@ -7153,7 +7175,7 @@ function genVariation(rng, diff, allowedOps) {
             }
             const k = ri(rng, 3, 10);
             const x1 = ri(rng, 2, 6), y1 = k * x1;
-            const x2f = ri(rng, 3, 10);
+            let x2f = ri(rng, 3, 10); if (x2f === x1) x2f = x1 + 1;
             const y2 = k * x2f;
             return {
                 clue: `$y$ is **directly proportional** to $x$. When $x = ${x1}$, $y = ${y1}$. Find $x$ when $y = ${y2}$.`,
@@ -7167,7 +7189,7 @@ function genVariation(rng, diff, allowedOps) {
         if (type === 0) {
             const k = ri(rng, 2, 8);
             const x1 = ri(rng, 2, 5), y1 = k * x1 * x1;
-            const x2 = ri(rng, 2, 6);
+            let x2 = ri(rng, 2, 6); if (x2 === x1) x2 = x1 + 1;
             const y2 = k * x2 * x2;
             return {
                 clue: rc(rng, [
@@ -7182,7 +7204,7 @@ function genVariation(rng, diff, allowedOps) {
         if (type === 1) {
             const k = ri(rng, 4, 15);
             const x1 = ri(rng, 2, 6), y1 = k * x1;
-            const x2 = ri(rng, 3, 10);
+            let x2 = ri(rng, 3, 10); if (x2 === x1) x2 = x1 + 1;
             const y2 = k * x2;
             return {
                 clue: `$y \\propto x$. When $x = ${x1}$, $y = ${y1}$. Find the *constant of proportionality* $k$, then find $y$ when $x = ${x2}$.`,
@@ -7194,7 +7216,7 @@ function genVariation(rng, diff, allowedOps) {
         if (type === 2) {
             const k = ri(rng, 1, 4);
             const x1 = ri(rng, 2, 4), y1 = k * x1 * x1 * x1;
-            const x2 = ri(rng, 2, 5);
+            let x2 = ri(rng, 2, 5); if (x2 === x1) x2 = x1 + 1;
             const y2 = k * x2 * x2 * x2;
             return {
                 clue: rc(rng, [
@@ -7256,8 +7278,8 @@ function genVariation(rng, diff, allowedOps) {
         return {
             clue: `A car travelling at $${speed}$ km/h takes $${time}$ hours for a journey. How long would the journey take at $${speed2}$ km/h?`,
             answer: String(time2),
-            answerDisplay: `$${time2}$ hours`,
-            worked: `$\\text{distance} = ${speed} \\times ${time} = ${dist}$ km. $\\text{time} = \\frac{${dist}}{${speed2}} = ${time2}$ hours`,
+            answerDisplay: `$${time2}$ ${time2 === 1 ? 'hour' : 'hours'}`,
+            worked: `$\\text{distance} = ${speed} \\times ${time} = ${dist}$ km. $\\text{time} = \\frac{${dist}}{${speed2}} = ${time2}$ ${time2 === 1 ? 'hour' : 'hours'}`,
         };
     }
     if (diff === 'Medium') {
@@ -7284,7 +7306,7 @@ function genVariation(rng, diff, allowedOps) {
             return {
                 clue: `$${x1}$ workers can complete a job in $${y1}$ days. How many days would $${x2}$ workers take?`,
                 answer: String(y2),
-                answerDisplay: `${y2} days`,
+                answerDisplay: `${y2} ${y2 === 1 ? 'day' : 'days'}`,
                 worked: `$k = ${x1} \\times ${y1} = ${k}$. Days $= \\frac{${k}}{${x2}} = ${y2}$`,
             };
         }
@@ -7299,8 +7321,8 @@ function genVariation(rng, diff, allowedOps) {
             return {
                 clue: `A train travelling at $${speed1}$ km/h takes $${time1}$ hours. If the train travels at $${speed2}$ km/h instead, how long would the journey take?`,
                 answer: String(time2),
-                answerDisplay: `$${time2}$ hours`,
-                worked: `$\\text{distance} = ${speed1} \\times ${time1} = ${dist}$ km. $\\text{time} = \\frac{${dist}}{${speed2}} = ${time2}$ hours`,
+                answerDisplay: `$${time2}$ ${time2 === 1 ? 'hour' : 'hours'}`,
+                worked: `$\\text{distance} = ${speed1} \\times ${time1} = ${dist}$ km. $\\text{time} = \\frac{${dist}}{${speed2}} = ${time2}$ ${time2 === 1 ? 'hour' : 'hours'}`,
             };
         }
         // type 3: find x given y
@@ -7322,7 +7344,7 @@ function genVariation(rng, diff, allowedOps) {
         const x1 = ri(rng, 2, 10), y1 = ri(rng, 2, 10);
         const k = x1 * y1;
         const y2 = ri(rng, 2, 8);
-        if (k % y2 !== 0) return genVariation(rng, diff, allowedOps);
+        if (k % y2 !== 0 || y2 === y1) return genVariation(rng, diff, allowedOps);
         const x2 = k / y2;
         return {
             clue: rc(rng, [
@@ -7337,7 +7359,7 @@ function genVariation(rng, diff, allowedOps) {
     if (hType === 1) {
         const k = ri(rng, 2, 6);
         const x1 = ri(rng, 2, 5), y1 = k * x1 * x1;
-        const x2v = ri(rng, 2, 6);
+        let x2v = ri(rng, 2, 6); if (x2v === x1) x2v = x1 + 1;
         const y2 = k * x2v * x2v;
         return {
             clue: rc(rng, [
@@ -7753,7 +7775,7 @@ function genTime(rng, diff, allowedOps) {
         if (rng() < 0.5) {
             // express the duration as "h min" at Medium/Hard for variety
             const durTxt = (diff !== 'Easy' && addMin >= 60)
-                ? `$${Math.floor(addMin / 60)}$ hours $${addMin % 60}$ minutes`
+                ? `$${Math.floor(addMin / 60)}$ ${Math.floor(addMin / 60) === 1 ? 'hour' : 'hours'}${addMin % 60 ? ` $${addMin % 60}$ minutes` : ''}`
                 : `$${addMin}$ minutes`;
             return { clue: `A film starts at ${disp(startM)} and runs for ${durTxt}. What time does it finish?`,
                 answer: hm(endM), answerDisplay: disp(endM),
@@ -7770,7 +7792,7 @@ function genTime(rng, diff, allowedOps) {
         : [['Sydney', 'Perth', 180], ['Sydney', 'Brisbane', 60], ['Sydney', 'Adelaide', 30],
            ['Adelaide', 'Perth', 90], ['Sydney', 'Darwin', 90]];
     const [cityA, cityB, offMin] = rc(rng, PAIRS);   // A is offMin minutes ahead of B
-    const offTxt = offMin % 60 === 0 ? `$${offMin / 60}$ hours` : `$${offMin}$ minutes`;
+    const offTxt = offMin % 60 === 0 ? `$${offMin / 60}$ ${offMin === 60 ? 'hour' : 'hours'}` : `$${offMin}$ minutes`;
     const baseM = ri(rng, 6, 20) * 60 + (offMin % 60 === 0 ? 0 : rc(rng, [0, 30]));
 
     if (diff === 'Hard' && rng() < 0.5) {
@@ -8059,7 +8081,7 @@ function _genPythagHypotenuse(rng, diff) {
         const x2 = x1 + a, y2 = y1 + b;
         return { clue: `Find the distance between the points $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
             answer: String(c), answerDisplay: `$${c}$ units`,
-            worked: `$d = \\sqrt{(${x2}-${x1})^2 + (${y2}-${y1})^2} = \\sqrt{${a}^2 + ${b}^2} = ${c}$`,
+            worked: `$d = \\sqrt{(${x2} - ${par(x1)})^2 + (${y2} - ${par(y1)})^2} = \\sqrt{${a}^2 + ${b}^2} = ${c}$`,
             diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true } };
     }
 
@@ -8078,7 +8100,7 @@ function _genPythagHypotenuse(rng, diff) {
         const x2 = x1 + a, y2 = y1 + b;
         return { clue: `Find the distance between the points $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
             answer: String(c), answerDisplay: `$${c}$ units`,
-            worked: `$d = \\sqrt{(${x2}-${x1})^2 + (${y2}-${y1})^2} = \\sqrt{${a}^2 + ${b}^2} = ${c}$`,
+            worked: `$d = \\sqrt{(${x2} - ${par(x1)})^2 + (${y2} - ${par(y1)})^2} = \\sqrt{${a}^2 + ${b}^2} = ${c}$`,
             diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true } };
     }
     // irrational hypotenuse, rounded to 1 dp
@@ -8410,9 +8432,9 @@ function genFunctions(rng, diff, allowedOps) {
         const a = ri(rng, 1, 3), b = ri(rng, -4, 4), c = ri(rng, -5, 5);
         const k = ri(rng, -3, 3);
         const val = a * k * k + b * k + c;
-        return { clue: `If $f(x) = ${a === 1 ? '' : a}x^2 ${sgn(b)}x ${sgn(c)}$, evaluate $f(${k})$.`,
+        return { clue: `If $f(x) = ${polyStr([[a, 'x^2'], [b, 'x'], [c, '']])}$, evaluate $f(${k})$.`,
             answer: String(val), answerDisplay: `$${val}$`,
-            worked: `$f(${k}) = ${a}(${k})^2 ${sgn(b)}(${k}) ${sgn(c)} = ${val}$.` };
+            worked: `$f(${k}) = ${polyStr([[a, `(${k})^2`], [b, `(${k})`], [c, '']])} = ${val}$.` };
     }
 
     if (op === 'domain-range') {
@@ -8438,7 +8460,7 @@ function genFunctions(rng, diff, allowedOps) {
         // (x−h)² + (y−k)² = r² ⇒ x²+y²+Dx+Ey+F=0
         const h = ri(rng, -4, 4), k = ri(rng, -4, 4), r = ri(rng, 2, 6);
         const D = -2 * h, E = -2 * k, F = h * h + k * k - r * r;
-        const eqn = `x^2 + y^2 ${sgn(D)}x ${sgn(E)}y ${sgn(F)} = 0`;
+        const eqn = `${polyStr([[1, 'x^2'], [1, 'y^2'], [D, 'x'], [E, 'y'], [F, '']])} = 0`;
         const diagram = { type: 'coord-circle', h, k, r };
         if (rng() < 0.5) {
             return { clue: `Find the *centre* of the circle $${eqn}$ (complete the square).`,
@@ -8547,6 +8569,7 @@ const ALL_SUBTOPICS = Object.keys(GENERATORS);
  */
 export function generateMathsQuestions({ subTopic = 'All', subTopics = null, subOpsFilter = null, difficulty = 'All', count = 10, seed, showFormulas, stage = 'Stage 4', includePath = false } = {}) {
     const rng = mulberry32(seed != null ? seed : Date.now());
+    resetFresh();   // context variety is per worksheet
 
     // subTopics array takes priority over subTopic string
     let subtopics;
@@ -8624,6 +8647,12 @@ export function generateMathsQuestions({ subTopic = 'All', subTopics = null, sub
         let q;
         try { q = gen(rng, diff, allowedOps, { showFormulas, stage, includePath }); } catch (e) { console.error(e); continue; }
         if (!q) continue;
+
+        // Normalise how maths reads (no "1x", no "+ -3") before duplicate / shape checks.
+        q.clue = endPunct(tidyMath(q.clue));
+        if (q.answerDisplay) q.answerDisplay = tidyMath(String(q.answerDisplay));
+        if (q.worked) q.worked = tidyMath(q.worked);
+        if (typeof q.answer === 'string' && q.answer.includes('$')) q.answer = tidyMath(q.answer);
 
         const ans = String(q.answer);
         const displayStr = String(q.answerDisplay || ans);
