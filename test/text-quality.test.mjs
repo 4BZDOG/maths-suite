@@ -47,6 +47,14 @@ test('Text quality: "1 hours", "1 days" … plural agreement', () => {
     });
 });
 
+test('Text quality: a quantity of 1 takes a singular verb ("1 is", "1 gets")', () => {
+    scan('singular quantity with plural verb', (t) => {
+        const plain = t.replace(/\\\$/g, '');
+        const m = plain.match(/(?:^|[.?!]\s+)\$?1\$? (?:more (?:passenger|student|item)s? )?(are|get|leave|were)\b/);
+        return m ? `"1 ${m[1]}"` : null;
+    });
+});
+
 test('Text quality: plural subject takes a plural verb ("4 oranges cost")', () => {
     scan('plural subject with singular verb', (t) => {
         const m = t.match(/\$\d+\$ (?:\w+ ){0,3}(?:apples|oranges|pencils|stickers|muffins|bottles|litres|kilograms|metres)\b[^.?]*? costs\b/);

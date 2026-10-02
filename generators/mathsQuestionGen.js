@@ -57,11 +57,172 @@ function polyStr(terms) {
     return out || '0';
 }
 
+
+
+
+// ── "Fraction of an amount" and "percentage of an amount" scenes ─────────────
+// Each returns { c: clue, u: noun for the answer line }. W is always large enough for plurals.
+function fractionOfScene(rng, W, num, den) {
+    const f = `$\\frac{${num}}{${den}}$`, n = pickName(rng);
+    return rcFresh(rng, [
+        { c: `A class has $${W}$ students. ${f} of them play sport. How many students play sport?`, u: 'students' },
+        { c: `There are $${W}$ marbles in a bag. ${f} of them are red. How many red marbles are there?`, u: 'red marbles' },
+        { c: `A pizza has $${W}$ slices. ${f} of the pizza is eaten. How many slices is that?`, u: 'slices' },
+        { c: `${n} has $${W}$ stickers and gives ${f} of them to a friend. How many stickers does ${n} give away?`, u: 'stickers' },
+        { c: `A farm has $${W}$ animals. ${f} of them are cows. How many cows are there?`, u: 'cows' },
+        { c: `A bag holds $${W}$ lollies. ${n} eats ${f} of them. How many lollies does ${n} eat?`, u: 'lollies' },
+        { c: `A school library has $${W}$ books. ${f} of them are fiction. How many fiction books is that?`, u: 'books' },
+        { c: `A tank holds $${W}$ litres of water and ${f} of it is used. How many litres are used?`, u: 'litres' },
+        { c: `A team plays $${W}$ games and wins ${f} of them. How many games does the team win?`, u: 'games' },
+        { c: `${n} has $${W}$ pages to read and reads ${f} of them before dinner. How many pages is that?`, u: 'pages' },
+    ], 'frac-of-scenes');
+}
+function percentOfScene(rng, p, W) {
+    const n = pickName(rng);
+    return rcFresh(rng, [
+        { c: `$${p}\\%$ of a class of $${W}$ students passed the test. How many students passed?`, u: 'students' },
+        { c: `A bag has $${W}$ marbles and $${p}\\%$ of them are blue. How many blue marbles are there?`, u: 'blue marbles' },
+        { c: `${n} answered $${p}\\%$ of the $${W}$ questions on a quiz correctly. How many questions is that?`, u: 'questions' },
+        { c: `A tank holds $${W}$ litres and is $${p}\\%$ full. How many litres of water are in the tank?`, u: 'litres' },
+        { c: `A town has $${W}$ residents and $${p}\\%$ of them are under 18. How many residents is that?`, u: 'residents' },
+        { c: `A school has $${W}$ students and $${p}\\%$ walk to school. How many students walk?`, u: 'students' },
+        { c: `${n} has read $${p}\\%$ of a $${W}$-page book. How many pages has ${n} read?`, u: 'pages' },
+        { c: `A basketball player takes $${W}$ shots and $${p}\\%$ go in. How many shots go in?`, u: 'shots' },
+    ], 'pct-of-scenes');
+}
+
+// ── Ratio-sharing scenarios ─────────────────────────────────────────────────
+// Every stem states the total first ("$T$ …") so the amount can be re-derived from the clue, and
+// keeps the ratio's order meaningful (first person / first ingredient takes the first part).
+function ratioStem(rng, diff, T, parts, unitFallback) {
+    const R = `$${parts.join(' : ')}$`;
+    const [n1, n2, n3] = [pickName(rng), pickName(rng), pickName(rng)];
+    const three = parts.length === 3;
+    const thing = rc(rng, ['lollies', 'marbles', 'stickers', 'trading cards', 'pencils', 'shells', 'coins']);
+    const who = three ? `${n1}, ${n2} and ${n3}` : `${n1} and ${n2}`;
+    const generic = [
+        `Share $${T}$ ${unitFallback} in the ratio ${R}.`,
+        `Divide $${T}$ ${unitFallback} in the ratio ${R}.`,
+    ];
+    if (diff === 'Easy') {
+        return rcFresh(rng, [
+            ...generic,
+            `${who} share $${T}$ ${thing} in the ratio ${R}. How many does each person get?`,
+            `A bag of $${T}$ ${thing} is divided among ${who} in the ratio ${R}. How many does each person receive?`,
+        ], 'ratio-easy');
+    }
+    if (diff === 'Medium') {
+        return rcFresh(rng, [
+            ...generic,
+            three ? `A rope $${T}$ cm long is cut into three pieces in the ratio ${R}. Find the length of each piece.`
+                  : `A rope $${T}$ cm long is cut into two pieces in the ratio ${R}. Find the length of each piece.`,
+            three ? `$${T}$ mL of paint is mixed from red, yellow and white in the ratio ${R}. How much of each colour is used?`
+                  : `$${T}$ mL of paint is mixed from blue and white in the ratio ${R}. How much of each colour is used?`,
+            `${who} share $${T}$ ${thing} in the ratio ${R}. How many does each person get?`,
+        ], 'ratio-medium');
+    }
+    return rcFresh(rng, [
+        ...generic,
+        three ? `A business makes a profit of $\\$${T}$, shared among three partners in the ratio ${R}. How much does each partner receive?`
+              : `A business makes a profit of $\\$${T}$, shared between two partners in the ratio ${R}. How much does each partner receive?`,
+        three ? `$${T}$ kg of mix is made from cement, sand and gravel in the ratio ${R}. How many kilograms of each are used?`
+              : `$${T}$ kg of concrete mix is made from cement and sand in the ratio ${R}. How many kilograms of each are used?`,
+        `A fundraiser collects $\\$${T}$, which is split ${three ? 'between three charities' : 'between two charities'} in the ratio ${R}. Find each charity's share.`,
+    ], 'ratio-hard');
+}
+
+// ── Integer word problems ───────────────────────────────────────────────────
+// Wide banks (names + settings) so a worksheet rarely repeats a scenario. Numbers are always wrapped
+// in $…$ and singular/plural agree even when a quantity is 1.
+// "1 is" / "5 are"
+const _are = (v) => (v === 1 ? '$1$ is' : `$${v}$ are`);
+const _P = (v, noun, many) => `$${v}$ ${v === 1 ? noun : (many || noun + 's')}`;
+const WP_INT = {
+    '+': {
+        Easy: [
+            (a, b, n) => `${n} has ${_P(a, 'sticker')} and is given ${b} more. How many stickers does ${n} have now?`,
+            (a, b) => `A bakery sells ${_P(a, 'pie')} in the morning and ${b} in the afternoon. How many pies is that altogether?`,
+            (a, b) => `A jar holds ${_P(a, 'red counter')} and ${_P(b, 'blue counter')}. How many counters are in the jar?`,
+            (a, b, n) => `${n} reads ${_P(a, 'page')} on Saturday and ${_P(b, 'page')} on Sunday. How many pages is that in total?`,
+            (a, b) => `A bus has ${_P(a, 'passenger')}. ${b === 1 ? '$1$ more passenger gets' : `$${b}$ more passengers get`} on at the next stop. How many passengers are on the bus now?`,
+            (a, b) => `There are ${_P(a, 'student')} in class A and ${b} in class B. How many students are there altogether?`,
+            (a, b, n) => `${n} scores ${_P(a, 'point')} in the first game and ${_P(b, 'point')} in the second. What is the total score?`,
+            (a, b) => `A shop has ${_P(a, 'apple')} and receives ${b} more. How many apples are there in total?`,
+        ],
+        Hard: [
+            (a, b) => `A school raised $\\$${a}$ in Term 1 and $\\$${b}$ in Term 2. Find the total amount raised.`,
+            (a, b) => `A factory produces ${_P(a, 'item')} on Monday and ${b} on Tuesday. What is the total production?`,
+            (a, b) => `Two towns have populations of $${a}$ and $${b}$. What is the combined population?`,
+            (a, b) => `A library lends $${a}$ books in March and $${b}$ in April. How many books were lent altogether?`,
+            (a, b, n) => `${n} walks ${_P(a, 'step')} before lunch and ${_P(b, 'step')} after lunch. How many steps is that in total?`,
+            (a, b) => `A cinema sells ${_P(a, 'ticket')} on Friday and ${b} on Saturday. How many tickets are sold over the two days?`,
+            (a, b) => `A farm collects ${_P(a, 'egg')} one week and ${b} the next. How many eggs is that altogether?`,
+            (a, b, n) => `${n} raises $\\$${a}$ online and $\\$${b}$ at a school stall for charity. How much is raised in total?`,
+        ],
+    },
+    '-': {
+        Easy: [
+            (a, b) => `A baker has ${_P(a, 'bun')} and sells ${b}. How many buns remain?`,
+            (a, b) => `A class has ${_P(a, 'student')}. ${_are(b)} absent. How many are present?`,
+            (a, b) => `A farmer has ${_P(a, 'egg')}. ${_are(b)} sold. How many are left?`,
+            (a, b, n) => `${n} has ${_P(a, 'marble')} and loses ${b}. How many marbles are left?`,
+            (a, b) => `A bus carries ${_P(a, 'passenger')}. ${b === 1 ? '$1$ gets' : `$${b}$ get`} off. How many are still on the bus?`,
+            (a, b, n) => `A packet has ${_P(a, 'biscuit')}. ${n} eats ${b}. How many biscuits are left?`,
+        ],
+        Hard: [
+            (a, b) => `A warehouse has ${_P(a, 'item')}. ${_are(b)} shipped. How many remain?`,
+            (a, b) => `A school has $${a}$ students. ${b === 1 ? '$1$ leaves' : `$${b}$ leave`} during the year. How many are left?`,
+            (a, b) => `A concert venue seats $${a}$. ${b === 1 ? '$1$ ticket is' : `$${b}$ tickets are`} unsold. How many are sold?`,
+            (a, b) => `A tank holds $${a}$ litres. $${b}$ litres are used. How many litres remain?`,
+            (a, b) => `A library has $${a}$ books and ${_are(b)} on loan. How many books are on the shelves?`,
+            (a, b, n) => `${n} saves $\\$${a}$ and spends $\\$${b}$ on a new game. How much money is left?`,
+        ],
+    },
+    '×': {
+        Easy: [
+            (a, b) => `A box contains ${_P(a, 'item')}. There are ${_P(b, 'box', 'boxes')}. How many items altogether?`,
+            (a, b) => `Each row has ${_P(a, 'seat')} and there are ${_P(b, 'row')}. How many seats in total?`,
+            (a, b) => `A pack of pencils contains ${_P(a, 'pencil')}. How many pencils in ${_P(b, 'pack')}?`,
+            (a, b) => `A tray holds ${_P(a, 'cupcake')}. How many cupcakes are on ${_P(b, 'tray')}?`,
+            (a, b, n) => `${n} buys ${_P(b, 'packet')} of stickers with ${_P(a, 'sticker')} in each. How many stickers is that?`,
+            (a, b) => `A car park has ${_P(b, 'row')} with ${_P(a, 'space')} in each row. How many spaces are there?`,
+        ],
+        Hard: [
+            (a, b) => `A hall has ${_P(a, 'row')} of ${_P(b, 'chair')}. How many chairs in total?`,
+            (a, b) => `A factory makes ${_P(a, 'widget')} per hour. How many in ${_P(b, 'hour')}?`,
+            (a, b) => `Each crate holds ${_P(a, 'bottle')}. How many bottles in ${_P(b, 'crate')}?`,
+            (a, b) => `A train has ${_P(b, 'carriage')} with ${_P(a, 'seat')} each. How many seats are on the train?`,
+            (a, b, n) => `${n} runs $${a}$ km each week for ${_P(b, 'week')}. How far is that in total?`,
+            (a, b) => `Each packet contains ${_P(a, 'biscuit')}. How many biscuits are in ${_P(b, 'packet')}?`,
+        ],
+    },
+    '÷': {
+        Easy: [
+            (t, b) => `$${t}$ lollies are shared equally among ${_P(b, 'child', 'children')}. How many does each child get?`,
+            (t, b) => `A farmer packs $${t}$ eggs into boxes of $${b}$. How many boxes are needed?`,
+            (t, b) => `$${t}$ students are split into ${_P(b, 'equal group')}. How many students are in each group?`,
+            (t, b, n) => `${n} shares $${t}$ stickers equally among ${_P(b, 'friend')}. How many stickers does each friend get?`,
+            (t, b) => `A teacher puts $${t}$ pencils into ${_P(b, 'equal bundle')}. How many pencils are in each bundle?`,
+            (t, b) => `$${t}$ chairs are set out in rows of $${b}$. How many rows are there?`,
+        ],
+        Hard: [
+            (t, b) => `$${t}$ books are packed into ${_P(b, 'box', 'boxes')}. How many books per box?`,
+            (t, b) => `A $${t}$ km journey is split into ${_P(b, 'equal stage')}. How long is each stage?`,
+            (t, b) => `$${t}$ students are divided into ${_P(b, 'equal team')}. How many per team?`,
+            (t, b) => `A bakery packs $${t}$ muffins into trays of $${b}$. How many trays are needed?`,
+            (t, b, n) => `${n} reads a $${t}$-page book in ${_P(b, 'equal session')}. How many pages is that per session?`,
+            (t, b) => `$${t}$ cm of ribbon is cut into ${_P(b, 'equal piece')}. How long is each piece?`,
+        ],
+    },
+};
+const wpInt = (rng, op, diff, x, y) => {
+    const band = diff === 'Easy' ? 'Easy' : 'Hard';
+    return rcFresh(rng, WP_INT[op][band], `wp${op}${band}`)(x, y, pickName(rng));
+};
+
 // Negative numbers get brackets when they follow a minus sign: 5 - (-3), never 5 - -3.
 const par = (n) => (n < 0 ? `(${n})` : `${n}`);
 
-// "1 hour" / "2 hours"
-function plural(n, one, many) { return `${n} ${n === 1 ? one : (many || one + 's')}`; }
 
 // Tidy maths spans so generated expressions read the way a teacher would write them:
 // no leading coefficient of 1 ("1x" → "x", "1\sqrt{5}" → "\sqrt{5}") and no "+ -3" ("x + -3" → "x - 3").
@@ -76,8 +237,8 @@ function tidyMath(str) {
 }
 
 // Prose clues end like sentences: "Round $4.7$ to the nearest whole number" → "… number.".
-// Left alone: prompts ending in ":" before an expression, bare expression lines, and anything
-// that already ends in . ? ! ) or a closing quote.
+// Left alone: anything that already ends in . ? : ! ) or a quote, and clues that end on a maths
+// expression (a full stop right after "$-10 + 8$" would read as part of it).
 function endPunct(clue) {
     if (!clue) return clue;
     const lines = clue.split('\n');
@@ -85,7 +246,7 @@ function endPunct(clue) {
     if (!t.trim()) return clue;
     if (/^\s*\$[^$]*\$\s*$/.test(t)) return clue;
     if (/[.?:!)"'…]$/.test(t)) return clue;
-    if (/\$$/.test(t) && /:$/.test(t.replace(/\$[^$]*\$$/, '').trimEnd())) return clue;
+    if (/\$$/.test(t)) return clue;      // ends on a maths expression: a full stop there reads as part of it
     lines[lines.length - 1] = t + '.';
     return lines.join('\n');
 }
@@ -242,7 +403,7 @@ export const SUB_OPS = {
     'Financial Maths': [
         { key: 'simple-interest',   label: 'Simple interest' },
         { key: 'compound-interest', label: 'Compound interest' },
-        { key: 'markup-profit',     label: 'Markup / Profit' },
+        { key: 'markup-profit',     label: 'Markup / Discount / Profit' },
         { key: 'gst',               label: 'GST' },
         // Stage 5
         { key: 'depreciation',    label: 'Depreciation',       stages: ['Stage 5'] },
@@ -492,16 +653,7 @@ function genIntegers(rng, diff, allowedOps) {
         // 25-30% chance of a real-world context
         const wpChance = diff === 'Easy' ? 0.3 : 0.25;
         if (rng() < wpChance) {
-            const ctx = diff === 'Easy' ? rc(rng, [
-                { stem: `A shop has $${a}$ apples and receives $${b}$ more. How many apples are there in total?`, ans: a + b },
-                { stem: `A student scores $${a}$ points on Monday and $${b}$ points on Tuesday. What is the total score?`, ans: a + b },
-                { stem: `There are $${a}$ students in class A and $${b}$ students in class B. How many students altogether?`, ans: a + b },
-            ]) : rc(rng, [
-                { stem: `A school raised $\\$${a}$ in Term 1 and $\\$${b}$ in Term 2. Find the total amount raised.`, ans: a + b },
-                { stem: `A factory produces $${a}$ items on Monday and $${b}$ on Tuesday. What is the total production?`, ans: a + b },
-                { stem: `Two towns have populations of $${a}$ and $${b}$. What is the combined population?`, ans: a + b },
-            ]);
-            return { clue: ctx.stem, answer: String(ctx.ans), worked: `$${a} + ${b} = ${ctx.ans}$` };
+            return { clue: wpInt(rng, '+', diff, a, b), answer: String(a + b), worked: `$${a} + ${b} = ${a + b}$` };
         }
         const clue = rc(rng, [
             `${rc(rng, CALC_VERBS)} $${a} + ${b}$`,
@@ -567,16 +719,7 @@ function genIntegers(rng, diff, allowedOps) {
         const max = diff === 'Easy' ? 50 : diff === 'Medium' ? 500 : 9999;
         const a = ri(rng, 1, max), b = ri(rng, 1, a);
         if (rng() < 0.25) {
-            const ctx = diff === 'Easy' ? rc(rng, [
-                { stem: `A baker has $${a}$ buns and sells $${b}$. How many buns remain?`, ans: a - b },
-                { stem: `A class has $${a}$ students. $${b}$ are absent. How many are present?`, ans: a - b },
-                { stem: `A farmer has $${a}$ eggs. $${b}$ are sold. How many are left?`, ans: a - b },
-            ]) : rc(rng, [
-                { stem: `A warehouse has $${a}$ items. $${b}$ are shipped. How many remain?`, ans: a - b },
-                { stem: `A school has $${a}$ students. $${b}$ leave during the year. How many are left?`, ans: a - b },
-                { stem: `A concert venue seats $${a}$. $${b}$ tickets are unsold. How many are sold?`, ans: a - b },
-            ]);
-            return { clue: ctx.stem, answer: String(ctx.ans), worked: `$${a} - ${b} = ${ctx.ans}$` };
+            return { clue: wpInt(rng, '-', diff, a, b), answer: String(a - b), worked: `$${a} - ${b} = ${a - b}$` };
         }
         const clue = rc(rng, [
             `${rc(rng, CALC_VERBS)} $${a} - ${b}$`,
@@ -598,21 +741,11 @@ function genIntegers(rng, diff, allowedOps) {
         const a = ri(rng, lo, hi), b = ri(rng, lo, hi);
         // Easy: 25% word problem
         if (diff === 'Easy' && rng() < 0.25) {
-            const ctx = rc(rng, [
-                { stem: `A box contains $${a}$ items. There are $${b}$ boxes. How many items altogether?`, ans: a * b },
-                { stem: `Each row has $${a}$ seats and there are $${b}$ rows. How many seats in total?`, ans: a * b },
-                { stem: `A pack of pencils contains $${a}$ pencils. How many pencils in $${b}$ packs?`, ans: a * b },
-            ]);
-            return { clue: ctx.stem, answer: String(ctx.ans), worked: `$${a} \\times ${b} = ${ctx.ans}$` };
+            return { clue: wpInt(rng, '×', diff, a, b), answer: String(a * b), worked: `$${a} \\times ${b} = ${a * b}$` };
         }
         // Medium/Hard: 20% word problem
         if (diff !== 'Easy' && rng() < 0.2) {
-            const ctx = rc(rng, [
-                { stem: `A hall has $${a}$ rows of $${b}$ chairs. How many chairs in total?`, ans: a * b },
-                { stem: `A factory makes $${a}$ widgets per hour. How many in $${b}$ hours?`, ans: a * b },
-                { stem: `Each crate holds $${a}$ bottles. How many bottles in $${b}$ crates?`, ans: a * b },
-            ]);
-            return { clue: ctx.stem, answer: String(ctx.ans), worked: `$${a} \\times ${b} = ${ctx.ans}$` };
+            return { clue: wpInt(rng, '×', diff, a, b), answer: String(a * b), worked: `$${a} \\times ${b} = ${a * b}$` };
         }
         // Medium/Hard: 40% chance of negative operand(s)
         if (diff !== 'Easy' && rng() < 0.4) {
@@ -663,22 +796,12 @@ function genIntegers(rng, diff, allowedOps) {
         // Easy: 25% word problem
         if (diff === 'Easy' && rng() < 0.25) {
             const total = b * ans;
-            const ctx = rc(rng, [
-                { stem: `$${total}$ lollies are shared equally among $${b}$ children. How many does each child get?` },
-                { stem: `A farmer packs $${total}$ eggs into boxes of $${b}$. How many boxes are needed?` },
-                { stem: `$${total}$ students are split into $${b}$ equal groups. How many in each group?` },
-            ]);
-            return { clue: ctx.stem, answer: String(ans), worked: `$${b * ans} \\div ${b} = ${ans}$` };
+            return { clue: wpInt(rng, '÷', diff, total, b), answer: String(ans), worked: `$${b * ans} \\div ${b} = ${ans}$` };
         }
         // Medium/Hard: 20% word problem
         if (diff !== 'Easy' && rng() < 0.2) {
             const total = b * ans;
-            const ctx = rc(rng, [
-                { stem: `$${total}$ books are packed into $${b}$ boxes. How many books per box?` },
-                { stem: `A $${total}$ km journey is split into $${b}$ equal stages. How long is each stage?` },
-                { stem: `$${total}$ students are divided into $${b}$ equal teams. How many per team?` },
-            ]);
-            return { clue: ctx.stem, answer: String(ans), worked: `$${total} \\div ${b} = ${ans}$` };
+            return { clue: wpInt(rng, '÷', diff, total, b), answer: String(ans), worked: `$${total} \\div ${b} = ${ans}$` };
         }
         // Medium/Hard: 40% chance of negative dividend
         if (diff !== 'Easy' && rng() < 0.4) {
@@ -1178,7 +1301,7 @@ function genRounding(rng, diff, allowedOps) {
             const ph = rc(rng, [
                 `Round $${n}$ to the nearest $10$`,
                 `Write $${n}$ rounded to the nearest $10$`,
-                `Estimate $${n}$ to the nearest $10$`,
+                `Round off $${n}$ to the nearest $10$`,
             ]);
             return { clue: ph, answer: String(ans), worked: wk0 };
         }
@@ -1442,13 +1565,9 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             // 35% chance real-world context. Pair each clue with its noun so the
             // worksheet answer line and answer key can show the unit (e.g.
             // "12 students") instead of a bare number.
-            if (rng() < 0.35) {
-                const wp = rc(rng, [
-                    { c: `A class has $${whole}$ students. $\\frac{${num}}{${den}}$ of them play sport. How many students play sport?`, n: 'students' },
-                    { c: `There are $${whole}$ lollies in a bag. Tom eats $\\frac{${num}}{${den}}$ of them. How many lollies did Tom eat?`, n: 'lollies' },
-                    { c: `A farm has $${whole}$ animals. $\\frac{${num}}{${den}}$ are cows. How many cows are there?`, n: 'cows' },
-                ]);
-                return { clue: wp.c, answer: String(ans), answerDisplay: `${ans} ${wp.n}`, unit: wp.n, worked: `$\\frac{${num}}{${den}} \\times ${whole} = ${ans}$` };
+            if (rng() < 0.4) {
+                const wp = fractionOfScene(rng, whole, num, den);
+                return { clue: wp.c, answer: String(ans), answerDisplay: `${ans} ${wp.u}`, unit: wp.u, worked: `$\\frac{${num}}{${den}} \\times ${whole} = ${ans}$` };
             }
             const ph = rc(rng, [
                 `Find $\\frac{${num}}{${den}}$ of $${whole}$`,
@@ -1514,12 +1633,8 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
         const num3 = ri(rng, 1, den3 - 1);
         const whole3 = den3 * ri(rng, 3, 15);
         const ans3 = (num3 * whole3) / den3;
-        const ctx3 = rc(rng, [
-            `$${whole3}$ students walk to school. $\\frac{${num3}}{${den3}}$ of them walk every day. How many is that?`,
-            `A pizza has $${whole3}$ slices. $\\frac{${num3}}{${den3}}$ of the pizza is eaten. How many slices is that?`,
-            `There are $${whole3}$ marbles in a bag. $\\frac{${num3}}{${den3}}$ are red. How many red marbles are there?`,
-        ]);
-        return { clue: ctx3, answer: String(ans3), worked: `$\\frac{${num3}}{${den3}} \\times ${whole3} = ${ans3}$` };
+        const wp3 = fractionOfScene(rng, whole3, num3, den3);
+        return { clue: wp3.c, answer: String(ans3), answerDisplay: `${ans3} ${wp3.u}`, unit: wp3.u, worked: `$\\frac{${num3}}{${den3}} \\times ${whole3} = ${ans3}$` };
     }
 
     if (diff === 'Medium') {
@@ -1779,6 +1894,10 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             const mult = denominators[pct] || 10;
             const whole = ri(rng, 1, 20) * mult;
             const ans = Math.round((pct / 100) * whole);
+            if (whole >= 8 && rng() < 0.4) {
+                const sc = percentOfScene(rng, pct, whole);
+                return { clue: sc.c, answer: String(ans), answerDisplay: `${ans} ${sc.u}`, unit: sc.u, worked: `$\\frac{${pct}}{100} \\times ${whole} = ${ans}$` };
+            }
             const ph = rc(rng, [
                 `Find $${pct}\\%$ of $${whole}$`,
                 `Calculate $${pct}\\%$ of $${whole}$`,
@@ -1827,6 +1946,10 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
                 const whole = rc(rng, candidates);
                 const ans = (pct / 100) * whole;
                 if (Number.isInteger(ans)) {
+                    if (rng() < 0.35) {
+                        const sc = percentOfScene(rng, pct, whole);
+                        return { clue: sc.c, answer: String(ans), answerDisplay: `${ans} ${sc.u}`, unit: sc.u, worked: `$${pct}\\% \\times ${whole} = \\frac{${pct}}{100} \\times ${whole} = ${ans}$` };
+                    }
                     const ph = rc(rng, [
                         `Find $${pct}\\%$ of $${whole}$`,
                         `Calculate $${pct}\\%$ of $${whole}$`,
@@ -3022,7 +3145,8 @@ function _circleQuestion(rng, diff, opts) {
     const r = ri(rng, 2, diff === 'Easy' ? 9 : 14);
     const u = _geoUnit(r);
     const fOn = opts.showFormulas?.['circles']?.[diff.toLowerCase()];
-    if (rng() < 0.5) {
+    const pickArea = rng() < 0.5;
+    if (pickArea || opts.circleOnly === 'area') {   // the Area topic's "Area of circles" never asks for a circumference
         const ans = round(3.14 * r * r, 2);
         const pf = fOn ? ' Use $A = \\pi r^2$.' : '';
         const ph = rc(rng, [
@@ -4259,11 +4383,14 @@ function _genGeometryS5Op(rng, diff, op) {
             const saWorked = `$SA = 2(${l} \\times ${w} + ${l} \\times ${h} + ${w} \\times ${h}) = 2(${l*w} + ${l*h} + ${w*h}) = ${sa}$ ${u}²`;
             // ~35% chance: an applied "how much material to cover it" problem.
             if (rng() < 0.35) {
+                // Real boxes aren't millimetres wide: applied problems are always in centimetres.
+                const uc = 'cm';
                 const ctx = rc(rng, [
-                    `A gift box measures $${l}$ ${u} by $${w}$ ${u} by $${h}$ ${u}. How much wrapping paper (in ${u}²) is needed to cover it exactly, ignoring overlap?`,
-                    `A closed box is made from sheet cardboard with dimensions $${l}$ ${u} × $${w}$ ${u} × $${h}$ ${u}. What area of cardboard (${u}²) is required?`,
+                    `A gift box measures $${l}$ ${uc} by $${w}$ ${uc} by $${h}$ ${uc}. How much wrapping paper (in ${uc}²) is needed to cover it exactly, ignoring overlap?`,
+                    `A closed box is made from sheet cardboard with dimensions $${l}$ ${uc} × $${w}$ ${uc} × $${h}$ ${uc}. What area of cardboard (${uc}²) is required?`,
+                    `${pickName(rng)} is covering a $${l}$ ${uc} by $${w}$ ${uc} by $${h}$ ${uc} jewellery box in felt. What area of felt (in ${uc}²) is needed to cover every face?`,
                 ]);
-                return { clue: ctx, answer: String(sa), answerDisplay: `${sa} ${u}²`, worked: saWorked, diagram: { type: 'solid', kind: 'prism', dims: { l, w, h }, unit: u, find: 'SA' } };
+                return { clue: ctx, answer: String(sa), answerDisplay: `${sa} ${uc}²`, worked: saWorked.replace(new RegExp(` ${u}²$`), ` ${uc}²`), diagram: { type: 'solid', kind: 'prism', dims: { l, w, h }, unit: uc, find: 'SA' } };
             }
             const ph = rc(rng, [
                 `Find the *surface area* of a rectangular prism: length $${l}$ ${u}, width $${w}$ ${u}, height $${h}$ ${u}.`,
@@ -5038,8 +5165,8 @@ function genProbability(rng, diff, allowedOps) {
 
     // ---- conditional probability P(A|B) = n(A∩B)/n(B) (MA5-PRO-P-01) ----
     if (op === 'conditional') {
-        const subjA = rc(rng, ['History', 'music', 'French', 'science']);
-        const subjB = rc(rng, ['Geography', 'art', 'Spanish', 'sport'].filter(() => true));
+        const subjA = rc(rng, ['History', 'Music', 'French', 'Science']);
+        const subjB = rc(rng, ['Geography', 'Art', 'Spanish', 'Sport']);
         const total = rc(rng, [80, 100, 120, 150]);
         const both = ri(rng, 10, 25);
         const nB = both + ri(rng, 10, 30);
@@ -5179,8 +5306,8 @@ function genProbability(rng, diff, allowedOps) {
             const s = simplify(chosen, sections);
             const shadedVersion = rng() < 0.5;
             const ph = shadedVersion
-                ? `A spinner has $${sections}$ equal sections, $${chosen}$ of which are shaded. Find the probability of landing on a shaded section.`
-                : `A wheel is divided into $${sections}$ equal parts. $${chosen}$ are coloured red. What is the probability of spinning red?`;
+                ? `A spinner has $${sections}$ equal sections, $${chosen}$ of which ${chosen === 1 ? 'is' : 'are'} shaded. Find the probability of landing on a shaded section.`
+                : `A wheel is divided into $${sections}$ equal parts. $${chosen}$ ${chosen === 1 ? 'is' : 'are'} coloured red. What is the probability of spinning red?`;
             return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
                 worked: `$P = \\frac{${chosen}}{${sections}} = \\frac{${s.n}}{${s.d}}$`,
                 diagram: { type: 'spinner', sectors: Array.from({ length: sections }, (_, i) => ({ label: '', color: i < chosen ? (shadedVersion ? 'grey' : 'red') : 'white' })) } };
@@ -5596,24 +5723,19 @@ function genRatiosRates(rng, diff, allowedOps) {
                 return { clue: ph, answer: String(ansVal), answerDisplay: `$${ansVal}$ ${unit}`,
                     worked: `$\\text{Total parts} = ${denom}, \\; \\text{each part} = ${share}, \\; \\text{${which}} = ${ansVal}$` };
             }
-            const ph = rc(rng, [
-                `Share $${total}$ ${unit} in the ratio $${a} : ${b} : ${c}$.`,
-                `Divide $${total}$ ${unit} in the ratio $${a} : ${b} : ${c}$.`,
-            ]);
+            const ph = ratioStem(rng, diff, total, [a, b, c], unit);
             return { clue: ph, answer: `${A} : ${B} : ${C}`, answerDisplay: `$${A} : ${B} : ${C}$`,
                 worked: `$\\text{Total parts} = ${denom}, \\; \\text{each part} = ${share}$` };
         }
         const partsA = ri(rng, 1, diff === 'Hard' ? 9 : diff === 'Medium' ? 6 : 4);
         const partsB = ri(rng, 1, diff === 'Hard' ? 9 : diff === 'Medium' ? 6 : 4);
         const denomParts = partsA + partsB;
+        // a ratio like 2 : 2 or 3 : 9 isn't in simplest form (and 1 : 1 is a plain halving): keep them rare
+        if ((partsA === partsB || gcd(partsA, partsB) > 1) && rng() < 0.85) return genRatiosRates(rng, diff, allowedOps);
         if (total % denomParts !== 0) return genRatiosRates(rng, diff, allowedOps);
         const shareA = (total / denomParts) * partsA;
         const shareB = total - shareA;
-        const ph = rc(rng, [
-            `Divide $${total}$ ${unit} in the ratio $${partsA} : ${partsB}$.`,
-            `Share $${total}$ ${unit} in the ratio $${partsA} : ${partsB}$.`,
-            `Split $${total}$ ${unit} between two people in the ratio $${partsA} : ${partsB}$.`,
-        ]);
+        const ph = ratioStem(rng, diff, total, [partsA, partsB], unit);
         return { clue: ph, answer: `${shareA} : ${shareB}`, answerDisplay: `$${shareA} : ${shareB}$`,
             worked: `$\\text{Total parts} = ${denomParts}, \\; ${shareA} : ${shareB}$` };
     }
@@ -6201,12 +6323,17 @@ function genIndices(rng, diff, allowedOps) {
     }
 
     if (op === 'hcf-lcm') {
-        const lo = diff === 'Easy' ? 4 : diff === 'Medium' ? 6 : 8;
-        const hi = diff === 'Easy' ? 20 : diff === 'Medium' ? 40 : 60;
-        const a = ri(rng, lo, hi), b = ri(rng, lo, hi);
+        // Numbers are built as g×m, g×n (g = a shared factor) so the HCF question is a real one;
+        // an occasional coprime pair (Medium/Hard) keeps "HCF = 1" in the mix.
+        const gMax = diff === 'Easy' ? 6 : diff === 'Medium' ? 9 : 12, mMax = diff === 'Easy' ? 5 : diff === 'Medium' ? 7 : 9;
+        const distinct = (n0, taken) => { let n = n0; while (taken.includes(n)) n = ri(rng, 2, mMax); return n; };
+        const g = ri(rng, 2, gMax);
+        const m1 = ri(rng, 2, mMax), m2 = distinct(ri(rng, 2, mMax), [m1]), m3 = distinct(ri(rng, 2, mMax), [m1, m2]);
+        let a = g * m1, b = g * m2;
+        if (diff !== 'Easy' && rng() < 0.12) { do { a = ri(rng, 6, 60); b = ri(rng, 6, 60); } while (gcd(a, b) !== 1); }
         if (diff === 'Hard' && rng() < 0.6) {
             // three numbers
-            const c = ri(rng, lo, hi);
+            const c = g * m3;
             const H = gcd(gcd(a, b), c), L = lcm(lcm(a, b), c);
             const wantHCF = rng() < 0.5;
             return wantHCF
@@ -6272,7 +6399,8 @@ function genIndices(rng, diff, allowedOps) {
         const useSq = rng() < 0.5;
         const [n, r] = rc(rng, useSq ? squares : cubes);
         const den = useSq ? 2 : 3;
-        const num = ri(rng, 2, 3);
+        // numerator never equals the denominator (8^(3/3) is just 8): 3/2 for roots, 2/3 or 4/3 for cube roots
+        const num = useSq ? 3 : rc(rng, [2, 4]);
         const val = Math.pow(r, num);
         if (diff === 'Medium') {
             return { clue: `${verb}\n$${n}^{\\frac{${num}}{${den}}}$`, answer: String(val), answerDisplay: `$${val}$`,
@@ -6335,7 +6463,7 @@ function genAlgebraicIndices(rng, diff, allowedOps) {
     if (op === 'alg-fraction') {
         if (diff === 'Easy') {
             // x^(1/2) × x^(3/2) = x^2  (half-integer indices summing to an integer)
-            const a = ri(rng, 1, 5), b = ri(rng, 1, 5), s = (a + b) / 2;
+            const a = rc(rng, [1, 3, 5]), b = rc(rng, [1, 3, 5]), s = (a + b) / 2;   // odd/2 + odd/2: genuine halves that sum to a whole number
             return { clue: `${simp}\n$${v}^{\\frac{${a}}{2}} \\times ${v}^{\\frac{${b}}{2}}$`,
                 answer: `${v}^${s}`, answerDisplay: `$${P(v, s)}$`,
                 worked: `$${v}^{\\frac{${a}}{2}+\\frac{${b}}{2}} = ${v}^{\\frac{${a + b}}{2}} = ${P(v, s)}$` };
@@ -7426,6 +7554,11 @@ function genAlgebra(rng, diff, allowedOps, opts = {}) {
     return null;
 }
 
+// "Area" topic: same engine as Geometry, but its circle option is area-only (circumference belongs to Length).
+function genArea(rng, diff, allowedOps, opts = {}) {
+    return genGeometry(rng, diff, allowedOps, { ...opts, circleOnly: 'area' });
+}
+
 function genStatistics(rng, diff, allowedOps, opts = {}, _depth = 0) {
     const S5_KEYS = ['five-number-summary', 'std-dev', 'box-plot', 'bivariate'];
     const s5Active = S5_KEYS.filter(k => allowedOps && allowedOps.includes(k));
@@ -8507,7 +8640,7 @@ const GENERATORS = {
     // Measurement & Space focus areas (NESA structure). Area / Pythagoras
     // reuse the geometry engine; Length / Volume / Time are standalone.
     'Length':                           genLength,
-    'Area':                             genGeometry,
+    'Area':                             genArea,
     'Volume':                           genVolume,
     'Time':                             genTime,
     "Pythagoras' Theorem":              genPythagoras,
