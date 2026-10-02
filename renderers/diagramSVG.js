@@ -2,6 +2,8 @@
 // Generates inline SVG strings for geometry question diagrams.
 // Colors adapt to light/dark mode via currentColor where possible.
 
+import { isPrimDiagram, buildPrims, primsToSVG } from './diagramPrims.js';
+
 const GC = '#10b981';  // emerald — shape outlines, arcs, dimension lines
 const MC = '#ef4444';  // red — missing value highlights
 
@@ -1059,6 +1061,7 @@ function _network({ degrees, edges }) {
 // ─── Public API ───────────────────────────────────────────────────────────────
 export function renderDiagramSVG(diagram) {
     if (!diagram) return '';
+    if (isPrimDiagram(diagram)) { const pr = buildPrims(diagram); return pr ? primsToSVG(pr) : ''; }
     switch (diagram.type) {
         case 'rectangle':           return _rectangle(diagram);
         case 'right-triangle':      return _rightTriangle(diagram);

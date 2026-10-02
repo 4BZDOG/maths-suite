@@ -11,6 +11,8 @@ import { detectVerb, detectMidVerb, autoBoldVerb } from '../renderers/htmlUtils.
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
 import { getOutcomesForTopics, getTopicOutcomeCodes } from '../core/outcomes.js';
 import { drawFormulaSheet } from './pdfDrawFormulas.js';
+import { drawPrimDiagramPDF } from './pdfPrims.js';
+import { isPrimDiagram } from '../renderers/diagramPrims.js';
 
 let isExporting = false;
 
@@ -329,8 +331,8 @@ function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
 
 function _drawRhombusKiteDiagramPDF(doc, { type, d1, d2 }, x0, y0, w, h, ps, font) {
     const maxW = w * 0.5, maxH = h * 0.6;
-    const hw = Math.max(7, Math.min(maxW, d1 * 1.1 * ps));   // half horizontal diagonal
-    const hh = Math.max(6, Math.min(maxH, d2 * 1.1 * ps));   // half vertical diagonal
+    const hw = Math.max(11, Math.min(maxW, d1 * 1.1 * ps));   // half horizontal diagonal
+    const hh = Math.max(9, Math.min(maxH, d2 * 1.1 * ps));   // half vertical diagonal
     const cx = x0 + w * 0.46;
     const cy = y0 + h / 2 + 1;
     // Kite: cross-point above centre so the lower spike is longer.
@@ -1060,6 +1062,7 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
     doc.setLineDashPattern([], 0);
     if (doc.setLineJoin) doc.setLineJoin('round');
     if (doc.setLineCap)  doc.setLineCap('round');
+    if (isPrimDiagram(diagram)) { drawPrimDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); return; }
     switch (diagram.type) {
         case 'rectangle':            _drawRectDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'right-triangle':       _drawRightTriDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;

@@ -4095,14 +4095,14 @@ function _genGeometryS5Op(rng, diff, op) {
                     `A gift box measures $${l}$ ${u} by $${w}$ ${u} by $${h}$ ${u}. How much wrapping paper (in ${u}²) is needed to cover it exactly, ignoring overlap?`,
                     `A closed box is made from sheet cardboard with dimensions $${l}$ ${u} × $${w}$ ${u} × $${h}$ ${u}. What area of cardboard (${u}²) is required?`,
                 ]);
-                return { clue: ctx, answer: String(sa), answerDisplay: `${sa} ${u}²`, worked: saWorked };
+                return { clue: ctx, answer: String(sa), answerDisplay: `${sa} ${u}²`, worked: saWorked, diagram: { type: 'solid', kind: 'prism', dims: { l, w, h }, unit: u, find: 'SA' } };
             }
             const ph = rc(rng, [
                 `Find the *surface area* of a rectangular prism: length $${l}$ ${u}, width $${w}$ ${u}, height $${h}$ ${u}.`,
                 `Calculate the *total surface area* of a rectangular box with dimensions $${l}$ ${u} × $${w}$ ${u} × $${h}$ ${u}.`,
                 `A rectangular prism has dimensions $${l}$ ${u} by $${w}$ ${u} by $${h}$ ${u}. Find its surface area.`,
             ]);
-            return { clue: ph, answer: String(sa), answerDisplay: `${sa} ${u}²`, worked: `$SA = 2(${l} \\times ${w} + ${l} \\times ${h} + ${w} \\times ${h}) = 2(${l*w} + ${l*h} + ${w*h}) = ${sa}$ ${u}²` };
+            return { clue: ph, answer: String(sa), answerDisplay: `${sa} ${u}²`, worked: `$SA = 2(${l} \\times ${w} + ${l} \\times ${h} + ${w} \\times ${h}) = 2(${l*w} + ${l*h} + ${w*h}) = ${sa}$ ${u}²`, diagram: { type: 'solid', kind: 'prism', dims: { l, w, h }, unit: u, find: 'SA' } };
         }
         // Cylinder: SA = 2πr² + 2πrh
         const r = ri(rng, 2, 8), h = ri(rng, 3, 12);
@@ -4112,6 +4112,7 @@ function _genGeometryS5Op(rng, diff, op) {
             answer: String(sa),
             answerDisplay: `${sa} cm²`,
             worked: `$SA = 2\\pi r^2 + 2\\pi rh = 2\\pi(${r})^2 + 2\\pi(${r})(${h}) = ${sa}$ cm²`,
+            diagram: { type: 'solid', kind: 'cylinder', dims: { r, h }, find: 'SA' },
         };
     }
 
@@ -7363,6 +7364,7 @@ function genVolume(rng, diff, allowedOps) {
     const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
+    const solid = (kind, dims, find, extra) => ({ type: 'solid', kind, dims, find, ...extra });
 
     // cone: V = ⅓πr²h, left in terms of π (r²h divisible by 3 → integer coeff)
     if (op === 'cone') {
@@ -7371,7 +7373,8 @@ function genVolume(rng, diff, allowedOps) {
         const coeff = r * r * h / 3;
         return { clue: `Find the volume of a cone with base radius $${r}\\text{ cm}$ and perpendicular height $${h}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
             answer: `${coeff}π`, answerDisplay: `$${coeff}\\pi\\text{ cm}^3$`,
-            worked: `$V = \\tfrac{1}{3}\\pi r^2 h = \\tfrac{1}{3}\\pi (${r})^2(${h}) = ${coeff}\\pi\\text{ cm}^3$` };
+            worked: `$V = \\tfrac{1}{3}\\pi r^2 h = \\tfrac{1}{3}\\pi (${r})^2(${h}) = ${coeff}\\pi\\text{ cm}^3$`,
+            diagram: solid('cone', { r, h }, 'V') };
     }
 
     if (op === 'prism') {
@@ -7379,7 +7382,8 @@ function genVolume(rng, diff, allowedOps) {
             const l = ri(rng, 2, 10), w = ri(rng, 2, 10), h = ri(rng, 2, 10);
             return { clue: `Find the volume of a rectangular prism $${l}\\text{ cm} \\times ${w}\\text{ cm} \\times ${h}\\text{ cm}$.`,
                 answer: String(l * w * h), answerDisplay: `$${l * w * h}\\text{ cm}^3$`,
-                worked: `$V = ${l} \\times ${w} \\times ${h} = ${l * w * h}\\text{ cm}^3$` };
+                worked: `$V = ${l} \\times ${w} \\times ${h} = ${l * w * h}\\text{ cm}^3$`,
+                diagram: solid('prism', { l, w, h }, 'V') };
         }
         if (diff === 'Hard') {
             const r = rng();
@@ -7396,14 +7400,16 @@ function genVolume(rng, diff, allowedOps) {
             const l = ri(rng, 2, 10), w = ri(rng, 2, 10), h = ri(rng, 2, 10), V = l * w * h;
             return { clue: `A rectangular prism has volume $${V}\\text{ cm}^3$, length $${l}\\text{ cm}$ and width $${w}\\text{ cm}$. Find its height.`,
                 answer: String(h), answerDisplay: `$${h}\\text{ cm}$`,
-                worked: `$h = ${V} \\div (${l} \\times ${w}) = ${V} \\div ${l * w} = ${h}\\text{ cm}$` };
+                worked: `$h = ${V} \\div (${l} \\times ${w}) = ${V} \\div ${l * w} = ${h}\\text{ cm}$`,
+                diagram: solid('prism', { l, w, h }, 'h', { given: `V = ${V} cm³` }) };
         }
         // Medium: triangular prism
         const b = ri(rng, 1, 6) * 2, ht = ri(rng, 2, 9), L = ri(rng, 3, 12);
         const V = (b * ht / 2) * L;
         return { clue: `A triangular prism has a cross-section of base $${b}\\text{ cm}$ and height $${ht}\\text{ cm}$, and length $${L}\\text{ cm}$. Find its volume.`,
             answer: String(V), answerDisplay: `$${V}\\text{ cm}^3$`,
-            worked: `$V = \\tfrac{1}{2} \\times ${b} \\times ${ht} \\times ${L} = ${V}\\text{ cm}^3$` };
+            worked: `$V = \\tfrac{1}{2} \\times ${b} \\times ${ht} \\times ${L} = ${V}\\text{ cm}^3$`,
+            diagram: solid('tri-prism', { b, ht, L }, 'V') };
     }
 
     if (op === 'cylinder') {
@@ -7412,18 +7418,21 @@ function genVolume(rng, diff, allowedOps) {
             // inverse: find the height given the volume in terms of π
             return { clue: `A cylinder has volume $${V}\\pi\\text{ cm}^3$ and radius $${r}\\text{ cm}$. Find its height.`,
                 answer: String(h), answerDisplay: `$${h}\\text{ cm}$`,
-                worked: `$h = \\dfrac{${V}\\pi}{\\pi \\times ${r}^2} = \\dfrac{${V}}{${r * r}} = ${h}\\text{ cm}$` };
+                worked: `$h = \\dfrac{${V}\\pi}{\\pi \\times ${r}^2} = \\dfrac{${V}}{${r * r}} = ${h}\\text{ cm}$`,
+                diagram: solid('cylinder', { r, h }, 'h', { given: `V = ${V}π cm³`, givenP: `V = ${V} pi cm³` }) };
         }
         if (diff !== 'Easy' && rng() < 0.4) {
             // numeric answer using π ≈ 3.14, rounded to 1 dp
             const Vnum = Math.round(V * 3.14 * 10) / 10;
             return { clue: `Find the volume of a cylinder with radius $${r}\\text{ cm}$ and height $${h}\\text{ cm}$. Use $\\pi \\approx 3.14$ and round to 1 decimal place.`,
                 answer: String(Vnum), answerDisplay: `$${Vnum}\\text{ cm}^3$`,
-                worked: `$V = \\pi r^2 h \\approx 3.14 \\times ${r * r} \\times ${h} = ${Vnum}\\text{ cm}^3$` };
+                worked: `$V = \\pi r^2 h \\approx 3.14 \\times ${r * r} \\times ${h} = ${Vnum}\\text{ cm}^3$`,
+                diagram: solid('cylinder', { r, h }, 'V') };
         }
         return { clue: `Find the volume of a cylinder with radius $${r}\\text{ cm}$ and height $${h}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
             answer: `${V}π`, answerDisplay: `$${V}\\pi\\text{ cm}^3$`,
-            worked: `$V = \\pi r^2 h = \\pi \\times ${r * r} \\times ${h} = ${V}\\pi\\text{ cm}^3$` };
+            worked: `$V = \\pi r^2 h = \\pi \\times ${r * r} \\times ${h} = ${V}\\pi\\text{ cm}^3$`,
+            diagram: solid('cylinder', { r, h }, 'V') };
     }
 
     if (op === 'capacity') {
@@ -7456,7 +7465,8 @@ function genVolume(rng, diff, allowedOps) {
         const Ldisp = V / 1000;
         return { clue: `A fish tank measures $${l}\\text{ cm} \\times ${w}\\text{ cm} \\times ${h}\\text{ cm}$. Approximately how many litres of water does it hold? (round to the nearest litre)`,
             answer: String(Ldisp), answerDisplay: `$${Ldisp}\\text{ L}$`,
-            worked: `$V = ${l} \\times ${w} \\times ${h} = ${Vraw}\\text{ cm}^3 \\approx ${V}\\text{ cm}^3 = ${Ldisp}\\text{ L}$` };
+            worked: `$V = ${l} \\times ${w} \\times ${h} = ${Vraw}\\text{ cm}^3 \\approx ${V}\\text{ cm}^3 = ${Ldisp}\\text{ L}$`,
+            diagram: solid('prism', { l, w, h }, 'V') };
     }
 
     if (op === 'pyramid') {
@@ -7465,14 +7475,16 @@ function genVolume(rng, diff, allowedOps) {
         const V = baseArea * h / 3;
         return { clue: `A square pyramid has base side $${base}\\text{ cm}$ and perpendicular height $${h}\\text{ cm}$. Find its volume.`,
             answer: String(V), answerDisplay: `$${V}\\text{ cm}^3$`,
-            worked: `$V = \\tfrac{1}{3} \\times ${baseArea} \\times ${h} = ${V}\\text{ cm}^3$` };
+            worked: `$V = \\tfrac{1}{3} \\times ${baseArea} \\times ${h} = ${V}\\text{ cm}^3$`,
+            diagram: solid('pyramid', { s: base, h }, 'V') };
     }
 
     // sphere: V = 4/3 π r^3, leave in terms of π (r a multiple of 3 → integer coeff)
     const r = rc(rng, [3, 6, 9]), coeff = 4 * r * r * r / 3;
     return { clue: `Find the volume of a sphere with radius $${r}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
         answer: `${coeff}π`, answerDisplay: `$${coeff}\\pi\\text{ cm}^3$`,
-        worked: `$V = \\tfrac{4}{3}\\pi r^3 = \\tfrac{4}{3}\\pi \\times ${r * r * r} = ${coeff}\\pi\\text{ cm}^3$` };
+        worked: `$V = \\tfrac{4}{3}\\pi r^3 = \\tfrac{4}{3}\\pi \\times ${r * r * r} = ${coeff}\\pi\\text{ cm}^3$`,
+        diagram: solid('sphere', { r }, 'V') };
 }
 
 // ---- Time: 24-hour conversion, elapsed time, time zones ----

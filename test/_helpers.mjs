@@ -27,7 +27,7 @@ export const VALID_DIAGRAMS = new Set([
     'parallel-transversal', 'straight-line-angles', 'vertically-opposite',
     'number-plane', 'general-triangle', 'composite-prism',
     'rhombus', 'kite', 'sector',
-    'coord-circle', 'semicircle', 'hyperbola', 'network',
+    'coord-circle', 'semicircle', 'hyperbola', 'network', 'solid',
 ]);
 
 // Generate with the right stage / includePath for the given topic.

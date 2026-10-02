@@ -47,6 +47,15 @@ const SAMPLES = [
     ['coord-circle (2,-1,r3)',    { type: 'coord-circle', h: 2, k: -1, r: 3 }],
     ['semicircle (a=4)',          { type: 'semicircle', a: 4 }],
     ['hyperbola (a2,h1,k-2)',     { type: 'hyperbola', a: 2, h: 1, k: -2 }],
+    ['solid: prism (V)',          { type: 'solid', kind: 'prism', dims: { l: 8, w: 5, h: 4 }, find: 'V' }],
+    ['solid: prism (SA)',         { type: 'solid', kind: 'prism', dims: { l: 12, w: 3, h: 9 }, find: 'SA' }],
+    ['solid: prism (find h)',     { type: 'solid', kind: 'prism', dims: { l: 6, w: 5, h: 4 }, find: 'h', given: 'V = 120 cm³' }],
+    ['solid: tri-prism (V)',      { type: 'solid', kind: 'tri-prism', dims: { b: 6, ht: 4, L: 10 }, find: 'V' }],
+    ['solid: cylinder (V)',       { type: 'solid', kind: 'cylinder', dims: { r: 5, h: 12 }, find: 'V' }],
+    ['solid: cylinder (SA)',      { type: 'solid', kind: 'cylinder', dims: { r: 3, h: 8 }, find: 'SA' }],
+    ['solid: cone (V)',           { type: 'solid', kind: 'cone', dims: { r: 6, h: 9 }, find: 'V' }],
+    ['solid: sphere (V)',         { type: 'solid', kind: 'sphere', dims: { r: 6 }, find: 'V' }],
+    ['solid: pyramid (V)',        { type: 'solid', kind: 'pyramid', dims: { s: 6, h: 9 }, find: 'V' }],
     ['network (3,3,2,2)',         { type: 'network', degrees: [3, 3, 2, 2], edges: [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3]] }],
 ];
 
