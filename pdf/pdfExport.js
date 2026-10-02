@@ -1454,40 +1454,56 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
         const outcomes = getOutcomesForTopics(activeTopics, stage);
         if (outcomes.length > 0) {
             const hdr_y = cy;
-            const hdr_h = 6 * pScale;
             const hdr_pad = 2 * pScale;
+            const fontPt = 5.5 * pScale;
+            const rowH = 5.2 * pScale;                       // one row of pills
+            const pillH = 3.8 * pScale;
+            // Baseline that centres cap-height text vertically inside a pill
+            const capH = fontPt * 0.3528 * 0.72;
+            const pillBaseline = (rowTop) => rowTop + (rowH - pillH) / 2 + pillH / 2 + capH / 2;
+            doc.setFont(pdfFont, 'bold');
+            doc.setFontSize(fontPt);
+            const labelW = doc.getTextWidth('OUTCOMES') + 3 * pScale;
+            // Pass 1: flow the pills onto as many rows as they need (never drop an outcome).
+            const rows = [[]];
+            let rx = MARGIN + hdr_pad + labelW;
+            outcomes.forEach(o => {
+                const codeW = doc.getTextWidth(o.code) + 3 * pScale;
+                if (rx + codeW > MARGIN + availW - hdr_pad && rows[rows.length - 1].length) { rows.push([]); rx = MARGIN + hdr_pad + labelW; }
+                rows[rows.length - 1].push({ o, codeW, x: rx });
+                rx += codeW + 2 * pScale;
+            });
+            const hdr_h = rows.length * rowH + 1.6 * pScale;
             doc.setFillColor(248, 250, 252);
             doc.setDrawColor(226, 232, 240);
             doc.setLineWidth(0.3);
             doc.roundedRect(MARGIN, hdr_y, availW, hdr_h, 1.5, 1.5, 'FD');
-            // Label
             doc.setFont(pdfFont, 'bold');
-            doc.setFontSize(5.5 * pScale);
+            doc.setFontSize(fontPt);
             doc.setTextColor(148, 163, 184);
-            doc.text('OUTCOMES', MARGIN + hdr_pad, hdr_y + hdr_h / 2 + 1.8 * pScale);
-            // Outcome code pills
-            let px = MARGIN + hdr_pad + doc.getTextWidth('OUTCOMES') + 3 * pScale;
-            outcomes.forEach(o => {
-                const pillColor = o.appliesAll ? [99, 102, 241] : [16, 185, 129];
-                doc.setFont(pdfFont, 'bold');
-                doc.setFontSize(5.5 * pScale);
-                const codeW = doc.getTextWidth(o.code) + 3 * pScale;
-                if (px + codeW > MARGIN + availW - hdr_pad) return;
-                doc.setFillColor(...pillColor.map(c => Math.round(c * 0.15 + 255 * 0.85)));
-                doc.setDrawColor(...pillColor.map(c => Math.round(c * 0.3 + 255 * 0.7)));
-                doc.roundedRect(px, hdr_y + 1.2 * pScale, codeW, hdr_h - 2.4 * pScale, 1, 1, 'FD');
-                doc.setTextColor(...pillColor);
-                doc.text(o.code, px + 1.5 * pScale, hdr_y + hdr_h / 2 + 1.8 * pScale);
-                px += codeW + 2 * pScale;
+            doc.text('OUTCOMES', MARGIN + hdr_pad, pillBaseline(hdr_y + 0.8 * pScale));
+            // Pass 2: draw the pills
+            rows.forEach((row, ri2) => {
+                const rowTop = hdr_y + 0.8 * pScale + ri2 * rowH;
+                row.forEach(({ o, codeW, x }) => {
+                    const pillColor = o.appliesAll ? [99, 102, 241] : [16, 185, 129];
+                    doc.setFillColor(...pillColor.map(c => Math.round(c * 0.15 + 255 * 0.85)));
+                    doc.setDrawColor(...pillColor.map(c => Math.round(c * 0.3 + 255 * 0.7)));
+                    doc.roundedRect(x, rowTop + (rowH - pillH) / 2, codeW, pillH, 1, 1, 'FD');
+                    doc.setTextColor(...pillColor);
+                    doc.text(o.code, x + 1.5 * pScale, pillBaseline(rowTop));
+                });
             });
-            cy += hdr_h + 3 * pScale;
+            // First question must clear the strip by a cap-height or more, and the
+            // column divider should start below it rather than cut through it.
+            cy += hdr_h + 6 * pScale;
             colY = [cy, cy];   // header consumed space; reset both column trackers
         }
     }
     let _rowMaxH     = 0;
     let overflowCount = 0;
     let pagesUsed   = 1;
-    let pageStartY  = startY;   // Y where content begins on the current PDF page
+    let pageStartY  = cy;       // Y where content begins on the current PDF page (below any outcomes strip)
 
     doc.setFont(pdfFont, 'normal');
     doc.setFontSize(9 * pScale);
@@ -1546,8 +1562,12 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
             metaH = 4 * pScale + metaRows * (chipH + 1);
         }
         const hasDiagram = (showDiagrams || !!item.diagram?.essential) && !!item.diagram;
-        const diagH = hasDiagram && isPrimDiagram(item.diagram)
-            ? preferredHeightMM(item.diagram, colW - 13, pScale, DIAG_H) : DIAG_H;
+        // Graph-style diagrams plot at equal x/y scale, so they come out tall and narrow in a
+        // 30 mm box and their labels shrink to nothing; give them more room.
+        const TALL_DIAGRAMS = { 'number-plane': 42, parabola: 42, 'coord-circle': 40, semicircle: 36, hyperbola: 42 };
+        const diagH = !hasDiagram ? 0
+            : isPrimDiagram(item.diagram) ? preferredHeightMM(item.diagram, colW - 13, pScale, DIAG_H)
+            : (TALL_DIAGRAMS[item.diagram.type] ? TALL_DIAGRAMS[item.diagram.type] * pScale : DIAG_H);
         const itemH = clueBlockH
             + (hasDiagram ? diagH + SECTION_PAD : 0)
             + (workingCount > 0 ? SECTION_PAD + workingCount * workingLineSpacing + SECTION_PAD : 0)
@@ -1914,30 +1934,26 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId, startNums = {}) {
         // continuous across difficulties, matching the worksheet pages.
         const secStart  = startNums[sec.key] || 1;
 
+        // Let clues wrap onto as many lines as the page can afford: when a key
+        // is sparse (the usual case) nothing is truncated; when it is dense the
+        // allowance shrinks so every answer still fits on the page.
+        const keyBottom  = PAGE_HEIGHT - MARGIN - 12 * pScale;
+        const perRowMM   = (keyBottom - ky) / Math.max(1, sec.questions.length);
+        const keyMaxLines = Math.max(2, Math.min(6, Math.floor((perRowMM - 1.4 * pScale - (showWorkedPDF ? 7 * pScale : 0)) / lineH)));
+
         sec.questions.forEach((q, i) => {
-            if (ky + 6 * pScale > PAGE_HEIGHT - MARGIN - 12 * pScale) return;
+            if (ky + 6 * pScale > keyBottom) return;
 
-            // Plain text for width measurement / shown-line count (the rich
-            // drawer below does its own wrapping but we still need a count
-            // for the answer-row vertical layout below).
-            const clueText = latexToText(q.clue || '');
             const ansText  = latexToText(String(q.answerDisplay || q.answer || ''));
-
-            doc.setFont(pdfFont, 'normal');
-            doc.setFontSize(7 * pScale);
-            doc.setTextColor(100, 116, 139);
             const qNum = secStart + i;
-            const clueLines = doc.splitTextToSize(`${qNum}. ${clueText}`, clueW);
-            // Cap at 3 wrapped lines so a freak long clue can't blow up a key page.
-            const shownCount = Math.min(clueLines.length, 3);
 
             // Bold verb + *italic* emphasis + **bold** — matches the HTML answer key
-            // and the PDF problem-set body.
-            _drawKeyClueRich(doc, `${qNum}. `, q.clue || '', cx, ky, {
+            // and the PDF problem-set body. Returns how many lines it really drew,
+            // which (not a plain-text estimate) decides the row height below.
+            const linesDrawn = _drawKeyClueRich(doc, `${qNum}. `, q.clue || '', cx, ky, {
                 maxW: clueW, lineH, fontSizePt: 7 * pScale, pdfFont,
-                color: [100, 116, 139], maxLines: 3,
+                color: [100, 116, 139], maxLines: keyMaxLines,
             });
-            const shown = { length: shownCount };
 
             doc.setFont(pdfFont, 'bold');
             doc.setFontSize(8 * pScale);
@@ -1945,9 +1961,15 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId, startNums = {}) {
             // Right-align manually so superscript exponents (drawn smaller/raised
             // to survive the font subset) still sit flush to the marking rail.
             const ansW = measureSup(doc, ansText, 8 * pScale);
-            drawSup(doc, ansText, cx + colW - ansW, ky, 8 * pScale);
-
-            let blockH = Math.max(shown.length * lineH, 5 * pScale);
+            let blockH = Math.max(linesDrawn * lineH, 5 * pScale);
+            if (ansW > ansStripW - 1) {
+                // Too wide for the marking rail: give the answer its own line under the clue
+                // instead of letting it run over the clue text.
+                drawSup(doc, ansText, cx + colW - ansW, ky + linesDrawn * lineH + 0.6 * pScale, 8 * pScale);
+                blockH += lineH + 0.6 * pScale;
+            } else {
+                drawSup(doc, ansText, cx + colW - ansW, ky, 8 * pScale);
+            }
 
             // Worked solution — shown when "Show worked" is toggled on.
             // Normal weight (not italic): the custom fonts ship only normal+bold,
@@ -1963,11 +1985,16 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId, startNums = {}) {
                 blockH += workedLines.length * 3.3 * pScale + 1;
             }
 
+            // Separator sits just below the last baseline of this row (clear of its
+            // descenders) and the next row starts a cap-height + padding below it, so
+            // the rule never cuts through either row's text.
+            const lastBaseline = ky + blockH - lineH;
+            const sepY = lastBaseline + 1.9 * pScale;
             doc.setDrawColor(220, 220, 220);
             doc.setLineWidth(0.1);
-            doc.line(cx, ky + blockH - 0.5, cx + colW, ky + blockH - 0.5);
+            doc.line(cx, sepY, cx + colW, sepY);
 
-            ky += blockH + 1.4 * pScale;
+            ky = sepY + 3.6 * pScale;
         });
 
         // Per-section score sits directly under the last question in this

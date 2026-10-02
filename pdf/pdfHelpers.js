@@ -73,17 +73,21 @@ export function setLatexAsciiFallback(on) { _asciiFallback = !!on; }
 const _SUP_REV = { '⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9','ⁿ':'n','ˣ':'x','⁺':'+','⁻':'-' };
 const _WINANSI_MAP = {
     'π':'pi', '≈':'~', '≤':'<=', '≥':'>=', '≠':'!=', '√':'sqrt', '∞':'inf',
-    'θ':'theta', 'α':'alpha', 'β':'beta', 'γ':'gamma', '∠':'angle',
+    'θ':'theta', 'α':'alpha', 'β':'beta', 'γ':'gamma', 'σ':'sigma', 'Σ':'sum', '∠':'angle',
+    '⇒':'=>',   // U+21D2 implies
+    '∪':'U',    // union
+    '∩':'n',    // intersection
+    '∝':'prop. to',
     '−':'-',    // U+2212 minus sign → ASCII hyphen
     '→':'->',   // U+2192 rightwards arrow
     '□':'[ ]',  // U+25A1 fill-in-the-box placeholder
-    '̄':'',   // combining macron (overline, e.g. x̄) — drop, keep the base letter
+    '̄':'-bar', // combining macron (overline, e.g. x̄) → "x-bar"; the glyph is not in the font
 };
 export function _winAnsiSafe(s) {
     if (!s) return s;
     // Collapse runs of superscript characters into caret notation: x⁴→x^4, 2¹²→2^12
     s = s.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹ⁿˣ⁺⁻]+/g, run => '^' + [...run].map(c => _SUP_REV[c] || '').join(''));
-    return s.replace(/[π≈≤≥≠√∞θαβγ∠−→□]/g, c => (c in _WINANSI_MAP ? _WINANSI_MAP[c] : c)).replace(/\u0304/g, '');
+    return s.replace(/[π≈≤≥≠√∞θαβγσΣ∠−→⇒∪∩∝□]/g, c => (c in _WINANSI_MAP ? _WINANSI_MAP[c] : c)).replace(/\u0304/g, _WINANSI_MAP['\u0304']);
 }
 
 const _SUP_MAP = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','n':'ⁿ','x':'ˣ','+':'⁺','-':'⁻'};
@@ -118,7 +122,7 @@ const _CARET_RE = /\^\(/;
 // small vector tick (see _drawRadical below) — real vector strokes need no font
 // glyph at all, so the actual radical symbol survives even though the font can't
 // render it as text.
-const _SYMBOL_RE = /[π≈≤≥≠√∞θαβγ∠→□]/;
+const _SYMBOL_RE = /[π≈≤≥≠√∞θαβγσΣ∠→⇒∪∩∝□]|\u0304/;
 const _needsRich = s => _SUP_RE.test(s || '') || _CARET_RE.test(s || '') || _SYMBOL_RE.test(s || '');
 
 /** True when the string contains a superscript glyph or a "^(…)" caret run. */
@@ -251,9 +255,26 @@ function _parseLatex(s) {
         .replace(/\\div/g,    '÷')
         .replace(/\\pm/g,     '±')
         .replace(/\\approx/g, '≈')
-        .replace(/\\neq/g,    '≠')
-        .replace(/\\leq/g,    '≤')
-        .replace(/\\geq/g,    '≥')
+        .replace(/\\neq?\b/g,  '≠')
+        .replace(/\\leq?\b/g,  '≤')
+        .replace(/\\geq?\b/g,  '≥')
+        // Arrows, set symbols, relations and dots used in worked solutions
+        .replace(/\\(?:Long)?[Rr]ightarrow\b|\\implies\b/g, (m) => (/R|implies/.test(m) ? '⇒' : '→'))
+        .replace(/\\to\b/g,       '→')
+        .replace(/\\cup\b/g,      '∪')
+        .replace(/\\cap\b/g,      '∩')
+        .replace(/\\propto\b/g,   '∝')
+        .replace(/\\(?:l|c)?dots\b/g, '…')
+        .replace(/\\cdot\b/g,     '·')
+        .replace(/\\sigma\b/g,    'σ')
+        .replace(/\\Sigma\b|\\sum\b/g, 'Σ')
+        .replace(/\\mu\b/g,       'µ')
+        .replace(/\\ell\b/g,      'l')
+        .replace(/\\deg\b/g,      '°')
+        // LaTeX spacing commands: \; \, \: \! \quad \qquad — spaces, never literal text
+        .replace(/\\(?:q?quad)\b/g, ' ')
+        .replace(/\\[;:, ]/g,      ' ')
+        .replace(/\\!/g,           '')
         .replace(/\\pi/g,     'π')
         .replace(/\\infty/g,  '∞')
         .replace(/\\degree/g, '°')
@@ -296,8 +317,11 @@ function _parseLatex(s) {
         // Superscripts: convert to Unicode superscript characters
         .replace(/\^\{([^}]+)\}/g,  (_, inner) => _toSuperscript(inner))
         .replace(/\^(\w+)/g,        (_, exp)   => _toSuperscript(exp))
-        // Subscripts: _n → (n)
-        .replace(/\_\{([^}]+)\}/g,  '($1)')
+        // Subscripts: the embedded font subset has no subscript glyphs (U+2080 block), so
+        // a short subscript is written inline (Q_1 / Q_{1} → Q1, x_{n} → xn) and a longer
+        // one in brackets (a_{max} → a(max)).
+        .replace(/\_\{([^}]+)\}/g,  (_, t) => (/^[A-Za-z0-9]{1,2}$/.test(t) ? t : `(${t})`))
+        .replace(/([A-Za-z0-9)])_([A-Za-z0-9])/g, '$1$2')
         // Trig functions: keep as-is but remove backslash
         .replace(/\\sin/g, 'sin')
         .replace(/\\cos/g, 'cos')
@@ -573,17 +597,39 @@ export function drawHeader(ctx, fullTitle, subText, instructions, isKey, setIndi
     pScale = pScale || scale;
     const titleScale = ctx.titleScale || 1;
 
+    // Room for the title: everything left of the right-hand block (the Name/Class/Date
+    // fields, or the "TEACHER ANSWER KEY" label). Long titles shrink to fit rather than
+    // running off the page or underneath the fields.
+    const rightBlockW = isKey ? 50 * pScale : 76;
+    const titleMaxW = PAGE_WIDTH - MARGIN * 2 - rightBlockW;
+    // Returns { pt, text }: the largest size ≥ minPt at which `text` fits, ellipsising only
+    // if even the minimum size is too wide.
+    const fitText = (text, startPt, minPt, weight) => {
+        doc.setFont(pdfFont, weight);
+        doc.setFontSize(startPt);
+        const w = doc.getTextWidth(text);
+        if (w <= titleMaxW) return { pt: startPt, text };
+        const pt = Math.max(minPt, startPt * (titleMaxW / w) * 0.98);
+        doc.setFontSize(pt);
+        let t = text;
+        while (t.length > 1 && doc.getTextWidth(t + '…') > titleMaxW) t = t.slice(0, -1);
+        return { pt, text: doc.getTextWidth(text) <= titleMaxW ? text : t.trimEnd() + '…' };
+    };
+    const fitTitle = fitText(fullTitle.toUpperCase(), 24 * pScale * titleScale, 8 * pScale, 'bold');
+    const titleTxt = fitTitle.text, titlePt = fitTitle.pt;
+
     // Title
-    drawText(doc, fullTitle.toUpperCase(), MARGIN, MARGIN + 10 * pScale, {
-        fontSizePt: 24 * pScale * titleScale,
+    drawText(doc, titleTxt, MARGIN, MARGIN + 10 * pScale, {
+        fontSizePt: titlePt,
         bold: true,
         color: [15, 23, 42],
         pdfFont,
     });
 
     // Subtitle
-    drawText(doc, subText, MARGIN, MARGIN + 17 * pScale, {
-        fontSizePt: 10 * pScale * titleScale,
+    const fitSub = fitText(subText || '', 10 * pScale * titleScale, 6.5 * pScale, 'normal');
+    drawText(doc, fitSub.text, MARGIN, MARGIN + 17 * pScale, {
+        fontSizePt: fitSub.pt,
         italic: true,
         color: [100, 116, 139],
         pdfFont,

@@ -15,9 +15,9 @@ import { exportPDF } from './pdf/pdfExport.js';
 import { showToast } from './ui/toast.js';
 import { generateMathsQuestions } from './generators/mathsQuestionGen.js';
 import { openModal, closeModal } from './ui/modal.js';
-import { setupSidebarResize, toggleSidebar, switchTab, setupTablistKeys } from './ui/sidebar.js';
+import { setupSidebarResize, toggleSidebar, switchTab, setupTablistKeys, closeSidebarOnNarrow, isNarrowScreen } from './ui/sidebar.js';
 import { toggleDarkMode } from './ui/darkMode.js';
-import { adjustZoom, resetZoom } from './ui/zoom.js';
+import { adjustZoom, resetZoom, setupZoomAutoFit, applyZoom } from './ui/zoom.js';
 import { setupSortableList } from './ui/pageOrder.js';
 import { setupDragAndDrop } from './ui/dropZone.js';
 
@@ -274,6 +274,7 @@ function renderActivePage() {
     _updatePageButtonLabels(nEasy, nMedium, nHard);
     updateStatus();
     renderExportPreview();
+    applyZoom();   // pages may have just changed visibility/size — keep fit-to-width margins right
 }
 
 function _updateQuestionsPerPageSummary(nEasy, nMedium, nHard, pages) {
@@ -1415,6 +1416,7 @@ window._puzzleApp = {
     closeModal,
     downloadConfig,
     exportPDF,
+    closeSidebarOnNarrow,
     toggleDarkMode,
     toggleSidebar,
     switchTab,
@@ -1548,7 +1550,10 @@ window.addEventListener('load', async () => {
 
         _step('Setting up…', 90);
         setupSidebarResize();
+        setupZoomAutoFit();
         setupTablistKeys();
+        // Phones/tablets: open on the worksheet, not on top of it (the drawer is one tap away).
+        if (isNarrowScreen()) document.body.classList.add('sidebar-closed');
         setupSortableList('#page-order-list', () => saveState());
         setupDragAndDrop((f) => {
             if (!f.name.toLowerCase().endsWith('.json')) {

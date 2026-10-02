@@ -98,10 +98,10 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
             `</div>`;
 
         html += `<div class="problem-item${isLocked ? ' is-locked' : ''}">
-            ${actionsHtml}
             <div class="problem-clue-row">
                 <span class="problem-num">${startNum + i}.</span>
                 <div class="problem-clue katex-target">${formatClue(item.clue)}</div>
+                ${actionsHtml}
             </div>
             ${diagramHtml}
             ${workingHtml}
