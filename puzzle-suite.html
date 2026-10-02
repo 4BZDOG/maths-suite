@@ -363,6 +363,13 @@
                         <div class="toggle-row"><label title="Prepend a formula reference sheet page to the exported PDF — lists all relevant formulas for selected topics"><i class="fas fa-book-open toggle-icon"></i>Formula Sheet in PDF</label><label class="switch"><input
                                     type="checkbox" id="showFormulaSheet" onchange="saveState(); renderExportPreview();"><span
                                     class="slider-switch"></span></label></div>
+                        <hr class="form-divider">
+                        <div class="toggle-row"><label for="blankPageMode" title="Add a blank page after each set (except the last) so sets never share a sheet when printed double-sided"><i class="fas fa-copy toggle-icon"></i>Blank Page for Duplex</label>
+                            <select id="blankPageMode" onchange="saveState(); renderExportPreview();">
+                                <option value="off">Off</option>
+                                <option value="odd">Pad odd sets only</option>
+                                <option value="always">After every set</option>
+                            </select></div>
                     </div>
                 </details>
             </div>
