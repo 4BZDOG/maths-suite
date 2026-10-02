@@ -182,8 +182,9 @@ test('Volume cone: π-coefficient equals ⅓ r² h', () => {
                 subOpsFilter: { Volume: ['cone'] } });
             for (const q of qs) {
                 const m = q.clue.match(/radius \$(\d+)\\text\{ cm\}\$ and perpendicular height \$(\d+)/);
-                if (!m) continue;
+                if (!m || /Find its \*slant/.test(q.clue)) continue;
                 const [r, h] = [+m[1], +m[2]];
+                if (/3\.14/.test(q.clue)) { assert.equal(Number(q.answer), Math.round(3.14 * r * r * h / 3 * 10) / 10, q.clue); checked++; continue; }
                 assert.equal(q.answer, `${(r * r * h) / 3}π`, `${diff}/seed${seed}: ${q.clue}`);
                 checked++;
             }

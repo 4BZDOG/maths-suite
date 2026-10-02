@@ -93,7 +93,7 @@ test('Spinner diagrams: sector counts agree with the question', () => {
         const m = q.clue.match(/\$(\d+)\$ (?:equal sections|equal parts)/);
         assert.ok(m, `spinner diagram without a section count: ${q.clue}`);
         assert.equal(d.sectors.length, Number(m[1]), q.clue);
-        const shaded = q.clue.match(/\$(\d+)\$ (?:of which are shaded|are coloured red)/);
+        const shaded = q.clue.match(/\$(\d+)\$ (?:of which (?:is|are) shaded|(?:is|are) coloured red)/);
         if (shaded) {
             const coloured = d.sectors.filter(s => s.color && s.color !== 'white').length;
             assert.equal(coloured, Number(shaded[1]), q.clue);

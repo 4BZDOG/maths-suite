@@ -16,9 +16,9 @@ const times = (c) => [...c.matchAll(/\$(\d{1,2})\{:\}(\d{2})/g)].map(m => Number
 
 // offset "$N$ hours|minutes ahead|behind" → signed minutes (null if absent).
 function offset(c) {
-    const m = c.match(/\$(\d+)\$ (hours|minutes) (ahead|behind)/);
+    const m = c.match(/\$(\d+)\$ (hours?|minutes) (ahead|behind)/);
     if (!m) return null;
-    const mins = m[2] === 'hours' ? Number(m[1]) * 60 : Number(m[1]);
+    const mins = /^hour/.test(m[2]) ? Number(m[1]) * 60 : Number(m[1]);
     return m[3] === 'ahead' ? mins : -mins;
 }
 
@@ -67,7 +67,7 @@ test('Time: recomputed answers match the generator', () => {
                 // duration: finish time
                 if (/runs for/.test(c) && /finish/.test(c)) {
                     const start = times(c)[0];
-                    const hrs = c.match(/runs for \$(\d+)\$ hours/);
+                    const hrs = c.match(/runs for \$(\d+)\$ hours?/);
                     const mins = c.match(/\$(\d+)\$ minutes/);
                     const add = (hrs ? Number(hrs[1]) * 60 : 0) + (mins ? Number(mins[1]) : 0);
                     assert.equal(a, hm(start + add), L);

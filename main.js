@@ -525,6 +525,17 @@ function renderExportPreview() {
         </div>`;
     }
 
+    // Duplex padding: one blank page after each non-final set when enabled.
+    const blankMode = document.getElementById('blankPageMode')?.value || 'off';
+    const blankPerSet = (blankMode === 'always' || (blankMode === 'odd' && pageCount % 2 === 1)) ? 1 : 0;
+    const blankTotal = blankPerSet * Math.max(0, copies - 1);
+    if (blankTotal > 0) {
+        html += `<div class="ep-row">
+            <span style="font-weight:600;"><i class="fas fa-copy" style="color:#94a3b8; margin-right:5px; font-size:10px;"></i>Blank pages (duplex)</span>
+            <span style="opacity:.7;">${blankTotal} page${blankTotal !== 1 ? 's' : ''}</span>
+        </div>`;
+    }
+
     html += `<hr class="ep-divider">`;
     if (copies > 1) {
         const qPerCopy = questionCount;
@@ -534,7 +545,7 @@ function renderExportPreview() {
         </div>`;
         html += `<div class="ep-row" style="font-weight:700;">
             <span>Total</span>
-            <span>${pageCount * copies}&thinsp;pages (${copies}&thinsp;copies)</span>
+            <span>${pageCount * copies + blankTotal}&thinsp;pages (${copies}&thinsp;copies)</span>
         </div>`;
     } else {
         html += `<div class="ep-row" style="font-weight:700;">
