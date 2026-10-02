@@ -1,6 +1,7 @@
 // =============================================================
 // ui/sidebar.js — Sidebar resize handle & tab switching
 // =============================================================
+import { applyZoom } from './zoom.js';
 import { saveState } from '../core/storage.js';
 
 export function setupSidebarResize() {
@@ -35,6 +36,19 @@ export function setupSidebarResize() {
 
 export function toggleSidebar() {
     document.body.classList.toggle('sidebar-closed');
+    // the preview pane changes width (and the page's fit-to-width zoom with it) once the slide finishes
+    setTimeout(applyZoom, 320);
+}
+
+// Below this width the sidebar is an overlay drawer (see the 900px media query in
+// puzzle-suite.css), so it should start closed and get out of the way once the
+// user has generated or exported something.
+const NARROW_MAX_PX = 900;
+export function isNarrowScreen() {
+    return typeof window !== 'undefined' && window.matchMedia(`(max-width: ${NARROW_MAX_PX}px)`).matches;
+}
+export function closeSidebarOnNarrow() {
+    if (isNarrowScreen()) { document.body.classList.add('sidebar-closed'); setTimeout(applyZoom, 320); }
 }
 
 // Reusable WAI-ARIA roving-tabindex keyboard handling for any [role="tablist"]

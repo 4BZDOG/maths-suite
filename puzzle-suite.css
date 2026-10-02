@@ -1032,9 +1032,11 @@ main {
 }
 
 .toggle-sidebar {
-    position: absolute;
+    /* Fixed to the edge of the open sidebar (never over its footer buttons) and
+       slides to the screen corner when the sidebar is closed. */
+    position: fixed;
     bottom: 20px;
-    left: 20px;
+    left: calc(var(--sidebar-width) + 16px);
     z-index: 100;
     width: 46px;
     height: 46px;
@@ -1047,9 +1049,10 @@ main {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: 0.2s;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s, box-shadow 0.2s;
     font-size: 1.1rem;
 }
+body.sidebar-closed .toggle-sidebar { left: 20px; }
 
 .toggle-sidebar:hover {
     transform: scale(1.08);
@@ -1248,8 +1251,11 @@ main {
     position: relative;
     overflow: hidden;
     transform-origin: top center;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, margin 0.2s ease;
     border-radius: 2px;
+    /* Keep true paper width — the preview scales the page to fit (ui/zoom.js) instead
+       of letting flexbox squash it into unreadable columns on narrow screens. */
+    flex-shrink: 0;
 }
 
 .page.visible {
@@ -1804,6 +1810,10 @@ table.mode-cw td.cell.empty {
     body.sidebar-closed aside {
         margin-left: -100%;
     }
+
+    /* The drawer is 85% wide (max 400px): park the toggle just outside it. */
+    .toggle-sidebar { left: calc(min(85%, 400px) + 12px); }
+    body.sidebar-closed .toggle-sidebar { left: 16px; }
 
     aside {
         position: absolute;
@@ -2788,9 +2798,12 @@ table.mode-cw td.cell.empty {
 .problem-item { position: relative; }
 
 .problem-actions {
-    position: absolute;
-    top: 5px;
-    right: 7px;
+    /* Lives inside the clue row (reserving its own space) so question text can
+       never run underneath it. */
+    position: static;
+    flex-shrink: 0;
+    align-self: flex-start;
+    margin: -3px -7px 0 4px;
     display: flex;
     gap: 3px;
     /* Faintly visible at rest so the controls are discoverable on touch and
@@ -3749,6 +3762,40 @@ details.outcomes-ws-header:not([open]) .outcomes-ws-summary::after { transform: 
     color: #a5b4fc;
     border-color: rgba(99,102,241,0.32);
 }
+
+/* ─── The worksheet is paper ──────────────────────────────────────────────
+   In dark mode only the app chrome goes dark. The page and everything printed on
+   it stays light so the preview matches the PDF (no dark cards on white paper,
+   no pale-grey labels on white). Re-declaring the tokens here fixes every
+   var()-based rule inside .page at once; the few hard-coded dark overrides above
+   are countered individually below. */
+[data-theme="dark"] .page {
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --primary-light: #e0e7ff;
+    --bg-panel: #ffffff;
+    --border: #cbd5e1;
+    --text-main: #0f172a;
+    --text: #0f172a;
+    --text-muted: #475569;
+    --input-bg: #f8fafc;
+    --track-bg: #cbd5e1;
+    --hover-bg: rgba(15, 23, 42, .05);
+    color-scheme: light;
+    color: #0f172a;
+}
+[data-theme="dark"] .page .problem-item { background: #ffffff; border-color: var(--border); }
+[data-theme="dark"] .page .problem-working-line { border-bottom-color: #cbd5e1; }
+[data-theme="dark"] .page .problem-diagram { color: #0f172a; }
+[data-theme="dark"] .page .geo-diagram-svg text { stroke: #ffffff; }
+[data-theme="dark"] .page .problem-clue em { color: #0d9488; }
+[data-theme="dark"] .page .key-worked { color: #475569; }
+[data-theme="dark"] .page .outcomes-ws-header { border-color: rgba(99,102,241,0.22); background: rgba(99,102,241,0.04); }
+[data-theme="dark"] .page .outcomes-ws-title { color: #4f46e5; }
+[data-theme="dark"] .page .outcomes-ws-pill { background: rgba(99,102,241,0.10); color: #4f46e5; border-color: rgba(99,102,241,0.25); }
+[data-theme="dark"] .page .outcomes-ws-row--wm .outcomes-ws-pill { background: #dcfce7; color: #15803d; border-color: #bbf7d0; }
+[data-theme="dark"] .page .outcomes-ws-desc strong { color: #0f172a; }
+[data-theme="dark"] .page .q-outcome-chip { background: rgba(99,102,241,0.08); color: #6366f1; border-color: rgba(99,102,241,0.20); }
 
 } /* end @layer components (maths) */
 
