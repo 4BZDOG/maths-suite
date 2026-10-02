@@ -829,15 +829,39 @@ function _numberPlane({ pts, line, mid, tri }) {
 
     // Points: red dots + coordinate labels, nudged to stay inside the frame.
     let dots = '';
-    for (const [px, py] of pts) {
+    pts.forEach(([px, py], i) => {
         const dx = mapX(px), dy = mapY(py);
-        const right = dx < plR - 40;
-        const above = dy > plT + 14;
+        const other = pts[1 - i] || pts[0];
+        const ox = mapX(other[0]), oy = mapY(other[1]);
+        const label = `(${px}, ${py})`;
+        const wPx = label.length * 5.2;
+        const awayX = dx >= ox ? 1 : -1, awayY = dy <= oy ? -1 : 1;
+        // Candidates, best first: diagonally away from the other point, then
+        // the other three corners. A spot is rejected if it leaves the plot
+        // area (tick numbers live outside it) or the segment passes through it.
+        const hitsSeg = (x0, y0, x1, y1) => {
+            if (!(line && pts.length >= 2)) return false;
+            for (let t = 0; t <= 1; t += 0.05) {
+                const sx = dx + (ox - dx) * t, sy = dy + (oy - dy) * t;
+                if (sx > x0 - 1 && sx < x1 + 1 && sy > y0 - 1 && sy < y1 + 1) return true;
+            }
+            return false;
+        };
+        const spots = [[awayX, awayY], [-awayX, awayY], [awayX, -awayY], [-awayX, -awayY]];
+        let best = null;
+        for (const [sx, sy] of spots) {
+            const x0 = sx > 0 ? dx + 5 : dx - 5 - wPx, x1 = x0 + wPx;
+            const y1 = sy < 0 ? dy - 5 : dy + 14, y0 = y1 - 10;
+            if (x0 < plL + 1 || x1 > plR - 1 || y0 < plT || y1 > plB) continue;
+            if (hitsSeg(x0, y0, x1, y1)) continue;
+            best = { sx, sy }; break;
+        }
+        if (!best) best = { sx: awayX, sy: awayY };
         dots +=
             `<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="3.4" fill="${MC}"/>` +
-            _t(right ? dx + 6 : dx - 6, above ? dy - 6 : dy + 12,
-                `(${px}, ${py})`, { anchor: right ? 'start' : 'end', missing: true, size: 9 });
-    }
+            _t(best.sx > 0 ? dx + 6 : dx - 6, best.sy < 0 ? dy - 6 : dy + 13,
+                label, { anchor: best.sx > 0 ? 'start' : 'end', missing: true, size: 9 });
+    });
 
     const inner =
         grid + triFill + axes +
@@ -854,10 +878,10 @@ function _numberPlane({ pts, line, mid, tri }) {
 // dashed; for a kite the horizontal diagonal sits below centre (longer lower
 // part) to read as a kite rather than a rhombus.
 function _quadDiagonals({ type, d1, d2 }) {
-    const VW = 220, VH = 138;
-    const cx = 88, cy = VH / 2;
-    const hw = Math.max(28, Math.min(56, d1 * 3));   // half horizontal extent
-    const hh = Math.max(24, Math.min(52, d2 * 3));   // half vertical extent
+    const VW = 250, VH = 140;
+    const cx = 104, cy = 62;
+    const hw = Math.max(32, Math.min(60, d1 * 4));   // half horizontal extent
+    const hh = Math.max(26, Math.min(44, d2 * 4));   // half vertical extent
     // Kite: cross-point is above centre so the lower spike is longer.
     const topY = cy - hh;
     const botY = type === 'kite' ? cy + hh * 1.5 : cy + hh;
@@ -874,12 +898,13 @@ function _quadDiagonals({ type, d1, d2 }) {
         // Diagonals (dashed)
         `<line x1="${left.x}" y1="${left.y}" x2="${right.x}" y2="${right.y}" stroke="${GC}" stroke-width="1.3" stroke-dasharray="4,3" opacity="0.85"/>` +
         `<line x1="${top.x}" y1="${top.y}" x2="${bot.x}" y2="${bot.y}" stroke="${GC}" stroke-width="1.3" stroke-dasharray="4,3" opacity="0.85"/>` +
-        // Diagonal labels
-        _t((cx + right.x) / 2, crossY - 5, `d₁ = ${d1}`, { size: 10 }) +
-        _t(cx + 8, (topY + botY) / 2, `d₂ = ${d2}`, { anchor: 'start', size: 10 }) +
+        _rightAngleAt(cx, crossY, 1, 0, 0, -1, 5) +
+        // Diagonal labels sit just beyond the end of each diagonal, clear of the shape
+        _t(left.x - 6, crossY + 3.5, `d₁ = ${d1}`, { anchor: 'end', size: 10 }) +
+        _t(top.x, top.y - 6, `d₂ = ${d2}`, { size: 10 }) +
         // Missing area label to the right
-        _t(right.x + 16, cy - 6, 'A = ?', { anchor: 'start', missing: true, size: 14 }) +
-        _t(right.x + 16, cy + 12, 'A = ½d₁d₂', { anchor: 'start', size: 9, opacity: 0.7 });
+        _t(right.x + 16, crossY - 6, 'A = ?', { anchor: 'start', missing: true, size: 14 }) +
+        _t(right.x + 16, crossY + 12, 'A = ½d₁d₂', { anchor: 'start', size: 9, opacity: 0.7 });
 
     return _svg(VW, VH, inner);
 }
@@ -983,25 +1008,28 @@ function _hyperbola({ a, h, k }) {
     const span = 6;
     const f = _coordFrame(h - span, h + span, k - span, k + span, VW, VH);
     const axV = f.mapX(h), ayH = f.mapY(k);
+    // Sample each branch densely (geometric spacing hugs the vertical asymptote)
+    // and clip to the plot window so the curve runs right to the frame edge.
+    const clipId = `hyp${Math.round(f.plL)}${Math.round(f.plT)}`;
     let branches = '';
     for (const dir of [-1, 1]) {
         const pts = [];
-        for (let i = 1; i <= 40; i++) {
-            const dx = dir * (i / 40) * span;
-            const x = h + dx;
-            if (Math.abs(dx) < 0.18) continue;          // skip near the vertical asymptote
-            const y = a / (x - h) + k;
-            if (y < k - span || y > k + span) continue;
-            pts.push(`${f.mapX(x).toFixed(1)},${f.mapY(y).toFixed(1)}`);
+        for (let i = 0; i <= 120; i++) {
+            const dx = dir * 0.03 * Math.pow(span / 0.03, i / 120);
+            const y = a / dx + k;
+            if (Math.abs(y - k) > span * 1.6) continue;   // far off-window; clip handles the rest
+            pts.push(`${f.mapX(h + dx).toFixed(1)},${f.mapY(y).toFixed(1)}`);
         }
         if (pts.length > 1) branches += `<polyline points="${pts.join(' ')}" fill="none" stroke="${GC}" stroke-width="2" stroke-linejoin="round"/>`;
     }
+    branches = `<clipPath id="${clipId}"><rect x="${f.plL.toFixed(1)}" y="${f.plT.toFixed(1)}" width="${(f.plR - f.plL).toFixed(1)}" height="${(f.plB - f.plT).toFixed(1)}"/></clipPath>` +
+        `<g clip-path="url(#${clipId})">${branches}</g>`;
     const inner = f.bg +
         `<line x1="${axV.toFixed(1)}" y1="${f.plT.toFixed(1)}" x2="${axV.toFixed(1)}" y2="${f.plB.toFixed(1)}" stroke="${MC}" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.8"/>` +
         `<line x1="${f.plL.toFixed(1)}" y1="${ayH.toFixed(1)}" x2="${f.plR.toFixed(1)}" y2="${ayH.toFixed(1)}" stroke="${MC}" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.8"/>` +
         branches +
-        _t(axV + 3, f.plT + 9, `x = ${h}`, { anchor: 'start', missing: true, size: 8 }) +
-        _t(f.plR - 3, ayH - 4, `y = ${k}`, { anchor: 'end', missing: true, size: 8 });
+        _t(axV + (a > 0 ? -3 : 3), f.plT + 9, `x = ${h}`, { anchor: a > 0 ? 'end' : 'start', missing: true, size: 8 }) +
+        _t(a > 0 ? f.plL + 3 : f.plR - 3, ayH - 4, `y = ${k}`, { anchor: a > 0 ? 'start' : 'end', missing: true, size: 8 });
     return _svg(VW, VH, inner);
 }
 
