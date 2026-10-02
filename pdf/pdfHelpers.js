@@ -597,17 +597,39 @@ export function drawHeader(ctx, fullTitle, subText, instructions, isKey, setIndi
     pScale = pScale || scale;
     const titleScale = ctx.titleScale || 1;
 
+    // Room for the title: everything left of the right-hand block (the Name/Class/Date
+    // fields, or the "TEACHER ANSWER KEY" label). Long titles shrink to fit rather than
+    // running off the page or underneath the fields.
+    const rightBlockW = isKey ? 50 * pScale : 76;
+    const titleMaxW = PAGE_WIDTH - MARGIN * 2 - rightBlockW;
+    // Returns { pt, text }: the largest size ≥ minPt at which `text` fits, ellipsising only
+    // if even the minimum size is too wide.
+    const fitText = (text, startPt, minPt, weight) => {
+        doc.setFont(pdfFont, weight);
+        doc.setFontSize(startPt);
+        const w = doc.getTextWidth(text);
+        if (w <= titleMaxW) return { pt: startPt, text };
+        const pt = Math.max(minPt, startPt * (titleMaxW / w) * 0.98);
+        doc.setFontSize(pt);
+        let t = text;
+        while (t.length > 1 && doc.getTextWidth(t + '…') > titleMaxW) t = t.slice(0, -1);
+        return { pt, text: doc.getTextWidth(text) <= titleMaxW ? text : t.trimEnd() + '…' };
+    };
+    const fitTitle = fitText(fullTitle.toUpperCase(), 24 * pScale * titleScale, 8 * pScale, 'bold');
+    const titleTxt = fitTitle.text, titlePt = fitTitle.pt;
+
     // Title
-    drawText(doc, fullTitle.toUpperCase(), MARGIN, MARGIN + 10 * pScale, {
-        fontSizePt: 24 * pScale * titleScale,
+    drawText(doc, titleTxt, MARGIN, MARGIN + 10 * pScale, {
+        fontSizePt: titlePt,
         bold: true,
         color: [15, 23, 42],
         pdfFont,
     });
 
     // Subtitle
-    drawText(doc, subText, MARGIN, MARGIN + 17 * pScale, {
-        fontSizePt: 10 * pScale * titleScale,
+    const fitSub = fitText(subText || '', 10 * pScale * titleScale, 6.5 * pScale, 'normal');
+    drawText(doc, fitSub.text, MARGIN, MARGIN + 17 * pScale, {
+        fontSizePt: fitSub.pt,
         italic: true,
         color: [100, 116, 139],
         pdfFont,
