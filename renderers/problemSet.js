@@ -75,7 +75,7 @@ export function renderProblemSet(container, questions, settings, difficultyLabel
             : '';
 
         // Diagram (geometry questions only, when enabled)
-        const diagramHtml = showDiagrams && item.diagram
+        const diagramHtml = (showDiagrams || item.diagram?.essential) && item.diagram
             ? `<div class="problem-diagram">${renderDiagramSVG(item.diagram)}</div>`
             : '';
 

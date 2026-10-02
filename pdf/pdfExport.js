@@ -4,13 +4,15 @@
 import { state, syncSettingsFromDOM } from '../core/state.js';
 import { showToast } from '../ui/toast.js';
 import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
-import { loadJSPDF, loadFontForPDF, FONT_SELECT_MAP } from './pdfFonts.js';
+import { loadJSPDF, loadFontForPDF, aliasBoldToRegular, FONT_SELECT_MAP } from './pdfFonts.js';
 import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue, drawText, setLatexAsciiFallback, drawSup, measureSup, _winAnsiSafe } from './pdfHelpers.js';
 import { detectVerb, detectMidVerb, autoBoldVerb } from '../renderers/htmlUtils.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
 import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
 import { getOutcomesForTopics, getTopicOutcomeCodes } from '../core/outcomes.js';
 import { drawFormulaSheet } from './pdfDrawFormulas.js';
+import { drawPrimDiagramPDF } from './pdfPrims.js';
+import { isPrimDiagram, preferredHeightMM } from '../renderers/diagramPrims.js';
 
 let isExporting = false;
 
@@ -329,10 +331,10 @@ function _drawCircleDiagramPDF(doc, { r, missing }, x0, y0, w, h, ps, font) {
 
 function _drawRhombusKiteDiagramPDF(doc, { type, d1, d2 }, x0, y0, w, h, ps, font) {
     const maxW = w * 0.5, maxH = h * 0.6;
-    const hw = Math.max(7, Math.min(maxW, d1 * 1.1 * ps));   // half horizontal diagonal
-    const hh = Math.max(6, Math.min(maxH, d2 * 1.1 * ps));   // half vertical diagonal
-    const cx = x0 + w * 0.40;
-    const cy = y0 + h / 2;
+    const hw = Math.max(11, Math.min(maxW, d1 * 1.1 * ps));   // half horizontal diagonal
+    const hh = Math.max(9, Math.min(maxH, d2 * 1.1 * ps));   // half vertical diagonal
+    const cx = x0 + w * 0.46;
+    const cy = y0 + h / 2 + 1;
     // Kite: cross-point above centre so the lower spike is longer.
     const topY = cy - hh;
     const botY = type === 'kite' ? cy + hh * 1.5 : cy + hh;
@@ -357,8 +359,12 @@ function _drawRhombusKiteDiagramPDF(doc, { type, d1, d2 }, x0, y0, w, h, ps, fon
     doc.setFontSize(8 * ps);
     doc.setFont(font, 'normal');
     doc.setTextColor(..._LC);
-    doc.text(`d1 = ${d1}`, (cx + right[0]) / 2, crossY - _LBL_OFFSET, { align: 'center' });
-    doc.text(`d2 = ${d2}`, cx + _LBL_OFFSET, (topY + botY) / 2, { align: 'left' });
+    doc.text(`d1 = ${d1}`, left[0] - _LBL_OFFSET, crossY + 1, { align: 'right' });
+    doc.text(`d2 = ${d2}`, cx, topY - _LBL_OFFSET, { align: 'center' });
+    // right-angle mark where the diagonals cross
+    const m = 1.6;
+    doc.setDrawColor(..._GC); doc.setLineWidth(_AUX_W);
+    doc.lines([[0, -m], [-m, 0]], cx + m, crossY, [1, 1], 'S', false);
 
     doc.setFont(font, 'bold');
     doc.setFontSize(9.5 * ps);
@@ -808,15 +814,33 @@ function _drawHyperbolaPDF(doc, { a, h: hh, k }, x0, y0, w, h, ps, font) {
     doc.setDrawColor(..._GC); doc.setLineWidth(0.6);
     for (const dir of [-1, 1]) {
         let prev = null;
-        for (let i = 1; i <= 40; i++) {
-            const dx = dir * (i / 40) * span; if (Math.abs(dx) < 0.18) { prev = null; continue; }
-            const x = hh + dx, y = a / (x - hh) + k;
-            if (y < k - span || y > k + span) { prev = null; continue; }
-            const cur = [f.mapX(x), f.mapY(y)];
-            if (prev) doc.line(prev[0], prev[1], cur[0], cur[1]);
+        for (let i = 0; i <= 120; i++) {
+            const dx = dir * 0.03 * Math.pow(span / 0.03, i / 120);
+            const cur = [f.mapX(hh + dx), f.mapY(a / dx + k)];
+            if (prev) {
+                const seg = _clipSegToRect(prev[0], prev[1], cur[0], cur[1], f.plL, f.plT, f.plR, f.plB);
+                if (seg) doc.line(seg[0], seg[1], seg[2], seg[3]);
+            }
             prev = cur;
         }
     }
+    // Asymptote labels sit in the quadrants the branches avoid.
+    doc.setFontSize(6 * ps); doc.setFont(font, 'bold'); doc.setTextColor(..._MC);
+    doc.text(`x = ${hh}`, f.mapX(hh) + (a > 0 ? -1.2 : 1.2), f.plT + 2.8, { align: a > 0 ? 'right' : 'left' });
+    doc.text(`y = ${k}`, a > 0 ? f.plL + 1.2 : f.plR - 1.2, f.mapY(k) - 1, { align: a > 0 ? 'left' : 'right' });
+}
+
+// Liang–Barsky clip of a segment to a rectangle; null when fully outside.
+function _clipSegToRect(x1, y1, x2, y2, xl, yt, xr, yb) {
+    let t0 = 0, t1 = 1;
+    const dx = x2 - x1, dy = y2 - y1;
+    for (const [p, q] of [[-dx, x1 - xl], [dx, xr - x1], [-dy, y1 - yt], [dy, yb - y1]]) {
+        if (p === 0) { if (q < 0) return null; continue; }
+        const r = q / p;
+        if (p < 0) { if (r > t1) return null; if (r > t0) t0 = r; }
+        else { if (r < t0) return null; if (r < t1) t1 = r; }
+    }
+    return [x1 + t0 * dx, y1 + t0 * dy, x1 + t1 * dx, y1 + t1 * dy];
 }
 
 function _drawNetworkPDF(doc, { degrees, edges }, x0, y0, w, h, ps, font) {
@@ -989,14 +1013,35 @@ function _drawNumberPlanePDF(doc, { pts, line, mid, tri }, x0, y0, w, h, ps, fon
 
     // Points + coordinate labels
     doc.setFontSize(6 * ps); doc.setFont(font, 'bold');
-    for (const [px, py] of pts) {
+    pts.forEach(([px, py], i) => {
         const dx = mapX(px), dy = mapY(py);
         doc.setFillColor(..._MC); doc.circle(dx, dy, 1.1, 'F');
         doc.setTextColor(..._MC);
-        const right = dx < plR - 12;
-        doc.text(`(${px}, ${py})`, right ? dx + 1.6 : dx - 1.6, dy > plT + 5 ? dy - 1.4 : dy + 3,
-            { align: right ? 'left' : 'right' });
-    }
+        const other = pts[1 - i] || pts[0];
+        const ox = mapX(other[0]), oy = mapY(other[1]);
+        const label = `(${px}, ${py})`;
+        const wMm = doc.getTextWidth(label), hMm = 2.4 * ps;
+        const awayX = dx >= ox ? 1 : -1, awayY = dy <= oy ? -1 : 1;
+        const hitsSeg = (bx0, by0, bx1, by1) => {
+            if (!(line && pts.length >= 2)) return false;
+            for (let t = 0; t <= 1; t += 0.05) {
+                const sx = dx + (ox - dx) * t, sy = dy + (oy - dy) * t;
+                if (sx > bx0 - 0.3 && sx < bx1 + 0.3 && sy > by0 - 0.3 && sy < by1 + 0.3) return true;
+            }
+            return false;
+        };
+        let best = null;
+        for (const [sx, sy] of [[awayX, awayY], [-awayX, awayY], [awayX, -awayY], [-awayX, -awayY]]) {
+            const bx0 = sx > 0 ? dx + 1.6 : dx - 1.6 - wMm, bx1 = bx0 + wMm;
+            const by1 = sy < 0 ? dy - 1.4 : dy + 3, by0 = by1 - hMm;
+            if (bx0 < plL + 0.3 || bx1 > plR - 0.3 || by0 < plT || by1 > plB) continue;
+            if (hitsSeg(bx0, by0, bx1, by1)) continue;
+            best = { sx, sy }; break;
+        }
+        if (!best) best = { sx: awayX, sy: awayY };
+        doc.text(label, best.sx > 0 ? dx + 1.6 : dx - 1.6, best.sy < 0 ? dy - 1.4 : dy + 3,
+            { align: best.sx > 0 ? 'left' : 'right' });
+    });
 }
 
 /**
@@ -1017,6 +1062,7 @@ function _drawDiagramInPDF(doc, diagram, x0, y0, w, h, ps, font) {
     doc.setLineDashPattern([], 0);
     if (doc.setLineJoin) doc.setLineJoin('round');
     if (doc.setLineCap)  doc.setLineCap('round');
+    if (isPrimDiagram(diagram)) { drawPrimDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); return; }
     switch (diagram.type) {
         case 'rectangle':            _drawRectDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
         case 'right-triangle':       _drawRightTriDiagramPDF(doc, diagram, x0, y0, w, h, ps, font); break;
@@ -1499,9 +1545,11 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
             }
             metaH = 4 * pScale + metaRows * (chipH + 1);
         }
-        const hasDiagram = showDiagrams && !!item.diagram;
+        const hasDiagram = (showDiagrams || !!item.diagram?.essential) && !!item.diagram;
+        const diagH = hasDiagram && isPrimDiagram(item.diagram)
+            ? preferredHeightMM(item.diagram, colW - 13, pScale, DIAG_H) : DIAG_H;
         const itemH = clueBlockH
-            + (hasDiagram ? DIAG_H + SECTION_PAD : 0)
+            + (hasDiagram ? diagH + SECTION_PAD : 0)
             + (workingCount > 0 ? SECTION_PAD + workingCount * workingLineSpacing + SECTION_PAD : 0)
             + answerLineSpacing + SECTION_PAD + 6 * pScale
             + metaH + itemGap;
@@ -1582,8 +1630,8 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
 
         // ── Geometry diagram ─────────────────────────────────────────
         if (hasDiagram) {
-            _drawDiagramInPDF(doc, item.diagram, itemX + 9, nextY, colW - 13, DIAG_H, pScale, pdfFont);
-            nextY += DIAG_H + SECTION_PAD;
+            _drawDiagramInPDF(doc, item.diagram, itemX + 9, nextY, colW - 13, diagH, pScale, pdfFont);
+            nextY += diagH + SECTION_PAD;
         }
 
         // ── Working area: 5 mm grid pitch for algebra alignment ─────
@@ -2055,8 +2103,15 @@ export async function exportPDF() {
         if (fontName) {
             if (T) T.innerText = 'Loading fonts...';
             try {
-                const ok = await loadFontForPDF(doc, fontName, 400);
-                if (ok) { await loadFontForPDF(doc, fontName, 700); pdfFont = fontName; }
+                // One retry each: a single CDN hiccup shouldn't silently downgrade the export.
+                const ok = (await loadFontForPDF(doc, fontName, 400)) || (await loadFontForPDF(doc, fontName, 400));
+                if (ok) {
+                    pdfFont = fontName;
+                    const okBold = (await loadFontForPDF(doc, fontName, 700)) || (await loadFontForPDF(doc, fontName, 700));
+                    // No bold face? Alias the regular face as bold. Without this jsPDF falls
+                    // back to a serif font for every bold run (title, verbs, headings).
+                    if (!okBold) aliasBoldToRegular(doc, fontName);
+                }
             } catch (e) { console.warn('Unexpected font load error:', e); }
             if (pdfFont === 'helvetica') {
                 showToast(`Couldn't load the "${fontName}" font — exporting with the standard PDF font instead.`, 'warning');

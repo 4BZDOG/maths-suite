@@ -1409,6 +1409,14 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             // k in [1, maxMult-1] ensures num < den (no n/n trivial case)
             const num = factor * ri(rng, 1, maxMult - 1);
             const ans = fracStr(num, den);
+            if (den <= 12 && rng() < 0.4) {
+                // Shaded fraction model: name the fraction, then simplify.
+                const g0 = gcd(num, den);
+                const inl = (den / g0) === 1 ? String(num / g0) : `\\frac{${num / g0}}{${den / g0}}`;
+                return { clue: rc(rng, ['What fraction of the shape is shaded? Write your answer in *simplest form*.', 'Write the shaded part as a fraction in *lowest terms*.']),
+                    answer: ans, worked: `$\\frac{${num}}{${den}} = \\frac{${num}\\div${g0}}{${den}\\div${g0}} = ${inl}$`,
+                    diagram: { type: 'fraction', essential: true, kind: rc(rng, ['bar', 'pie']), parts: den, shaded: num } };
+            }
             const ph = rc(rng, [
                 `Simplify $\\frac{${num}}{${den}}$`,
                 `Write $\\frac{${num}}{${den}}$ in its **simplest form**`,
@@ -1662,6 +1670,13 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
     if (diff === 'Easy') {
         const typeE = _pickType(rng, filtered, 2);
         if (typeE === -1) return null;
+        if (typeE === 2 && rng() < 0.35) {
+            const shaded = ri(rng, 5, 95);
+            return { clue: rc(rng, ['What percentage of the grid is shaded?', 'The hundred-square is partly shaded. What *percentage* is shaded?']),
+                answer: String(shaded), answerDisplay: `${shaded}%`,
+                worked: `$${shaded}$ of the $100$ squares are shaded, so $${shaded}\\%$.`,
+                diagram: { type: 'fraction', essential: true, kind: 'grid', shaded } };
+        }
         if (typeE === 2) {
             // express "a out of b" as a percentage (b divides 100 → clean %)
             const b = rc(rng, [4, 5, 10, 20, 25, 50, 100]);
@@ -2357,9 +2372,12 @@ function _genStemLeaf(rng, diff, _depth = 0) {
     const stemKeys = Object.keys(stems).map(Number).sort((a, b) => a - b);
     // Plain-text rows (no LaTeX) so the plot renders identically in the HTML
     // preview and the PDF text converter.
-    const rows = stemKeys.map(s => `${s} | ${stems[s].join(' ')}`).join('\n');
     const k0 = stemKeys[0], leaf0 = stems[k0][0];
-    const keyLine = `Key: ${k0} | ${leaf0} = ${k0 * 10 + leaf0}`;
+    const plot = {
+        type: 'stem-leaf', essential: true,
+        rows: stemKeys.map(s => ({ stem: s, leaves: stems[s] })),
+        key: `${k0} | ${leaf0} = ${k0 * 10 + leaf0}`,
+    };
 
     const median = data[(n - 1) / 2];
     const range = data[n - 1] - data[0];
@@ -2376,14 +2394,14 @@ function _genStemLeaf(rng, diff, _depth = 0) {
     if (want === 'mode' && modes.length !== 1) return _genStemLeaf(rng, diff, _depth + 1);
 
     const stem = `The stem-and-leaf plot shows ${ctx}. Find the *${want}*.`;
-    const clue = `${stem}\n${rows}\n${keyLine}`;
+    const clue = stem;
     const ans = want === 'median' ? median : want === 'range' ? range : modes[0];
     const worked = want === 'median'
         ? `With $${n}$ ordered values, the median is the middle (${(n + 1) / 2}th) value $= ${median}$.`
         : want === 'range'
             ? `$\\text{range} = ${data[n - 1]} - ${data[0]} = ${range}$`
             : `The most frequent value is $${modes[0]}$ (appears $${maxC}$ times).`;
-    return { clue, answer: String(ans), answerDisplay: `$${ans}$`, worked, notes: 'Statistics' };
+    return { clue, answer: String(ans), answerDisplay: `$${ans}$`, worked, notes: 'Statistics', diagram: plot };
 }
 
 // ============================================================
@@ -3605,6 +3623,20 @@ function _genAlgebraOp(rng, diff, op) {
         };
     }
 
+    if (op === 'simultaneous' && rng() < 0.3) {
+        // Graphical solution: the intersection of two drawn lines.
+        const x = ri(rng, -4, 4), y = ri(rng, -4, 4);
+        let m1 = ri(rng, -3, 3), m2 = ri(rng, -3, 3);
+        if (m1 === m2) m2 = m1 === 3 ? 1 : m1 + 1;
+        const c1 = y - m1 * x, c2 = y - m2 * x;
+        if (Math.abs(c1) > 9 || Math.abs(c2) > 9) return _genAlgebraOp(rng, diff, op);
+        const e1 = _linEqStr(m1, c1).full, e2 = _linEqStr(m2, c2).full;
+        return { clue: `The graphs of $y = ${e1}$ and $y = ${e2}$ are drawn. Use the graph to solve the simultaneous equations.`,
+            answer: `x=${x},y=${y}`, answerDisplay: `$x = ${x},\\ y = ${y}$`,
+            worked: `The lines cross at $(${x}, ${y})$, so $x = ${x}$ and $y = ${y}$.`,
+            diagram: { type: 'line-graph', essential: true, xMin: -6, xMax: 6, yMin: -8, yMax: 8,
+                lines: [{ m: m1, c: c1, label: `y = ${e1}` }, { m: m2, c: c2, label: `y = ${e2}`, color: 'm' }], points: [[x, y, undefined]] } };
+    }
     if (op === 'simultaneous') {
         const x = ri(rng, 1, 8), y = ri(rng, 1, 8);
         if (diff === 'Easy') {
@@ -3965,6 +3997,32 @@ function _genStatisticsS5Op(rng, diff, op) {
 
     // box plots & the 1.5×IQR outlier rule (MA5-DAT-C-01)
     if (op === 'box-plot') {
+        if (rng() < 0.55) {
+            // Read the five-number summary straight off a drawn box plot.
+            const big = rng() < 0.5;
+            const st = big ? 5 : 1;
+            const mn = st * ri(rng, big ? 1 : 2, big ? 6 : 14);
+            const q1v = mn + st * ri(rng, big ? 1 : 2, big ? 3 : 6);
+            const medv = q1v + st * ri(rng, big ? 1 : 2, big ? 3 : 6);
+            const q3v = medv + st * ri(rng, big ? 1 : 2, big ? 3 : 6);
+            const mx = q3v + st * ri(rng, big ? 1 : 2, big ? 4 : 8);
+            const ctx = rc(rng, ['the marks scored in a class test', 'the time (in minutes) students spent on homework', 'the heights (in cm) of plants in an experiment', 'the number of points scored by a team over a season']);
+            const plot = { type: 'box-plot', essential: true, min: mn, q1: q1v, med: medv, q3: q3v, max: mx };
+            const iqrv = q3v - q1v;
+            const asks = [
+                { q: 'Find the *median*.', a: medv, w: `The median is the line inside the box: $${medv}$.` },
+                { q: 'Find the *range*.', a: mx - mn, w: `$\\text{range} = ${mx} - ${mn} = ${mx - mn}$` },
+                { q: 'Find the *interquartile range (IQR)*.', a: iqrv, w: `$\\text{IQR} = Q_3 - Q_1 = ${q3v} - ${q1v} = ${iqrv}$` },
+                { q: 'State the *upper quartile* ($Q_3$).', a: q3v, w: `$Q_3$ is the right-hand end of the box: $${q3v}$.` },
+                { q: 'State the *lower quartile* ($Q_1$).', a: q1v, w: `$Q_1$ is the left-hand end of the box: $${q1v}$.` },
+            ];
+            if (diff === 'Hard') {
+                asks.push({ q: 'Calculate the *upper outlier fence* using the $1.5 \\times \\text{IQR}$ rule.', a: q3v + 1.5 * iqrv, w: `IQR $= ${iqrv}$; upper fence $= ${q3v} + 1.5(${iqrv}) = ${q3v + 1.5 * iqrv}$` });
+                asks.push({ q: 'Calculate the *lower outlier fence* using the $1.5 \\times \\text{IQR}$ rule.', a: q1v - 1.5 * iqrv, w: `IQR $= ${iqrv}$; lower fence $= ${q1v} - 1.5(${iqrv}) = ${q1v - 1.5 * iqrv}$` });
+            }
+            const pick = rc(rng, asks);
+            return { clue: `The box plot summarises ${ctx}. ${pick.q}`, answer: String(pick.a), answerDisplay: `$${pick.a}$`, worked: pick.w, diagram: plot };
+        }
         const q1 = ri(rng, 10, 40);
         const iqr = ri(rng, 8, 25);
         const q3 = q1 + iqr;
@@ -4037,7 +4095,34 @@ function _genStatisticsS5Op(rng, diff, op) {
 
         // Easy: predict y only. Medium/Hard also draw from reverse-prediction
         // and gradient/intercept interpretation for variety.
-        const variant = diff === 'Easy' ? 0 : ri(rng, 0, 3);
+        const variant = diff === 'Easy' ? 0 : ri(rng, 0, 4);
+
+        // Scatter plot with the fitted line drawn (supportive) — needs c >= 0 so the
+        // first-quadrant axes show everything.
+        const scatterFor = () => {
+            if (c < 0) return undefined;
+            const xs = [1, 2, 3, 4, 5, 6, 7, 8].slice(0, 7);
+            const jit = Math.max(1, Math.ceil(m / 2));
+            const pts = xs.map((px, i) => [px, Math.max(1, m * px + c + ((i * 5 + m) % 3 - 1) * jit)]);
+            const xMaxP = Math.max(8, x + 1) + (Math.max(8, x + 1) % 2);
+            return { type: 'scatter', pts, line: { m, c }, xMax: xMaxP, yMax: Math.ceil((m * xMaxP + c) * 1.05), xTitle: 'x', yTitle: 'y' };
+        };
+
+        if (variant === 4) {
+            // Describe the correlation shown on a scatter plot (data in the plot).
+            const kind = rc(rng, ['positive', 'negative', 'none']);
+            const base = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            const pts = base.map((px, i) => {
+                const wob = ((i * 7 + 3) % 5) - 2;
+                if (kind === 'positive') return [px, Math.max(1, px + 1 + wob)];
+                if (kind === 'negative') return [px, Math.max(1, 11 - px + wob)];
+                return [px, 5 + ((i * 4 + 1) % 7) - 3 + (i % 2 ? 2 : -2)];
+            });
+            return { clue: rc(rng, ['What type of correlation does the scatter plot show?', 'Describe the relationship between $x$ and $y$ shown in the scatter plot (positive, negative or none).']),
+                answer: kind, answerDisplay: kind,
+                worked: kind === 'none' ? 'The points show no pattern: there is no correlation.' : `As $x$ increases, $y$ ${kind === 'positive' ? 'increases' : 'decreases'}: a ${kind} correlation.`,
+                diagram: { type: 'scatter', essential: true, pts, xMax: 10, yMax: 14, xTitle: 'x', yTitle: 'y' } };
+        }
 
         if (variant === 3) {
             // interpret the y-intercept (value of y when x = 0)
@@ -4056,7 +4141,7 @@ function _genStatisticsS5Op(rng, diff, op) {
                 `For the line of best fit $y = ${m}x${cStr}$, what value of $x$ gives $y = ${y}$?`,
             ]);
             return { clue: ph, answer: String(x), answerDisplay: `$x = ${x}$`,
-                worked: `$${y} = ${m}x${cStr}$, so $x = \\frac{${y - c}}{${m}} = ${x}$` };
+                worked: `$${y} = ${m}x${cStr}$, so $x = \\frac{${y - c}}{${m}} = ${x}$`, diagram: scatterFor() };
         }
         if (variant === 2) {
             // Interpret the gradient as a rate of change.
@@ -4073,7 +4158,7 @@ function _genStatisticsS5Op(rng, diff, op) {
             `Using $y = ${m}x${cStr}$, calculate the predicted value of $y$ for $x = ${x}$.`,
         ]);
         return { clue: ph, answer: String(y), answerDisplay: `$y = ${y}$`,
-            worked: `$y = ${m}(${x})${cStr} = ${y}$` };
+            worked: `$y = ${m}(${x})${cStr} = ${y}$`, diagram: scatterFor() };
     }
     return null;
 }
@@ -4095,14 +4180,14 @@ function _genGeometryS5Op(rng, diff, op) {
                     `A gift box measures $${l}$ ${u} by $${w}$ ${u} by $${h}$ ${u}. How much wrapping paper (in ${u}²) is needed to cover it exactly, ignoring overlap?`,
                     `A closed box is made from sheet cardboard with dimensions $${l}$ ${u} × $${w}$ ${u} × $${h}$ ${u}. What area of cardboard (${u}²) is required?`,
                 ]);
-                return { clue: ctx, answer: String(sa), answerDisplay: `${sa} ${u}²`, worked: saWorked };
+                return { clue: ctx, answer: String(sa), answerDisplay: `${sa} ${u}²`, worked: saWorked, diagram: { type: 'solid', kind: 'prism', dims: { l, w, h }, unit: u, find: 'SA' } };
             }
             const ph = rc(rng, [
                 `Find the *surface area* of a rectangular prism: length $${l}$ ${u}, width $${w}$ ${u}, height $${h}$ ${u}.`,
                 `Calculate the *total surface area* of a rectangular box with dimensions $${l}$ ${u} × $${w}$ ${u} × $${h}$ ${u}.`,
                 `A rectangular prism has dimensions $${l}$ ${u} by $${w}$ ${u} by $${h}$ ${u}. Find its surface area.`,
             ]);
-            return { clue: ph, answer: String(sa), answerDisplay: `${sa} ${u}²`, worked: `$SA = 2(${l} \\times ${w} + ${l} \\times ${h} + ${w} \\times ${h}) = 2(${l*w} + ${l*h} + ${w*h}) = ${sa}$ ${u}²` };
+            return { clue: ph, answer: String(sa), answerDisplay: `${sa} ${u}²`, worked: `$SA = 2(${l} \\times ${w} + ${l} \\times ${h} + ${w} \\times ${h}) = 2(${l*w} + ${l*h} + ${w*h}) = ${sa}$ ${u}²`, diagram: { type: 'solid', kind: 'prism', dims: { l, w, h }, unit: u, find: 'SA' } };
         }
         // Cylinder: SA = 2πr² + 2πrh
         const r = ri(rng, 2, 8), h = ri(rng, 3, 12);
@@ -4112,6 +4197,7 @@ function _genGeometryS5Op(rng, diff, op) {
             answer: String(sa),
             answerDisplay: `${sa} cm²`,
             worked: `$SA = 2\\pi r^2 + 2\\pi rh = 2\\pi(${r})^2 + 2\\pi(${r})(${h}) = ${sa}$ cm²`,
+            diagram: { type: 'solid', kind: 'cylinder', dims: { r, h }, find: 'SA' },
         };
     }
 
@@ -4158,7 +4244,8 @@ function _genGeometryS5Op(rng, diff, op) {
             `Two similar triangles have corresponding sides. If one triangle has a side of $${a}$ ${u} and the *corresponding* side of the larger triangle is $${a * scale}$ ${u}, find the side corresponding to $${b}$ ${u}.`,
             `A triangle with a side of $${a}$ ${u} is similar to a larger triangle with a corresponding side of $${a * scale}$ ${u}. Find the length of the side that corresponds to $${b}$ ${u}.`,
         ]);
-        return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}` };
+        return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}`,
+            diagram: { type: 'similar', small: [`${a} ${u}`, `${b} ${u}`, ''], big: [`${a * scale} ${u}`, `? ${u}`, ''] } };
     }
     return null;
 }
@@ -4381,7 +4468,8 @@ function genTrigonometry(rng, diff, allowedOps) {
         const angle = round(Math.atan2(h, base) * 180 / Math.PI, 0);
         return { clue: `A cuboid measures $${l}\\text{ cm} \\times ${w}\\text{ cm} \\times ${h}\\text{ cm}$. Find the angle the body diagonal makes with the base (to the nearest degree).`,
             answer: String(angle), answerDisplay: `${angle}°`,
-            worked: `Base diagonal $= \\sqrt{${l}^2 + ${w}^2} = ${round(base, 2)}$. $\\theta = \\tan^{-1}\\frac{${h}}{${round(base, 2)}} = ${angle}°$` };
+            worked: `Base diagonal $= \\sqrt{${l}^2 + ${w}^2} = ${round(base, 2)}$. $\\theta = \\tan^{-1}\\frac{${h}}{${round(base, 2)}} = ${angle}°$`,
+            diagram: { type: 'cuboid-diag', l, w, h } };
     }
 
     if (op === 'find-side') {
@@ -4506,25 +4594,29 @@ function genTrigonometry(rng, diff, allowedOps) {
                 return {
                     clue: ph, answer: String(height), answerDisplay: `${height} m`,
                     worked: `$h = ${dist} \\times \\tan(${angle}°) = ${height}$ m`,
+                    diagram: { type: 'scene', kind: 'elevation', height, dist, angle, missing: 'height' },
                 };
             }
             const ph = `A tree is $${height}$ m tall. The *angle of elevation* from a point on the ground to the top is $${angle}$°. How far is the point from the base?`;
             return {
                 clue: ph, answer: String(dist), answerDisplay: `${dist} m`,
                 worked: `$d = \\frac{${height}}{\\tan(${angle}°)} = ${dist}$ m`,
+                diagram: { type: 'scene', kind: 'elevation', height, dist, angle, missing: 'dist' },
             };
         }
-        const ph = rc(rng, [
-            `A ladder leans against a wall. The base is $${dist}$ m from the wall and the ladder reaches $${height}$ m up the wall. Find the angle the ladder makes with the ground.`,
-            `From a point $${dist}$ m away from a building, the *angle of elevation* to the top is measured. If the building is $${height}$ m tall, find the angle of elevation.`,
-            `From the top of a cliff $${height}$ m high, the *angle of depression* to a boat $${dist}$ m offshore is measured. Find the angle of depression.`,
-            `A drone flies at a height of $${height}$ m and spots a marker $${dist}$ m away on the ground. Find the *angle of depression* from the drone to the marker.`,
-            `A ramp rises $${height}$ m over a horizontal distance of $${dist}$ m. Find the angle the ramp makes with the ground.`,
-            `A guy wire supports a pole $${height}$ m tall. It is anchored $${dist}$ m from the base. Find the angle the wire makes with the ground.`,
-        ]);
+        const scenes = [
+            ['ladder', `A ladder leans against a wall. The base is $${dist}$ m from the wall and the ladder reaches $${height}$ m up the wall. Find the angle the ladder makes with the ground.`],
+            ['elevation', `From a point $${dist}$ m away from a building, the *angle of elevation* to the top is measured. If the building is $${height}$ m tall, find the angle of elevation.`],
+            ['depression', `From the top of a cliff $${height}$ m high, the *angle of depression* to a boat $${dist}$ m offshore is measured. Find the angle of depression.`],
+            ['drone', `A drone flies at a height of $${height}$ m and spots a marker $${dist}$ m away on the ground. Find the *angle of depression* from the drone to the marker.`],
+            ['ramp', `A ramp rises $${height}$ m over a horizontal distance of $${dist}$ m. Find the angle the ramp makes with the ground.`],
+            ['wire', `A guy wire supports a pole $${height}$ m tall. It is anchored $${dist}$ m from the base. Find the angle the wire makes with the ground.`],
+        ];
+        const [sceneKind, ph] = rc(rng, scenes);
         return {
             clue: ph, answer: `${angle}°`, answerDisplay: `${angle}°`,
             worked: `$\\tan(\\theta) = \\frac{${height}}{${dist}} \\Rightarrow \\theta = ${angle}°$`,
+            diagram: { type: 'scene', kind: sceneKind, height, dist, angle, missing: 'angle' },
         };
     }
 
@@ -4588,33 +4680,68 @@ function genTrigonometry(rng, diff, allowedOps) {
             ? [30, 45, 60, 120, 150, 210, 240, 300, 315, 330]
             : [20, 30, 40, 45, 55, 60, 70, 110, 120, 135, 150, 160, 200, 210, 225, 240, 250, 290, 300, 310, 315, 330, 340];
         const bearing = rc(rng, bearingPool);
+        const pad3 = (n) => String(n).padStart(3, '0');
+        const variant = rng();
+        if (variant < 0.22) {
+            // back bearing: bearing of A from B given the bearing of B from A
+            const back = (bearing + 180) % 360;
+            const [nA, nB] = rc(rng, [['A', 'B'], ['P', 'Q'], ['X', 'Y']]);
+            return {
+                clue: rc(rng, [
+                    `The bearing of ${nB} from ${nA} is $${pad3(bearing)}$°T. Find the bearing of ${nA} from ${nB}.`,
+                    `${nB} is on a bearing of $${pad3(bearing)}$°T from ${nA}. What is the *return* (back) bearing from ${nB} to ${nA}?`,
+                ]),
+                answer: `${pad3(back)}°`, answerDisplay: `${pad3(back)}°T`,
+                worked: `${bearing < 180 ? `$${bearing} + 180 = ${back}$` : `$${bearing} - 180 = ${back}$`}, so the bearing of ${nA} from ${nB} is $${pad3(back)}$°T.`,
+                diagram: { type: 'bearing', legs: [{ bearing }], names: [nA, nB], back: true },
+            };
+        }
+        if (diff !== 'Easy' && variant < 0.45) {
+            // two perpendicular legs → straight-line distance by Pythagoras
+            const [ta, tb, tc] = rc(rng, [[3, 4, 5], [5, 12, 13], [8, 15, 17], [6, 8, 10]]);
+            const k = ri(rng, 1, diff === 'Hard' ? 8 : 4) * (diff === 'Hard' ? 5 : 10);
+            const d1 = ta * k, d2 = tb * k, total = tc * k;
+            const turn = rng() < 0.5 ? 90 : -90;
+            const b2 = (bearing + turn + 360) % 360;
+            const veh = total <= 50 ? rc(rng, ['A hiker', 'A cyclist', 'A boat']) : rc(rng, ['A ship', 'A yacht', 'A plane']);
+            return {
+                clue: `${veh} travels $${d1}$ km on a bearing of $${pad3(bearing)}$°T, then turns and travels $${d2}$ km on a bearing of $${pad3(b2)}$°T. How far is it from its starting point?`,
+                answer: String(total), answerDisplay: `${total} km`,
+                worked: `The two legs are at right angles, so $d = \\sqrt{${d1}^2 + ${d2}^2} = ${total}$ km.`,
+                diagram: { type: 'bearing', legs: [{ bearing, dist: d1 }, { bearing: b2, dist: d2 }], names: ['Start', 'B', 'End'], closing: true },
+            };
+        }
         const radians = bearing * Math.PI / 180;
         const eastward = round(dist * Math.sin(radians), 1);
         const northward = round(dist * Math.cos(radians), 1);
-        const bStr = String(bearing).padStart(3, '0');
+        const bStr = pad3(bearing);
         if (rng() < 0.5) {
-            const ph = rc(rng, [
-                `A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *east* (or west) of its starting point is it?`,
-                `From port, a vessel sails $${dist}$ km on a bearing of $${bStr}$°T. Find its *east/west* displacement.`,
-                `A hiker walks $${dist}$ km on a bearing of $${bStr}$°T. Find the *east/west* distance from the start.`,
-            ]);
+            const ps = [
+                [`A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *east* (or west) of its starting point is it?`, ['Port', 'Ship']],
+                [`From port, a vessel sails $${dist}$ km on a bearing of $${bStr}$°T. Find its *east/west* displacement.`, ['Port', 'Vessel']],
+                [`A hiker walks $${dist}$ km on a bearing of $${bStr}$°T. Find the *east/west* distance from the start.`, ['Start', 'Hiker']],
+            ];
+            const [ph, names] = rc(rng, ps);
             const absE = Math.abs(eastward);
             const dir = eastward >= 0 ? 'east' : 'west';
             return {
                 clue: ph, answer: String(absE), answerDisplay: `${absE} km ${dir}`,
                 worked: `$\\text{E/W} = ${dist} \\times \\sin(${bearing}°) = ${absE}$ km ${dir}`,
+                diagram: { type: 'bearing', legs: [{ bearing, dist }], names, ask: 'east' },
             };
         }
-        const ph = rc(rng, [
-            `A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *north* (or south) of its starting point is it?`,
-            `An aircraft flies $${dist}$ km on a bearing of $${bStr}$°T. Find its *north/south* displacement.`,
-            `A cyclist rides $${dist}$ km on a bearing of $${bStr}$°T. Find the *north/south* distance from the start.`,
-        ]);
+        const ps = [
+            [`A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *north* (or south) of its starting point is it?`, ['Port', 'Ship']],
+            [`An aircraft flies $${dist}$ km on a bearing of $${bStr}$°T. Find its *north/south* displacement.`, ['Airport', 'Plane']],
+            [`A cyclist rides $${dist}$ km on a bearing of $${bStr}$°T. Find the *north/south* distance from the start.`, ['Start', 'Cyclist']],
+        ];
+        const [ph, names] = rc(rng, ps);
         const absN = Math.abs(northward);
         const dir = northward >= 0 ? 'north' : 'south';
         return {
             clue: ph, answer: String(absN), answerDisplay: `${absN} km ${dir}`,
             worked: `$\\text{N/S} = ${dist} \\times \\cos(${bearing}°) = ${absN}$ km ${dir}`,
+            diagram: { type: 'bearing', legs: [{ bearing, dist }], names, ask: 'north' },
         };
     }
 
@@ -4838,7 +4965,8 @@ function genProbability(rng, diff, allowedOps) {
         const s = simplify(both, nB);
         return { clue: `In a group of $${total}$ students, $${nA}$ study ${subjA}, $${nB}$ study ${subjB}, and $${both}$ study both. Find the probability that a student studies ${subjA} *given* that they study ${subjB}.`,
             answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `$P(${subjA[0]}|${subjB[0]}) = \\frac{n(\\text{both})}{n(${subjB})} = \\frac{${both}}{${nB}} = \\frac{${s.n}}{${s.d}}$` };
+            worked: `$P(${subjA[0]}|${subjB[0]}) = \\frac{n(\\text{both})}{n(${subjB})} = \\frac{${both}}{${nB}} = \\frac{${s.n}}{${s.d}}$`,
+            diagram: { type: 'venn', labels: [subjA[0].toUpperCase() + subjA.slice(1), subjB[0].toUpperCase() + subjB.slice(1)], total, sets: { a: nA, b: nB }, regions: { a: '?', ab: both, b: '?', out: '?' } } };
     }
 
     // ---- Venn diagram: P(A or B) = (|A| + |B| − both)/total ----
@@ -4853,10 +4981,27 @@ function genProbability(rng, diff, allowedOps) {
         const s = simplify(fav, total);
         const labelA = rc(rng, ['football', 'tennis', 'coffee', 'maths']);
         const labelB = rc(rng, ['basketball', 'cricket', 'tea', 'science']);
+        const cap = (w) => w[0].toUpperCase() + w.slice(1);
+        if (rng() < 0.4) {
+            // Fully labelled Venn diagram (essential): read counts straight off it.
+            const onlyA = nA - both, onlyB = nB - both, out = total - union;
+            const asks = [
+                { d: `likes ${labelA} *only*`, v: onlyA }, { d: `likes ${labelB} *only*`, v: onlyB },
+                { d: `likes *both*`, v: both }, { d: `likes *neither*`, v: out },
+                { d: `likes ${labelA} (in total)`, v: nA }, { d: `likes ${labelA} *or* ${labelB}`, v: union },
+            ];
+            const pick = rc(rng, asks);
+            const ps = simplify(pick.v, total);
+            return { clue: `The Venn diagram shows the results of a survey of $${total}$ people. Find the probability that a person chosen at random ${pick.d}.`,
+                answer: fracStr(ps.n, ps.d), answerDisplay: `$\\frac{${ps.n}}{${ps.d}}$`,
+                worked: `$P = \\frac{${pick.v}}{${total}} = \\frac{${ps.n}}{${ps.d}}$`,
+                diagram: { type: 'venn', essential: true, labels: [cap(labelA), cap(labelB)], total, regions: { a: onlyA, ab: both, b: onlyB, out } } };
+        }
         const ask = wantNeither ? '*neither*' : `${labelA} *or* ${labelB}`;
         return { clue: `In a survey of $${total}$ people, $${nA}$ like ${labelA}, $${nB}$ like ${labelB}, and $${both}$ like both. Find the probability that a person likes ${ask}.`,
             answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `$n(A \\cup B) = ${nA} + ${nB} - ${both} = ${union}$; ${wantNeither ? `neither $= ${total} - ${union} = ${fav}$` : `favourable $= ${fav}$`}; $P = \\frac{${fav}}{${total}} = \\frac{${s.n}}{${s.d}}$` };
+            worked: `$n(A \\cup B) = ${nA} + ${nB} - ${both} = ${union}$; ${wantNeither ? `neither $= ${total} - ${union} = ${fav}$` : `favourable $= ${fav}$`}; $P = \\frac{${fav}}{${total}} = \\frac{${s.n}}{${s.d}}$`,
+            diagram: { type: 'venn', labels: [cap(labelA), cap(labelB)], total, sets: { a: nA, b: nB }, regions: { a: '?', ab: both, b: '?', out: '?' } } };
     }
 
     // ---- two-way table: P(specific cell) = cell/total ----
@@ -4872,9 +5017,11 @@ function genProbability(rng, diff, allowedOps) {
         ];
         const pick = rc(rng, cells);
         const s = simplify(pick.v, total);
-        return { clue: `In a class, ${bt} boys and ${gt} girls play tennis, while ${bn} boys and ${gn} girls do not. A student is chosen at random. Find the probability of choosing ${pick.d}.`,
+        return { clue: `The two-way table shows how many students in a class play tennis. A student is chosen at random. Find the probability of choosing ${pick.d}.`,
             answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `Total $= ${total}$; $P = \\frac{${pick.v}}{${total}} = \\frac{${s.n}}{${s.d}}$` };
+            worked: `Total $= ${total}$; $P = \\frac{${pick.v}}{${total}} = \\frac{${s.n}}{${s.d}}$`,
+            diagram: { type: 'table', essential: true, head: ['', 'Plays tennis', 'Does not', 'Total'],
+                rows: [['Boys', bt, bn, bt + bn], ['Girls', gt, gn, gt + gn], ['Total', bt + gt, bn + gn, total]] } };
     }
 
     // ---- experimental / relative frequency (MA4-PRO-C-01) ----
@@ -4935,23 +5082,25 @@ function genProbability(rng, diff, allowedOps) {
                 else if (target === 'greater than 3') fav = sides - 3;
                 else fav = 3;
                 const s = simplify(fav, sides);
-                const ph = rc(rng, [
-                    `A fair $${sides}$-sided die is rolled. Find P(${target}).`,
-                    `A spinner has $${sides}$ equal sections numbered 1 to $${sides}$. Find P(${target}).`,
-                ]);
+                const spin = rng() < 0.5;
+                const ph = spin
+                    ? `A spinner has $${sides}$ equal sections numbered 1 to $${sides}$. Find P(${target}).`
+                    : `A fair $${sides}$-sided die is rolled. Find P(${target}).`;
                 return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-                    worked: `$P = \\frac{${fav}}{${sides}} = \\frac{${s.n}}{${s.d}}$` };
+                    worked: `$P = \\frac{${fav}}{${sides}} = \\frac{${s.n}}{${s.d}}$`,
+                    diagram: spin ? { type: 'spinner', sectors: Array.from({ length: sides }, (_, i) => ({ label: i + 1 })) } : undefined };
             }
             // Coin / simple spinner
             const sections = rc(rng, [4, 5, 6, 8]);
             const chosen = ri(rng, 1, sections - 1);
             const s = simplify(chosen, sections);
-            const ph = rc(rng, [
-                `A spinner has $${sections}$ equal sections, $${chosen}$ of which are shaded. Find the probability of landing on a shaded section.`,
-                `A wheel is divided into $${sections}$ equal parts. $${chosen}$ are coloured red. What is the probability of spinning red?`,
-            ]);
+            const shadedVersion = rng() < 0.5;
+            const ph = shadedVersion
+                ? `A spinner has $${sections}$ equal sections, $${chosen}$ of which are shaded. Find the probability of landing on a shaded section.`
+                : `A wheel is divided into $${sections}$ equal parts. $${chosen}$ are coloured red. What is the probability of spinning red?`;
             return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-                worked: `$P = \\frac{${chosen}}{${sections}} = \\frac{${s.n}}{${s.d}}$` };
+                worked: `$P = \\frac{${chosen}}{${sections}} = \\frac{${s.n}}{${s.d}}$`,
+                diagram: { type: 'spinner', sectors: Array.from({ length: sections }, (_, i) => ({ label: '', color: i < chosen ? (shadedVersion ? 'grey' : 'red') : 'white' })) } };
         }
         if (diff === 'Medium') {
             const variant = ri(rng, 0, 2);
@@ -4970,13 +5119,15 @@ function genProbability(rng, diff, allowedOps) {
                 else fav = nums.filter(n => [1, 4, 9, 16].includes(n)).length;
                 if (fav <= 0 || fav >= sides) return genProbability(rng, diff, allowedOps);
                 const s = simplify(fav, sides);
-                const ph = rc(rng, [
+                const phs = [
                     `A fair $${sides}$-sided die is rolled. Find P(${target}).`,
                     `Roll a fair $${sides}$-sided die numbered 1 to $${sides}$. What is P(${target})?`,
                     `A spinner has $${sides}$ equal sections numbered 1 to $${sides}$. Find P(${target}).`,
-                ]);
-                return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-                    worked: `$P = \\frac{${fav}}{${sides}} = \\frac{${s.n}}{${s.d}}$` };
+                ];
+                const phIdx = ri(rng, 0, phs.length - 1);
+                return { clue: phs[phIdx], answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+                    worked: `$P = \\frac{${fav}}{${sides}} = \\frac{${s.n}}{${s.d}}$`,
+                    diagram: phIdx === 2 && sides <= 12 ? { type: 'spinner', sectors: Array.from({ length: sides }, (_, i) => ({ label: i + 1 })) } : undefined };
             }
             // 3-colour bag
             const c1 = ri(rng, 2, 7), c2 = ri(rng, 2, 7), c3 = ri(rng, 1, 6);
@@ -5181,7 +5332,9 @@ function genProbability(rng, diff, allowedOps) {
             `Two fair coins are tossed. What is the probability of getting a head on *both*?`,
         ]);
         return { clue: ph, answer: fracStr(1, 4), answerDisplay: `$\\frac{1}{4}$`,
-            worked: `$P = \\frac{1}{2} \\times \\frac{1}{2} = \\frac{1}{4}$` };
+            worked: `$P = \\frac{1}{2} \\times \\frac{1}{2} = \\frac{1}{4}$`,
+            diagram: { type: 'tree', first: [{ l: 'H', p: '1/2' }, { l: 'T', p: '1/2' }],
+                second: [[{ l: 'H', p: '1/2' }, { l: 'T', p: '1/2' }], [{ l: 'H', p: '1/2' }, { l: 'T', p: '1/2' }]] } };
     }
     if (diff === 'Medium') {
         const variant = ri(rng, 0, 1);
@@ -5236,8 +5389,13 @@ function genProbability(rng, diff, allowedOps) {
             `A bag has $${fav}$ ${colour} marbles out of $${total}$. Two are drawn *without replacement*. Find P(both ${colour}).`,
             `$${fav}$ of $${total}$ marbles are ${colour}. If two are drawn without replacement, find P(both ${colour}).`,
         ]);
+        const c0 = colour[0].toUpperCase();
+        const nn = total - fav;
         return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `$P = \\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}} = \\frac{${numProd}}{${denProd}} = \\frac{${s.n}}{${s.d}}$` };
+            worked: `$P = \\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}} = \\frac{${numProd}}{${denProd}} = \\frac{${s.n}}{${s.d}}$`,
+            diagram: { type: 'tree', first: [{ l: c0, p: `${fav}/${total}` }, { l: 'N', p: `${nn}/${total}` }],
+                second: [[{ l: c0, p: `${fav - 1}/${total - 1}` }, { l: 'N', p: `${nn}/${total - 1}` }],
+                         [{ l: c0, p: `${fav}/${total - 1}` }, { l: 'N', p: `${nn - 1}/${total - 1}` }]] } };
     }
     // Three independent events
     const d1 = rc(rng, [4, 5, 6]), d2 = rc(rng, [4, 5, 6]), d3 = rc(rng, [2, 3, 4]);
@@ -6465,6 +6623,40 @@ function genLinear(rng, diff, allowedOps) {
         };
     }
 
+    if (op === 'plot-line' && rng() < 0.45) {
+        // Read a straight line drawn on a number plane (data lives in the graph).
+        const mAbs = diff === 'Easy' ? ri(rng, 1, 2) : ri(rng, 1, 3);
+        const m = diff === 'Easy' ? mAbs : mAbs * (rng() < 0.4 ? -1 : 1);
+        const c = ri(rng, -3, 3);
+        const k = Math.abs(m) >= 3 ? 1 : ri(rng, 1, 2);
+        const line = { m, c };
+        const win = { xMin: -5, xMax: 6, yMin: -8, yMax: 8 };
+        const ptA = [0, c], ptB = [k, m * k + c];
+        const kind = diff === 'Easy' ? rc(rng, ['gradient', 'intercept', 'read']) : rc(rng, ['gradient', 'intercept', 'read', 'equation']);
+        const { full } = _linEqStr(m, c);
+        if (kind === 'gradient') {
+            return { clue: rc(rng, ['Find the *gradient* of the line shown.', 'What is the *gradient* of the straight line drawn on the number plane?']),
+                answer: String(m), answerDisplay: `$${m}$`,
+                worked: `Rise over run between $(${ptA}) $ and $(${ptB})$: $\\frac{${ptB[1] - ptA[1]}}{${k}} = ${m}$`,
+                diagram: { type: 'line-graph', essential: true, ...win, lines: [line], points: [[ptA[0], ptA[1], 'coords'], [ptB[0], ptB[1], 'coords']] } };
+        }
+        if (kind === 'intercept') {
+            return { clue: rc(rng, ['State the *y-intercept* of the line shown.', 'Where does the line cross the $y$-axis? Give the $y$-intercept.']),
+                answer: String(c), answerDisplay: `$${c}$`, worked: `The line crosses the $y$-axis at $y = ${c}$.`,
+                diagram: { type: 'line-graph', essential: true, ...win, lines: [line], points: [] } };
+        }
+        if (kind === 'read') {
+            const xr = ri(rng, 1, 3), yr = m * xr + c;
+            return { clue: `Use the graph to find the value of $y$ when $x = ${xr}$.`,
+                answer: String(yr), answerDisplay: `$y = ${yr}$`, worked: `Reading up from $x = ${xr}$ to the line gives $y = ${yr}$.`,
+                diagram: { type: 'line-graph', essential: true, ...win, lines: [line], points: [[xr, yr, undefined]] } };
+        }
+        return { clue: 'Write the *equation* of the line shown in the form $y = mx + c$.',
+            answer: `y=${full}`, answerDisplay: `$y = ${full}$`,
+            worked: `Gradient $m = ${m}$, $y$-intercept $c = ${c}$, so $y = ${full}$.`,
+            diagram: { type: 'line-graph', essential: true, ...win, lines: [line], points: [[ptA[0], ptA[1], 'coords'], [ptB[0], ptB[1], 'coords']] } };
+    }
+
     if (op === 'plot-line') {
         if (diff === 'Easy') {
             const m = ri(rng, 1, 3);
@@ -6749,16 +6941,21 @@ function genPropsOfFigures(rng, diff, allowedOps) {
                 answer: t.name,
                 answerDisplay: t.name,
                 worked: `${t.desc} → ${t.name}`,
+                diagram: { type: 'congruent', test: t.name },
             };
         }
         if (diff === 'Medium') {
+            // The matching marks on the two triangles are the evidence; name the test they prove.
             const t = rc(rng, tests);
             return {
-                clue: `To prove two triangles congruent using *${t.name}*, what information do you need? Answer: ${t.desc}.
-How many pieces of information does ${t.name} require?`,
-                answer: t.name === 'SSS' ? '3' : t.name === 'RHS' ? '3' : '3',
-                answerDisplay: '3 pieces',
-                worked: `${t.name} requires ${t.desc} — that is 3 independent measurements.`,
+                clue: rc(rng, [
+                    'The markings show the equal sides and angles in two triangles. Which *congruence test* proves the triangles are congruent?',
+                    'Equal sides and angles are marked on each triangle. State the *congruence test* that proves they are congruent.',
+                ]),
+                answer: t.name,
+                answerDisplay: t.name,
+                worked: `The marks show ${t.desc} → ${t.name}.`,
+                diagram: { type: 'congruent', test: t.name, essential: true },
             };
         }
         // Hard: given measurements, identify the test and find a missing value
@@ -6792,6 +6989,7 @@ How many pieces of information does ${t.name} require?`,
                 answer: String(image),
                 answerDisplay: `${image} cm`,
                 worked: `Scaled side $= ${orig} \\times ${k} = ${image}$ cm`,
+                diagram: { type: 'similar', small: [`${orig} cm`, '', ''], big: ['? cm', '', ''] },
             };
         }
         if (diff === 'Medium') {
@@ -6808,6 +7006,7 @@ How many pieces of information does ${t.name} require?`,
                 answer: String(bImg),
                 answerDisplay: `${bImg} cm`,
                 worked: `Scale factor $= \\frac{${aImg}}{${a}} = ${k}$. Missing side $= ${b} \\times ${k} = ${bImg}$ cm.`,
+                diagram: { type: 'similar', small: [`${a} cm`, `${b} cm`, ''], big: [`${aImg} cm`, '? cm', ''] },
             };
         }
         // Hard: area ratio = k²
@@ -6853,6 +7052,7 @@ How many pieces of information does ${t.name} require?`,
         answer: String(a4),
         answerDisplay: `$${a4}°$`,
         worked: `Angle sum $= 360°$. Fourth angle $= 360 - ${a1} - ${a2} - ${a3} = ${a4}°$.`,
+        diagram: { type: 'quad-angles', angles: [a1, a2, a3, '?'] },
     };
 }
 
@@ -7363,6 +7563,7 @@ function genVolume(rng, diff, allowedOps) {
     const pool = OPS.filter(k => !allowedOps || allowedOps.includes(k));
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
+    const solid = (kind, dims, find, extra) => ({ type: 'solid', kind, dims, find, ...extra });
 
     // cone: V = ⅓πr²h, left in terms of π (r²h divisible by 3 → integer coeff)
     if (op === 'cone') {
@@ -7371,7 +7572,8 @@ function genVolume(rng, diff, allowedOps) {
         const coeff = r * r * h / 3;
         return { clue: `Find the volume of a cone with base radius $${r}\\text{ cm}$ and perpendicular height $${h}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
             answer: `${coeff}π`, answerDisplay: `$${coeff}\\pi\\text{ cm}^3$`,
-            worked: `$V = \\tfrac{1}{3}\\pi r^2 h = \\tfrac{1}{3}\\pi (${r})^2(${h}) = ${coeff}\\pi\\text{ cm}^3$` };
+            worked: `$V = \\tfrac{1}{3}\\pi r^2 h = \\tfrac{1}{3}\\pi (${r})^2(${h}) = ${coeff}\\pi\\text{ cm}^3$`,
+            diagram: solid('cone', { r, h }, 'V') };
     }
 
     if (op === 'prism') {
@@ -7379,7 +7581,8 @@ function genVolume(rng, diff, allowedOps) {
             const l = ri(rng, 2, 10), w = ri(rng, 2, 10), h = ri(rng, 2, 10);
             return { clue: `Find the volume of a rectangular prism $${l}\\text{ cm} \\times ${w}\\text{ cm} \\times ${h}\\text{ cm}$.`,
                 answer: String(l * w * h), answerDisplay: `$${l * w * h}\\text{ cm}^3$`,
-                worked: `$V = ${l} \\times ${w} \\times ${h} = ${l * w * h}\\text{ cm}^3$` };
+                worked: `$V = ${l} \\times ${w} \\times ${h} = ${l * w * h}\\text{ cm}^3$`,
+                diagram: solid('prism', { l, w, h }, 'V') };
         }
         if (diff === 'Hard') {
             const r = rng();
@@ -7396,14 +7599,16 @@ function genVolume(rng, diff, allowedOps) {
             const l = ri(rng, 2, 10), w = ri(rng, 2, 10), h = ri(rng, 2, 10), V = l * w * h;
             return { clue: `A rectangular prism has volume $${V}\\text{ cm}^3$, length $${l}\\text{ cm}$ and width $${w}\\text{ cm}$. Find its height.`,
                 answer: String(h), answerDisplay: `$${h}\\text{ cm}$`,
-                worked: `$h = ${V} \\div (${l} \\times ${w}) = ${V} \\div ${l * w} = ${h}\\text{ cm}$` };
+                worked: `$h = ${V} \\div (${l} \\times ${w}) = ${V} \\div ${l * w} = ${h}\\text{ cm}$`,
+                diagram: solid('prism', { l, w, h }, 'h', { given: `V = ${V} cm³` }) };
         }
         // Medium: triangular prism
         const b = ri(rng, 1, 6) * 2, ht = ri(rng, 2, 9), L = ri(rng, 3, 12);
         const V = (b * ht / 2) * L;
         return { clue: `A triangular prism has a cross-section of base $${b}\\text{ cm}$ and height $${ht}\\text{ cm}$, and length $${L}\\text{ cm}$. Find its volume.`,
             answer: String(V), answerDisplay: `$${V}\\text{ cm}^3$`,
-            worked: `$V = \\tfrac{1}{2} \\times ${b} \\times ${ht} \\times ${L} = ${V}\\text{ cm}^3$` };
+            worked: `$V = \\tfrac{1}{2} \\times ${b} \\times ${ht} \\times ${L} = ${V}\\text{ cm}^3$`,
+            diagram: solid('tri-prism', { b, ht, L }, 'V') };
     }
 
     if (op === 'cylinder') {
@@ -7412,18 +7617,21 @@ function genVolume(rng, diff, allowedOps) {
             // inverse: find the height given the volume in terms of π
             return { clue: `A cylinder has volume $${V}\\pi\\text{ cm}^3$ and radius $${r}\\text{ cm}$. Find its height.`,
                 answer: String(h), answerDisplay: `$${h}\\text{ cm}$`,
-                worked: `$h = \\dfrac{${V}\\pi}{\\pi \\times ${r}^2} = \\dfrac{${V}}{${r * r}} = ${h}\\text{ cm}$` };
+                worked: `$h = \\dfrac{${V}\\pi}{\\pi \\times ${r}^2} = \\dfrac{${V}}{${r * r}} = ${h}\\text{ cm}$`,
+                diagram: solid('cylinder', { r, h }, 'h', { given: `V = ${V}π cm³`, givenP: `V = ${V} pi cm³` }) };
         }
         if (diff !== 'Easy' && rng() < 0.4) {
             // numeric answer using π ≈ 3.14, rounded to 1 dp
             const Vnum = Math.round(V * 3.14 * 10) / 10;
             return { clue: `Find the volume of a cylinder with radius $${r}\\text{ cm}$ and height $${h}\\text{ cm}$. Use $\\pi \\approx 3.14$ and round to 1 decimal place.`,
                 answer: String(Vnum), answerDisplay: `$${Vnum}\\text{ cm}^3$`,
-                worked: `$V = \\pi r^2 h \\approx 3.14 \\times ${r * r} \\times ${h} = ${Vnum}\\text{ cm}^3$` };
+                worked: `$V = \\pi r^2 h \\approx 3.14 \\times ${r * r} \\times ${h} = ${Vnum}\\text{ cm}^3$`,
+                diagram: solid('cylinder', { r, h }, 'V') };
         }
         return { clue: `Find the volume of a cylinder with radius $${r}\\text{ cm}$ and height $${h}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
             answer: `${V}π`, answerDisplay: `$${V}\\pi\\text{ cm}^3$`,
-            worked: `$V = \\pi r^2 h = \\pi \\times ${r * r} \\times ${h} = ${V}\\pi\\text{ cm}^3$` };
+            worked: `$V = \\pi r^2 h = \\pi \\times ${r * r} \\times ${h} = ${V}\\pi\\text{ cm}^3$`,
+            diagram: solid('cylinder', { r, h }, 'V') };
     }
 
     if (op === 'capacity') {
@@ -7456,7 +7664,8 @@ function genVolume(rng, diff, allowedOps) {
         const Ldisp = V / 1000;
         return { clue: `A fish tank measures $${l}\\text{ cm} \\times ${w}\\text{ cm} \\times ${h}\\text{ cm}$. Approximately how many litres of water does it hold? (round to the nearest litre)`,
             answer: String(Ldisp), answerDisplay: `$${Ldisp}\\text{ L}$`,
-            worked: `$V = ${l} \\times ${w} \\times ${h} = ${Vraw}\\text{ cm}^3 \\approx ${V}\\text{ cm}^3 = ${Ldisp}\\text{ L}$` };
+            worked: `$V = ${l} \\times ${w} \\times ${h} = ${Vraw}\\text{ cm}^3 \\approx ${V}\\text{ cm}^3 = ${Ldisp}\\text{ L}$`,
+            diagram: solid('prism', { l, w, h }, 'V') };
     }
 
     if (op === 'pyramid') {
@@ -7465,14 +7674,16 @@ function genVolume(rng, diff, allowedOps) {
         const V = baseArea * h / 3;
         return { clue: `A square pyramid has base side $${base}\\text{ cm}$ and perpendicular height $${h}\\text{ cm}$. Find its volume.`,
             answer: String(V), answerDisplay: `$${V}\\text{ cm}^3$`,
-            worked: `$V = \\tfrac{1}{3} \\times ${baseArea} \\times ${h} = ${V}\\text{ cm}^3$` };
+            worked: `$V = \\tfrac{1}{3} \\times ${baseArea} \\times ${h} = ${V}\\text{ cm}^3$`,
+            diagram: solid('pyramid', { s: base, h }, 'V') };
     }
 
     // sphere: V = 4/3 π r^3, leave in terms of π (r a multiple of 3 → integer coeff)
     const r = rc(rng, [3, 6, 9]), coeff = 4 * r * r * r / 3;
     return { clue: `Find the volume of a sphere with radius $${r}\\text{ cm}$. Leave your answer in terms of $\\pi$.`,
         answer: `${coeff}π`, answerDisplay: `$${coeff}\\pi\\text{ cm}^3$`,
-        worked: `$V = \\tfrac{4}{3}\\pi r^3 = \\tfrac{4}{3}\\pi \\times ${r * r * r} = ${coeff}\\pi\\text{ cm}^3$` };
+        worked: `$V = \\tfrac{4}{3}\\pi r^3 = \\tfrac{4}{3}\\pi \\times ${r * r * r} = ${coeff}\\pi\\text{ cm}^3$`,
+        diagram: solid('sphere', { r }, 'V') };
 }
 
 // ---- Time: 24-hour conversion, elapsed time, time zones ----
@@ -7486,6 +7697,15 @@ function genTime(rng, diff, allowedOps) {
     const hm = (m) => { m = norm(m); return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`; };
     const disp = (m) => `$${hm(m).replace(':', '{:}')}$`;
 
+    if (op === 'convert' && rng() < 0.4) {
+        // Read an analogue clock, then give the 24-hour time.
+        const h12 = ri(rng, 1, 11), min = 5 * ri(rng, 0, 11), pm = rng() < 0.5;
+        const h24 = pm ? h12 + 12 : h12;
+        return { clue: `The clock shows a time in the ${pm ? 'afternoon' : 'morning'}. Write this time in 24-hour time.`,
+            answer: `${pad(h24)}:${pad(min)}`, answerDisplay: `$${pad(h24)}{:}${pad(min)}$`,
+            worked: `The clock reads $${h12}{:}${pad(min)}$ ${pm ? '(pm): add 12 hours' : '(am): the hour is unchanged'} $\\rightarrow ${pad(h24)}{:}${pad(min)}$`,
+            diagram: { type: 'clock', essential: true, faces: [{ h: h12, m: min }] } };
+    }
     if (op === 'convert') {
         if (rng() < 0.5) {
             // 12-hour → 24-hour
@@ -7502,6 +7722,21 @@ function genTime(rng, diff, allowedOps) {
             worked: `Subtract 12: $${h24} - 12 = ${h12}$, afternoon $\\rightarrow ${h12}{:}${pad(min)}\\text{ pm}$` };
     }
 
+    if (op === 'duration' && rng() < 0.35) {
+        // Two analogue clocks: how long between the start and finish times?
+        const startH = ri(rng, 1, 9), startM = 5 * ri(rng, 0, 11);
+        const addMin = diff === 'Easy' ? 15 * ri(rng, 1, 8) : 5 * ri(rng, 4, diff === 'Medium' ? 36 : 48);
+        const total = startH * 60 + startM + addMin;
+        const eh = Math.floor(total / 60) % 12 || 12, em = total % 60;
+        const hh = Math.floor(addMin / 60), mm = addMin % 60;
+        const ask = diff !== 'Easy' && addMin >= 60 && rng() < 0.5;
+        return { clue: ask
+                ? 'A bus trip starts at the time shown on the first clock and finishes at the time on the second clock. How many minutes does the trip take?'
+                : 'The first clock shows when a lesson starts and the second clock shows when it ends. How many minutes does the lesson last?',
+            answer: String(addMin), answerDisplay: `$${addMin}\\text{ min}$`,
+            worked: `From $${startH}{:}${pad(startM)}$ to $${eh}{:}${pad(em)}$ is ${hh > 0 ? `$${hh}$ h ` : ''}$${mm}$ min $= ${addMin}$ minutes.`,
+            diagram: { type: 'clock', essential: true, faces: [{ h: startH, m: startM, label: 'Start' }, { h: eh, m: em, label: 'Finish' }] } };
+    }
     if (op === 'duration') {
         if (diff === 'Hard' && rng() < 0.45) {
             // timetable: latest departure to arrive by a target time
@@ -7571,27 +7806,37 @@ function genDataViz(rng, diff, allowedOps) {
         const freqs = Array.from({ length: n }, () => ri(rng, 1, 12));
         const total = freqs.reduce((a, b) => a + b, 0);
         const r = rng();
+        // The frequency table is drawn (essential: the data lives in it).
+        const CAT_SETS = [
+            ['Football', 'Netball', 'Tennis', 'Swimming', 'Cricket', 'Hockey'],
+            ['Red', 'Blue', 'Green', 'Yellow', 'Purple', 'Orange'],
+            ['Pizza', 'Pasta', 'Burgers', 'Sushi', 'Salad', 'Tacos'],
+            ['Bus', 'Train', 'Car', 'Walk', 'Bike', 'Tram'],
+        ];
+        const cats = rc(rng, CAT_SETS).slice(0, n);
+        const header = rc(rng, [['Category', 'Frequency'], ['Favourite', 'Frequency'], ['Item', 'Number of students']]);
+        const freqTable = { type: 'table', essential: true, head: header, rows: cats.map((c, i) => [c, freqs[i]]) };
         if (diff !== 'Easy' && r < 0.33) {
             // which category has the highest frequency (the mode)?
             const maxF = Math.max(...freqs);
             // ensure a unique maximum so the answer is well defined
             if (freqs.filter(f => f === maxF).length === 1) {
-                const cat = 'ABCDEF'[freqs.indexOf(maxF)];
-                return { clue: `A frequency table for categories A–${'ABCDEF'[n - 1]} records frequencies of $${freqs.join(', ')}$ respectively. Which category is the mode?`,
+                const cat = cats[freqs.indexOf(maxF)];
+                return { clue: rc(rng, [`The frequency table shows the results of a survey. Which category is the mode?`, `Use the frequency table to find the *mode* (the most popular category).`]),
                     answer: cat, answerDisplay: cat,
-                    worked: `The mode is the category with the highest frequency ($${maxF}$) → ${cat}.` };
+                    worked: `The mode is the category with the highest frequency ($${maxF}$) → ${cat}.`, diagram: freqTable };
             }
         }
         if (diff === 'Hard' && r < 0.66) {
             // what fraction of the data is in the first category?
             const g = gcd(freqs[0], total);
-            return { clue: `A frequency table records frequencies of $${freqs.join(', ')}$. What fraction of the data is in the first category?`,
+            return { clue: `The frequency table shows a class survey. What fraction of the data is in the *${cats[0]}* category? Give your answer in simplest form.`,
                 answer: `${freqs[0] / g}/${total / g}`, answerDisplay: `$\\frac{${freqs[0] / g}}{${total / g}}$`,
-                worked: `$\\frac{${freqs[0]}}{${total}} = \\frac{${freqs[0] / g}}{${total / g}}$` };
+                worked: `$\\frac{${freqs[0]}}{${total}} = \\frac{${freqs[0] / g}}{${total / g}}$`, diagram: freqTable };
         }
-        return { clue: `A frequency table records frequencies of $${freqs.join(', ')}$. How many data values are there in total?`,
+        return { clue: rc(rng, [`How many data values are there in total in the frequency table?`, `Use the frequency table to find the *total* number of responses.`]),
             answer: String(total), answerDisplay: `$${total}$`,
-            worked: `$${freqs.join(' + ')} = ${total}$` };
+            worked: `$${freqs.join(' + ')} = ${total}$`, diagram: freqTable };
     }
 
     if (op === 'tally') {
@@ -7603,40 +7848,65 @@ function genDataViz(rng, diff, allowedOps) {
                 worked: `$${f} \\div 5 = ${groups}$ remainder $${rem}$` };
         }
         const f = ri(rng, 3, 18), groups = Math.floor(f / 5), rem = f % 5;
-        return { clue: `In a tally chart, one category has **${groups} complete group(s) of five and ${rem} extra mark(s)**. What is its frequency?`,
+        const pets = rc(rng, [['Dog', 'Cat', 'Fish', 'Bird'], ['Red', 'Blue', 'Green', 'Yellow'], ['Walk', 'Bus', 'Car', 'Bike']]);
+        const others = pets.slice(1).map(() => ri(rng, 2, 14));
+        const which = ri(rng, 0, 3);
+        const tallies = pets.map((_, i) => (i === which ? f : others[i > which ? i - 1 : i]));
+        return { clue: `The tally chart shows a class survey. What is the *frequency* of ${pets[which]}?`,
             answer: String(f), answerDisplay: `$${f}$`,
-            worked: `$5 \\times ${groups} + ${rem} = ${f}$` };
+            worked: `$5 \\times ${groups} + ${rem} = ${f}$`,
+            diagram: { type: 'table', essential: true, head: ['Category', 'Tally', 'Frequency'],
+                rows: pets.map((nm, i) => [nm, { tally: tallies[i] }, i === which ? { q: true } : tallies[i]]) } };
     }
 
     if (op === 'dot-plot-read') {
-        // a small dot plot described as a value list; find mode/range/total
+        // A dot plot is drawn (essential); the student reads mode/range/total/counts from it.
         const n = diff === 'Easy' ? 6 : diff === 'Medium' ? 9 : 12;
         const lo = ri(rng, 0, 3), hi = lo + ri(rng, 3, 6);
         const data = Array.from({ length: n }, () => ri(rng, lo, hi)).sort((a, b) => a - b);
         // guarantee both extremes appear so range is well defined
         data[0] = lo; data[data.length - 1] = hi;
-        const want = diff === 'Easy' ? rc(rng, ['total', 'range'])
-            : rc(rng, ['mode', 'range', 'total']);
-        if (want === 'total') {
-            return { clue: `A dot plot shows the values $${data.join(', ')}$. How many data values are shown in total?`,
-                answer: String(n), answerDisplay: `$${n}$`, worked: `Count the dots: $${n}$.` };
-        }
-        if (want === 'range') {
-            return { clue: `A dot plot shows the values $${data.join(', ')}$. What is the range?`,
-                answer: String(hi - lo), answerDisplay: `$${hi - lo}$`,
-                worked: `$${hi} - ${lo} = ${hi - lo}$` };
-        }
-        // mode — pick the unique most-frequent value (rebuild if tied)
         const counts = {};
         for (const v of data) counts[v] = (counts[v] || 0) + 1;
+        const [what, axis] = rc(rng, [
+            ['the number of siblings each student has', 'Number of siblings'],
+            ['the goals scored by a team in each match', 'Goals scored'],
+            ['the books read by each student this month', 'Books read'],
+            ['the pets owned by each student', 'Pets owned'],
+        ]);
+        const plot = { type: 'dot-plot', essential: true, counts, lo: Math.max(0, lo - 1), hi: hi + 1, title: axis };
+        const intro = `The dot plot shows ${what}.`;
         const maxC = Math.max(...Object.values(counts));
         const modes = Object.keys(counts).filter(k => counts[k] === maxC).map(Number);
-        if (modes.length !== 1) {
-            return genDataViz(rng, diff, ['dot-plot-read']);   // retry for a clean mode
+        const kinds = diff === 'Easy' ? ['total', 'range', 'count'] : ['mode', 'range', 'total', 'count', 'more'];
+        let want = rc(rng, kinds);
+        if (want === 'mode' && modes.length !== 1) want = 'total';
+        if (want === 'total') {
+            return { clue: `${intro} How many data values are shown in total?`,
+                answer: String(n), answerDisplay: `$${n}$`, worked: `Count the dots: $${n}$.`, diagram: plot };
         }
-        return { clue: `A dot plot shows the values $${data.join(', ')}$. What is the mode?`,
+        if (want === 'range') {
+            return { clue: `${intro} What is the range?`,
+                answer: String(hi - lo), answerDisplay: `$${hi - lo}$`,
+                worked: `$${hi} - ${lo} = ${hi - lo}$`, diagram: plot };
+        }
+        if (want === 'count') {
+            const vs = Object.keys(counts).map(Number);
+            const v = rc(rng, vs);
+            return { clue: `${intro} How many data values are equal to $${v}$?`,
+                answer: String(counts[v]), answerDisplay: `$${counts[v]}$`,
+                worked: `Count the dots above $${v}$: $${counts[v]}$.`, diagram: plot };
+        }
+        if (want === 'more') {
+            const v = ri(rng, lo, hi - 1);
+            const k = data.filter(x => x > v).length;
+            return { clue: `${intro} How many data values are *greater than* $${v}$?`,
+                answer: String(k), answerDisplay: `$${k}$`,
+                worked: `Count the dots to the right of $${v}$: $${k}$.`, diagram: plot };
+        }
+        return { clue: `${intro} What is the mode?`,
             answer: String(modes[0]), answerDisplay: `$${modes[0]}$`,
-            worked: `The most frequent value is $${modes[0]}$ (appears $${maxC}$ times).` };
+            worked: `The most frequent value is $${modes[0]}$ (appears $${maxC}$ times).`, diagram: plot };
     }
 
     if (op === 'graph-choice') {

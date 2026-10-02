@@ -203,12 +203,10 @@ test('Statistics stem-and-leaf: median/range/mode match the plotted data', () =>
             for (const q of qs) {
                 const wm = q.clue.match(/Find the \*(median|range|mode)\*/);
                 if (!wm) continue;
+                assert.equal(q.diagram?.type, 'stem-leaf', `${diff}/seed${seed}: stem-and-leaf plot missing`);
+                assert.ok(q.diagram.essential, 'stem-and-leaf data must survive the "show diagrams" toggle');
                 const data = [];
-                for (const line of q.clue.split('\n')) {
-                    const lm = line.match(/^(\d+) \| ([\d ]+)$/);
-                    if (!lm) continue;
-                    for (const leaf of lm[2].trim().split(/\s+/)) data.push((+lm[1]) * 10 + (+leaf));
-                }
+                for (const r of q.diagram.rows) for (const leaf of r.leaves) data.push(r.stem * 10 + leaf);
                 data.sort((a, b) => a - b);
                 let exp;
                 if (wm[1] === 'median') exp = data[(data.length - 1) / 2];

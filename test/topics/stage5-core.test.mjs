@@ -344,9 +344,9 @@ test('Probability two-way: P(cell) = cell / total', () => {
         const qs = genStage5({ topic: 'Probability', difficulty: 'Medium', count: 4, seed,
             subOpsFilter: { Probability: ['two-way'] } });
         for (const q of qs) {
-            const m = q.clue.match(/(\d+) boys and (\d+) girls play tennis, while (\d+) boys and (\d+) girls do not/);
-            if (!m) continue;
-            const [bt, gt, bn, gn] = [+m[1], +m[2], +m[3], +m[4]];
+            if (q.diagram?.type !== 'table') continue;
+            const [boys, girls] = q.diagram.rows;
+            const [bt, bn, gt, gn] = [boys[1], boys[2], girls[1], girls[2]];
             const total = bt + gt + bn + gn;
             let cell;
             if (/boy who plays tennis/.test(q.clue)) cell = bt;
