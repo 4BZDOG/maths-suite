@@ -69,6 +69,17 @@ const SAMPLES = [
     ['box plot (outlier)',        { type: 'box-plot', min: 12, q1: 20, med: 26, q3: 34, max: 47, outliers: [71] }],
     ['dot plot',                  { type: 'dot-plot', counts: { 1: 2, 2: 5, 3: 3, 4: 1, 5: 4 }, lo: 0, hi: 6, title: 'Pets per student' }],
     ['scatter + best fit',        { type: 'scatter', pts: [[1, 3], [2, 5], [3, 6], [4, 9], [5, 11], [6, 12]], line: { m: 2, c: 1 }, xTitle: 'Hours studied', yTitle: 'Score' }],
+    ['scene: elevation',          { type: 'scene', kind: 'elevation', height: 36, dist: 48, angle: 36.9, missing: 'angle' }],
+    ['scene: depression',         { type: 'scene', kind: 'depression', height: 40, dist: 60, angle: 33.7, missing: 'angle' }],
+    ['scene: drone',              { type: 'scene', kind: 'drone', height: 30, dist: 40, missing: 'angle' }],
+    ['scene: ladder (find h)',    { type: 'scene', kind: 'ladder', height: 8, dist: 3, angle: 70, missing: 'height' }],
+    ['scene: wire',               { type: 'scene', kind: 'wire', height: 36, dist: 48, missing: 'angle' }],
+    ['scene: ramp (find d)',      { type: 'scene', kind: 'ramp', height: 2, dist: 12, angle: 9.5, missing: 'dist' }],
+    ['bearing: single leg (E)',   { type: 'bearing', legs: [{ bearing: 60, dist: 80 }], names: ['Port', 'Ship'], ask: 'east' }],
+    ['bearing: single leg (N)',   { type: 'bearing', legs: [{ bearing: 215, dist: 120 }], names: ['Start', 'End'], ask: 'north' }],
+    ['bearing: two legs',         { type: 'bearing', legs: [{ bearing: 40, dist: 50 }, { bearing: 130, dist: 70 }], closing: true }],
+    ['bearing: back bearing',     { type: 'bearing', legs: [{ bearing: 70 }], names: ['A', 'B'], back: true }],
+    ['cuboid diagonal',           { type: 'cuboid-diag', l: 8, w: 6, h: 5 }],
     ['network (3,3,2,2)',         { type: 'network', degrees: [3, 3, 2, 2], edges: [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3]] }],
 ];
 

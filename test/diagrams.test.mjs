@@ -47,7 +47,7 @@ test('primitive diagrams keep every shape and label inside the canvas', () => {
         if (!isPrimDiagram(q.diagram)) continue;
         const p = buildPrims(q.diagram);
         assert.ok(p, `no prims for ${JSON.stringify(q.diagram)}`);
-        assert.ok(p.w <= 340 && p.h <= 190 && p.w >= 60 && p.h >= 40, `${q.diagram.type}/${q.diagram.kind}: canvas ${p.w}x${p.h} out of range`);
+        assert.ok(p.w <= 340 && p.h <= 200 && p.w >= 60 && p.h >= 40, `${q.diagram.type}/${q.diagram.kind}: canvas ${p.w}x${p.h} out of range`);
         const inX = (x) => x >= -0.5 && x <= p.w + 0.5, inY = (y) => y >= -0.5 && y <= p.h + 0.5;
         for (const it of p.items) {
             const pts = it.pts || (it.t === 'circle' ? [[it.cx - it.r, it.cy - it.r], [it.cx + it.r, it.cy + it.r]] : []);

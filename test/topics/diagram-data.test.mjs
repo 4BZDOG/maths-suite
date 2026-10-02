@@ -121,3 +121,59 @@ test('Tree diagrams: branch probabilities sum to 1 and multiply to the answer', 
     }
     assert.ok(checked > 10, `only ${checked} tree questions verified`);
 });
+
+test('Trig applications: scene diagrams carry the numbers the answer is built from', () => {
+    let checked = 0;
+    for (const q of collect('Trigonometry', 'applications')) {
+        const d = q.diagram;
+        assert.equal(d?.type, 'scene', `no scene diagram: ${q.clue}`);
+        assert.ok(['elevation', 'depression', 'drone', 'ladder', 'wire', 'ramp'].includes(d.kind), d.kind);
+        // every number quoted in the clue appears in the diagram (and vice versa)
+        const nums = [...q.clue.matchAll(/\$(\d+(?:\.\d+)?)\$/g)].map(m => Number(m[1]));
+        assert.ok(nums.includes(d.height) || d.missing === 'height', `${q.clue}: height ${d.height} not in clue`);
+        assert.ok(nums.includes(d.dist) || d.missing === 'dist', `${q.clue}: dist ${d.dist} not in clue`);
+        const deg = Math.atan2(d.height, d.dist) * 180 / Math.PI;
+        if (d.missing === 'angle') assert.ok(Math.abs(parseFloat(q.answer) - deg) < 0.06, `${q.clue} → ${q.answer} (expected ${deg.toFixed(1)})`);
+        if (d.missing === 'height') assert.ok(Math.abs(Number(q.answer) - d.height) < 1e-9, q.clue);
+        if (d.missing === 'dist') assert.ok(Math.abs(Number(q.answer) - d.dist) < 1e-9, q.clue);
+        checked++;
+    }
+    assert.ok(checked > 60, `only ${checked} application scenes verified`);
+});
+
+test('3D trigonometry: cuboid diagram matches the clue and the answer', () => {
+    let checked = 0;
+    for (const q of collect('Trigonometry', 'trig-3d')) {
+        const d = q.diagram;
+        assert.equal(d?.type, 'cuboid-diag', q.clue);
+        const base = Math.hypot(d.l, d.w);
+        assert.equal(Number(q.answer), Math.round(Math.atan2(d.h, base) * 180 / Math.PI), q.clue);
+        checked++;
+    }
+    assert.ok(checked > 10, `only ${checked} 3D questions verified`);
+});
+
+test('Bearings: back bearings, perpendicular legs and components match their diagrams', () => {
+    const pad3 = (n) => String(n).padStart(3, '0');
+    let back = 0, perp = 0, comp = 0;
+    for (const q of collect('Trigonometry', 'bearings', { seeds: 200 })) {
+        const d = q.diagram;
+        assert.equal(d?.type, 'bearing', `no bearing diagram: ${q.clue}`);
+        if (d.back) {
+            assert.equal(q.answer, `${pad3((d.legs[0].bearing + 180) % 360)}°`, q.clue);
+            back++;
+        } else if (d.closing) {
+            const [l1, l2] = d.legs;
+            assert.equal(Math.abs(l2.bearing - l1.bearing) % 180, 90, `legs not perpendicular: ${q.clue}`);
+            assert.ok(Math.abs(Number(q.answer) - Math.hypot(l1.dist, l2.dist)) < 1e-9, q.clue);
+            assert.ok(Number.isInteger(Number(q.answer)), 'exact (Pythagorean) distance expected');
+            perp++;
+        } else {
+            const { bearing, dist } = d.legs[0];
+            const exp = d.ask === 'east' ? Math.abs(dist * Math.sin(bearing * Math.PI / 180)) : Math.abs(dist * Math.cos(bearing * Math.PI / 180));
+            assert.ok(Math.abs(Number(q.answer) - exp) < 0.06, `${q.clue} → ${q.answer} (expected ${exp.toFixed(2)})`);
+            comp++;
+        }
+    }
+    assert.ok(back > 10 && perp > 10 && comp > 20, `coverage too thin: back ${back}, perp ${perp}, comp ${comp}`);
+});

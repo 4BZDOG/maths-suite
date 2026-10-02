@@ -4438,7 +4438,8 @@ function genTrigonometry(rng, diff, allowedOps) {
         const angle = round(Math.atan2(h, base) * 180 / Math.PI, 0);
         return { clue: `A cuboid measures $${l}\\text{ cm} \\times ${w}\\text{ cm} \\times ${h}\\text{ cm}$. Find the angle the body diagonal makes with the base (to the nearest degree).`,
             answer: String(angle), answerDisplay: `${angle}°`,
-            worked: `Base diagonal $= \\sqrt{${l}^2 + ${w}^2} = ${round(base, 2)}$. $\\theta = \\tan^{-1}\\frac{${h}}{${round(base, 2)}} = ${angle}°$` };
+            worked: `Base diagonal $= \\sqrt{${l}^2 + ${w}^2} = ${round(base, 2)}$. $\\theta = \\tan^{-1}\\frac{${h}}{${round(base, 2)}} = ${angle}°$`,
+            diagram: { type: 'cuboid-diag', l, w, h } };
     }
 
     if (op === 'find-side') {
@@ -4563,25 +4564,29 @@ function genTrigonometry(rng, diff, allowedOps) {
                 return {
                     clue: ph, answer: String(height), answerDisplay: `${height} m`,
                     worked: `$h = ${dist} \\times \\tan(${angle}°) = ${height}$ m`,
+                    diagram: { type: 'scene', kind: 'elevation', height, dist, angle, missing: 'height' },
                 };
             }
             const ph = `A tree is $${height}$ m tall. The *angle of elevation* from a point on the ground to the top is $${angle}$°. How far is the point from the base?`;
             return {
                 clue: ph, answer: String(dist), answerDisplay: `${dist} m`,
                 worked: `$d = \\frac{${height}}{\\tan(${angle}°)} = ${dist}$ m`,
+                diagram: { type: 'scene', kind: 'elevation', height, dist, angle, missing: 'dist' },
             };
         }
-        const ph = rc(rng, [
-            `A ladder leans against a wall. The base is $${dist}$ m from the wall and the ladder reaches $${height}$ m up the wall. Find the angle the ladder makes with the ground.`,
-            `From a point $${dist}$ m away from a building, the *angle of elevation* to the top is measured. If the building is $${height}$ m tall, find the angle of elevation.`,
-            `From the top of a cliff $${height}$ m high, the *angle of depression* to a boat $${dist}$ m offshore is measured. Find the angle of depression.`,
-            `A drone flies at a height of $${height}$ m and spots a marker $${dist}$ m away on the ground. Find the *angle of depression* from the drone to the marker.`,
-            `A ramp rises $${height}$ m over a horizontal distance of $${dist}$ m. Find the angle the ramp makes with the ground.`,
-            `A guy wire supports a pole $${height}$ m tall. It is anchored $${dist}$ m from the base. Find the angle the wire makes with the ground.`,
-        ]);
+        const scenes = [
+            ['ladder', `A ladder leans against a wall. The base is $${dist}$ m from the wall and the ladder reaches $${height}$ m up the wall. Find the angle the ladder makes with the ground.`],
+            ['elevation', `From a point $${dist}$ m away from a building, the *angle of elevation* to the top is measured. If the building is $${height}$ m tall, find the angle of elevation.`],
+            ['depression', `From the top of a cliff $${height}$ m high, the *angle of depression* to a boat $${dist}$ m offshore is measured. Find the angle of depression.`],
+            ['drone', `A drone flies at a height of $${height}$ m and spots a marker $${dist}$ m away on the ground. Find the *angle of depression* from the drone to the marker.`],
+            ['ramp', `A ramp rises $${height}$ m over a horizontal distance of $${dist}$ m. Find the angle the ramp makes with the ground.`],
+            ['wire', `A guy wire supports a pole $${height}$ m tall. It is anchored $${dist}$ m from the base. Find the angle the wire makes with the ground.`],
+        ];
+        const [sceneKind, ph] = rc(rng, scenes);
         return {
             clue: ph, answer: `${angle}°`, answerDisplay: `${angle}°`,
             worked: `$\\tan(\\theta) = \\frac{${height}}{${dist}} \\Rightarrow \\theta = ${angle}°$`,
+            diagram: { type: 'scene', kind: sceneKind, height, dist, angle, missing: 'angle' },
         };
     }
 
@@ -4645,33 +4650,68 @@ function genTrigonometry(rng, diff, allowedOps) {
             ? [30, 45, 60, 120, 150, 210, 240, 300, 315, 330]
             : [20, 30, 40, 45, 55, 60, 70, 110, 120, 135, 150, 160, 200, 210, 225, 240, 250, 290, 300, 310, 315, 330, 340];
         const bearing = rc(rng, bearingPool);
+        const pad3 = (n) => String(n).padStart(3, '0');
+        const variant = rng();
+        if (variant < 0.22) {
+            // back bearing: bearing of A from B given the bearing of B from A
+            const back = (bearing + 180) % 360;
+            const [nA, nB] = rc(rng, [['A', 'B'], ['P', 'Q'], ['X', 'Y']]);
+            return {
+                clue: rc(rng, [
+                    `The bearing of ${nB} from ${nA} is $${pad3(bearing)}$°T. Find the bearing of ${nA} from ${nB}.`,
+                    `${nB} is on a bearing of $${pad3(bearing)}$°T from ${nA}. What is the *return* (back) bearing from ${nB} to ${nA}?`,
+                ]),
+                answer: `${pad3(back)}°`, answerDisplay: `${pad3(back)}°T`,
+                worked: `${bearing < 180 ? `$${bearing} + 180 = ${back}$` : `$${bearing} - 180 = ${back}$`}, so the bearing of ${nA} from ${nB} is $${pad3(back)}$°T.`,
+                diagram: { type: 'bearing', legs: [{ bearing }], names: [nA, nB], back: true },
+            };
+        }
+        if (diff !== 'Easy' && variant < 0.45) {
+            // two perpendicular legs → straight-line distance by Pythagoras
+            const [ta, tb, tc] = rc(rng, [[3, 4, 5], [5, 12, 13], [8, 15, 17], [6, 8, 10]]);
+            const k = ri(rng, 1, diff === 'Hard' ? 8 : 4) * (diff === 'Hard' ? 5 : 10);
+            const d1 = ta * k, d2 = tb * k, total = tc * k;
+            const turn = rng() < 0.5 ? 90 : -90;
+            const b2 = (bearing + turn + 360) % 360;
+            const veh = total <= 50 ? rc(rng, ['A hiker', 'A cyclist', 'A boat']) : rc(rng, ['A ship', 'A yacht', 'A plane']);
+            return {
+                clue: `${veh} travels $${d1}$ km on a bearing of $${pad3(bearing)}$°T, then turns and travels $${d2}$ km on a bearing of $${pad3(b2)}$°T. How far is it from its starting point?`,
+                answer: String(total), answerDisplay: `${total} km`,
+                worked: `The two legs are at right angles, so $d = \\sqrt{${d1}^2 + ${d2}^2} = ${total}$ km.`,
+                diagram: { type: 'bearing', legs: [{ bearing, dist: d1 }, { bearing: b2, dist: d2 }], names: ['Start', 'B', 'End'], closing: true },
+            };
+        }
         const radians = bearing * Math.PI / 180;
         const eastward = round(dist * Math.sin(radians), 1);
         const northward = round(dist * Math.cos(radians), 1);
-        const bStr = String(bearing).padStart(3, '0');
+        const bStr = pad3(bearing);
         if (rng() < 0.5) {
-            const ph = rc(rng, [
-                `A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *east* (or west) of its starting point is it?`,
-                `From port, a vessel sails $${dist}$ km on a bearing of $${bStr}$°T. Find its *east/west* displacement.`,
-                `A hiker walks $${dist}$ km on a bearing of $${bStr}$°T. Find the *east/west* distance from the start.`,
-            ]);
+            const ps = [
+                [`A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *east* (or west) of its starting point is it?`, ['Port', 'Ship']],
+                [`From port, a vessel sails $${dist}$ km on a bearing of $${bStr}$°T. Find its *east/west* displacement.`, ['Port', 'Vessel']],
+                [`A hiker walks $${dist}$ km on a bearing of $${bStr}$°T. Find the *east/west* distance from the start.`, ['Start', 'Hiker']],
+            ];
+            const [ph, names] = rc(rng, ps);
             const absE = Math.abs(eastward);
             const dir = eastward >= 0 ? 'east' : 'west';
             return {
                 clue: ph, answer: String(absE), answerDisplay: `${absE} km ${dir}`,
                 worked: `$\\text{E/W} = ${dist} \\times \\sin(${bearing}°) = ${absE}$ km ${dir}`,
+                diagram: { type: 'bearing', legs: [{ bearing, dist }], names, ask: 'east' },
             };
         }
-        const ph = rc(rng, [
-            `A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *north* (or south) of its starting point is it?`,
-            `An aircraft flies $${dist}$ km on a bearing of $${bStr}$°T. Find its *north/south* displacement.`,
-            `A cyclist rides $${dist}$ km on a bearing of $${bStr}$°T. Find the *north/south* distance from the start.`,
-        ]);
+        const ps = [
+            [`A ship travels $${dist}$ km on a bearing of $${bStr}$°T. How far *north* (or south) of its starting point is it?`, ['Port', 'Ship']],
+            [`An aircraft flies $${dist}$ km on a bearing of $${bStr}$°T. Find its *north/south* displacement.`, ['Airport', 'Plane']],
+            [`A cyclist rides $${dist}$ km on a bearing of $${bStr}$°T. Find the *north/south* distance from the start.`, ['Start', 'Cyclist']],
+        ];
+        const [ph, names] = rc(rng, ps);
         const absN = Math.abs(northward);
         const dir = northward >= 0 ? 'north' : 'south';
         return {
             clue: ph, answer: String(absN), answerDisplay: `${absN} km ${dir}`,
             worked: `$\\text{N/S} = ${dist} \\times \\cos(${bearing}°) = ${absN}$ km ${dir}`,
+            diagram: { type: 'bearing', legs: [{ bearing, dist }], names, ask: 'north' },
         };
     }
 
