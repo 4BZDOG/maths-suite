@@ -1914,30 +1914,26 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId, startNums = {}) {
         // continuous across difficulties, matching the worksheet pages.
         const secStart  = startNums[sec.key] || 1;
 
+        // Let clues wrap onto as many lines as the page can afford: when a key
+        // is sparse (the usual case) nothing is truncated; when it is dense the
+        // allowance shrinks so every answer still fits on the page.
+        const keyBottom  = PAGE_HEIGHT - MARGIN - 12 * pScale;
+        const perRowMM   = (keyBottom - ky) / Math.max(1, sec.questions.length);
+        const keyMaxLines = Math.max(2, Math.min(6, Math.floor((perRowMM - 1.4 * pScale - (showWorkedPDF ? 7 * pScale : 0)) / lineH)));
+
         sec.questions.forEach((q, i) => {
-            if (ky + 6 * pScale > PAGE_HEIGHT - MARGIN - 12 * pScale) return;
+            if (ky + 6 * pScale > keyBottom) return;
 
-            // Plain text for width measurement / shown-line count (the rich
-            // drawer below does its own wrapping but we still need a count
-            // for the answer-row vertical layout below).
-            const clueText = latexToText(q.clue || '');
             const ansText  = latexToText(String(q.answerDisplay || q.answer || ''));
-
-            doc.setFont(pdfFont, 'normal');
-            doc.setFontSize(7 * pScale);
-            doc.setTextColor(100, 116, 139);
             const qNum = secStart + i;
-            const clueLines = doc.splitTextToSize(`${qNum}. ${clueText}`, clueW);
-            // Cap at 3 wrapped lines so a freak long clue can't blow up a key page.
-            const shownCount = Math.min(clueLines.length, 3);
 
             // Bold verb + *italic* emphasis + **bold** — matches the HTML answer key
-            // and the PDF problem-set body.
-            _drawKeyClueRich(doc, `${qNum}. `, q.clue || '', cx, ky, {
+            // and the PDF problem-set body. Returns how many lines it really drew,
+            // which (not a plain-text estimate) decides the row height below.
+            const linesDrawn = _drawKeyClueRich(doc, `${qNum}. `, q.clue || '', cx, ky, {
                 maxW: clueW, lineH, fontSizePt: 7 * pScale, pdfFont,
-                color: [100, 116, 139], maxLines: 3,
+                color: [100, 116, 139], maxLines: keyMaxLines,
             });
-            const shown = { length: shownCount };
 
             doc.setFont(pdfFont, 'bold');
             doc.setFontSize(8 * pScale);
@@ -1945,9 +1941,15 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId, startNums = {}) {
             // Right-align manually so superscript exponents (drawn smaller/raised
             // to survive the font subset) still sit flush to the marking rail.
             const ansW = measureSup(doc, ansText, 8 * pScale);
-            drawSup(doc, ansText, cx + colW - ansW, ky, 8 * pScale);
-
-            let blockH = Math.max(shown.length * lineH, 5 * pScale);
+            let blockH = Math.max(linesDrawn * lineH, 5 * pScale);
+            if (ansW > ansStripW - 1) {
+                // Too wide for the marking rail: give the answer its own line under the clue
+                // instead of letting it run over the clue text.
+                drawSup(doc, ansText, cx + colW - ansW, ky + linesDrawn * lineH + 0.6 * pScale, 8 * pScale);
+                blockH += lineH + 0.6 * pScale;
+            } else {
+                drawSup(doc, ansText, cx + colW - ansW, ky, 8 * pScale);
+            }
 
             // Worked solution — shown when "Show worked" is toggled on.
             // Normal weight (not italic): the custom fonts ship only normal+bold,
@@ -1963,11 +1965,16 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId, startNums = {}) {
                 blockH += workedLines.length * 3.3 * pScale + 1;
             }
 
+            // Separator sits just below the last baseline of this row (clear of its
+            // descenders) and the next row starts a cap-height + padding below it, so
+            // the rule never cuts through either row's text.
+            const lastBaseline = ky + blockH - lineH;
+            const sepY = lastBaseline + 1.9 * pScale;
             doc.setDrawColor(220, 220, 220);
             doc.setLineWidth(0.1);
-            doc.line(cx, ky + blockH - 0.5, cx + colW, ky + blockH - 0.5);
+            doc.line(cx, sepY, cx + colW, sepY);
 
-            ky += blockH + 1.4 * pScale;
+            ky = sepY + 3.6 * pScale;
         });
 
         // Per-section score sits directly under the last question in this

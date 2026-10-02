@@ -189,3 +189,38 @@ test('latexToText: no generated mixed number collapses into a single fraction', 
     assert.equal(offenders.length, 0,
         `mixed number collapsed during conversion:\n  ${offenders.slice(0, 8).join('\n  ')}`);
 });
+
+test('latexToText: subscripts never leak raw "_" into the PDF', () => {
+    assert.equal(latexToText('$Q_1 = 14, Q_3 = 44$'), 'Q1 = 14, Q3 = 44');
+    assert.equal(latexToText('$x_{n} + a_{max}$'), 'xn + a(max)');
+    assert.equal(latexToText('$\\text{IQR} = Q_3 - Q_1$'), 'IQR = Q3 - Q1');
+    // every generated clue/answer/worked line converts without an underscore
+    for (const topic of ALL_TOPICS) for (const diff of ['Easy', 'Medium', 'Hard']) for (let seed = 1; seed <= 15; seed++) {
+        for (const q of gen(topic, diff, seed)) {
+            for (const field of [q.clue, q.answerDisplay, q.worked]) {
+                if (!field) continue;
+                assert.ok(!/[A-Za-z0-9)]_[A-Za-z0-9{]/.test(latexToText(field)), `raw subscript in PDF text: ${latexToText(field)}`);
+            }
+        }
+    }
+});
+
+test('latexToText: no LaTeX command used by any generated question is silently deleted', () => {
+    // Commands whose arguments carry the content (the command word itself may disappear).
+    const STRUCTURAL = new Set(['frac', 'dfrac', 'tfrac', 'text', 'left', 'right', 'overline', 'mathrm', 'textbf', 'bar']);
+    const seen = new Set();
+    for (const topic of ALL_TOPICS) for (const diff of ['Easy', 'Medium', 'Hard']) for (let seed = 1; seed <= 20; seed++) {
+        for (const q of gen(topic, diff, seed)) {
+            for (const f of [q.clue, q.answerDisplay, q.worked]) {
+                if (f) for (const m of f.matchAll(/\\([a-zA-Z]+)/g)) seen.add(m[1]);
+            }
+        }
+    }
+    const stripped = [...seen].filter(c => !STRUCTURAL.has(c) && latexToText(`$a \\${c} b$`) === 'a  b');
+    assert.deepEqual(stripped, [], `LaTeX commands with no PDF mapping (they print as nothing): ${stripped.join(', ')}`);
+});
+
+test('latexToText: spacing commands become spaces, never literal backslashes', () => {
+    assert.equal(latexToText('$Q_1 = 5.5,\\; Q_3 = 16$'), 'Q1 = 5.5,  Q3 = 16');
+    assert.ok(!/\\/.test(latexToText('$a \\, b \\; c \\quad d \\! e$')));
+});
