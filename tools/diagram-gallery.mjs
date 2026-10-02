@@ -80,6 +80,18 @@ const SAMPLES = [
     ['bearing: two legs',         { type: 'bearing', legs: [{ bearing: 40, dist: 50 }, { bearing: 130, dist: 70 }], closing: true }],
     ['bearing: back bearing',     { type: 'bearing', legs: [{ bearing: 70 }], names: ['A', 'B'], back: true }],
     ['cuboid diagonal',           { type: 'cuboid-diag', l: 8, w: 6, h: 5 }],
+    ['line graph: two lines',     { type: 'line-graph', xMin: -6, xMax: 6, yMin: -6, yMax: 8, lines: [{ m: 2, c: -1 }, { m: -1, c: 5, color: 'm' }], points: [[2, 3, '?']] }],
+    ['line graph: read gradient', { type: 'line-graph', xMin: -5, xMax: 8, yMin: -5, yMax: 9, lines: [{ m: 1.5, c: -2 }], points: [[0, -2, 'coords'], [4, 4, 'coords']] }],
+    ['similar triangles',         { type: 'similar', small: ['6 cm', '8 cm', ''], big: ['15 cm', '? cm', ''] }],
+    ['congruent: SSS',            { type: 'congruent', test: 'SSS' }],
+    ['congruent: SAS',            { type: 'congruent', test: 'SAS' }],
+    ['congruent: AAS',            { type: 'congruent', test: 'AAS' }],
+    ['congruent: RHS',            { type: 'congruent', test: 'RHS' }],
+    ['quadrilateral angles',      { type: 'quad-angles', angles: [85, 96, 72, '?'] }],
+    ['clocks (duration)',         { type: 'clock', faces: [{ h: 2, m: 35, label: 'Start' }, { h: 4, m: 10, label: 'Finish' }] }],
+    ['fraction bar',              { type: 'fraction', kind: 'bar', parts: 8, shaded: 6 }],
+    ['fraction pie',              { type: 'fraction', kind: 'pie', parts: 6, shaded: 4 }],
+    ['hundred grid',              { type: 'fraction', kind: 'grid', shaded: 37 }],
     ['network (3,3,2,2)',         { type: 'network', degrees: [3, 3, 2, 2], edges: [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3]] }],
 ];
 

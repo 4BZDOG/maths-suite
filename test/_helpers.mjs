@@ -29,7 +29,7 @@ export const VALID_DIAGRAMS = new Set([
     'rhombus', 'kite', 'sector',
     'coord-circle', 'semicircle', 'hyperbola', 'network', 'solid',
     'stem-leaf', 'table', 'venn', 'spinner', 'tree', 'box-plot', 'dot-plot', 'scatter',
-    'scene', 'bearing', 'cuboid-diag',
+    'scene', 'bearing', 'cuboid-diag', 'line-graph', 'similar', 'congruent', 'quad-angles', 'clock', 'fraction',
 ]);
 
 // Generate with the right stage / includePath for the given topic.

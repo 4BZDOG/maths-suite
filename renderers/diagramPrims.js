@@ -161,7 +161,7 @@ function solidPrims({ kind, dims = {}, unit = 'cm', find, given, givenP, hint = 
         items.push(path(ellipsePts(cx, cy, R, 15, Math.PI, 2 * Math.PI, 30), { dash: true, op: 0.55, sw: 1.2 }));
         items.push(path(ellipsePts(cx, cy, R, 15, 0, Math.PI, 30), { op: 0.75, sw: 1.2 }));
         items.push(line([cx, cy], [cx + R, cy], { dash: true, sw: 1.3 }), circle(cx, cy, 2.2, { fill: 'g', stroke: 'g', sw: 0 }));
-        T(cx + R / 2, cy + 15, 'r');
+        T(cx + R / 2, cy + 32, 'r');
     } else if (kind === 'pyramid') {
         const { s } = dims;
         const bw = 86, dx = 32, dy = 20, x = 36, yb = 128;
@@ -461,7 +461,15 @@ function scenePrims({ kind, height, dist, angle, missing, unit = 'm' }) {
     const angle_at = (vx, vy, dirA, dirB, r = 26) => {
         const arc = angArc(vx, vy, r, dirA, dirB);
         items.push(path(arc.pts, { sw: 1.5 }));
-        items.push(text(vx + (r + 12) * Math.cos(arc.mid), vy + (r + 12) * Math.sin(arc.mid) + 4, aLab.s, { size: 11, ...aLab }));
+        const span = Math.abs(Math.atan2(dirB[1], dirB[0]) - Math.atan2(dirA[1], dirA[0]));
+        if (Math.min(span, 2 * Math.PI - span) < 0.5) {
+            // Narrow angle: a label at the arc's mid-angle would sit on the sloping line,
+            // so put it on the reference line's far side instead.
+            const ux = dirA[0] / Math.hypot(...dirA), below = dirB[1] < 0;
+            items.push(text(vx + ux * (r + 16), vy + (below ? 14 : -6), aLab.s, { size: 11, ...aLab }));
+        } else {
+            items.push(text(vx + (r + 12) * Math.cos(arc.mid), vy + (r + 12) * Math.sin(arc.mid) + 4, aLab.s, { size: 11, ...aLab }));
+        }
     };
     const distLabel = (xa, xb) => items.push(text((xa + xb) / 2, gy + 16, dLab.s, { size: 10, ...dLab }));
 
@@ -650,8 +658,204 @@ function cuboidDiagPrims({ l, w, h, unit = 'cm', angle }) {
     return fitPrims(items, 6);
 }
 
+// ─── Graphs, similar / congruent figures, clocks, fraction models ────────────
+// Liang–Barsky clip of a segment to a rectangle (null when fully outside).
+function clipSeg(x1, y1, x2, y2, xl, yt, xr, yb) {
+    let t0 = 0, t1 = 1;
+    const dx = x2 - x1, dy = y2 - y1;
+    for (const [p, q] of [[-dx, x1 - xl], [dx, xr - x1], [-dy, y1 - yt], [dy, yb - y1]]) {
+        if (p === 0) { if (q < 0) return null; continue; }
+        const r = q / p;
+        if (p < 0) { if (r > t1) return null; if (r > t0) t0 = r; }
+        else { if (r < t0) return null; if (r < t1) t1 = r; }
+    }
+    return [[x1 + t0 * dx, y1 + t0 * dy], [x1 + t1 * dx, y1 + t1 * dy]];
+}
+
+// Equal-scale Cartesian plane with a unit grid, axes through the origin and
+// integer tick labels. Returns items + mappers.
+function cartesian({ xMin, xMax, yMin, yMax, W = 250, H = 200, labelEvery }) {
+    const m = 14;
+    const sc = Math.min((W - 2 * m) / (xMax - xMin), (H - 2 * m) / (yMax - yMin));
+    const dw = (xMax - xMin) * sc, dh = (yMax - yMin) * sc;
+    const px0 = m + (W - 2 * m - dw) / 2, py0 = m + (H - 2 * m - dh) / 2;
+    const px1 = px0 + dw, py1 = py0 + dh;
+    const X = (v) => px0 + (v - xMin) * sc, Y = (v) => py1 - (v - yMin) * sc;
+    const span = Math.max(xMax - xMin, yMax - yMin);
+    const lab = labelEvery || (span <= 14 ? 1 : span <= 28 ? 2 : 5);
+    const items = [poly([[px0, py0], [px1, py0], [px1, py1], [px0, py1]], { fill: 'none', stroke: 'f', sw: 1 })];
+    for (let v = Math.ceil(xMin); v <= xMax; v++) if (v !== 0) items.push(line([X(v), py0], [X(v), py1], { stroke: 'f', sw: v % lab === 0 ? 0.9 : 0.5 }));
+    for (let v = Math.ceil(yMin); v <= yMax; v++) if (v !== 0) items.push(line([px0, Y(v)], [px1, Y(v)], { stroke: 'f', sw: v % lab === 0 ? 0.9 : 0.5 }));
+    const ax = xMin <= 0 && xMax >= 0 ? X(0) : px0, ay = yMin <= 0 && yMax >= 0 ? Y(0) : py1;
+    items.push(line([px0, ay], [px1, ay], { stroke: 'l', sw: 1.4, op: 0.85 }), line([ax, py0], [ax, py1], { stroke: 'l', sw: 1.4, op: 0.85 }));
+    items.push(poly([[px1 + 1, ay], [px1 - 5, ay - 3], [px1 - 5, ay + 3]], { fill: 'l', stroke: 'l', sw: 0.5 }), poly([[ax, py0 - 1], [ax - 3, py0 + 5], [ax + 3, py0 + 5]], { fill: 'l', stroke: 'l', sw: 0.5 }));
+    items.push(text(px1 - 2, ay - 6, 'x', { size: 10, anchor: 'end' }), text(ax + 6, py0 + 9, 'y', { size: 10, anchor: 'start' }));
+    for (let v = Math.ceil(xMin); v <= xMax; v++) if (v !== 0 && v % lab === 0) items.push(text(X(v), ay + 11, String(v), { size: 8.5, op: 0.85 }));
+    for (let v = Math.ceil(yMin); v <= yMax; v++) if (v !== 0 && v % lab === 0) items.push(text(ax - 4, Y(v) + 3, String(v), { size: 8.5, anchor: 'end', op: 0.85 }));
+    return { items, X, Y, px0, px1, py0, py1, sc };
+}
+
+// diagram: { type:'line-graph', xMin,xMax,yMin,yMax, lines:[{m,c,label?,color?}], points:[[x,y,label?]], essential? }
+//   point label: undefined → none; '?' → red question mark; 'coords' → "(x, y)"; any other string as is.
+function lineGraphPrims({ xMin = -6, xMax = 6, yMin = -6, yMax = 6, lines = [], points = [] }) {
+    const f = cartesian({ xMin, xMax, yMin, yMax });
+    const items = [...f.items];
+    lines.forEach((ln, i) => {
+        const seg = clipSeg(f.X(xMin), f.Y(ln.m * xMin + ln.c), f.X(xMax), f.Y(ln.m * xMax + ln.c), f.px0, f.py0, f.px1, f.py1);
+        if (!seg) return;
+        items.push(path(seg, { stroke: ln.color === 'm' ? 'm' : 'g', sw: 2.2 }));
+        if (ln.label) {
+            const [ex, ey] = Math.abs(ln.m) <= 1 ? seg[1] : (ln.m > 0 ? seg[1] : seg[0]);
+            const right = ex > (f.px0 + f.px1) / 2;
+            items.push(text(ex + (right ? -4 : 4), ey + (ln.m > 0 ? 14 : -6) + i * 0, ln.label, { anchor: right ? 'end' : 'start', size: 10, bold: true, color: ln.color === 'm' ? 'm' : 'l' }));
+        }
+    });
+    for (const [x, y, lb] of points) {
+        items.push(circle(f.X(x), f.Y(y), 3.6, { fill: 'm', stroke: 'm', sw: 0 }));
+        if (lb === undefined) continue;
+        const s = lb === 'coords' ? `(${x}, ${y})` : lb;
+        const isQ = lb === '?';
+        const rising = lines.length ? lines[0].m > 0 : true;
+        items.push(text(f.X(x) + (isQ ? 7 : 8), f.Y(y) + (isQ || !rising ? -7 : 15), s, { anchor: 'start', size: isQ ? 13 : 10, bold: true, color: 'm' }));
+    }
+    return fitPrims(items, 4);
+}
+
+// Triangle vertices from side lengths (base AB, then BC, CA), scaled so the base is `base` px.
+function triPts(sa, sb, sc, base, x0, yBase) {
+    const k = base / sa;
+    const cx = (sa * sa + sc * sc - sb * sb) / (2 * sa), cy = Math.sqrt(Math.max(1e-6, sc * sc - cx * cx));
+    return [[x0, yBase], [x0 + base, yBase], [x0 + cx * k, yBase - cy * k]];
+}
+const tick = (a, b, n, size = 4) => {   // n tick marks across the midpoint of segment ab
+    const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = -uy, ny = ux, out = [];
+    for (let i = 0; i < n; i++) {
+        const o = (i - (n - 1) / 2) * 4;
+        out.push(line([mx + ux * o - nx * size, my + uy * o - ny * size], [mx + ux * o + nx * size, my + uy * o + ny * size], { sw: 1.5 }));
+    }
+    return out;
+};
+function angleMarks(P, vi, n, r = 12) {   // n concentric arcs at vertex vi of triangle P
+    const v = P[vi], p = P[(vi + 1) % 3], q = P[(vi + 2) % 3], out = [];
+    for (let i = 0; i < n; i++) out.push(path(angArc(v[0], v[1], r + i * 4, [p[0] - v[0], p[1] - v[1]], [q[0] - v[0], q[1] - v[1]]).pts, { sw: 1.4 }));
+    return out;
+}
+const sideLabel = (P, i, lb, cen) => {   // label outside side i (P[i]→P[i+1])
+    if (!lb) return [];
+    const a = P[i], b = P[(i + 1) % 3], mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+    let nx = -(b[1] - a[1]), ny = b[0] - a[0]; const L = Math.hypot(nx, ny); nx /= L; ny /= L;
+    if ((mx - cen[0]) * nx + (my - cen[1]) * ny < 0) { nx = -nx; ny = -ny; }
+    const isQ = lb === '?' || /^\?/.test(lb);
+    return [text(mx + nx * 13, my + ny * 13 + 3.5, lb, { size: 10, bold: isQ, color: isQ ? 'm' : 'l' })];
+};
+
+// diagram: { type:'similar', shape?:[ab,bc,ca], small:['6 cm','8 cm',''], big:['12 cm','?',''] , essential? }
+//   Corresponding vertices carry matching 1/2/3 angle arcs; side labels are for AB, BC, CA.
+function similarPrims({ shape = [7, 6, 5], small = [], big = [] }) {
+    const items = [];
+    const yB = 130;
+    const T1 = triPts(shape[0], shape[1], shape[2], 70, 10, yB);
+    const T2 = triPts(shape[0], shape[1], shape[2], 130, 120, yB);
+    for (const [T, labels, nm] of [[T1, small, 'A'], [T2, big, 'B']]) {
+        items.push(poly(T, { fill: nm === 'A' ? 'gtint' : 'tint' }));
+        const cen = [(T[0][0] + T[1][0] + T[2][0]) / 3, (T[0][1] + T[1][1] + T[2][1]) / 3];
+        for (let v = 0; v < 3; v++) items.push(...angleMarks(T, v, v + 1, T === T1 ? 9 : 12));
+        for (let i = 0; i < 3; i++) items.push(...sideLabel(T, i, labels[i], cen));
+    }
+    return fitPrims(items, 6);
+}
+
+// diagram: { type:'congruent', test:'SSS'|'SAS'|'AAS'|'RHS' }
+function congruentPrims({ test }) {
+    const items = [];
+    const shape = test === 'RHS' ? [3, 5, 4] : [6, 5, 4];   // RHS: right angle at B (3² + 4² = 5²)
+    const make = (x0, mirror) => {
+        // RHS: legs along the axes, right angle at vertex 0 (3-4-5 proportions)
+        let T = test === 'RHS' ? [[x0 + 104, 128], [x0 + 104, 128 - 78], [x0, 128]] : triPts(shape[0], shape[1], shape[2], 112, x0, 128);
+        if (mirror) { const cx = x0 + 56; T = T.map(([x, y]) => [2 * cx - x, y]); }
+        return T;
+    };
+    for (const [x0, mirror] of [[8, false], [150, true]]) {
+        const T = make(x0, mirror);
+        items.push(poly(T, { fill: mirror ? 'tint' : 'gtint' }));
+        if (test === 'SSS') { items.push(...tick(T[0], T[1], 1), ...tick(T[1], T[2], 2), ...tick(T[2], T[0], 3)); }
+        if (test === 'SAS') { items.push(...tick(T[0], T[1], 1), ...tick(T[1], T[2], 2), ...angleMarks(T, 1, 1, 13)); }
+        if (test === 'AAS') { items.push(...angleMarks(T, 0, 1, 13), ...angleMarks(T, 1, 2, 11), ...tick(T[1], T[2], 1)); }
+        if (test === 'RHS') {
+            const v = T[0], a = T[1], b = T[2];
+            const la = Math.hypot(a[0] - v[0], a[1] - v[1]), lb = Math.hypot(b[0] - v[0], b[1] - v[1]);
+            items.push(rightMark(v[0], v[1], (a[0] - v[0]) / la, (a[1] - v[1]) / la, (b[0] - v[0]) / lb, (b[1] - v[1]) / lb, 9),
+                ...tick(T[1], T[2], 1), ...tick(T[0], T[2], 2));
+        }
+    }
+    return fitPrims(items, 6);
+}
+
+// diagram: { type:'quad-angles', angles:[a,b,c,d|'?'] } — a generic quadrilateral with its interior angles labelled.
+function quadAnglesPrims({ angles }) {
+    const V = [[14, 118], [150, 128], [188, 36], [52, 14]];
+    const items = [poly(V, { fill: 'gtint' })];
+    V.forEach((v, i) => {
+        const p = V[(i + 1) % 4], q = V[(i + 3) % 4];
+        const arc = angArc(v[0], v[1], 15, [p[0] - v[0], p[1] - v[1]], [q[0] - v[0], q[1] - v[1]]);
+        items.push(path(arc.pts, { sw: 1.4 }));
+        const known = angles[i] !== '?';
+        items.push(text(v[0] + 31 * Math.cos(arc.mid), v[1] + 31 * Math.sin(arc.mid) + 4, known ? `${angles[i]}°` : '?', { size: known ? 10.5 : 14, bold: !known, color: known ? 'l' : 'm' }));
+    });
+    return fitPrims(items, 6);
+}
+
+// diagram: { type:'clock', faces:[{h,m,label?}], essential:true }   analogue clock(s), numerals 1–12.
+function clockPrims({ faces }) {
+    const items = [];
+    const R = 46, gap = 34;
+    faces.forEach((f, idx) => {
+        const cx = R + 6 + idx * (2 * R + gap), cy = R + 6;
+        items.push(circle(cx, cy, R, { fill: 'tint', sw: 2 }));
+        for (let t = 0; t < 60; t++) {
+            const a = (t * Math.PI) / 30, big = t % 5 === 0, r0 = R - (big ? 6 : 3);
+            items.push(line([cx + r0 * Math.sin(a), cy - r0 * Math.cos(a)], [cx + (R - 1) * Math.sin(a), cy - (R - 1) * Math.cos(a)], { stroke: 'l', sw: big ? 1.4 : 0.7, op: 0.8 }));
+        }
+        for (let n = 1; n <= 12; n++) {
+            const a = (n * Math.PI) / 6;
+            items.push(text(cx + 34 * Math.sin(a), cy - 34 * Math.cos(a) + 3.6, String(n), { size: 10, bold: true }));
+        }
+        const am = (f.m * Math.PI) / 30, ah = (((f.h % 12) + f.m / 60) * Math.PI) / 6;
+        items.push(line([cx, cy], [cx + 20 * Math.sin(ah), cy - 20 * Math.cos(ah)], { stroke: 'l', sw: 3.4, op: 0.95 }));
+        items.push(line([cx, cy], [cx + 28 * Math.sin(am), cy - 28 * Math.cos(am)], { stroke: 'l', sw: 2, op: 0.95 }));
+        items.push(circle(cx, cy, 2.6, { fill: 'g', stroke: 'g', sw: 0 }));
+        if (f.label) items.push(text(cx, cy + R + 16, f.label, { size: 11, bold: true }));
+    });
+    return fitPrims(items, 6);
+}
+
+// diagram: { type:'fraction', kind:'bar'|'pie'|'grid', parts, shaded, essential:true }
+//   bar/pie: `parts` equal sections with the first `shaded` filled; grid: a 10 × 10 hundred-square with `shaded` cells filled.
+function fractionPrims({ kind, parts, shaded }) {
+    const items = [], fillOn = '#34d399';
+    if (kind === 'bar') {
+        const w = Math.min(34, 240 / parts), x0 = 0, y0 = 0, h = 34;
+        for (let i = 0; i < parts; i++) items.push(poly([[x0 + i * w, y0], [x0 + (i + 1) * w, y0], [x0 + (i + 1) * w, y0 + h], [x0 + i * w, y0 + h]], { fill: i < shaded ? fillOn : 'tint', sw: 1.6 }));
+    } else if (kind === 'pie') {
+        const R = 46, cx = R + 4, cy = R + 4;
+        for (let i = 0; i < parts; i++) {
+            const a0 = -Math.PI / 2 + (2 * Math.PI * i) / parts, a1 = -Math.PI / 2 + (2 * Math.PI * (i + 1)) / parts;
+            items.push(poly([[cx, cy], ...ellipsePts(cx, cy, R, R, a0, a1, 14)], { fill: i < shaded ? fillOn : 'tint', sw: 1.6 }));
+        }
+    } else {
+        const c = 12;
+        for (let r = 0; r < 10; r++) for (let k = 0; k < 10; k++) {
+            const idx = r * 10 + k;
+            items.push(poly([[k * c, r * c], [(k + 1) * c, r * c], [(k + 1) * c, (r + 1) * c], [k * c, (r + 1) * c]], { fill: idx < shaded ? fillOn : 'none', stroke: 'l', sw: 0.8 }));
+        }
+        items.push(poly([[0, 0], [10 * c, 0], [10 * c, 10 * c], [0, 10 * c]], { fill: 'none', sw: 1.8 }));
+    }
+    return fitPrims(items, 5);
+}
+
 // ─── public entry points ─────────────────────────────────────────────────────
-const BUILDERS = { scene: scenePrims, bearing: bearingPrims, 'cuboid-diag': cuboidDiagPrims, table: tablePrims, venn: vennPrims, spinner: spinnerPrims, tree: treePrims, solid: solidPrims, 'stem-leaf': stemLeafPrims, 'box-plot': boxPlotPrims, 'dot-plot': dotPlotPrims, scatter: scatterPrims };
+const BUILDERS = { 'line-graph': lineGraphPrims, similar: similarPrims, congruent: congruentPrims, 'quad-angles': quadAnglesPrims, clock: clockPrims, fraction: fractionPrims, scene: scenePrims, bearing: bearingPrims, 'cuboid-diag': cuboidDiagPrims, table: tablePrims, venn: vennPrims, spinner: spinnerPrims, tree: treePrims, solid: solidPrims, 'stem-leaf': stemLeafPrims, 'box-plot': boxPlotPrims, 'dot-plot': dotPlotPrims, scatter: scatterPrims };
 /** Height (mm) a primitive diagram wants in a PDF column `wMM` wide. */
 export function preferredHeightMM(diagram, wMM, ps, base) {
     const p = buildPrims(diagram);

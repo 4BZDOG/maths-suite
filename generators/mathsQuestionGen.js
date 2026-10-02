@@ -1409,6 +1409,14 @@ function genFractions(rng, diff, allowedOps, _depth = 0) {
             // k in [1, maxMult-1] ensures num < den (no n/n trivial case)
             const num = factor * ri(rng, 1, maxMult - 1);
             const ans = fracStr(num, den);
+            if (den <= 12 && rng() < 0.4) {
+                // Shaded fraction model: name the fraction, then simplify.
+                const g0 = gcd(num, den);
+                const inl = (den / g0) === 1 ? String(num / g0) : `\\frac{${num / g0}}{${den / g0}}`;
+                return { clue: rc(rng, ['What fraction of the shape is shaded? Write your answer in *simplest form*.', 'Write the shaded part as a fraction in *lowest terms*.']),
+                    answer: ans, worked: `$\\frac{${num}}{${den}} = \\frac{${num}\\div${g0}}{${den}\\div${g0}} = ${inl}$`,
+                    diagram: { type: 'fraction', essential: true, kind: rc(rng, ['bar', 'pie']), parts: den, shaded: num } };
+            }
             const ph = rc(rng, [
                 `Simplify $\\frac{${num}}{${den}}$`,
                 `Write $\\frac{${num}}{${den}}$ in its **simplest form**`,
@@ -1662,6 +1670,13 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
     if (diff === 'Easy') {
         const typeE = _pickType(rng, filtered, 2);
         if (typeE === -1) return null;
+        if (typeE === 2 && rng() < 0.35) {
+            const shaded = ri(rng, 5, 95);
+            return { clue: rc(rng, ['What percentage of the grid is shaded?', 'The hundred-square is partly shaded. What *percentage* is shaded?']),
+                answer: String(shaded), answerDisplay: `${shaded}%`,
+                worked: `$${shaded}$ of the $100$ squares are shaded, so $${shaded}\\%$.`,
+                diagram: { type: 'fraction', essential: true, kind: 'grid', shaded } };
+        }
         if (typeE === 2) {
             // express "a out of b" as a percentage (b divides 100 → clean %)
             const b = rc(rng, [4, 5, 10, 20, 25, 50, 100]);
@@ -3608,6 +3623,20 @@ function _genAlgebraOp(rng, diff, op) {
         };
     }
 
+    if (op === 'simultaneous' && rng() < 0.3) {
+        // Graphical solution: the intersection of two drawn lines.
+        const x = ri(rng, -4, 4), y = ri(rng, -4, 4);
+        let m1 = ri(rng, -3, 3), m2 = ri(rng, -3, 3);
+        if (m1 === m2) m2 = m1 === 3 ? 1 : m1 + 1;
+        const c1 = y - m1 * x, c2 = y - m2 * x;
+        if (Math.abs(c1) > 9 || Math.abs(c2) > 9) return _genAlgebraOp(rng, diff, op);
+        const e1 = _linEqStr(m1, c1).full, e2 = _linEqStr(m2, c2).full;
+        return { clue: `The graphs of $y = ${e1}$ and $y = ${e2}$ are drawn. Use the graph to solve the simultaneous equations.`,
+            answer: `x=${x},y=${y}`, answerDisplay: `$x = ${x},\\ y = ${y}$`,
+            worked: `The lines cross at $(${x}, ${y})$, so $x = ${x}$ and $y = ${y}$.`,
+            diagram: { type: 'line-graph', essential: true, xMin: -6, xMax: 6, yMin: -8, yMax: 8,
+                lines: [{ m: m1, c: c1, label: `y = ${e1}` }, { m: m2, c: c2, label: `y = ${e2}`, color: 'm' }], points: [[x, y, undefined]] } };
+    }
     if (op === 'simultaneous') {
         const x = ri(rng, 1, 8), y = ri(rng, 1, 8);
         if (diff === 'Easy') {
@@ -4215,7 +4244,8 @@ function _genGeometryS5Op(rng, diff, op) {
             `Two similar triangles have corresponding sides. If one triangle has a side of $${a}$ ${u} and the *corresponding* side of the larger triangle is $${a * scale}$ ${u}, find the side corresponding to $${b}$ ${u}.`,
             `A triangle with a side of $${a}$ ${u} is similar to a larger triangle with a corresponding side of $${a * scale}$ ${u}. Find the length of the side that corresponds to $${b}$ ${u}.`,
         ]);
-        return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}` };
+        return { clue: ph, answer: String(b * scale), answerDisplay: `${b * scale} ${u}`,
+            diagram: { type: 'similar', small: [`${a} ${u}`, `${b} ${u}`, ''], big: [`${a * scale} ${u}`, `? ${u}`, ''] } };
     }
     return null;
 }
@@ -6593,6 +6623,40 @@ function genLinear(rng, diff, allowedOps) {
         };
     }
 
+    if (op === 'plot-line' && rng() < 0.45) {
+        // Read a straight line drawn on a number plane (data lives in the graph).
+        const mAbs = diff === 'Easy' ? ri(rng, 1, 2) : ri(rng, 1, 3);
+        const m = diff === 'Easy' ? mAbs : mAbs * (rng() < 0.4 ? -1 : 1);
+        const c = ri(rng, -3, 3);
+        const k = Math.abs(m) >= 3 ? 1 : ri(rng, 1, 2);
+        const line = { m, c };
+        const win = { xMin: -5, xMax: 6, yMin: -8, yMax: 8 };
+        const ptA = [0, c], ptB = [k, m * k + c];
+        const kind = diff === 'Easy' ? rc(rng, ['gradient', 'intercept', 'read']) : rc(rng, ['gradient', 'intercept', 'read', 'equation']);
+        const { full } = _linEqStr(m, c);
+        if (kind === 'gradient') {
+            return { clue: rc(rng, ['Find the *gradient* of the line shown.', 'What is the *gradient* of the straight line drawn on the number plane?']),
+                answer: String(m), answerDisplay: `$${m}$`,
+                worked: `Rise over run between $(${ptA}) $ and $(${ptB})$: $\\frac{${ptB[1] - ptA[1]}}{${k}} = ${m}$`,
+                diagram: { type: 'line-graph', essential: true, ...win, lines: [line], points: [[ptA[0], ptA[1], 'coords'], [ptB[0], ptB[1], 'coords']] } };
+        }
+        if (kind === 'intercept') {
+            return { clue: rc(rng, ['State the *y-intercept* of the line shown.', 'Where does the line cross the $y$-axis? Give the $y$-intercept.']),
+                answer: String(c), answerDisplay: `$${c}$`, worked: `The line crosses the $y$-axis at $y = ${c}$.`,
+                diagram: { type: 'line-graph', essential: true, ...win, lines: [line], points: [] } };
+        }
+        if (kind === 'read') {
+            const xr = ri(rng, 1, 3), yr = m * xr + c;
+            return { clue: `Use the graph to find the value of $y$ when $x = ${xr}$.`,
+                answer: String(yr), answerDisplay: `$y = ${yr}$`, worked: `Reading up from $x = ${xr}$ to the line gives $y = ${yr}$.`,
+                diagram: { type: 'line-graph', essential: true, ...win, lines: [line], points: [[xr, yr, undefined]] } };
+        }
+        return { clue: 'Write the *equation* of the line shown in the form $y = mx + c$.',
+            answer: `y=${full}`, answerDisplay: `$y = ${full}$`,
+            worked: `Gradient $m = ${m}$, $y$-intercept $c = ${c}$, so $y = ${full}$.`,
+            diagram: { type: 'line-graph', essential: true, ...win, lines: [line], points: [[ptA[0], ptA[1], 'coords'], [ptB[0], ptB[1], 'coords']] } };
+    }
+
     if (op === 'plot-line') {
         if (diff === 'Easy') {
             const m = ri(rng, 1, 3);
@@ -6877,16 +6941,21 @@ function genPropsOfFigures(rng, diff, allowedOps) {
                 answer: t.name,
                 answerDisplay: t.name,
                 worked: `${t.desc} → ${t.name}`,
+                diagram: { type: 'congruent', test: t.name },
             };
         }
         if (diff === 'Medium') {
+            // The matching marks on the two triangles are the evidence; name the test they prove.
             const t = rc(rng, tests);
             return {
-                clue: `To prove two triangles congruent using *${t.name}*, what information do you need? Answer: ${t.desc}.
-How many pieces of information does ${t.name} require?`,
-                answer: t.name === 'SSS' ? '3' : t.name === 'RHS' ? '3' : '3',
-                answerDisplay: '3 pieces',
-                worked: `${t.name} requires ${t.desc} — that is 3 independent measurements.`,
+                clue: rc(rng, [
+                    'The markings show the equal sides and angles in two triangles. Which *congruence test* proves the triangles are congruent?',
+                    'Equal sides and angles are marked on each triangle. State the *congruence test* that proves they are congruent.',
+                ]),
+                answer: t.name,
+                answerDisplay: t.name,
+                worked: `The marks show ${t.desc} → ${t.name}.`,
+                diagram: { type: 'congruent', test: t.name, essential: true },
             };
         }
         // Hard: given measurements, identify the test and find a missing value
@@ -6920,6 +6989,7 @@ How many pieces of information does ${t.name} require?`,
                 answer: String(image),
                 answerDisplay: `${image} cm`,
                 worked: `Scaled side $= ${orig} \\times ${k} = ${image}$ cm`,
+                diagram: { type: 'similar', small: [`${orig} cm`, '', ''], big: ['? cm', '', ''] },
             };
         }
         if (diff === 'Medium') {
@@ -6936,6 +7006,7 @@ How many pieces of information does ${t.name} require?`,
                 answer: String(bImg),
                 answerDisplay: `${bImg} cm`,
                 worked: `Scale factor $= \\frac{${aImg}}{${a}} = ${k}$. Missing side $= ${b} \\times ${k} = ${bImg}$ cm.`,
+                diagram: { type: 'similar', small: [`${a} cm`, `${b} cm`, ''], big: [`${aImg} cm`, '? cm', ''] },
             };
         }
         // Hard: area ratio = k²
@@ -6981,6 +7052,7 @@ How many pieces of information does ${t.name} require?`,
         answer: String(a4),
         answerDisplay: `$${a4}°$`,
         worked: `Angle sum $= 360°$. Fourth angle $= 360 - ${a1} - ${a2} - ${a3} = ${a4}°$.`,
+        diagram: { type: 'quad-angles', angles: [a1, a2, a3, '?'] },
     };
 }
 
@@ -7625,6 +7697,15 @@ function genTime(rng, diff, allowedOps) {
     const hm = (m) => { m = norm(m); return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`; };
     const disp = (m) => `$${hm(m).replace(':', '{:}')}$`;
 
+    if (op === 'convert' && rng() < 0.4) {
+        // Read an analogue clock, then give the 24-hour time.
+        const h12 = ri(rng, 1, 11), min = 5 * ri(rng, 0, 11), pm = rng() < 0.5;
+        const h24 = pm ? h12 + 12 : h12;
+        return { clue: `The clock shows a time in the ${pm ? 'afternoon' : 'morning'}. Write this time in 24-hour time.`,
+            answer: `${pad(h24)}:${pad(min)}`, answerDisplay: `$${pad(h24)}{:}${pad(min)}$`,
+            worked: `The clock reads $${h12}{:}${pad(min)}$ ${pm ? '(pm): add 12 hours' : '(am): the hour is unchanged'} $\\rightarrow ${pad(h24)}{:}${pad(min)}$`,
+            diagram: { type: 'clock', essential: true, faces: [{ h: h12, m: min }] } };
+    }
     if (op === 'convert') {
         if (rng() < 0.5) {
             // 12-hour → 24-hour
@@ -7641,6 +7722,21 @@ function genTime(rng, diff, allowedOps) {
             worked: `Subtract 12: $${h24} - 12 = ${h12}$, afternoon $\\rightarrow ${h12}{:}${pad(min)}\\text{ pm}$` };
     }
 
+    if (op === 'duration' && rng() < 0.35) {
+        // Two analogue clocks: how long between the start and finish times?
+        const startH = ri(rng, 1, 9), startM = 5 * ri(rng, 0, 11);
+        const addMin = diff === 'Easy' ? 15 * ri(rng, 1, 8) : 5 * ri(rng, 4, diff === 'Medium' ? 36 : 48);
+        const total = startH * 60 + startM + addMin;
+        const eh = Math.floor(total / 60) % 12 || 12, em = total % 60;
+        const hh = Math.floor(addMin / 60), mm = addMin % 60;
+        const ask = diff !== 'Easy' && addMin >= 60 && rng() < 0.5;
+        return { clue: ask
+                ? 'A bus trip starts at the time shown on the first clock and finishes at the time on the second clock. How many minutes does the trip take?'
+                : 'The first clock shows when a lesson starts and the second clock shows when it ends. How many minutes does the lesson last?',
+            answer: String(addMin), answerDisplay: `$${addMin}\\text{ min}$`,
+            worked: `From $${startH}{:}${pad(startM)}$ to $${eh}{:}${pad(em)}$ is ${hh > 0 ? `$${hh}$ h ` : ''}$${mm}$ min $= ${addMin}$ minutes.`,
+            diagram: { type: 'clock', essential: true, faces: [{ h: startH, m: startM, label: 'Start' }, { h: eh, m: em, label: 'Finish' }] } };
+    }
     if (op === 'duration') {
         if (diff === 'Hard' && rng() < 0.45) {
             // timetable: latest departure to arrive by a target time

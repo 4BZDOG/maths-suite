@@ -177,3 +177,116 @@ test('Bearings: back bearings, perpendicular legs and components match their dia
     }
     assert.ok(back > 10 && perp > 10 && comp > 20, `coverage too thin: back ${back}, perp ${perp}, comp ${comp}`);
 });
+
+const frac = (n, d) => { const g = gcd(n, d); return d / g === 1 ? String(n / g) : `${n / g}/${d / g}`; };
+
+test('Line graphs: gradient / intercept / reading / equation answers match the drawn line', () => {
+    let checked = 0;
+    for (const q of collect('Linear Relationships', 'plot-line', { fn: gen, seeds: 150 })) {
+        const d = q.diagram;
+        if (!d || d.type !== 'line-graph') continue;
+        assert.ok(d.essential, 'graph carries the data, so it must be essential');
+        const { m, c } = d.lines[0];
+        if (/gradient/.test(q.clue)) assert.equal(Number(q.answer), m, q.clue);
+        else if (/y-intercept|cross the \$y\$-axis/.test(q.clue)) assert.equal(Number(q.answer), c, q.clue);
+        else if (/value of \$y\$ when/.test(q.clue)) { const [x] = d.points[0]; assert.equal(Number(q.answer), m * x + c, q.clue); }
+        else if (/equation/.test(q.clue)) assert.equal(q.answer, `y=${m === 1 ? 'x' : m === -1 ? '-x' : m + 'x'}${c === 0 ? '' : c > 0 ? ` + ${c}` : ` - ${-c}`}`, q.clue);
+        else assert.fail(`unrecognised graph question: ${q.clue}`);
+        // marked points lie on the line
+        for (const [x, y] of d.points) assert.equal(y, m * x + c, 'marked point is off the line');
+        checked++;
+    }
+    assert.ok(checked > 40, `only ${checked} line-graph questions verified`);
+});
+
+test('Graphical simultaneous equations: the lines really cross at the answer', () => {
+    let checked = 0;
+    for (const q of collect('Equations', 'simultaneous', { seeds: 200 })) {
+        const d = q.diagram;
+        if (!d || d.type !== 'line-graph') continue;
+        const [l1, l2] = d.lines;
+        const m = q.answer.match(/^x=(-?\d+),y=(-?\d+)$/);
+        assert.ok(m, `bad answer ${q.answer}`);
+        const x = +m[1], y = +m[2];
+        assert.equal(l1.m * x + l1.c, y); assert.equal(l2.m * x + l2.c, y);
+        assert.notEqual(l1.m, l2.m, 'parallel lines have no solution');
+        checked++;
+    }
+    assert.ok(checked > 20, `only ${checked} graphical simultaneous questions verified`);
+});
+
+test('Clock questions: answers follow from the clock faces', () => {
+    const pad = (n) => String(n).padStart(2, '0');
+    let conv = 0, dur = 0;
+    for (const q of collect('Time', 'convert', { fn: gen, seeds: 100 })) {
+        if (q.diagram?.type !== 'clock') continue;
+        const { h, m } = q.diagram.faces[0];
+        const pm = /afternoon/.test(q.clue);
+        assert.equal(q.answer, `${pad(pm ? h + 12 : h)}:${pad(m)}`, q.clue);
+        conv++;
+    }
+    for (const q of collect('Time', 'duration', { fn: gen, seeds: 100 })) {
+        if (q.diagram?.type !== 'clock') continue;
+        const [a, b] = q.diagram.faces;
+        const mins = ((b.h % 12) * 60 + b.m) - ((a.h % 12) * 60 + a.m);
+        assert.equal(Number(q.answer), ((mins % 720) + 720) % 720 || 720, q.clue);
+        dur++;
+    }
+    assert.ok(conv > 15 && dur > 15, `coverage too thin: convert ${conv}, duration ${dur}`);
+});
+
+test('Fraction & percentage models: shaded counts match the answer', () => {
+    let fr = 0, pc = 0;
+    for (const q of collect('Fractions', 'simplify-convert', { fn: gen, diffs: ['Easy'], seeds: 200 })) {
+        const d = q.diagram;
+        if (d?.type !== 'fraction') continue;
+        assert.ok(d.shaded > 0 && d.shaded < d.parts && d.essential);
+        const a = String(q.answer);
+        const m = a.match(/\\frac\{(\d+)\}\{(\d+)\}/) || a.match(/^(\d+)\/(\d+)$/);
+        assert.ok(m, `unparseable answer ${a}`);
+        assert.equal(`${m[1]}/${m[2]}`, frac(d.shaded, d.parts), `${d.shaded}/${d.parts} → ${a}`);
+        fr++;
+    }
+    for (const q of collect('Percentages', 'find-pct', { fn: gen, diffs: ['Easy'], seeds: 200 })) {
+        const d = q.diagram;
+        if (d?.type !== 'fraction') continue;
+        assert.equal(d.kind, 'grid');
+        assert.equal(Number(q.answer), d.shaded, q.clue);
+        pc++;
+    }
+    assert.ok(fr > 10 && pc > 10, `coverage too thin: fractions ${fr}, percentages ${pc}`);
+});
+
+test('Similar & congruent triangles: labels, scale factor and test names agree', () => {
+    let sim = 0, con = 0, quad = 0;
+    for (const q of [...collect('Geometry', 'similar-triangles'), ...collect('Properties of Geometrical Figures', 'similar-ratio')]) {
+        const d = q.diagram;
+        if (d?.type !== 'similar') continue;
+        const num = (t) => parseFloat(t);
+        // the first labelled pair fixes the scale factor; every other numeric pair obeys it, and the '?' side is the answer
+        const pairs = d.small.map((s, i) => [s, d.big[i]]).filter(([s, b]) => s && b);
+        const known = pairs.find(([s, b]) => !/\?/.test(b));
+        const k = known ? num(known[1]) / num(known[0]) : null;
+        const unknown = pairs.find(([, b]) => /\?/.test(b));
+        if (k && unknown) assert.ok(Math.abs(Number(q.answer) - num(unknown[0]) * k) < 1e-9, `${q.clue} → ${q.answer}`);
+        else if (!k && unknown) {   // "scale factor k" question: answer = side × k
+            const kk = Number((q.clue.match(/scale factor \$(\d+(?:\.\d+)?)\$/) || [])[1]);
+            assert.ok(Math.abs(Number(q.answer) - num(unknown[0]) * kk) < 1e-9, `${q.clue} → ${q.answer}`);
+        }
+        sim++;
+    }
+    for (const diff of ['Easy', 'Medium']) for (let seed = 1; seed <= 120; seed++) {
+        for (const q of genStage5({ topic: 'Properties of Geometrical Figures', difficulty: diff, count: 6, seed, subOpsFilter: { 'Properties of Geometrical Figures': ['congruent-tests'] } })) {
+            assert.equal(q.diagram?.type, 'congruent', q.clue);
+            assert.equal(q.diagram.test, q.answer, `${q.clue}`);
+            con++;
+        }
+    }
+    for (const q of collect('Properties of Geometrical Figures', 'quad-properties', { diffs: ['Hard'] })) {
+        if (q.diagram?.type !== 'quad-angles') continue;
+        const known = q.diagram.angles.filter(a => a !== '?').reduce((a, b) => a + b, 0);
+        assert.equal(Number(q.answer), 360 - known, q.clue);
+        quad++;
+    }
+    assert.ok(sim > 30 && con > 100 && quad > 20, `coverage too thin: similar ${sim}, congruent ${con}, quad ${quad}`);
+});
