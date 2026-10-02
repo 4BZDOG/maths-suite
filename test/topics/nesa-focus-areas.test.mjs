@@ -111,12 +111,11 @@ test('Data Classification and Visualisation: frequency total is the sum', () => 
             const qs = gen({ topic: 'Data Classification and Visualisation', difficulty: diff,
                 count: 6, seed, subOpsFilter: { 'Data Classification and Visualisation': ['frequency-total'] } });
             for (const q of qs) {
-                // The mode / fraction variants reuse the same frequency list but
+                // The mode / fraction variants reuse the same frequency table but
                 // ask a different question — only verify the "total" form here.
-                if (!/How many data values are there in total/.test(q.clue)) continue;
-                const m = q.clue.match(/frequencies of \$([\d, ]+)\$/);
-                if (!m) continue;
-                const sum = m[1].split(',').reduce((a, b) => a + Number(b), 0);
+                if (!/How many data values are there in total|find the \*total\* number/.test(q.clue)) continue;
+                assert.equal(q.diagram?.type, 'table', `${q.clue}: frequency table missing`);
+                const sum = q.diagram.rows.reduce((a, r) => a + Number(r[1]), 0);
                 assert.equal(Number(q.answer), sum, `${q.clue} → ${q.answer}`);
                 checked++;
             }

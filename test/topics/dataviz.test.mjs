@@ -7,7 +7,7 @@
 // =============================================================
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gen, DIFFS, checkStructure, parseDataList } from '../_helpers.mjs';
+import { gen, DIFFS, checkStructure } from '../_helpers.mjs';
 
 const TOPIC = 'Data Classification and Visualisation';
 const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));
@@ -33,20 +33,28 @@ test('DataViz: recomputed answers match the generator', () => {
                 const c = q.clue;
                 const a = String(q.answer);
                 const L = `${diff}/seed${seed}: "${c.slice(0, 70)}…" → ${a}`;
-                const list = parseDataList(c);
+                const dg = q.diagram;
+                const freqs = dg && dg.type === 'table' ? dg.rows.map(r => Number(r[r.length - 1])) : null;
 
-                if (/How many data values are there in total/.test(c) && list) {
-                    assert.equal(Number(a), list.reduce((x, y) => x + y, 0), L);
+                if (/in total in the frequency table|\*total\* number of responses/.test(c)) {
+                    assert.equal(Number(a), freqs.reduce((x, y) => x + y, 0), L);
                     checked++; continue;
                 }
-                if (/Which category is the mode/.test(c) && list) {
-                    const idx = list.indexOf(Math.max(...list));
-                    assert.equal(a, 'ABCDEF'[idx], L);
+                if (/\*mode\*|Which category is the mode/.test(c) && dg?.type === 'table') {
+                    const idx = freqs.indexOf(Math.max(...freqs));
+                    assert.equal(freqs.filter(f => f === freqs[idx]).length, 1, `${L}: mode not unique`);
+                    assert.equal(a, dg.rows[idx][0], L);
                     checked++; continue;
                 }
-                if (/What fraction of the data is in the first category/.test(c) && list) {
-                    const tot = list.reduce((x, y) => x + y, 0), g = gcd(list[0], tot);
-                    assert.equal(a, `${list[0] / g}/${tot / g}`, L);
+                if (/What fraction of the data is in the/.test(c) && dg?.type === 'table') {
+                    const tot = freqs.reduce((x, y) => x + y, 0), g = gcd(freqs[0], tot);
+                    assert.equal(a, `${freqs[0] / g}/${tot / g}`, L);
+                    checked++; continue;
+                }
+                if (/tally chart shows/.test(c)) {
+                    const qi = dg.rows.findIndex(r => r[2] && r[2].q);
+                    assert.ok(qi >= 0, `${L}: no unknown frequency`);
+                    assert.equal(Number(a), dg.rows[qi][1].tally, L);
                     checked++; continue;
                 }
                 let m = c.match(/frequency of \$(\d+)\$\. How many complete groups of five/);
@@ -59,15 +67,19 @@ test('DataViz: recomputed answers match the generator', () => {
                     assert.equal(Number(a), Number(m[1]) * 5 + Number(m[2]), L);
                     checked++; continue;
                 }
-                if (/dot plot/.test(c) && list) {
-                    if (/total/.test(c)) { assert.equal(Number(a), list.length, L); checked++; continue; }
-                    if (/range/.test(c)) {
-                        assert.equal(Number(a), Math.max(...list) - Math.min(...list), L);
-                        checked++; continue;
-                    }
+                if (dg?.type === 'dot-plot') {
+                    assert.ok(dg.essential, `${L}: dot plot must be essential`);
+                    const vals = [];
+                    for (const [v, n] of Object.entries(dg.counts)) for (let i = 0; i < n; i++) vals.push(Number(v));
+                    if (/How many data values are shown in total/.test(c)) { assert.equal(Number(a), vals.length, L); checked++; continue; }
+                    if (/range/.test(c)) { assert.equal(Number(a), Math.max(...vals) - Math.min(...vals), L); checked++; continue; }
+                    let m2 = c.match(/equal to \$(-?\d+)\$/);
+                    if (m2) { assert.equal(Number(a), vals.filter(v => v === +m2[1]).length, L); checked++; continue; }
+                    m2 = c.match(/greater than\* \$(-?\d+)\$/);
+                    if (m2) { assert.equal(Number(a), vals.filter(v => v > +m2[1]).length, L); checked++; continue; }
                     if (/mode/.test(c)) {
                         const counts = {};
-                        for (const v of list) counts[v] = (counts[v] || 0) + 1;
+                        for (const v of vals) counts[v] = (counts[v] || 0) + 1;
                         const maxC = Math.max(...Object.values(counts));
                         const modes = Object.keys(counts).filter(k => counts[k] === maxC).map(Number);
                         assert.equal(modes.length, 1, `${L}: mode not unique`);

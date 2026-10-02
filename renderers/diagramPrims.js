@@ -193,8 +193,258 @@ function solidPrims({ kind, dims = {}, unit = 'cm', find, given, givenP, hint = 
 
 }
 
+
+// ─── Statistics displays ─────────────────────────────────────────────────────
+// Nice axis step (1/2/5 × 10ⁿ) giving roughly `target` intervals over `span`.
+function niceStep(span, target = 6) {
+    const raw = span / target || 1;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    for (const m of [1, 2, 5, 10]) if (m * mag >= raw) return m * mag;
+    return 10 * mag;
+}
+const fmtNum = (v) => String(Math.round(v * 1000) / 1000);
+
+// Horizontal number line from lo→hi mapped across [x0, x1] at height y.
+// Majors labelled every `step`; minors every `minor` (default: each unit when
+// the span is small enough to read to the nearest whole number).
+function numberLine(lo, hi, x0, x1, y, { step, minor } = {}) {
+    const X = (v) => x0 + ((v - lo) / (hi - lo)) * (x1 - x0);
+    const st = step || niceStep(hi - lo, 8);
+    const mn = minor || (hi - lo <= 40 && st > 1 ? 1 : null);
+    const items = [line([x0, y], [x1, y], { stroke: 'l', sw: 1.4, op: 0.85 })];
+    if (mn) for (let v = Math.ceil(lo / mn) * mn; v <= hi + 1e-9; v += mn) items.push(line([X(v), y], [X(v), y + 3], { stroke: 'l', sw: 0.8, op: 0.6 }));
+    for (let v = Math.ceil(lo / st) * st; v <= hi + 1e-9; v += st) {
+        items.push(line([X(v), y - 1], [X(v), y + 6], { stroke: 'l', sw: 1.1, op: 0.85 }));
+        items.push(text(X(v), y + 17, fmtNum(v), { size: 9 }));
+    }
+    return { items, X };
+}
+
+// Cartesian axes with light grid, tick labels and axis titles (first quadrant
+// or wherever the supplied window sits). Returns drawing items + mappers.
+function axesFrame({ xMin, xMax, yMin, yMax, W = 250, H = 160, xTitle, yTitle, left = 34, bottom = 30, top = 14, right = 14 }) {
+    const px0 = left, px1 = W - right, py0 = top, py1 = H - bottom;
+    const X = (v) => px0 + ((v - xMin) / (xMax - xMin)) * (px1 - px0);
+    const Y = (v) => py1 - ((v - yMin) / (yMax - yMin)) * (py1 - py0);
+    const items = [];
+    const xs = niceStep(xMax - xMin, 8), ys = niceStep(yMax - yMin, 6);
+    for (let v = Math.ceil(xMin / xs) * xs; v <= xMax + 1e-9; v += xs) {
+        items.push(line([X(v), py0], [X(v), py1], { stroke: 'f', sw: 0.8 }));
+        items.push(text(X(v), py1 + 12, fmtNum(v), { size: 8.5, op: 0.8 }));
+    }
+    for (let v = Math.ceil(yMin / ys) * ys; v <= yMax + 1e-9; v += ys) {
+        items.push(line([px0, Y(v)], [px1, Y(v)], { stroke: 'f', sw: 0.8 }));
+        items.push(text(px0 - 5, Y(v) + 3, fmtNum(v), { size: 8.5, anchor: 'end', op: 0.8 }));
+    }
+    items.push(path([[px0, py0], [px0, py1], [px1, py1]], { stroke: 'l', sw: 1.4, op: 0.85 }));
+    if (xTitle) items.push(text((px0 + px1) / 2, H - 4, xTitle, { size: 9.5 }));
+    if (yTitle) items.push(text(px0 - 4, py0 - 5, yTitle, { size: 9.5, anchor: 'start' }));
+    return { items, X, Y, px0, px1, py0, py1 };
+}
+
+// diagram: { type:'stem-leaf', rows:[{stem, leaves:[…]}], key:'2 | 1 = 21', essential:true }
+function stemLeafPrims({ rows, key }) {
+    const items = [];
+    const rowH = 17, stemW = 30, leafGap = 13;
+    const maxLeaves = Math.max(...rows.map(r => r.leaves.length));
+    const x0 = 0, xDiv = x0 + stemW, xEnd = xDiv + 12 + maxLeaves * leafGap + 6;
+    items.push(text(x0 + stemW - 8, 12, 'Stem', { anchor: 'end', size: 10, bold: true }));
+    items.push(text(xDiv + 10, 12, 'Leaf', { anchor: 'start', size: 10, bold: true }));
+    items.push(line([x0, 18], [xEnd, 18], { stroke: 'l', sw: 1.2, op: 0.8 }));
+    const yEnd = 18 + rows.length * rowH + 4;
+    items.push(line([xDiv, 18], [xDiv, yEnd], { stroke: 'l', sw: 1.4, op: 0.85 }));
+    rows.forEach((r, i) => {
+        const y = 18 + (i + 1) * rowH - 4;
+        items.push(text(x0 + stemW - 8, y, String(r.stem), { anchor: 'end', size: 12 }));
+        r.leaves.forEach((lf, j) => items.push(text(xDiv + 10 + j * leafGap, y, String(lf), { anchor: 'start', size: 12 })));
+    });
+    if (key) items.push(text(x0, yEnd + 16, `Key: ${key}`, { anchor: 'start', size: 10, op: 0.85 }));
+    return fitPrims(items);
+}
+
+// diagram: { type:'box-plot', min, q1, med, q3, max, outliers?:[…], lo?, hi?, title?, essential:true }
+function boxPlotPrims({ min, q1, med, q3, max, outliers = [], lo, hi, title }) {
+    const all = [min, max, ...outliers];
+    const span = Math.max(...all) - Math.min(...all);
+    const st = niceStep(span || 10, 8);
+    const a = lo != null ? lo : Math.floor((Math.min(...all) - st * 0.3) / st) * st;
+    const b = hi != null ? hi : Math.ceil((Math.max(...all) + st * 0.3) / st) * st;
+    const items = [];
+    const nl = numberLine(a, b, 16, 296, 78, { step: st });
+    const X = nl.X, cy = 44, bh = 34;
+    items.push(...nl.items);
+    items.push(line([X(min), cy], [X(q1), cy], { sw: 1.8 }), line([X(q3), cy], [X(max), cy], { sw: 1.8 }));
+    items.push(line([X(min), cy - 9], [X(min), cy + 9], { sw: 1.8 }), line([X(max), cy - 9], [X(max), cy + 9], { sw: 1.8 }));
+    items.push(poly([[X(q1), cy - bh / 2], [X(q3), cy - bh / 2], [X(q3), cy + bh / 2], [X(q1), cy + bh / 2]], { fill: 'gtint' }));
+    items.push(line([X(med), cy - bh / 2], [X(med), cy + bh / 2], { sw: 2.4 }));
+    for (const o of outliers) items.push(text(X(o), cy + 4, '×', { size: 15, color: 'm', bold: true }));
+    if (title) items.push(text(156, 112, title, { size: 10 }));
+    return fitPrims(items);
+}
+
+// diagram: { type:'dot-plot', counts:{value:count,…}, lo, hi, title?, essential:true }
+function dotPlotPrims({ counts, lo, hi, title }) {
+    const values = Object.keys(counts).map(Number);
+    const a = lo != null ? lo : Math.min(...values), b = hi != null ? hi : Math.max(...values);
+    const maxC = Math.max(...Object.values(counts));
+    const r = 4.6, gap = 10.4, base = 14 + maxC * gap;
+    const nl = numberLine(a, b, 16, 16 + Math.max(160, (b - a) * 26), base, { step: 1, minor: null });
+    const items = [...nl.items];
+    for (const v of values) for (let i = 0; i < counts[v]; i++) items.push(circle(nl.X(v), base - 8 - i * gap, r, { fill: 'g', stroke: 'g', sw: 0 }));
+    if (title) items.push(text(16 + Math.max(160, (b - a) * 26) / 2, base + 34, title, { size: 10 }));
+    return fitPrims(items);
+}
+
+// diagram: { type:'scatter', pts:[[x,y],…], line?:{m,c}, xMax, yMax, xTitle, yTitle }
+function scatterPrims({ pts, line: ln, xMax, yMax, xTitle, yTitle }) {
+    const xm = xMax || niceStep(Math.max(...pts.map(p => p[0])) * 1.1, 1) * 1, ym = yMax || Math.ceil(Math.max(...pts.map(p => p[1])) * 1.1);
+    const fr = axesFrame({ xMin: 0, xMax: xm, yMin: 0, yMax: ym, xTitle, yTitle });
+    const items = [...fr.items];
+    if (ln) {
+        const ya = ln.c, yb = ln.m * xm + ln.c;
+        const t0 = ya < 0 ? -ln.c / ln.m : 0;
+        const t1 = yb > ym ? (ym - ln.c) / ln.m : xm;
+        items.push(line([fr.X(t0), fr.Y(ln.m * t0 + ln.c)], [fr.X(t1), fr.Y(ln.m * t1 + ln.c)], { sw: 1.8 }));
+    }
+    for (const [x, y] of pts) items.push(circle(fr.X(x), fr.Y(y), 3.4, { fill: 'm', stroke: 'm', sw: 0 }));
+    return fitPrims(items);
+}
+
+// ─── Tables, Venn diagrams, spinners, tree diagrams ──────────────────────────
+// Colour names usable in spinners etc. (fills accept any '#rrggbb' string).
+export const PALETTE = {
+    red: '#f87171', blue: '#60a5fa', green: '#4ade80', yellow: '#facc15',
+    orange: '#fb923c', purple: '#c084fc', pink: '#f9a8d4', white: '#ffffff', grey: '#cbd5e1',
+};
+
+// diagram: { type:'table', head:[…], rows:[[cell,…]…], essential?, rowHead?:true }
+//   cell: string | number | { q:true } (red "?") | { tally:n } (tally marks) | { b:true, s }
+function tablePrims({ head, rows, rowHead = true }) {
+    const items = [];
+    const size = 11, padX = 10, rowH = 21;
+    const cellW = (c) => {
+        if (c && typeof c === 'object') {
+            if (c.tally != null) return Math.ceil(c.tally / 5) * 24 + 8;
+            if (c.q) return 14;
+            return String(c.s).length * size * 0.56;
+        }
+        return String(c).length * size * 0.56;
+    };
+    const nCols = Math.max(head ? head.length : 0, ...rows.map(r => r.length));
+    const colW = Array.from({ length: nCols }, (_, c) => {
+        const cells = [...(head ? [head[c] ?? ''] : []), ...rows.map(r => r[c] ?? '')];
+        return Math.max(38, Math.ceil(Math.max(...cells.map(cellW)) + padX * 2));
+    });
+    const W = colW.reduce((a, b) => a + b, 0), top = 0;
+    const nR = rows.length + (head ? 1 : 0), H = nR * rowH;
+    const colX = [0]; colW.forEach((w, i) => colX.push(colX[i] + w));
+    if (head) items.push(poly([[0, 0], [W, 0], [W, rowH], [0, rowH]], { fill: 'gtint', stroke: 'none', sw: 0 }));
+    if (rowHead) items.push(poly([[0, head ? rowH : 0], [colX[1], head ? rowH : 0], [colX[1], H], [0, H]], { fill: 'tint', stroke: 'none', sw: 0 }));
+    items.push(poly([[0, top], [W, top], [W, H], [0, H]], { fill: 'none', sw: 1.6 }));
+    for (let r = 1; r < nR; r++) items.push(line([0, r * rowH], [W, r * rowH], { sw: 1, op: 0.7 }));
+    for (let c = 1; c < nCols; c++) items.push(line([colX[c], 0], [colX[c], H], { sw: 1, op: 0.7 }));
+    const put = (c, r, v, bold) => {
+        const cx = (colX[c] + colX[c + 1]) / 2, cy = r * rowH + rowH / 2;
+        if (v && typeof v === 'object' && v.tally != null) {
+            // tally marks: groups of four strokes crossed by a diagonal
+            let gx = colX[c] + 14;
+            for (let left = v.tally; left > 0; left -= 5) {
+                const n = Math.min(5, left), strokes = Math.min(4, n);
+                for (let i = 0; i < strokes; i++) items.push(line([gx + i * 4.5, cy - 8], [gx + i * 4.5, cy + 8], { stroke: 'l', sw: 1.6, op: 0.95 }));
+                if (n === 5) items.push(line([gx - 3, cy + 5], [gx + 3 * 4.5 + 3, cy - 5], { stroke: 'l', sw: 1.6, op: 0.95 }));
+                gx += 24;
+            }
+            return;
+        }
+        if (v && typeof v === 'object' && v.q) { items.push(text(cx, cy + 4.5, '?', { size: size + 3, color: 'm', bold: true })); return; }
+        const str = v && typeof v === 'object' ? v.s : v;
+        items.push(text(cx, cy + 4, String(str), { size, bold: bold || (v && v.b) }));
+    };
+    if (head) head.forEach((h, c) => put(c, 0, h, true));
+    rows.forEach((row, r) => row.forEach((v, c) => put(c, r + (head ? 1 : 0), v, rowHead && c === 0)));
+    return fitPrims(items, 4);
+}
+
+// diagram: { type:'venn', labels:[A,B], universe?:'ξ', total?, regions:{a,ab,b,out} }
+//   region values: number | '?' (red) | null (blank). `sets:{a,b}` print a set total beside its name.
+function vennPrims({ labels, regions = {}, total, sets }) {
+    const items = [];
+    const W = 270, H = 150;
+    items.push(poly([[0, 0], [W, 0], [W, H], [0, H]], { fill: 'none', sw: 1.6 }));
+    items.push(text(8, H - 8, total != null ? `Total = ${total}` : 'ξ', { anchor: 'start', size: 10, op: 0.9, p: total != null ? `Total = ${total}` : 'U' }));
+    const R = 50, cy = 78, ax = 98, bx = 172;
+    items.push(circle(ax, cy, R, { fill: 'gtint', sw: 1.8 }), circle(bx, cy, R, { fill: 'mtint', stroke: 'm', sw: 1.8 }));
+    const nameA = sets && sets.a != null ? `${labels[0]} (${sets.a})` : labels[0];
+    const nameB = sets && sets.b != null ? `${labels[1]} (${sets.b})` : labels[1];
+    items.push(text(ax - 14, 20, nameA, { size: 10, bold: true }), text(bx + 14, 20, nameB, { size: 10, bold: true }));
+    const reg = (x, y, v) => {
+        if (v == null || v === '') return;
+        if (v === '?') items.push(text(x, y, '?', { size: 15, color: 'm', bold: true }));
+        else items.push(text(x, y, String(v), { size: 14 }));
+    };
+    reg(ax - 26, cy + 5, regions.a); reg((ax + bx) / 2, cy + 5, regions.ab); reg(bx + 26, cy + 5, regions.b);
+    reg(W - 24, H - 12, regions.out);
+    return fitPrims(items, 4);
+}
+
+// diagram: { type:'spinner', sectors:[{label, color}], essential:true }
+function spinnerPrims({ sectors }) {
+    const n = sectors.length, R = 52, cx = R + 8, cy = R + 16;
+    const items = [];
+    sectors.forEach((sec, i) => {
+        const a0 = -Math.PI / 2 + (2 * Math.PI * i) / n, a1 = -Math.PI / 2 + (2 * Math.PI * (i + 1)) / n;
+        items.push(poly([[cx, cy], ...ellipsePts(cx, cy, R, R, a0, a1, 16)], { fill: PALETTE[sec.color] || (i % 2 ? 'tint' : 'gtint'), sw: 1.6 }));
+        const am = (a0 + a1) / 2;
+        if (sec.label != null && sec.label !== '') items.push(text(cx + R * 0.62 * Math.cos(am), cy + R * 0.62 * Math.sin(am) + 4, String(sec.label), { size: n > 6 ? 11 : 14, bold: true }));
+    });
+    items.push(circle(cx, cy, 3, { fill: 'white', stroke: 'l', sw: 1 }));
+    // pointer
+    items.push(poly([[cx - 6, 2], [cx + 6, 2], [cx, 14]], { fill: 'l', stroke: 'l', sw: 1 }));
+    return fitPrims(items, 5);
+}
+
+// diagram: { type:'tree', first:[{l,p}], second:[[{l,p}…] per first branch], essential? }
+//   p: string like '1/2' or '?'  (rendered red when '?'). Leaves show combined outcome.
+function treePrims({ first, second }) {
+    const items = [];
+    const R = 11, x0 = 10, x1 = 130, x2 = 250, dy = 26;
+    const leaves = second.flat().length;
+    let leafIdx = 0;
+    const rootY = (leaves - 1) * dy / 2 + 12;
+    const edge = (ax, ay, bx, by, p) => {
+        const dxx = bx - ax, dyy = by - ay, len = Math.hypot(dxx, dyy), ux = dxx / len, uy = dyy / len;
+        const sx = ax + ux * (ax === x0 ? 4 : R), sy = ay + uy * (ax === x0 ? 4 : R);
+        const ex = bx - ux * R, ey = by - uy * R;
+        items.push(line([sx, sy], [ex, ey], { sw: 1.6 }));
+        const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+        const isQ = p === '?';
+        items.push(text(mx - 2, my + (uy < -0.05 ? -5 : uy > 0.05 ? 13 : -5), String(p), { size: 10, color: isQ ? 'm' : 'l', bold: isQ }));
+    };
+    items.push(circle(x0, rootY, 3.2, { fill: 'g', stroke: 'g', sw: 0 }));
+    first.forEach((b1, i) => {
+        const kids = second[i];
+        const ys = kids.map(() => 12 + (leafIdx++) * dy);
+        const y1 = (ys[0] + ys[ys.length - 1]) / 2;
+        edge(x0, rootY, x1, y1, b1.p);
+        items.push(circle(x1, y1, R, { fill: 'gtint', sw: 1.6 }), text(x1, y1 + 4, b1.l, { size: 11, bold: true }));
+        kids.forEach((b2, j) => {
+            edge(x1, y1, x2, ys[j], b2.p);
+            items.push(circle(x2, ys[j], R, { fill: 'gtint', sw: 1.6 }), text(x2, ys[j] + 4, b2.l, { size: 11, bold: true }));
+            items.push(text(x2 + R + 8, ys[j] + 4, `${b1.l}${b2.l}`, { anchor: 'start', size: 10, op: 0.8 }));
+        });
+    });
+    return fitPrims(items, 6);
+}
+
 // ─── public entry points ─────────────────────────────────────────────────────
-const BUILDERS = { solid: solidPrims };
+const BUILDERS = { table: tablePrims, venn: vennPrims, spinner: spinnerPrims, tree: treePrims, solid: solidPrims, 'stem-leaf': stemLeafPrims, 'box-plot': boxPlotPrims, 'dot-plot': dotPlotPrims, scatter: scatterPrims };
+/** Height (mm) a primitive diagram wants in a PDF column `wMM` wide. */
+export function preferredHeightMM(diagram, wMM, ps, base) {
+    const p = buildPrims(diagram);
+    if (!p) return base;
+    const k = Math.min(diagram.essential ? 0.30 : 0.24, wMM / p.w);
+    return Math.min(56 * ps, Math.max(base, p.h * k + 2));
+}
 export const isPrimDiagram = (d) => !!d && d.type in BUILDERS;
 export function buildPrims(diagram) {
     const b = diagram && BUILDERS[diagram.type];
@@ -211,6 +461,7 @@ function strokeAttr(o) {
         (o.dash ? ' stroke-dasharray="4 3"' : '') + ' stroke-linejoin="round" stroke-linecap="round"';
 }
 function fillAttr(f) {
+    if (typeof f === 'string' && f[0] === '#') return `fill="${f}" fill-opacity="0.85"`;
     switch (f) {
         case 'tint':  return 'fill="currentColor" fill-opacity="0.07"';
         case 'gtint': return `fill="${GC}" fill-opacity="0.13"`;

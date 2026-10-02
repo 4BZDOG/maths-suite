@@ -4,7 +4,7 @@
 import { state, syncSettingsFromDOM } from '../core/state.js';
 import { showToast } from '../ui/toast.js';
 import { generateMathsQuestions } from '../generators/mathsQuestionGen.js';
-import { loadJSPDF, loadFontForPDF, FONT_SELECT_MAP } from './pdfFonts.js';
+import { loadJSPDF, loadFontForPDF, aliasBoldToRegular, FONT_SELECT_MAP } from './pdfFonts.js';
 import { buildCtx, drawHeader, drawExportIdFooter, makeExportId, latexToText, hasFraction, drawFractionClue, drawText, setLatexAsciiFallback, drawSup, measureSup, _winAnsiSafe } from './pdfHelpers.js';
 import { detectVerb, detectMidVerb, autoBoldVerb } from '../renderers/htmlUtils.js';
 // PAYMENTS: import access helpers — replace session.js backend stub when server is ready
@@ -12,7 +12,7 @@ import { clampBulkExportCount, FREE_LIMITS } from '../payments/access.js';
 import { getOutcomesForTopics, getTopicOutcomeCodes } from '../core/outcomes.js';
 import { drawFormulaSheet } from './pdfDrawFormulas.js';
 import { drawPrimDiagramPDF } from './pdfPrims.js';
-import { isPrimDiagram } from '../renderers/diagramPrims.js';
+import { isPrimDiagram, preferredHeightMM } from '../renderers/diagramPrims.js';
 
 let isExporting = false;
 
@@ -1545,9 +1545,11 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
             }
             metaH = 4 * pScale + metaRows * (chipH + 1);
         }
-        const hasDiagram = showDiagrams && !!item.diagram;
+        const hasDiagram = (showDiagrams || !!item.diagram?.essential) && !!item.diagram;
+        const diagH = hasDiagram && isPrimDiagram(item.diagram)
+            ? preferredHeightMM(item.diagram, colW - 13, pScale, DIAG_H) : DIAG_H;
         const itemH = clueBlockH
-            + (hasDiagram ? DIAG_H + SECTION_PAD : 0)
+            + (hasDiagram ? diagH + SECTION_PAD : 0)
             + (workingCount > 0 ? SECTION_PAD + workingCount * workingLineSpacing + SECTION_PAD : 0)
             + answerLineSpacing + SECTION_PAD + 6 * pScale
             + metaH + itemGap;
@@ -1628,8 +1630,8 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
 
         // ── Geometry diagram ─────────────────────────────────────────
         if (hasDiagram) {
-            _drawDiagramInPDF(doc, item.diagram, itemX + 9, nextY, colW - 13, DIAG_H, pScale, pdfFont);
-            nextY += DIAG_H + SECTION_PAD;
+            _drawDiagramInPDF(doc, item.diagram, itemX + 9, nextY, colW - 13, diagH, pScale, pdfFont);
+            nextY += diagH + SECTION_PAD;
         }
 
         // ── Working area: 5 mm grid pitch for algebra alignment ─────
@@ -2101,8 +2103,15 @@ export async function exportPDF() {
         if (fontName) {
             if (T) T.innerText = 'Loading fonts...';
             try {
-                const ok = await loadFontForPDF(doc, fontName, 400);
-                if (ok) { await loadFontForPDF(doc, fontName, 700); pdfFont = fontName; }
+                // One retry each: a single CDN hiccup shouldn't silently downgrade the export.
+                const ok = (await loadFontForPDF(doc, fontName, 400)) || (await loadFontForPDF(doc, fontName, 400));
+                if (ok) {
+                    pdfFont = fontName;
+                    const okBold = (await loadFontForPDF(doc, fontName, 700)) || (await loadFontForPDF(doc, fontName, 700));
+                    // No bold face? Alias the regular face as bold. Without this jsPDF falls
+                    // back to a serif font for every bold run (title, verbs, headings).
+                    if (!okBold) aliasBoldToRegular(doc, fontName);
+                }
             } catch (e) { console.warn('Unexpected font load error:', e); }
             if (pdfFont === 'helvetica') {
                 showToast(`Couldn't load the "${fontName}" font — exporting with the standard PDF font instead.`, 'warning');

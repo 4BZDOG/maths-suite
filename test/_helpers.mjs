@@ -28,6 +28,7 @@ export const VALID_DIAGRAMS = new Set([
     'number-plane', 'general-triangle', 'composite-prism',
     'rhombus', 'kite', 'sector',
     'coord-circle', 'semicircle', 'hyperbola', 'network', 'solid',
+    'stem-leaf', 'table', 'venn', 'spinner', 'tree', 'box-plot', 'dot-plot', 'scatter',
 ]);
 
 // Generate with the right stage / includePath for the given topic.

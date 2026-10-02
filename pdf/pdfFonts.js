@@ -47,6 +47,20 @@ export async function loadJSPDF() {
 }
 
 /**
+ * Register the already-cached regular face under the 'bold' style, so a failed
+ * bold download degrades to regular weight rather than jsPDF's serif fallback.
+ * @returns {boolean} true if a regular face was available to alias
+ */
+export function aliasBoldToRegular(doc, jsPDFFontName) {
+    const b64 = pdfFontCache[`${jsPDFFontName}:400`];
+    if (!b64) return false;
+    const filename = `${jsPDFFontName}-bold-alias.ttf`;
+    doc.addFileToVFS(filename, b64);
+    doc.addFont(filename, jsPDFFontName, 'bold');
+    return !!(doc.getFontList()[jsPDFFontName]);
+}
+
+/**
  * Load a TTF font from jsDelivr and register it with jsPDF.
  * Caches base64 data in memory to avoid re-fetching across exports.
  *

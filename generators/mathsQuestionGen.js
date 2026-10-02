@@ -2357,9 +2357,12 @@ function _genStemLeaf(rng, diff, _depth = 0) {
     const stemKeys = Object.keys(stems).map(Number).sort((a, b) => a - b);
     // Plain-text rows (no LaTeX) so the plot renders identically in the HTML
     // preview and the PDF text converter.
-    const rows = stemKeys.map(s => `${s} | ${stems[s].join(' ')}`).join('\n');
     const k0 = stemKeys[0], leaf0 = stems[k0][0];
-    const keyLine = `Key: ${k0} | ${leaf0} = ${k0 * 10 + leaf0}`;
+    const plot = {
+        type: 'stem-leaf', essential: true,
+        rows: stemKeys.map(s => ({ stem: s, leaves: stems[s] })),
+        key: `${k0} | ${leaf0} = ${k0 * 10 + leaf0}`,
+    };
 
     const median = data[(n - 1) / 2];
     const range = data[n - 1] - data[0];
@@ -2376,14 +2379,14 @@ function _genStemLeaf(rng, diff, _depth = 0) {
     if (want === 'mode' && modes.length !== 1) return _genStemLeaf(rng, diff, _depth + 1);
 
     const stem = `The stem-and-leaf plot shows ${ctx}. Find the *${want}*.`;
-    const clue = `${stem}\n${rows}\n${keyLine}`;
+    const clue = stem;
     const ans = want === 'median' ? median : want === 'range' ? range : modes[0];
     const worked = want === 'median'
         ? `With $${n}$ ordered values, the median is the middle (${(n + 1) / 2}th) value $= ${median}$.`
         : want === 'range'
             ? `$\\text{range} = ${data[n - 1]} - ${data[0]} = ${range}$`
             : `The most frequent value is $${modes[0]}$ (appears $${maxC}$ times).`;
-    return { clue, answer: String(ans), answerDisplay: `$${ans}$`, worked, notes: 'Statistics' };
+    return { clue, answer: String(ans), answerDisplay: `$${ans}$`, worked, notes: 'Statistics', diagram: plot };
 }
 
 // ============================================================
@@ -3965,6 +3968,32 @@ function _genStatisticsS5Op(rng, diff, op) {
 
     // box plots & the 1.5×IQR outlier rule (MA5-DAT-C-01)
     if (op === 'box-plot') {
+        if (rng() < 0.55) {
+            // Read the five-number summary straight off a drawn box plot.
+            const big = rng() < 0.5;
+            const st = big ? 5 : 1;
+            const mn = st * ri(rng, big ? 1 : 2, big ? 6 : 14);
+            const q1v = mn + st * ri(rng, big ? 1 : 2, big ? 3 : 6);
+            const medv = q1v + st * ri(rng, big ? 1 : 2, big ? 3 : 6);
+            const q3v = medv + st * ri(rng, big ? 1 : 2, big ? 3 : 6);
+            const mx = q3v + st * ri(rng, big ? 1 : 2, big ? 4 : 8);
+            const ctx = rc(rng, ['the marks scored in a class test', 'the time (in minutes) students spent on homework', 'the heights (in cm) of plants in an experiment', 'the number of points scored by a team over a season']);
+            const plot = { type: 'box-plot', essential: true, min: mn, q1: q1v, med: medv, q3: q3v, max: mx };
+            const iqrv = q3v - q1v;
+            const asks = [
+                { q: 'Find the *median*.', a: medv, w: `The median is the line inside the box: $${medv}$.` },
+                { q: 'Find the *range*.', a: mx - mn, w: `$\\text{range} = ${mx} - ${mn} = ${mx - mn}$` },
+                { q: 'Find the *interquartile range (IQR)*.', a: iqrv, w: `$\\text{IQR} = Q_3 - Q_1 = ${q3v} - ${q1v} = ${iqrv}$` },
+                { q: 'State the *upper quartile* ($Q_3$).', a: q3v, w: `$Q_3$ is the right-hand end of the box: $${q3v}$.` },
+                { q: 'State the *lower quartile* ($Q_1$).', a: q1v, w: `$Q_1$ is the left-hand end of the box: $${q1v}$.` },
+            ];
+            if (diff === 'Hard') {
+                asks.push({ q: 'Calculate the *upper outlier fence* using the $1.5 \\times \\text{IQR}$ rule.', a: q3v + 1.5 * iqrv, w: `IQR $= ${iqrv}$; upper fence $= ${q3v} + 1.5(${iqrv}) = ${q3v + 1.5 * iqrv}$` });
+                asks.push({ q: 'Calculate the *lower outlier fence* using the $1.5 \\times \\text{IQR}$ rule.', a: q1v - 1.5 * iqrv, w: `IQR $= ${iqrv}$; lower fence $= ${q1v} - 1.5(${iqrv}) = ${q1v - 1.5 * iqrv}$` });
+            }
+            const pick = rc(rng, asks);
+            return { clue: `The box plot summarises ${ctx}. ${pick.q}`, answer: String(pick.a), answerDisplay: `$${pick.a}$`, worked: pick.w, diagram: plot };
+        }
         const q1 = ri(rng, 10, 40);
         const iqr = ri(rng, 8, 25);
         const q3 = q1 + iqr;
@@ -4037,7 +4066,34 @@ function _genStatisticsS5Op(rng, diff, op) {
 
         // Easy: predict y only. Medium/Hard also draw from reverse-prediction
         // and gradient/intercept interpretation for variety.
-        const variant = diff === 'Easy' ? 0 : ri(rng, 0, 3);
+        const variant = diff === 'Easy' ? 0 : ri(rng, 0, 4);
+
+        // Scatter plot with the fitted line drawn (supportive) — needs c >= 0 so the
+        // first-quadrant axes show everything.
+        const scatterFor = () => {
+            if (c < 0) return undefined;
+            const xs = [1, 2, 3, 4, 5, 6, 7, 8].slice(0, 7);
+            const jit = Math.max(1, Math.ceil(m / 2));
+            const pts = xs.map((px, i) => [px, Math.max(1, m * px + c + ((i * 5 + m) % 3 - 1) * jit)]);
+            const xMaxP = Math.max(8, x + 1) + (Math.max(8, x + 1) % 2);
+            return { type: 'scatter', pts, line: { m, c }, xMax: xMaxP, yMax: Math.ceil((m * xMaxP + c) * 1.05), xTitle: 'x', yTitle: 'y' };
+        };
+
+        if (variant === 4) {
+            // Describe the correlation shown on a scatter plot (data in the plot).
+            const kind = rc(rng, ['positive', 'negative', 'none']);
+            const base = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            const pts = base.map((px, i) => {
+                const wob = ((i * 7 + 3) % 5) - 2;
+                if (kind === 'positive') return [px, Math.max(1, px + 1 + wob)];
+                if (kind === 'negative') return [px, Math.max(1, 11 - px + wob)];
+                return [px, 5 + ((i * 4 + 1) % 7) - 3 + (i % 2 ? 2 : -2)];
+            });
+            return { clue: rc(rng, ['What type of correlation does the scatter plot show?', 'Describe the relationship between $x$ and $y$ shown in the scatter plot (positive, negative or none).']),
+                answer: kind, answerDisplay: kind,
+                worked: kind === 'none' ? 'The points show no pattern: there is no correlation.' : `As $x$ increases, $y$ ${kind === 'positive' ? 'increases' : 'decreases'}: a ${kind} correlation.`,
+                diagram: { type: 'scatter', essential: true, pts, xMax: 10, yMax: 14, xTitle: 'x', yTitle: 'y' } };
+        }
 
         if (variant === 3) {
             // interpret the y-intercept (value of y when x = 0)
@@ -4056,7 +4112,7 @@ function _genStatisticsS5Op(rng, diff, op) {
                 `For the line of best fit $y = ${m}x${cStr}$, what value of $x$ gives $y = ${y}$?`,
             ]);
             return { clue: ph, answer: String(x), answerDisplay: `$x = ${x}$`,
-                worked: `$${y} = ${m}x${cStr}$, so $x = \\frac{${y - c}}{${m}} = ${x}$` };
+                worked: `$${y} = ${m}x${cStr}$, so $x = \\frac{${y - c}}{${m}} = ${x}$`, diagram: scatterFor() };
         }
         if (variant === 2) {
             // Interpret the gradient as a rate of change.
@@ -4073,7 +4129,7 @@ function _genStatisticsS5Op(rng, diff, op) {
             `Using $y = ${m}x${cStr}$, calculate the predicted value of $y$ for $x = ${x}$.`,
         ]);
         return { clue: ph, answer: String(y), answerDisplay: `$y = ${y}$`,
-            worked: `$y = ${m}(${x})${cStr} = ${y}$` };
+            worked: `$y = ${m}(${x})${cStr} = ${y}$`, diagram: scatterFor() };
     }
     return null;
 }
@@ -4839,7 +4895,8 @@ function genProbability(rng, diff, allowedOps) {
         const s = simplify(both, nB);
         return { clue: `In a group of $${total}$ students, $${nA}$ study ${subjA}, $${nB}$ study ${subjB}, and $${both}$ study both. Find the probability that a student studies ${subjA} *given* that they study ${subjB}.`,
             answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `$P(${subjA[0]}|${subjB[0]}) = \\frac{n(\\text{both})}{n(${subjB})} = \\frac{${both}}{${nB}} = \\frac{${s.n}}{${s.d}}$` };
+            worked: `$P(${subjA[0]}|${subjB[0]}) = \\frac{n(\\text{both})}{n(${subjB})} = \\frac{${both}}{${nB}} = \\frac{${s.n}}{${s.d}}$`,
+            diagram: { type: 'venn', labels: [subjA[0].toUpperCase() + subjA.slice(1), subjB[0].toUpperCase() + subjB.slice(1)], total, sets: { a: nA, b: nB }, regions: { a: '?', ab: both, b: '?', out: '?' } } };
     }
 
     // ---- Venn diagram: P(A or B) = (|A| + |B| − both)/total ----
@@ -4854,10 +4911,27 @@ function genProbability(rng, diff, allowedOps) {
         const s = simplify(fav, total);
         const labelA = rc(rng, ['football', 'tennis', 'coffee', 'maths']);
         const labelB = rc(rng, ['basketball', 'cricket', 'tea', 'science']);
+        const cap = (w) => w[0].toUpperCase() + w.slice(1);
+        if (rng() < 0.4) {
+            // Fully labelled Venn diagram (essential): read counts straight off it.
+            const onlyA = nA - both, onlyB = nB - both, out = total - union;
+            const asks = [
+                { d: `likes ${labelA} *only*`, v: onlyA }, { d: `likes ${labelB} *only*`, v: onlyB },
+                { d: `likes *both*`, v: both }, { d: `likes *neither*`, v: out },
+                { d: `likes ${labelA} (in total)`, v: nA }, { d: `likes ${labelA} *or* ${labelB}`, v: union },
+            ];
+            const pick = rc(rng, asks);
+            const ps = simplify(pick.v, total);
+            return { clue: `The Venn diagram shows the results of a survey of $${total}$ people. Find the probability that a person chosen at random ${pick.d}.`,
+                answer: fracStr(ps.n, ps.d), answerDisplay: `$\\frac{${ps.n}}{${ps.d}}$`,
+                worked: `$P = \\frac{${pick.v}}{${total}} = \\frac{${ps.n}}{${ps.d}}$`,
+                diagram: { type: 'venn', essential: true, labels: [cap(labelA), cap(labelB)], total, regions: { a: onlyA, ab: both, b: onlyB, out } } };
+        }
         const ask = wantNeither ? '*neither*' : `${labelA} *or* ${labelB}`;
         return { clue: `In a survey of $${total}$ people, $${nA}$ like ${labelA}, $${nB}$ like ${labelB}, and $${both}$ like both. Find the probability that a person likes ${ask}.`,
             answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `$n(A \\cup B) = ${nA} + ${nB} - ${both} = ${union}$; ${wantNeither ? `neither $= ${total} - ${union} = ${fav}$` : `favourable $= ${fav}$`}; $P = \\frac{${fav}}{${total}} = \\frac{${s.n}}{${s.d}}$` };
+            worked: `$n(A \\cup B) = ${nA} + ${nB} - ${both} = ${union}$; ${wantNeither ? `neither $= ${total} - ${union} = ${fav}$` : `favourable $= ${fav}$`}; $P = \\frac{${fav}}{${total}} = \\frac{${s.n}}{${s.d}}$`,
+            diagram: { type: 'venn', labels: [cap(labelA), cap(labelB)], total, sets: { a: nA, b: nB }, regions: { a: '?', ab: both, b: '?', out: '?' } } };
     }
 
     // ---- two-way table: P(specific cell) = cell/total ----
@@ -4873,9 +4947,11 @@ function genProbability(rng, diff, allowedOps) {
         ];
         const pick = rc(rng, cells);
         const s = simplify(pick.v, total);
-        return { clue: `In a class, ${bt} boys and ${gt} girls play tennis, while ${bn} boys and ${gn} girls do not. A student is chosen at random. Find the probability of choosing ${pick.d}.`,
+        return { clue: `The two-way table shows how many students in a class play tennis. A student is chosen at random. Find the probability of choosing ${pick.d}.`,
             answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `Total $= ${total}$; $P = \\frac{${pick.v}}{${total}} = \\frac{${s.n}}{${s.d}}$` };
+            worked: `Total $= ${total}$; $P = \\frac{${pick.v}}{${total}} = \\frac{${s.n}}{${s.d}}$`,
+            diagram: { type: 'table', essential: true, head: ['', 'Plays tennis', 'Does not', 'Total'],
+                rows: [['Boys', bt, bn, bt + bn], ['Girls', gt, gn, gt + gn], ['Total', bt + gt, bn + gn, total]] } };
     }
 
     // ---- experimental / relative frequency (MA4-PRO-C-01) ----
@@ -4936,23 +5012,25 @@ function genProbability(rng, diff, allowedOps) {
                 else if (target === 'greater than 3') fav = sides - 3;
                 else fav = 3;
                 const s = simplify(fav, sides);
-                const ph = rc(rng, [
-                    `A fair $${sides}$-sided die is rolled. Find P(${target}).`,
-                    `A spinner has $${sides}$ equal sections numbered 1 to $${sides}$. Find P(${target}).`,
-                ]);
+                const spin = rng() < 0.5;
+                const ph = spin
+                    ? `A spinner has $${sides}$ equal sections numbered 1 to $${sides}$. Find P(${target}).`
+                    : `A fair $${sides}$-sided die is rolled. Find P(${target}).`;
                 return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-                    worked: `$P = \\frac{${fav}}{${sides}} = \\frac{${s.n}}{${s.d}}$` };
+                    worked: `$P = \\frac{${fav}}{${sides}} = \\frac{${s.n}}{${s.d}}$`,
+                    diagram: spin ? { type: 'spinner', sectors: Array.from({ length: sides }, (_, i) => ({ label: i + 1 })) } : undefined };
             }
             // Coin / simple spinner
             const sections = rc(rng, [4, 5, 6, 8]);
             const chosen = ri(rng, 1, sections - 1);
             const s = simplify(chosen, sections);
-            const ph = rc(rng, [
-                `A spinner has $${sections}$ equal sections, $${chosen}$ of which are shaded. Find the probability of landing on a shaded section.`,
-                `A wheel is divided into $${sections}$ equal parts. $${chosen}$ are coloured red. What is the probability of spinning red?`,
-            ]);
+            const shadedVersion = rng() < 0.5;
+            const ph = shadedVersion
+                ? `A spinner has $${sections}$ equal sections, $${chosen}$ of which are shaded. Find the probability of landing on a shaded section.`
+                : `A wheel is divided into $${sections}$ equal parts. $${chosen}$ are coloured red. What is the probability of spinning red?`;
             return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-                worked: `$P = \\frac{${chosen}}{${sections}} = \\frac{${s.n}}{${s.d}}$` };
+                worked: `$P = \\frac{${chosen}}{${sections}} = \\frac{${s.n}}{${s.d}}$`,
+                diagram: { type: 'spinner', sectors: Array.from({ length: sections }, (_, i) => ({ label: '', color: i < chosen ? (shadedVersion ? 'grey' : 'red') : 'white' })) } };
         }
         if (diff === 'Medium') {
             const variant = ri(rng, 0, 2);
@@ -4971,13 +5049,15 @@ function genProbability(rng, diff, allowedOps) {
                 else fav = nums.filter(n => [1, 4, 9, 16].includes(n)).length;
                 if (fav <= 0 || fav >= sides) return genProbability(rng, diff, allowedOps);
                 const s = simplify(fav, sides);
-                const ph = rc(rng, [
+                const phs = [
                     `A fair $${sides}$-sided die is rolled. Find P(${target}).`,
                     `Roll a fair $${sides}$-sided die numbered 1 to $${sides}$. What is P(${target})?`,
                     `A spinner has $${sides}$ equal sections numbered 1 to $${sides}$. Find P(${target}).`,
-                ]);
-                return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-                    worked: `$P = \\frac{${fav}}{${sides}} = \\frac{${s.n}}{${s.d}}$` };
+                ];
+                const phIdx = ri(rng, 0, phs.length - 1);
+                return { clue: phs[phIdx], answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
+                    worked: `$P = \\frac{${fav}}{${sides}} = \\frac{${s.n}}{${s.d}}$`,
+                    diagram: phIdx === 2 && sides <= 12 ? { type: 'spinner', sectors: Array.from({ length: sides }, (_, i) => ({ label: i + 1 })) } : undefined };
             }
             // 3-colour bag
             const c1 = ri(rng, 2, 7), c2 = ri(rng, 2, 7), c3 = ri(rng, 1, 6);
@@ -5182,7 +5262,9 @@ function genProbability(rng, diff, allowedOps) {
             `Two fair coins are tossed. What is the probability of getting a head on *both*?`,
         ]);
         return { clue: ph, answer: fracStr(1, 4), answerDisplay: `$\\frac{1}{4}$`,
-            worked: `$P = \\frac{1}{2} \\times \\frac{1}{2} = \\frac{1}{4}$` };
+            worked: `$P = \\frac{1}{2} \\times \\frac{1}{2} = \\frac{1}{4}$`,
+            diagram: { type: 'tree', first: [{ l: 'H', p: '1/2' }, { l: 'T', p: '1/2' }],
+                second: [[{ l: 'H', p: '1/2' }, { l: 'T', p: '1/2' }], [{ l: 'H', p: '1/2' }, { l: 'T', p: '1/2' }]] } };
     }
     if (diff === 'Medium') {
         const variant = ri(rng, 0, 1);
@@ -5237,8 +5319,13 @@ function genProbability(rng, diff, allowedOps) {
             `A bag has $${fav}$ ${colour} marbles out of $${total}$. Two are drawn *without replacement*. Find P(both ${colour}).`,
             `$${fav}$ of $${total}$ marbles are ${colour}. If two are drawn without replacement, find P(both ${colour}).`,
         ]);
+        const c0 = colour[0].toUpperCase();
+        const nn = total - fav;
         return { clue: ph, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `$P = \\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}} = \\frac{${numProd}}{${denProd}} = \\frac{${s.n}}{${s.d}}$` };
+            worked: `$P = \\frac{${n1}}{${d1}} \\times \\frac{${n2}}{${d2}} = \\frac{${numProd}}{${denProd}} = \\frac{${s.n}}{${s.d}}$`,
+            diagram: { type: 'tree', first: [{ l: c0, p: `${fav}/${total}` }, { l: 'N', p: `${nn}/${total}` }],
+                second: [[{ l: c0, p: `${fav - 1}/${total - 1}` }, { l: 'N', p: `${nn}/${total - 1}` }],
+                         [{ l: c0, p: `${fav}/${total - 1}` }, { l: 'N', p: `${nn - 1}/${total - 1}` }]] } };
     }
     // Three independent events
     const d1 = rc(rng, [4, 5, 6]), d2 = rc(rng, [4, 5, 6]), d3 = rc(rng, [2, 3, 4]);
@@ -7583,27 +7670,37 @@ function genDataViz(rng, diff, allowedOps) {
         const freqs = Array.from({ length: n }, () => ri(rng, 1, 12));
         const total = freqs.reduce((a, b) => a + b, 0);
         const r = rng();
+        // The frequency table is drawn (essential: the data lives in it).
+        const CAT_SETS = [
+            ['Football', 'Netball', 'Tennis', 'Swimming', 'Cricket', 'Hockey'],
+            ['Red', 'Blue', 'Green', 'Yellow', 'Purple', 'Orange'],
+            ['Pizza', 'Pasta', 'Burgers', 'Sushi', 'Salad', 'Tacos'],
+            ['Bus', 'Train', 'Car', 'Walk', 'Bike', 'Tram'],
+        ];
+        const cats = rc(rng, CAT_SETS).slice(0, n);
+        const header = rc(rng, [['Category', 'Frequency'], ['Favourite', 'Frequency'], ['Item', 'Number of students']]);
+        const freqTable = { type: 'table', essential: true, head: header, rows: cats.map((c, i) => [c, freqs[i]]) };
         if (diff !== 'Easy' && r < 0.33) {
             // which category has the highest frequency (the mode)?
             const maxF = Math.max(...freqs);
             // ensure a unique maximum so the answer is well defined
             if (freqs.filter(f => f === maxF).length === 1) {
-                const cat = 'ABCDEF'[freqs.indexOf(maxF)];
-                return { clue: `A frequency table for categories A–${'ABCDEF'[n - 1]} records frequencies of $${freqs.join(', ')}$ respectively. Which category is the mode?`,
+                const cat = cats[freqs.indexOf(maxF)];
+                return { clue: rc(rng, [`The frequency table shows the results of a survey. Which category is the mode?`, `Use the frequency table to find the *mode* (the most popular category).`]),
                     answer: cat, answerDisplay: cat,
-                    worked: `The mode is the category with the highest frequency ($${maxF}$) → ${cat}.` };
+                    worked: `The mode is the category with the highest frequency ($${maxF}$) → ${cat}.`, diagram: freqTable };
             }
         }
         if (diff === 'Hard' && r < 0.66) {
             // what fraction of the data is in the first category?
             const g = gcd(freqs[0], total);
-            return { clue: `A frequency table records frequencies of $${freqs.join(', ')}$. What fraction of the data is in the first category?`,
+            return { clue: `The frequency table shows a class survey. What fraction of the data is in the *${cats[0]}* category? Give your answer in simplest form.`,
                 answer: `${freqs[0] / g}/${total / g}`, answerDisplay: `$\\frac{${freqs[0] / g}}{${total / g}}$`,
-                worked: `$\\frac{${freqs[0]}}{${total}} = \\frac{${freqs[0] / g}}{${total / g}}$` };
+                worked: `$\\frac{${freqs[0]}}{${total}} = \\frac{${freqs[0] / g}}{${total / g}}$`, diagram: freqTable };
         }
-        return { clue: `A frequency table records frequencies of $${freqs.join(', ')}$. How many data values are there in total?`,
+        return { clue: rc(rng, [`How many data values are there in total in the frequency table?`, `Use the frequency table to find the *total* number of responses.`]),
             answer: String(total), answerDisplay: `$${total}$`,
-            worked: `$${freqs.join(' + ')} = ${total}$` };
+            worked: `$${freqs.join(' + ')} = ${total}$`, diagram: freqTable };
     }
 
     if (op === 'tally') {
@@ -7615,40 +7712,65 @@ function genDataViz(rng, diff, allowedOps) {
                 worked: `$${f} \\div 5 = ${groups}$ remainder $${rem}$` };
         }
         const f = ri(rng, 3, 18), groups = Math.floor(f / 5), rem = f % 5;
-        return { clue: `In a tally chart, one category has **${groups} complete group(s) of five and ${rem} extra mark(s)**. What is its frequency?`,
+        const pets = rc(rng, [['Dog', 'Cat', 'Fish', 'Bird'], ['Red', 'Blue', 'Green', 'Yellow'], ['Walk', 'Bus', 'Car', 'Bike']]);
+        const others = pets.slice(1).map(() => ri(rng, 2, 14));
+        const which = ri(rng, 0, 3);
+        const tallies = pets.map((_, i) => (i === which ? f : others[i > which ? i - 1 : i]));
+        return { clue: `The tally chart shows a class survey. What is the *frequency* of ${pets[which]}?`,
             answer: String(f), answerDisplay: `$${f}$`,
-            worked: `$5 \\times ${groups} + ${rem} = ${f}$` };
+            worked: `$5 \\times ${groups} + ${rem} = ${f}$`,
+            diagram: { type: 'table', essential: true, head: ['Category', 'Tally', 'Frequency'],
+                rows: pets.map((nm, i) => [nm, { tally: tallies[i] }, i === which ? { q: true } : tallies[i]]) } };
     }
 
     if (op === 'dot-plot-read') {
-        // a small dot plot described as a value list; find mode/range/total
+        // A dot plot is drawn (essential); the student reads mode/range/total/counts from it.
         const n = diff === 'Easy' ? 6 : diff === 'Medium' ? 9 : 12;
         const lo = ri(rng, 0, 3), hi = lo + ri(rng, 3, 6);
         const data = Array.from({ length: n }, () => ri(rng, lo, hi)).sort((a, b) => a - b);
         // guarantee both extremes appear so range is well defined
         data[0] = lo; data[data.length - 1] = hi;
-        const want = diff === 'Easy' ? rc(rng, ['total', 'range'])
-            : rc(rng, ['mode', 'range', 'total']);
-        if (want === 'total') {
-            return { clue: `A dot plot shows the values $${data.join(', ')}$. How many data values are shown in total?`,
-                answer: String(n), answerDisplay: `$${n}$`, worked: `Count the dots: $${n}$.` };
-        }
-        if (want === 'range') {
-            return { clue: `A dot plot shows the values $${data.join(', ')}$. What is the range?`,
-                answer: String(hi - lo), answerDisplay: `$${hi - lo}$`,
-                worked: `$${hi} - ${lo} = ${hi - lo}$` };
-        }
-        // mode — pick the unique most-frequent value (rebuild if tied)
         const counts = {};
         for (const v of data) counts[v] = (counts[v] || 0) + 1;
+        const [what, axis] = rc(rng, [
+            ['the number of siblings each student has', 'Number of siblings'],
+            ['the goals scored by a team in each match', 'Goals scored'],
+            ['the books read by each student this month', 'Books read'],
+            ['the pets owned by each student', 'Pets owned'],
+        ]);
+        const plot = { type: 'dot-plot', essential: true, counts, lo: Math.max(0, lo - 1), hi: hi + 1, title: axis };
+        const intro = `The dot plot shows ${what}.`;
         const maxC = Math.max(...Object.values(counts));
         const modes = Object.keys(counts).filter(k => counts[k] === maxC).map(Number);
-        if (modes.length !== 1) {
-            return genDataViz(rng, diff, ['dot-plot-read']);   // retry for a clean mode
+        const kinds = diff === 'Easy' ? ['total', 'range', 'count'] : ['mode', 'range', 'total', 'count', 'more'];
+        let want = rc(rng, kinds);
+        if (want === 'mode' && modes.length !== 1) want = 'total';
+        if (want === 'total') {
+            return { clue: `${intro} How many data values are shown in total?`,
+                answer: String(n), answerDisplay: `$${n}$`, worked: `Count the dots: $${n}$.`, diagram: plot };
         }
-        return { clue: `A dot plot shows the values $${data.join(', ')}$. What is the mode?`,
+        if (want === 'range') {
+            return { clue: `${intro} What is the range?`,
+                answer: String(hi - lo), answerDisplay: `$${hi - lo}$`,
+                worked: `$${hi} - ${lo} = ${hi - lo}$`, diagram: plot };
+        }
+        if (want === 'count') {
+            const vs = Object.keys(counts).map(Number);
+            const v = rc(rng, vs);
+            return { clue: `${intro} How many data values are equal to $${v}$?`,
+                answer: String(counts[v]), answerDisplay: `$${counts[v]}$`,
+                worked: `Count the dots above $${v}$: $${counts[v]}$.`, diagram: plot };
+        }
+        if (want === 'more') {
+            const v = ri(rng, lo, hi - 1);
+            const k = data.filter(x => x > v).length;
+            return { clue: `${intro} How many data values are *greater than* $${v}$?`,
+                answer: String(k), answerDisplay: `$${k}$`,
+                worked: `Count the dots to the right of $${v}$: $${k}$.`, diagram: plot };
+        }
+        return { clue: `${intro} What is the mode?`,
             answer: String(modes[0]), answerDisplay: `$${modes[0]}$`,
-            worked: `The most frequent value is $${modes[0]}$ (appears $${maxC}$ times).` };
+            worked: `The most frequent value is $${modes[0]}$ (appears $${maxC}$ times).`, diagram: plot };
     }
 
     if (op === 'graph-choice') {

@@ -18,6 +18,12 @@ const FILL = {
     m:     RGB.m,
 };
 const PT_PER_MM = 2.835;
+// '#rrggbb' fills (spinner colours) → RGB, lightened to match the 0.85 SVG opacity.
+function hexFill(f) {
+    if (typeof f !== 'string' || f[0] !== '#') return FILL[f];
+    const n = parseInt(f.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(c => Math.round(255 - (255 - c) * 0.85));
+}
 
 /**
  * Draw a primitive-based diagram into the box (x0,y0,w,h) in mm, scaled to fit
@@ -44,7 +50,7 @@ export function drawPrimDiagramPDF(doc, diagram, x0, y0, w, h, ps, font) {
 
     for (const it of prims.items) {
         if (it.t === 'poly') {
-            const fill = FILL[it.fill];
+            const fill = hexFill(it.fill);
             const stroked = setStroke(it);
             if (fill) doc.setFillColor(...fill);
             const style = fill && stroked ? 'FD' : fill ? 'F' : stroked ? 'S' : null;
@@ -53,7 +59,7 @@ export function drawPrimDiagramPDF(doc, diagram, x0, y0, w, h, ps, font) {
             if (!setStroke(it)) continue;
             doc.lines(rel(it.pts), X(it.pts[0][0]), Y(it.pts[0][1]), [1, 1], 'S', false);
         } else if (it.t === 'circle') {
-            const fill = FILL[it.fill];
+            const fill = hexFill(it.fill);
             const stroked = setStroke(it);
             if (fill) doc.setFillColor(...fill);
             const style = fill && stroked ? 'FD' : fill ? 'F' : stroked ? 'S' : null;
