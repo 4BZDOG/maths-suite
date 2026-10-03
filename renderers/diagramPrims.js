@@ -161,7 +161,7 @@ function solidPrims({ kind, dims = {}, unit = 'cm', find, given, givenP, hint = 
         items.push(path(ellipsePts(cx, cy, R, 15, Math.PI, 2 * Math.PI, 30), { dash: true, op: 0.55, sw: 1.2 }));
         items.push(path(ellipsePts(cx, cy, R, 15, 0, Math.PI, 30), { op: 0.75, sw: 1.2 }));
         items.push(line([cx, cy], [cx + R, cy], { dash: true, sw: 1.3 }), circle(cx, cy, 2.2, { fill: 'g', stroke: 'g', sw: 0 }));
-        T(cx + R / 2, cy + 32, 'r');
+        T(cx + 14, cy + 30, 'r');
     } else if (kind === 'pyramid') {
         // square base (dims.s) or rectangular base (dims.l × dims.w)
         const bl = dims.l ?? dims.s, bd = dims.w ?? dims.s, rect = dims.l != null;
@@ -586,7 +586,9 @@ function bearingPrims({ legs, names = ['A', 'B', 'C', 'D'], unit = 'km', ask, cl
         items.push(path(arc, { sw: 1.4 }));
         const am = -Math.PI / 2 + rad(legs[i].bearing) / 2;
         const bl = legs[i].missingBearing ? { s: '?', color: 'm', bold: true } : { s: `${String(legs[i].bearing).padStart(3, '0')}°` };
-        items.push(text(a[0] + 33 * Math.cos(am), a[1] + 33 * Math.sin(am) + 4, bl.s, { size: 10, ...bl }));
+        // Small bearings put the label right beside the North arrow's "N": start it clear of the arrow.
+        const bAnchor = legs[i].bearing < 70 ? 'start' : legs[i].bearing > 290 ? 'end' : 'middle';
+        items.push(text(a[0] + 33 * Math.cos(am) + (bAnchor === 'start' ? 3 : bAnchor === 'end' ? -3 : 0), a[1] + 33 * Math.sin(am) + 4, bl.s, { size: 10, anchor: bAnchor, ...bl }));
         if (legs[i].dist != null || legs[i].missingDist) {
             const dl = legs[i].missingDist ? { s: '? ' + unit, color: 'm', bold: true } : { s: `${legs[i].dist} ${unit}` };
             const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
@@ -1237,6 +1239,9 @@ function numberPlanePrims({ pts, line: showLine, mid, tri }) {
             const y1 = sy < 0 ? dy - 5 : dy + 14, y0 = y1 - 10;
             if (x0 < L + 1 || x1 > R - 1 || y0 < T || y1 > Bm) continue;
             if (hitsSeg(x0, y0, x1, y1)) continue;
+            // keep clear of the "x" / "y" axis titles in the plot corners
+            if (x1 > R - 14 && y1 > Bm - 12) continue;
+            if (x0 < L + 12 && y0 < T + 11) continue;
             best = { sx, sy }; break;
         }
         if (!best) best = { sx: awayX, sy: awayY };
