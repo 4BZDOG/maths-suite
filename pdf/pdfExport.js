@@ -2028,6 +2028,165 @@ function drawKeyPage(ctx, sets, startY, pScale, exportId, startNums = {}) {
     drawExportIdFooter(ctx, exportId, pScale);
 }
 
+// =============================================================
+// DOM-free export core
+//
+// Everything below touches only a jsPDF document, `state` and the generators,
+// so the same code path runs in the browser (exportPDF) and under Node
+// (test/pdf-golden.test.mjs).
+// =============================================================
+
+/** Create the jsPDF document for the configured paper size. */
+export function createExportDoc(jsPDF, cfg) {
+    const paperSize = cfg.paperSize || 'a4';
+    return new jsPDF({ unit: 'mm', format: paperSize, orientation: 'portrait' });
+}
+
+/**
+ * Bundle everything a set needs to be drawn: the document, drawing context,
+ * page selection and per-page font scales. `env.setFont()` rebuilds the
+ * context after a custom font has been registered.
+ */
+export function createExportEnv(doc, { cfg = state.settings, pdfFont = 'helvetica', wmImg = null, activeTopics = null, selectedPages = null } = {}) {
+    const isLetter    = (cfg.paperSize || 'a4') === 'letter';
+    const dims = { PAGE_WIDTH: isLetter ? 215.9 : 210, PAGE_HEIGHT: isLetter ? 279.4 : 297, MARGIN: 15 };
+    const scale = parseFloat(cfg.globalFontScale) || 1;
+    const getPScale = (key) => {
+        const val = cfg.scales?.[key];
+        return scale * (val !== undefined ? parseFloat(val) || 1 : 1);
+    };
+    const pageOrder = cfg.pageOrder || ['easy', 'medium', 'hard', 'key'];
+    const env = {
+        doc, cfg, dims, scale, getPScale, wmImg,
+        activeTopics: activeTopics || Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]),
+        selectedPages: selectedPages || pageOrder.filter(p => cfg.opts?.[p]),
+        isFirstPage: true,
+        ctx: null,
+        setFont(font) {
+            env.ctx = buildCtx(doc, font, wmImg, scale, dims, cfg);
+        },
+    };
+    env.setFont(pdfFont);
+    // Derive cap from pages-per-difficulty selector (state.questionsPerSet is 1 or 2)
+    cfg.psCapPages = state.questionsPerSet || 1;
+    return env;
+}
+
+/**
+ * Draw one export copy (set number i of count) into env.doc: the optional
+ * formula sheet, each selected page in order, and any duplex padding page.
+ */
+export function drawExportSet(env, i, count, exportBase, { title = 'Maths Quiz', sub = '', makeSets = createQuestionSets } = {}) {
+    const { doc, cfg, dims, getPScale, activeTopics, selectedPages, ctx } = env;
+    const { PAGE_WIDTH, PAGE_HEIGHT, MARGIN } = dims;
+    const pv = state.generatedSets;
+    const havePreview = pv && (pv.easy?.length || pv.medium?.length || pv.hard?.length);
+
+    cfg.exportCount = (cfg.exportCount || 0) + 1;
+    // Set #1 reuses the on-screen preview questions exactly (incl. rerolls
+    // and locked slots); alternates are reproducible offsets of its seed.
+    let sets, seed;
+    if (i === 0 && havePreview) {
+        sets = pv;
+        seed = exportBase;
+    } else {
+        seed = exportBase + i * 1_000_000;
+        sets = makeSets(cfg, seed);
+    }
+    const exportId = makeExportId(seed);
+    if (!sets) return;
+
+    const setIndicator = count > 1 ? `SET ${i + 1}` : '';
+    const pagesBeforeSet = env.isFirstPage ? 0 : doc.getNumberOfPages();
+
+    const addPage = () => {
+        if (!env.isFirstPage) doc.addPage();
+        env.isFirstPage = false;
+        ctx.drawWatermark();
+    };
+
+    // Optional formula reference sheet — one page per set, prepended before question pages
+    if (cfg.showFormulaSheet) {
+        addPage();
+        drawFormulaSheet(ctx, activeTopics, getPScale('easy'));
+    }
+
+    // Track visible question counts per difficulty.
+    // Pages not in selectedPages default to 0 so their answers are excluded from the key.
+    const visibleCounts = {
+        easy:   selectedPages.includes('easy')   ? null : 0,
+        medium: selectedPages.includes('medium') ? null : 0,
+        hard:   selectedPages.includes('hard')   ? null : 0,
+    };
+
+    // Continuous numbering across difficulties (Easy 1.., Medium n+1..,
+    // Hard ..). Computed canonically (easy→medium→hard) from visible
+    // counts; falls back to full length for a difficulty not yet drawn
+    // (only matters under a non-default page order). The answer key
+    // uses the same helper so its numbers match the worksheet.
+    const startNumFor = (diff) => {
+        const cnt = (k) => visibleCounts[k] ?? (sets[k] || []).length;
+        if (diff === 'easy')   return 1;
+        if (diff === 'medium') return 1 + cnt('easy');
+        return 1 + cnt('easy') + cnt('medium');   // hard
+    };
+
+    const BANDS = {
+        easy:   { instr: '🌱 EASY — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.',   rgb: [16, 185, 129] },
+        medium: { instr: '⚡ MEDIUM — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', rgb: [245, 158, 11] },
+        hard:   { instr: '🔥 HARD — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.',   rgb: [239, 68, 68] },
+    };
+
+    for (const pType of selectedPages) {
+        if (BANDS[pType]) {
+            addPage();
+            const ps = getPScale(pType);
+            const sy = drawHeader(ctx, title, sub, BANDS[pType].instr, false, setIndicator, ps, exportId, BANDS[pType].rgb);
+            const overflow = drawQuestionPage(ctx, sets[pType], sy, ps, exportId, startNumFor(pType));
+            visibleCounts[pType] = (sets[pType] || []).length - overflow;
+
+        } else if (pType === 'key') {
+            addPage();
+            const ps = getPScale('key');
+            const sy = drawHeader(ctx, title, sub, 'ANSWER KEY', true, setIndicator, ps, exportId);
+            // Always trim answer key to only questions that were rendered on question pages
+            const keySets = {
+                easy:   (sets.easy   || []).slice(0, visibleCounts.easy   ?? (sets.easy   || []).length),
+                medium: (sets.medium || []).slice(0, visibleCounts.medium ?? (sets.medium || []).length),
+                hard:   (sets.hard   || []).slice(0, visibleCounts.hard   ?? (sets.hard   || []).length),
+            };
+            const keyStartNums = {
+                Easy:   startNumFor('easy'),
+                Medium: startNumFor('medium'),
+                Hard:   startNumFor('hard'),
+            };
+            drawKeyPage(ctx, keySets, sy, ps, exportId, keyStartNums);
+        }
+    }
+
+    // Back-to-back printing: a blank page keeps the next set on a fresh sheet.
+    // 'odd' pads only sets with an odd page count; 'always' adds one after every set.
+    // Never after the final set (nothing follows it).
+    if (i < count - 1 && !env.isFirstPage) {
+        const setPages = doc.getNumberOfPages() - pagesBeforeSet;
+        const mode = cfg.blankPageMode || 'off';
+        if (mode === 'always' || (mode === 'odd' && setPages % 2 === 1)) {
+            doc.addPage();
+            doc.setFont(ctx.pdfFont || 'helvetica', 'normal');
+            doc.setFontSize(7);
+            doc.setTextColor(200, 200, 200);
+            doc.text('This page is intentionally left blank', PAGE_WIDTH / 2, PAGE_HEIGHT - MARGIN, { align: 'center' });
+        }
+    }
+}
+
+/** Synchronous whole-export driver (used by tests; the UI loops itself to show progress). */
+export function drawExportSync(doc, { count = 1, exportBase = 1, title = 'Maths Quiz', sub = '', pdfFont = 'helvetica', makeSets } = {}) {
+    const env = createExportEnv(doc, { pdfFont });
+    for (let i = 0; i < count; i++) drawExportSet(env, i, count, exportBase, { title, sub, makeSets });
+    return env;
+}
+
 export async function exportPDF() {
     if (isExporting) return;
 
@@ -2097,19 +2256,7 @@ export async function exportPDF() {
         const jspdfModule = await loadJSPDF();
         const { jsPDF } = jspdfModule;
 
-        const paperSize = cfg.paperSize || 'a4';
-        const isLetter  = paperSize === 'letter';
-        const PAGE_WIDTH  = isLetter ? 215.9 : 210;
-        const PAGE_HEIGHT = isLetter ? 279.4 : 297;
-        const doc = new jsPDF({ unit: 'mm', format: paperSize, orientation: 'portrait' });
-        const MARGIN = 15;
-
-        const scale = parseFloat(cfg.globalFontScale) || 1;
-        const getPScale = (key) => {
-            const val = cfg.scales?.[key];
-            return scale * (val !== undefined ? parseFloat(val) || 1 : 1);
-        };
-
+        const doc = createExportDoc(jsPDF, cfg);
         let pdfFont = 'helvetica';
 
         let wmImg = null;
@@ -2123,7 +2270,7 @@ export async function exportPDF() {
             });
         }
 
-        let ctx = buildCtx(doc, pdfFont, wmImg, scale, { PAGE_WIDTH, PAGE_HEIGHT, MARGIN }, cfg);
+        const env = createExportEnv(doc, { cfg, pdfFont, wmImg, activeTopics, selectedPages });
 
         const fontSelectVal = cfg.font || "'Inter', sans-serif";
         const fontName = FONT_SELECT_MAP[fontSelectVal];
@@ -2144,135 +2291,22 @@ export async function exportPDF() {
                 showToast(`Couldn't load the "${fontName}" font — exporting with the standard PDF font instead.`, 'warning');
             }
         }
-        ctx = buildCtx(doc, pdfFont, wmImg, scale, { PAGE_WIDTH, PAGE_HEIGHT, MARGIN }, cfg);
+        env.setFont(pdfFont);
 
         // If we fell back to the standard (helvetica) font — e.g. the font CDN
         // was blocked — switch latexToText to ASCII-safe output so π, √ and
         // superscripts don't render as mojibake.
         setLatexAsciiFallback(pdfFont === 'helvetica');
 
-        // Derive cap from pages-per-difficulty selector (state.questionsPerSet is 1 or 2)
-        cfg.psCapPages = state.questionsPerSet || 1;
-
-        let isFirstPage = true;
         // Capture the base seed once so all alternate sets are consistent
         // offsets of it, even if the loop yields to the event loop between iterations.
         const exportBase = cfg.previewSeed ?? Date.now();
-        const pv = state.generatedSets;
-        const havePreview = pv && (pv.easy?.length || pv.medium?.length || pv.hard?.length);
 
         for (let i = 0; i < count; i++) {
             if (T) T.innerText = `Generating Set ${i + 1}/${count}`;
             if (B) B.style.width = Math.round((i / count) * 100) + '%';
             await new Promise(r => setTimeout(r, 10));
-
-            cfg.exportCount = (cfg.exportCount || 0) + 1;
-            // Set #1 reuses the on-screen preview questions exactly (incl. rerolls
-            // and locked slots); alternates are reproducible offsets of its seed.
-            let sets, seed;
-            if (i === 0 && havePreview) {
-                sets = pv;
-                seed = exportBase;
-            } else {
-                seed = exportBase + i * 1_000_000;
-                sets = createQuestionSets(cfg, seed);
-            }
-            const exportId = makeExportId(seed);
-            if (!sets) continue;
-
-            const setIndicator = count > 1 ? `SET ${i + 1}` : '';
-            const pagesBeforeSet = isFirstPage ? 0 : doc.getNumberOfPages();
-
-            const addPage = () => {
-                if (!isFirstPage) doc.addPage();
-                isFirstPage = false;
-                ctx.drawWatermark();
-            };
-
-            // Optional formula reference sheet — one page per set, prepended before question pages
-            if (cfg.showFormulaSheet) {
-                addPage();
-                const ps = getPScale('easy');
-                drawFormulaSheet(ctx, activeTopics, ps);
-            }
-
-            // Track visible question counts per difficulty.
-            // Pages not in selectedPages default to 0 so their answers are excluded from the key.
-            const visibleCounts = {
-                easy:   selectedPages.includes('easy')   ? null : 0,
-                medium: selectedPages.includes('medium') ? null : 0,
-                hard:   selectedPages.includes('hard')   ? null : 0,
-            };
-
-            // Continuous numbering across difficulties (Easy 1.., Medium n+1..,
-            // Hard ..). Computed canonically (easy→medium→hard) from visible
-            // counts; falls back to full length for a difficulty not yet drawn
-            // (only matters under a non-default page order). The answer key
-            // uses the same helper so its numbers match the worksheet.
-            const startNumFor = (diff) => {
-                const cnt = (k) => visibleCounts[k] ?? (sets[k] || []).length;
-                if (diff === 'easy')   return 1;
-                if (diff === 'medium') return 1 + cnt('easy');
-                return 1 + cnt('easy') + cnt('medium');   // hard
-            };
-
-            for (const pType of selectedPages) {
-                await new Promise(r => setTimeout(r, 0));
-
-                if (pType === 'easy') {
-                    addPage();
-                    const ps = getPScale('easy');
-                    const sy = drawHeader(ctx, title, sub, '🌱 EASY — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [16, 185, 129]);
-                    const overflow = drawQuestionPage(ctx, sets.easy, sy, ps, exportId, startNumFor('easy'));
-                    visibleCounts.easy = (sets.easy || []).length - overflow;
-
-                } else if (pType === 'medium') {
-                    addPage();
-                    const ps = getPScale('medium');
-                    const sy = drawHeader(ctx, title, sub, '⚡ MEDIUM — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [245, 158, 11]);
-                    const overflow = drawQuestionPage(ctx, sets.medium, sy, ps, exportId, startNumFor('medium'));
-                    visibleCounts.medium = (sets.medium || []).length - overflow;
-
-                } else if (pType === 'hard') {
-                    addPage();
-                    const ps = getPScale('hard');
-                    const sy = drawHeader(ctx, title, sub, '🔥 HARD — SOLVE EACH PROBLEM AND WRITE YOUR ANSWER.', false, setIndicator, ps, exportId, [239, 68, 68]);
-                    const overflow = drawQuestionPage(ctx, sets.hard, sy, ps, exportId, startNumFor('hard'));
-                    visibleCounts.hard = (sets.hard || []).length - overflow;
-
-                } else if (pType === 'key') {
-                    addPage();
-                    const ps = getPScale('key');
-                    const sy = drawHeader(ctx, title, sub, 'ANSWER KEY', true, setIndicator, ps, exportId);
-                    // Always trim answer key to only questions that were rendered on question pages
-                    const keySets = {
-                        easy:   (sets.easy   || []).slice(0, visibleCounts.easy   ?? (sets.easy   || []).length),
-                        medium: (sets.medium || []).slice(0, visibleCounts.medium ?? (sets.medium || []).length),
-                        hard:   (sets.hard   || []).slice(0, visibleCounts.hard   ?? (sets.hard   || []).length),
-                    };
-                    const keyStartNums = {
-                        Easy:   startNumFor('easy'),
-                        Medium: startNumFor('medium'),
-                        Hard:   startNumFor('hard'),
-                    };
-                    drawKeyPage(ctx, keySets, sy, ps, exportId, keyStartNums);
-                }
-            }
-
-            // Back-to-back printing: a blank page keeps the next set on a fresh sheet.
-            // 'odd' pads only sets with an odd page count; 'always' adds one after every set.
-            // Never after the final set (nothing follows it).
-            if (i < count - 1 && !isFirstPage) {
-                const setPages = doc.getNumberOfPages() - pagesBeforeSet;
-                const mode = cfg.blankPageMode || 'off';
-                if (mode === 'always' || (mode === 'odd' && setPages % 2 === 1)) {
-                    doc.addPage();
-                    doc.setFont(ctx.pdfFont || 'helvetica', 'normal');
-                    doc.setFontSize(7);
-                    doc.setTextColor(200, 200, 200);
-                    doc.text('This page is intentionally left blank', PAGE_WIDTH / 2, PAGE_HEIGHT - MARGIN, { align: 'center' });
-                }
-            }
+            drawExportSet(env, i, count, exportBase, { title, sub });
         }
 
         if (T) T.innerText = 'Saving PDF...';
