@@ -685,6 +685,7 @@ function showPage(n) {
         else b.removeAttribute('aria-current');
         b.setAttribute('aria-selected', active ? 'true' : 'false');
         b.tabIndex = active ? 0 : -1;   // roving tabindex for the tablist
+        if (active && b.scrollIntoView) b.scrollIntoView({ inline: 'nearest', block: 'nearest' });   // narrow screens: the tab strip scrolls
     });
     renderActivePage();
     document.querySelector('.viewport')?.scrollTo({ top: 0, behavior: 'smooth' });
