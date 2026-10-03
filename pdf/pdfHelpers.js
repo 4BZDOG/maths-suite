@@ -555,9 +555,11 @@ export function drawText(doc, text, x, y, { fontSizePt, bold = false, italic = f
     if (!text) return;
 
     // Convert LaTeX math to unicode text for PDF rendering
-    const renderText = latexToText(text);
-
-    if (hasEmoji(renderText)) {
+    let renderText = latexToText(text);
+    // No canvas outside the browser (Node test harness): drop the emoji and draw plain text.
+    const canRasterise = typeof document !== 'undefined';
+    if (!canRasterise) renderText = renderText.replace(/\p{Emoji_Presentation}|\p{Extended_Pictographic}|\uFE0F/gu, '').trim();
+    if (canRasterise && hasEmoji(renderText)) {
         const img = textToImgPDF(renderText, { fontSizePt, bold, italic, color });
         const imgX = align === 'right' ? x - img.widthMm : x;
         doc.addImage(img.url, 'PNG', imgX, y - img.heightMm, img.widthMm, img.heightMm);

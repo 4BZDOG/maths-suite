@@ -86,6 +86,7 @@ export const state = {
         titleScale:      1,
         paperSize:       'a4',
         blankPageMode:   'off',   // 'off' | 'odd' (pad odd sets) | 'always' — back-to-back printing
+        blankPageEmpty:  false,   // true → duplex padding pages carry no "intentionally left blank" line
         showAnswerKey:   true,
         showExportId:    true,
         showTopic:             false,
@@ -156,6 +157,7 @@ export function syncSettingsFromDOM() {
     s.titleScale     = parseFloat(getVal('titleScale', s.titleScale));
     s.paperSize      = getVal('paperSize', s.paperSize);
     s.blankPageMode  = getVal('blankPageMode', s.blankPageMode);
+    s.blankPageEmpty = getChk('blankPageEmpty', s.blankPageEmpty);
     s.showAnswerKey  = getChk('showAnswerKey', s.showAnswerKey);
     s.showExportId   = getChk('showExportId', s.showExportId);
     s.showTopic             = getChk('psShowTopic',            s.showTopic);
@@ -324,6 +326,7 @@ export function applyStateToDOM(s) {
     setVal('titleScale',  cfg.titleScale);
     setVal('paperSize',   cfg.paperSize);
     setVal('blankPageMode', cfg.blankPageMode || 'off');
+    setChk('blankPageEmpty', cfg.blankPageEmpty);
     setChk('showAnswerKey', cfg.showAnswerKey);
     setChk('showExportId',  cfg.showExportId);
 

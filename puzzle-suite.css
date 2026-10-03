@@ -619,6 +619,7 @@ input[type=range]:focus-visible::-moz-range-thumb {
     display: inline-block;
     width: 44px;
     height: 24px;
+    flex-shrink: 0;   /* a wrapping label must not squash the switch (seen at 320 px) */
 }
 
 .switch input {
@@ -1125,6 +1126,41 @@ body.sidebar-closed .toggle-sidebar { left: 20px; }
 .page-btn[data-page="1"].active { color: #10b981; border-bottom-color: #10b981; }
 .page-btn[data-page="2"].active { color: #f59e0b; border-bottom-color: #f59e0b; }
 .page-btn[data-page="3"].active { color: #ef4444; border-bottom-color: #ef4444; }
+.page-btn[hidden] { display: none; }
+.page-btn-blank { border: 1px dashed var(--border); }
+
+/* Duplex padding preview: a dashed, empty sheet (preview-only, never exported) */
+.page.page-blank {
+    background: transparent;
+    border: 2px dashed #94a3b8;
+    box-shadow: none;
+    border-radius: 6px;
+    align-items: center;
+    justify-content: center;
+}
+.page.page-blank.visible { display: flex; }
+.page.page-blank .blank-sheet-note {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    max-width: 70%;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #64748b !important;
+}
+.page.page-blank .blank-sheet-note i { font-size: 1.6rem; opacity: 0.6; }
+.page.page-blank .blank-sheet-footer {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 15mm;
+    text-align: center;
+    font-size: 7pt;
+    color: #c8c8c8;
+}
+.page.page-blank .blank-sheet-footer[hidden] { display: none; }
+[data-theme="dark"] .page.page-blank { border-color: #64748b; }
+[data-theme="dark"] .page.page-blank .blank-sheet-note { color: #94a3b8 !important; }
 
 .zoom-display {
     display: flex;
@@ -3797,6 +3833,20 @@ details.outcomes-ws-header:not([open]) .outcomes-ws-summary::after { transform: 
 [data-theme="dark"] .page .outcomes-ws-desc strong { color: #0f172a; }
 [data-theme="dark"] .page .q-outcome-chip { background: rgba(99,102,241,0.08); color: #6366f1; border-color: rgba(99,102,241,0.20); }
 
+
+/* ── Narrow phones (≤ 480 px) ────────────────────────────────────────────
+   Found by emulated-viewport QA at 320 px: the sidebar drawer is only ~270 px
+   wide, so each topic row (checkbox + name + outcome chip + counts + chevron)
+   overflowed and pushed the expand chevron off the drawer; and the Easy/Medium/
+   Hard/Key/Blank tab strip was wider than the screen and clipped at both ends. */
+@media (max-width: 480px) {
+    .topic-toggle-name { min-width: 0; overflow-wrap: anywhere; }
+    .topic-toggle-row { gap: 6px; padding: 6px 6px; }
+    .topic-toggle-row .outcome-chip { display: none; }   /* code is still in the chip's title / Outcomes panel */
+    .page-tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+    .page-tabs::-webkit-scrollbar { display: none; }
+    .page-btn { flex: 0 0 auto; padding: 8px 9px; }
+}
 } /* end @layer components (maths) */
 
 /* =============================================================
