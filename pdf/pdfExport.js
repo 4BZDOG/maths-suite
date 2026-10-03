@@ -1412,212 +1412,417 @@ function createQuestionSets(cfg, seed) {
     };
 }
 
+// Graph-style diagrams plot at equal x/y scale, so they come out tall and narrow in a
+// 30 mm box and their labels shrink to nothing; give them more room.
+const TALL_DIAGRAMS = { 'number-plane': 42, parabola: 42, 'coord-circle': 40, semicircle: 36, hyperbola: 42 };
+
+/**
+ * Page-wide layout constants for a question page (pure: derived from ctx,
+ * settings and the page scale).
+ */
+function _questionPageMetrics(ctx, pScale) {
+    const { PAGE_WIDTH, PAGE_HEIGHT, MARGIN } = ctx;
+    const cfg = state.settings;
+    const cols = cfg.cols || 2;
+    const availW = PAGE_WIDTH - MARGIN * 2;
+    return {
+        pScale, cols, availW, PAGE_WIDTH, PAGE_HEIGHT, MARGIN,
+        colW: (availW - (cols - 1) * 8) / cols,
+        showTopic:          cfg.showTopic || false,
+        showOutcomeChips:   cfg.psShowOutcomeChips || false,
+        showOutcomesHeader: cfg.psShowOutcomesHeader || false,
+        capPages:           cfg.psCapPages || 0,
+        showDiagrams:       cfg.showDiagrams !== false,   // default true
+        stage:              state.stage ?? 'Stage 4',
+        DIAG_H:             30 * pScale,                  // allocated height (mm) per diagram
+        chipFontPt:         5.5 * pScale,
+        // 5 mm working-line pitch matches standard graph paper so algebra
+        // students can keep equals-signs aligned across rows.
+        workingLineSpacing: 5,
+        answerLineSpacing:  9 * pScale,
+        itemGap:            6 * pScale,
+        // Padding between major item sections (12pt ≈ 4.2mm) — gives the
+        // question, working area and answer track distinct visual zones.
+        SECTION_PAD:        4.2 * pScale,
+        pageBottom:         PAGE_HEIGHT - MARGIN - 10,
+    };
+}
+
+/**
+ * Optional outcomes header strip. Returns the vertical space it consumed
+ * (0 when the strip is off or there are no outcomes to list).
+ */
+function _drawOutcomesStrip(ctx, m, y) {
+    const { doc, pdfFont } = ctx;
+    const { pScale, MARGIN, availW, stage } = m;
+    if (!m.showOutcomesHeader) return 0;
+    const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
+    const outcomes = getOutcomesForTopics(activeTopics, stage);
+    if (outcomes.length === 0) return 0;
+
+    const hdr_y = y;
+    const hdr_pad = 2 * pScale;
+    const fontPt = 5.5 * pScale;
+    const rowH = 5.2 * pScale;                       // one row of pills
+    const pillH = 3.8 * pScale;
+    // Baseline that centres cap-height text vertically inside a pill
+    const capH = fontPt * 0.3528 * 0.72;
+    const pillBaseline = (rowTop) => rowTop + (rowH - pillH) / 2 + pillH / 2 + capH / 2;
+    doc.setFont(pdfFont, 'bold');
+    doc.setFontSize(fontPt);
+    const labelW = doc.getTextWidth('OUTCOMES') + 3 * pScale;
+    // Pass 1: flow the pills onto as many rows as they need (never drop an outcome).
+    const rows = [[]];
+    let rx = MARGIN + hdr_pad + labelW;
+    outcomes.forEach(o => {
+        const codeW = doc.getTextWidth(o.code) + 3 * pScale;
+        if (rx + codeW > MARGIN + availW - hdr_pad && rows[rows.length - 1].length) { rows.push([]); rx = MARGIN + hdr_pad + labelW; }
+        rows[rows.length - 1].push({ o, codeW, x: rx });
+        rx += codeW + 2 * pScale;
+    });
+    const hdr_h = rows.length * rowH + 1.6 * pScale;
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(MARGIN, hdr_y, availW, hdr_h, 1.5, 1.5, 'FD');
+    doc.setFont(pdfFont, 'bold');
+    doc.setFontSize(fontPt);
+    doc.setTextColor(148, 163, 184);
+    doc.text('OUTCOMES', MARGIN + hdr_pad, pillBaseline(hdr_y + 0.8 * pScale));
+    // Pass 2: draw the pills
+    rows.forEach((row, ri2) => {
+        const rowTop = hdr_y + 0.8 * pScale + ri2 * rowH;
+        row.forEach(({ o, codeW, x }) => {
+            const pillColor = o.appliesAll ? [99, 102, 241] : [16, 185, 129];
+            doc.setFillColor(...pillColor.map(c => Math.round(c * 0.15 + 255 * 0.85)));
+            doc.setDrawColor(...pillColor.map(c => Math.round(c * 0.3 + 255 * 0.7)));
+            doc.roundedRect(x, rowTop + (rowH - pillH) / 2, codeW, pillH, 1, 1, 'FD');
+            doc.setTextColor(...pillColor);
+            doc.text(o.code, x + 1.5 * pScale, pillBaseline(rowTop));
+        });
+    });
+    // First question must clear the strip by a cap-height or more, and the
+    // column divider should start below it rather than cut through it.
+    return hdr_h + 6 * pScale;
+}
+
+/**
+ * Topic pill + outcome-chip descriptors for an item's meta row, with widths
+ * measured in the current font. `padW` is the horizontal padding added to the
+ * measured text (the height estimate and the drawing pass historically use
+ * different paddings — see _measureMetaH).
+ */
+function _metaPills(ctx, m, item, itemCodes, topicPad, chipPad) {
+    const { doc, pdfFont } = ctx;
+    const { pScale, chipFontPt } = m;
+    const pills = [];
+    if (m.showTopic && item.topic) {
+        doc.setFont(pdfFont, 'normal');
+        doc.setFontSize(6 * pScale);
+        pills.push({ text: item.topic.toUpperCase(), w: doc.getTextWidth(item.topic.toUpperCase()) + topicPad, style: 'topic' });
+    }
+    if (itemCodes.length > 0) {
+        doc.setFont(pdfFont, 'bold');
+        doc.setFontSize(chipFontPt);
+        itemCodes.forEach(code => pills.push({ text: code, w: doc.getTextWidth(code) + chipPad, style: 'chip' }));
+    }
+    return pills;
+}
+
+/** Height reserved for the combined meta row (topic pill + outcome chips on one centred line). */
+function _measureMetaH(ctx, m, item, itemCodes) {
+    const { pScale, colW } = m;
+    const chipH  = 3.5 * pScale;
+    const maxMetaW = colW - 4;
+    let lineW = 0, metaRows = 1;
+    // Estimate pass pads each pill by 6 mm (the draw pass uses 4 mm).
+    _metaPills(ctx, m, item, itemCodes, 6, 6).forEach(p => {
+        if (p.style === 'topic') { lineW += p.w; return; }
+        if (lineW + p.w > maxMetaW && lineW > 0) { metaRows++; lineW = p.w; }
+        else lineW += p.w;
+    });
+    return 4 * pScale + metaRows * (chipH + 1);
+}
+
+/**
+ * Measure everything about one question that placement needs: clue lines,
+ * fraction handling, working lines, meta row and diagram heights, and the
+ * total estimated item height.
+ */
+function _measureQuestion(ctx, m, item) {
+    const { doc, pdfFont } = ctx;
+    const { pScale, colW, stage, SECTION_PAD, workingLineSpacing, answerLineSpacing, itemGap } = m;
+
+    // Fraction clues need 3 line-heights (numerator + bar + denominator),
+    // but ONLY when the clue is short enough to sit on one line.
+    // Long narrative clues that happen to contain \frac (e.g. probability
+    // questions) must be word-wrapped normally to avoid column overflow.
+    // Reset clue font before splitTextToSize — prior iterations change doc
+    // font state, which would cause width calculation to use wrong metrics.
+    doc.setFont(pdfFont, 'normal');
+    doc.setFontSize(9 * pScale);
+    const clueText   = latexToText(item.clue || '');
+    const clueLines  = doc.splitTextToSize(clueText, colW - 14);
+    const isFraction = hasFraction(item.clue) && clueLines.length === 1;
+    // Multi-line clues (e.g. "Solve:\n$\dfrac{t}{9}=12$") can't take the
+    // single-line isFraction path above, but _drawClueInline still stacks
+    // any fraction-bearing equation line — each such line needs ~3
+    // line-heights (numerator+bar+denominator) instead of 1, same as the
+    // single-line case, or the diagram/working section below would
+    // overlap the denominator.
+    const extraFractionLines = isFraction ? 0
+        : (item.clue || '').split('\n').filter(l => hasFraction(l)).length;
+    const clueBlockH = isFraction
+        ? 3 * 4.5 * pScale
+        : (clueLines.length + extraFractionLines * 2) * 4.5 * pScale;
+
+    const workingCount = item.difficulty === 'Hard' ? 3 : item.difficulty === 'Medium' ? 2 : 1;
+    // Use item.notes (specific sub-topic key) for outcome lookup — item.topic is broad category
+    const itemCodes = m.showOutcomeChips && item.notes ? getTopicOutcomeCodes(item.notes, stage) : [];
+    const hasMeta = (m.showTopic && item.topic) || itemCodes.length > 0;
+    const metaH = hasMeta ? _measureMetaH(ctx, m, item, itemCodes) : 0;
+
+    const hasDiagram = (m.showDiagrams || !!item.diagram?.essential) && !!item.diagram;
+    const diagH = !hasDiagram ? 0
+        : isPrimDiagram(item.diagram) ? preferredHeightMM(item.diagram, colW - 13, pScale, m.DIAG_H)
+        : (TALL_DIAGRAMS[item.diagram.type] ? TALL_DIAGRAMS[item.diagram.type] * pScale : m.DIAG_H);
+    const itemH = clueBlockH
+        + (hasDiagram ? diagH + SECTION_PAD : 0)
+        + (workingCount > 0 ? SECTION_PAD + workingCount * workingLineSpacing + SECTION_PAD : 0)
+        + answerLineSpacing + SECTION_PAD + 6 * pScale
+        + metaH + itemGap;
+
+    return { isFraction, clueBlockH, workingCount, itemCodes, hasMeta, hasDiagram, diagH, itemH };
+}
+
+/** Draw the clue text; returns the Y just below it. */
+function _drawClue(ctx, m, q, item, clueX, drawY) {
+    const { doc, pdfFont } = ctx;
+    const { pScale, colW } = m;
+    // isFraction is true only when the clue fits on a single line AND
+    // contains \frac — so long narrative fraction clues (e.g. probability
+    // complementary questions) use the inline renderer which wraps text
+    // and handles *emphasis* markers correctly.
+    if (q.isFraction) {
+        // Auto-bold the leading verb so fraction clues emphasise it the same
+        // way the inline renderer does (drawFractionClue honours ** markers).
+        const r = drawFractionClue(doc, autoBoldVerb(item.clue || ''), clueX, drawY, {
+            fontSizePt: 9 * pScale, pdfFont, color: [15, 23, 42],
+        });
+        return drawY + r.belowBaseline + 1;
+    }
+    // Inline renderer: switches to bold/italic for **word** / *word* markers
+    const lastLineY = _drawClueInline(doc, item.clue || '', clueX, drawY,
+        colW - 14, 9 * pScale, pdfFont, [15, 23, 42], 4.5 * pScale);
+    return lastLineY + 1.5 * pScale;  // small cap-height clearance
+}
+
+/** Dotted working lines on a 5 mm pitch; returns the Y below the area. */
+function _drawWorkingArea(ctx, m, q, clueX, itemX, y) {
+    const { doc, pdfFont } = ctx;
+    const { pScale, SECTION_PAD, workingLineSpacing, colW } = m;
+    let nextY = y;
+    doc.setFont(pdfFont, 'normal');
+    doc.setFontSize(6.5 * pScale);
+    doc.setTextColor(160, 170, 185);
+    doc.text('Working', clueX, nextY);
+    nextY += SECTION_PAD;
+    for (let wl = 0; wl < q.workingCount; wl++) {
+        nextY += workingLineSpacing;
+        doc.setDrawColor(215, 222, 235);
+        doc.setLineWidth(0.2);
+        doc.setLineDashPattern([0.5, 1.5], 0);
+        doc.line(clueX, nextY, itemX + colW - 4, nextY);
+        doc.setLineDashPattern([], 0);
+    }
+    return nextY + SECTION_PAD;
+}
+
+/** Right-aligned "Answer: ____ unit" marking track; returns the Y below it. */
+function _drawAnswerTrack(ctx, m, item, itemX, y) {
+    const { doc, pdfFont } = ctx;
+    const { pScale, colW, answerLineSpacing, SECTION_PAD } = m;
+    const lineY = y + answerLineSpacing;
+    doc.setFont(pdfFont, 'normal');
+    doc.setFontSize(8 * pScale);
+    doc.setTextColor(100, 116, 139);
+    // item.unit is only populated for Easy measurement questions in
+    // the generator; printing it as a hint after the answer line tells
+    // students whether to write cm² / m / ° / etc.
+    const unitText  = item.unit ? ` ${latexToText(item.unit)}` : '';
+    const unitW     = unitText ? measureSup(doc, unitText, 8 * pScale) + 1 : 0;
+    // Right edge of the line is the column edge; label sits to the
+    // left of a fixed-length track so teachers can scan answers in a
+    // consistent vertical "rail" down the page.
+    const rightEdge   = itemX + colW - 4 - unitW;
+    const trackLength = Math.min(46 * pScale, colW - 26 - unitW);
+    const trackStart  = rightEdge - trackLength;
+    doc.text('Answer:', trackStart - 2, lineY, { align: 'right' });
+    doc.setDrawColor(150, 160, 180);
+    doc.setLineWidth(0.4);
+    doc.setLineDashPattern([0.8, 1.2], 0);
+    doc.line(trackStart, lineY, rightEdge, lineY);
+    doc.setLineDashPattern([], 0);
+    if (unitText) {
+        doc.setFont(pdfFont, 'bold');
+        doc.setFontSize(8 * pScale);
+        doc.setTextColor(100, 116, 139);
+        drawSup(doc, unitText.trim(), rightEdge + 1.5, lineY, 8 * pScale);
+    }
+    return lineY + SECTION_PAD;
+}
+
+/**
+ * Meta row: topic pill + outcome chips, centred in the column. Muted
+ * styling — these chips are administrative metadata and should not compete
+ * with the question text. Returns the Y below the row(s).
+ */
+function _drawMetaRow(ctx, m, item, q, itemX, y) {
+    const { doc, pdfFont } = ctx;
+    const { pScale, colW, chipFontPt } = m;
+    let nextY = y + 2 * pScale;
+    const chipH = 3.5 * pScale;
+    const gap   = 2;
+    // Ordered pill list: topic first, then outcome chips
+    const pills = _metaPills(ctx, m, item, q.itemCodes, 4, 4);
+    pills.forEach(p => { if (p.style === 'topic') p.rgb = TOPIC_COLOURS_RGB[item.topic] || [100, 116, 139]; });
+    // Wrap pills into rows, then centre each row in the column
+    const colCenterX = itemX + colW / 2;
+    const maxRowW    = colW - 4;
+    const pillRows = [];
+    let curRow = [], curRowW = 0;
+    for (const p of pills) {
+        const needed = curRowW > 0 ? gap + p.w : p.w;
+        if (curRowW > 0 && curRowW + gap + p.w > maxRowW) {
+            pillRows.push(curRow);
+            curRow  = [p];
+            curRowW = p.w;
+        } else {
+            curRow.push(p);
+            curRowW += needed;
+        }
+    }
+    if (curRow.length > 0) pillRows.push(curRow);
+    for (const r of pillRows) {
+        const totalW = r.reduce((s, p) => s + p.w, 0) + gap * (r.length - 1);
+        let px = colCenterX - totalW / 2;
+        for (const p of r) {
+            const pillTop = nextY - 2.5 * pScale;
+            if (p.style === 'topic') {
+                doc.setFont(pdfFont, 'normal');
+                doc.setFontSize(6 * pScale);
+                doc.setFillColor(
+                    Math.round(255 * 0.88 + p.rgb[0] * 0.12),
+                    Math.round(255 * 0.88 + p.rgb[1] * 0.12),
+                    Math.round(255 * 0.88 + p.rgb[2] * 0.12)
+                );
+                doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'F');
+                doc.setDrawColor(...p.rgb);
+                doc.setLineWidth(0.2);
+                doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'S');
+                doc.setTextColor(...p.rgb);
+                doc.text(p.text, px + 2, nextY);
+            } else {
+                // Outcome code chip — neutral slate so it reads as
+                // metadata, not a coloured callout.
+                doc.setFont(pdfFont, 'normal');
+                doc.setFontSize(chipFontPt);
+                doc.setFillColor(243, 245, 250);
+                doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'F');
+                doc.setDrawColor(210, 218, 230);
+                doc.setLineWidth(0.15);
+                doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'S');
+                doc.setTextColor(120, 130, 150);
+                doc.text(p.text, px + 2, nextY);
+            }
+            px += p.w + gap;
+        }
+        nextY += chipH + 1;
+    }
+    return nextY - 1;  // remove trailing inter-row gap
+}
+
+/**
+ * Placement. COLUMN-MAJOR fill (newspaper style): stack items down the
+ * current column until one won't fit, then move to the next column; when the
+ * last column on the page is full, break to a new page. This keeps the
+ * question numbers continuous down a column and then down the next — unlike
+ * shortest-column balancing, which interleaves 1,3,5 / 2,4,6.
+ *
+ * `flow` carries { cy, col, colY, pagesUsed, pageStartY }. Returns false when
+ * the page cap stops further questions, true when the item can be drawn.
+ */
+function _placeItem(ctx, m, flow, itemH, exportId) {
+    const { doc, drawWatermark, scale } = ctx;
+    const { cols, MARGIN, colW, pageBottom, capPages } = m;
+    const breakToNewPage = () => {
+        flow.pagesUsed++;
+        if (cols === 2) {
+            _drawColumnDivider(doc, MARGIN, colW, flow.pageStartY, Math.max(flow.colY[0], flow.colY[1]));
+        }
+        drawExportIdFooter(ctx, exportId, m.pScale);
+        doc.addPage();
+        drawWatermark();
+        flow.pageStartY = MARGIN + 15 * scale;
+        flow.cy         = flow.pageStartY;
+        flow.colY       = [flow.pageStartY, flow.pageStartY];
+        flow.col        = 0;
+    };
+
+    if (cols === 2) {
+        if (flow.colY[flow.col] + itemH > pageBottom) {
+            if (flow.col === 0) {
+                // Left column full → continue at the top of the right column.
+                flow.col = 1;
+            } else {
+                // Both columns full → next page (subject to the page cap).
+                if (capPages > 0 && flow.pagesUsed >= capPages) return false;
+                breakToNewPage();
+            }
+        }
+    } else if (flow.cy + itemH > pageBottom) {
+        if (capPages > 0 && flow.pagesUsed >= capPages) return false;
+        breakToNewPage();
+    }
+    return true;
+}
+
 /**
  * Draw a question page (Easy / Medium / Hard) in PDF.
  * Returns the number of questions that did NOT fit (overflow count).
  */
 function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1) {
     if (!questions || !questions.length) return 0;
-    const { doc, PAGE_WIDTH, PAGE_HEIGHT, MARGIN, scale, pdfFont, drawWatermark } = ctx;
+    const { doc, PAGE_WIDTH, PAGE_HEIGHT, MARGIN, scale, pdfFont } = ctx;
     pScale = pScale || scale;
+    const m = _questionPageMetrics(ctx, pScale);
+    const { cols, colW, itemGap } = m;
 
-    const cfg = state.settings;
-    const cols               = cfg.cols || 2;
-    const showTopic          = cfg.showTopic || false;
-    const showOutcomeChips   = cfg.psShowOutcomeChips || false;
-    const showOutcomesHeader = cfg.psShowOutcomesHeader || false;
-    const capPages           = cfg.psCapPages || 0;
-    const showDiagrams       = cfg.showDiagrams !== false;   // default true
-    const stage              = state.stage ?? 'Stage 4';
-    const DIAG_H             = 30 * pScale;  // allocated height (mm) per diagram
-    const availW             = PAGE_WIDTH - MARGIN * 2;
-    const colW               = (availW - (cols - 1) * 8) / cols;
-    const chipFontPt         = 5.5 * pScale;
-    // 5 mm working-line pitch matches standard graph paper so algebra
-    // students can keep equals-signs aligned across rows.
-    const workingLineSpacing = 5;
-    const answerLineSpacing  = 9 * pScale;
-    const itemGap            = 6 * pScale;
-    // Padding between major item sections (12pt ≈ 4.2mm) — gives the
-    // question, working area and answer track distinct visual zones.
-    const SECTION_PAD        = 4.2 * pScale;
+    // Per-column Y trackers (2-column mode); cy tracks the single column / deepest extent.
+    const flow = { cy: startY, col: 0, colY: [startY, startY], pagesUsed: 1, pageStartY: startY };
 
-    let cy          = startY, col = 0;
-    // Per-column Y trackers for shortest-column placement (2-column mode).
-    // Items are dropped into whichever column is currently shorter, which
-    // balances height when one column has a tall item (e.g. a diagram).
-    let colY = [startY, startY];
-
-    // Optional outcomes header strip
-    if (showOutcomesHeader) {
-        const activeTopics = Object.keys(state.selectedTopics).filter(t => state.selectedTopics[t]);
-        const outcomes = getOutcomesForTopics(activeTopics, stage);
-        if (outcomes.length > 0) {
-            const hdr_y = cy;
-            const hdr_pad = 2 * pScale;
-            const fontPt = 5.5 * pScale;
-            const rowH = 5.2 * pScale;                       // one row of pills
-            const pillH = 3.8 * pScale;
-            // Baseline that centres cap-height text vertically inside a pill
-            const capH = fontPt * 0.3528 * 0.72;
-            const pillBaseline = (rowTop) => rowTop + (rowH - pillH) / 2 + pillH / 2 + capH / 2;
-            doc.setFont(pdfFont, 'bold');
-            doc.setFontSize(fontPt);
-            const labelW = doc.getTextWidth('OUTCOMES') + 3 * pScale;
-            // Pass 1: flow the pills onto as many rows as they need (never drop an outcome).
-            const rows = [[]];
-            let rx = MARGIN + hdr_pad + labelW;
-            outcomes.forEach(o => {
-                const codeW = doc.getTextWidth(o.code) + 3 * pScale;
-                if (rx + codeW > MARGIN + availW - hdr_pad && rows[rows.length - 1].length) { rows.push([]); rx = MARGIN + hdr_pad + labelW; }
-                rows[rows.length - 1].push({ o, codeW, x: rx });
-                rx += codeW + 2 * pScale;
-            });
-            const hdr_h = rows.length * rowH + 1.6 * pScale;
-            doc.setFillColor(248, 250, 252);
-            doc.setDrawColor(226, 232, 240);
-            doc.setLineWidth(0.3);
-            doc.roundedRect(MARGIN, hdr_y, availW, hdr_h, 1.5, 1.5, 'FD');
-            doc.setFont(pdfFont, 'bold');
-            doc.setFontSize(fontPt);
-            doc.setTextColor(148, 163, 184);
-            doc.text('OUTCOMES', MARGIN + hdr_pad, pillBaseline(hdr_y + 0.8 * pScale));
-            // Pass 2: draw the pills
-            rows.forEach((row, ri2) => {
-                const rowTop = hdr_y + 0.8 * pScale + ri2 * rowH;
-                row.forEach(({ o, codeW, x }) => {
-                    const pillColor = o.appliesAll ? [99, 102, 241] : [16, 185, 129];
-                    doc.setFillColor(...pillColor.map(c => Math.round(c * 0.15 + 255 * 0.85)));
-                    doc.setDrawColor(...pillColor.map(c => Math.round(c * 0.3 + 255 * 0.7)));
-                    doc.roundedRect(x, rowTop + (rowH - pillH) / 2, codeW, pillH, 1, 1, 'FD');
-                    doc.setTextColor(...pillColor);
-                    doc.text(o.code, x + 1.5 * pScale, pillBaseline(rowTop));
-                });
-            });
-            // First question must clear the strip by a cap-height or more, and the
-            // column divider should start below it rather than cut through it.
-            cy += hdr_h + 6 * pScale;
-            colY = [cy, cy];   // header consumed space; reset both column trackers
-        }
+    const strip = _drawOutcomesStrip(ctx, m, flow.cy);
+    if (strip > 0) {
+        flow.cy += strip;
+        flow.colY = [flow.cy, flow.cy];   // header consumed space; reset both column trackers
+        flow.pageStartY = flow.cy;        // content begins below the outcomes strip
     }
-    let _rowMaxH     = 0;
     let overflowCount = 0;
-    let pagesUsed   = 1;
-    let pageStartY  = cy;       // Y where content begins on the current PDF page (below any outcomes strip)
 
     doc.setFont(pdfFont, 'normal');
     doc.setFontSize(9 * pScale);
 
     for (let i = 0; i < questions.length; i++) {
         const item = questions[i];
+        const q = _measureQuestion(ctx, m, item);
 
-        // Pre-calculate item height to decide whether it fits.
-        // Fraction clues need 3 line-heights (numerator + bar + denominator),
-        // but ONLY when the clue is short enough to sit on one line.
-        // Long narrative clues that happen to contain \frac (e.g. probability
-        // questions) must be word-wrapped normally to avoid column overflow.
-        // Reset clue font before splitTextToSize — prior iterations change doc
-        // font state, which would cause width calculation to use wrong metrics.
-        doc.setFont(pdfFont, 'normal');
-        doc.setFontSize(9 * pScale);
-        const clueText   = latexToText(item.clue || '');
-        const clueLines  = doc.splitTextToSize(clueText, colW - 14);
-        const isFraction = hasFraction(item.clue) && clueLines.length === 1;
-        // Multi-line clues (e.g. "Solve:\n$\dfrac{t}{9}=12$") can't take the
-        // single-line isFraction path above, but _drawClueInline still stacks
-        // any fraction-bearing equation line — each such line needs ~3
-        // line-heights (numerator+bar+denominator) instead of 1, same as the
-        // single-line case, or the diagram/working section below would
-        // overlap the denominator.
-        const extraFractionLines = isFraction ? 0
-            : (item.clue || '').split('\n').filter(l => hasFraction(l)).length;
-        const clueBlockH = isFraction
-            ? 3 * 4.5 * pScale
-            : (clueLines.length + extraFractionLines * 2) * 4.5 * pScale;
-
-        const workingCount = item.difficulty === 'Hard' ? 3 : item.difficulty === 'Medium' ? 2 : 1;
-        // Use item.notes (specific sub-topic key) for outcome lookup — item.topic is broad category
-        const itemCodes = showOutcomeChips && item.notes ? getTopicOutcomeCodes(item.notes, stage) : [];
-        // Estimate height for the combined meta row (topic pill + outcome chips on one centered line)
-        const hasMeta = (showTopic && item.topic) || itemCodes.length > 0;
-        let metaH = 0;
-        if (hasMeta) {
-            const chipH  = 3.5 * pScale;
-            const maxMetaW = colW - 4;
-            let lineW = 0, metaRows = 1;
-            if (showTopic && item.topic) {
-                doc.setFont(pdfFont, 'normal');
-                doc.setFontSize(6 * pScale);
-                lineW += doc.getTextWidth(item.topic.toUpperCase()) + 6;
-            }
-            if (itemCodes.length > 0) {
-                doc.setFont(pdfFont, 'bold');
-                doc.setFontSize(chipFontPt);
-                itemCodes.forEach(code => {
-                    const cw = doc.getTextWidth(code) + 6;
-                    if (lineW + cw > maxMetaW && lineW > 0) { metaRows++; lineW = cw; }
-                    else lineW += cw;
-                });
-            }
-            metaH = 4 * pScale + metaRows * (chipH + 1);
-        }
-        const hasDiagram = (showDiagrams || !!item.diagram?.essential) && !!item.diagram;
-        // Graph-style diagrams plot at equal x/y scale, so they come out tall and narrow in a
-        // 30 mm box and their labels shrink to nothing; give them more room.
-        const TALL_DIAGRAMS = { 'number-plane': 42, parabola: 42, 'coord-circle': 40, semicircle: 36, hyperbola: 42 };
-        const diagH = !hasDiagram ? 0
-            : isPrimDiagram(item.diagram) ? preferredHeightMM(item.diagram, colW - 13, pScale, DIAG_H)
-            : (TALL_DIAGRAMS[item.diagram.type] ? TALL_DIAGRAMS[item.diagram.type] * pScale : DIAG_H);
-        const itemH = clueBlockH
-            + (hasDiagram ? diagH + SECTION_PAD : 0)
-            + (workingCount > 0 ? SECTION_PAD + workingCount * workingLineSpacing + SECTION_PAD : 0)
-            + answerLineSpacing + SECTION_PAD + 6 * pScale
-            + metaH + itemGap;
-
-        // COLUMN-MAJOR fill (newspaper style): stack items down the current
-        // column until one won't fit, then move to the next column; when the
-        // last column on the page is full, break to a new page. This keeps the
-        // question numbers continuous down a column and then down the next —
-        // unlike shortest-column balancing, which interleaves 1,3,5 / 2,4,6.
-        const pageBottom = PAGE_HEIGHT - MARGIN - 10;
-        const breakToNewPage = () => {
-            pagesUsed++;
-            if (cols === 2) {
-                _drawColumnDivider(doc, MARGIN, colW, pageStartY, Math.max(colY[0], colY[1]));
-            }
-            drawExportIdFooter(ctx, exportId, pScale);
-            doc.addPage();
-            drawWatermark();
-            pageStartY = MARGIN + 15 * scale;
-            cy         = pageStartY;
-            colY       = [pageStartY, pageStartY];
-            col        = 0;
-        };
-
-        if (cols === 2) {
-            if (colY[col] + itemH > pageBottom) {
-                if (col === 0) {
-                    // Left column full → continue at the top of the right column.
-                    col = 1;
-                } else {
-                    // Both columns full → next page (subject to the page cap).
-                    if (capPages > 0 && pagesUsed >= capPages) {
-                        overflowCount = questions.length - i;
-                        break;
-                    }
-                    breakToNewPage();
-                }
-            }
-        } else if (cy + itemH > pageBottom) {
-            if (capPages > 0 && pagesUsed >= capPages) {
-                overflowCount = questions.length - i;
-                break;
-            }
-            breakToNewPage();
+        if (!_placeItem(ctx, m, flow, q.itemH, exportId)) {
+            overflowCount = questions.length - i;
+            break;
         }
 
-        const itemX = col === 0 ? MARGIN : MARGIN + colW + 8;
-        let drawY = cols === 2 ? colY[col] : cy;
+        const itemX = flow.col === 0 ? MARGIN : MARGIN + colW + 8;
+        const drawY = cols === 2 ? flow.colY[flow.col] : flow.cy;
 
         // ── Question number (inline with clue) ───────────────────────
         doc.setFont(pdfFont, 'bold');
@@ -1625,178 +1830,38 @@ function drawQuestionPage(ctx, questions, startY, pScale, exportId, startNum = 1
         doc.setTextColor(100, 116, 139);
         doc.text(`${startNum + i}.`, itemX, drawY);
 
-        // ── Clue text ────────────────────────────────────────────────
-        // isFraction is true only when the clue fits on a single line AND
-        // contains \frac — so long narrative fraction clues (e.g. probability
-        // complementary questions) use the inline renderer which wraps text
-        // and handles *emphasis* markers correctly.
-        let clueEndY;
         const clueX = itemX + 9;
-        if (isFraction) {
-            // Auto-bold the leading verb so fraction clues emphasise it the same
-            // way the inline renderer does (drawFractionClue honours ** markers).
-            const r = drawFractionClue(doc, autoBoldVerb(item.clue || ''), clueX, drawY, {
-                fontSizePt: 9 * pScale, pdfFont, color: [15, 23, 42],
-            });
-            clueEndY = drawY + r.belowBaseline + 1;
-        } else {
-            // Inline renderer: switches to bold/italic for **word** / *word* markers
-            const lastLineY = _drawClueInline(doc, item.clue || '', clueX, drawY,
-                colW - 14, 9 * pScale, pdfFont, [15, 23, 42], 4.5 * pScale);
-            clueEndY = lastLineY + 1.5 * pScale;  // small cap-height clearance
-        }
-
-        let nextY = clueEndY + SECTION_PAD;
+        let nextY = _drawClue(ctx, m, q, item, clueX, drawY) + m.SECTION_PAD;
 
         // ── Geometry diagram ─────────────────────────────────────────
-        if (hasDiagram) {
-            _drawDiagramInPDF(doc, item.diagram, itemX + 9, nextY, colW - 13, diagH, pScale, pdfFont);
-            nextY += diagH + SECTION_PAD;
+        if (q.hasDiagram) {
+            _drawDiagramInPDF(doc, item.diagram, itemX + 9, nextY, colW - 13, q.diagH, pScale, pdfFont);
+            nextY += q.diagH + m.SECTION_PAD;
         }
 
         // ── Working area: 5 mm grid pitch for algebra alignment ─────
-        if (workingCount > 0) {
-            doc.setFont(pdfFont, 'normal');
-            doc.setFontSize(6.5 * pScale);
-            doc.setTextColor(160, 170, 185);
-            doc.text('Working', clueX, nextY);
-            nextY += SECTION_PAD;
-            for (let wl = 0; wl < workingCount; wl++) {
-                nextY += workingLineSpacing;
-                doc.setDrawColor(215, 222, 235);
-                doc.setLineWidth(0.2);
-                doc.setLineDashPattern([0.5, 1.5], 0);
-                doc.line(clueX, nextY, itemX + colW - 4, nextY);
-                doc.setLineDashPattern([], 0);
-            }
-            nextY += SECTION_PAD;
-        }
+        if (q.workingCount > 0) nextY = _drawWorkingArea(ctx, m, q, clueX, itemX, nextY);
 
         // ── Answer line: right-aligned marking track ─────────────────
-        const lineY = nextY + answerLineSpacing;
-        doc.setFont(pdfFont, 'normal');
-        doc.setFontSize(8 * pScale);
-        doc.setTextColor(100, 116, 139);
-        // item.unit is only populated for Easy measurement questions in
-        // the generator; printing it as a hint after the answer line tells
-        // students whether to write cm² / m / ° / etc.
-        const unitText  = item.unit ? ` ${latexToText(item.unit)}` : '';
-        const unitW     = unitText ? measureSup(doc, unitText, 8 * pScale) + 1 : 0;
-        // Right edge of the line is the column edge; label sits to the
-        // left of a fixed-length track so teachers can scan answers in a
-        // consistent vertical "rail" down the page.
-        const rightEdge   = itemX + colW - 4 - unitW;
-        const trackLength = Math.min(46 * pScale, colW - 26 - unitW);
-        const trackStart  = rightEdge - trackLength;
-        doc.text('Answer:', trackStart - 2, lineY, { align: 'right' });
-        doc.setDrawColor(150, 160, 180);
-        doc.setLineWidth(0.4);
-        doc.setLineDashPattern([0.8, 1.2], 0);
-        doc.line(trackStart, lineY, rightEdge, lineY);
-        doc.setLineDashPattern([], 0);
-        if (unitText) {
-            doc.setFont(pdfFont, 'bold');
-            doc.setFontSize(8 * pScale);
-            doc.setTextColor(100, 116, 139);
-            drawSup(doc, unitText.trim(), rightEdge + 1.5, lineY, 8 * pScale);
-        }
-        nextY = lineY + SECTION_PAD;
+        nextY = _drawAnswerTrack(ctx, m, item, itemX, nextY);
 
-        // ── Meta row: topic pill + outcome chips, centered in column ──
-        // Muted styling — these chips are administrative metadata and
-        // should not compete with the question text.
-        if (hasMeta) {
-            nextY += 2 * pScale;
-            const chipH = 3.5 * pScale;
-            const gap   = 2;
-            // Build ordered pill list: topic first, then outcome chips
-            const pills = [];
-            if (showTopic && item.topic) {
-                const topicRgb = TOPIC_COLOURS_RGB[item.topic] || [100, 116, 139];
-                doc.setFont(pdfFont, 'normal');
-                doc.setFontSize(6 * pScale);
-                const tw = doc.getTextWidth(item.topic.toUpperCase()) + 4;
-                pills.push({ text: item.topic.toUpperCase(), w: tw, rgb: topicRgb, style: 'topic' });
-            }
-            if (itemCodes.length > 0) {
-                doc.setFont(pdfFont, 'bold');
-                doc.setFontSize(chipFontPt);
-                itemCodes.forEach(code => {
-                    pills.push({ text: code, w: doc.getTextWidth(code) + 4, style: 'chip' });
-                });
-            }
-            // Wrap pills into rows, then center each row in the column
-            const colCenterX = itemX + colW / 2;
-            const maxRowW    = colW - 4;
-            const pillRows = [];
-            let curRow = [], curRowW = 0;
-            for (const p of pills) {
-                const needed = curRowW > 0 ? gap + p.w : p.w;
-                if (curRowW > 0 && curRowW + gap + p.w > maxRowW) {
-                    pillRows.push(curRow);
-                    curRow  = [p];
-                    curRowW = p.w;
-                } else {
-                    curRow.push(p);
-                    curRowW += needed;
-                }
-            }
-            if (curRow.length > 0) pillRows.push(curRow);
-            // Draw each row centered
-            for (const r of pillRows) {
-                const totalW = r.reduce((s, p) => s + p.w, 0) + gap * (r.length - 1);
-                let px = colCenterX - totalW / 2;
-                for (const p of r) {
-                    const pillTop = nextY - 2.5 * pScale;
-                    if (p.style === 'topic') {
-                        doc.setFont(pdfFont, 'normal');
-                        doc.setFontSize(6 * pScale);
-                        doc.setFillColor(
-                            Math.round(255 * 0.88 + p.rgb[0] * 0.12),
-                            Math.round(255 * 0.88 + p.rgb[1] * 0.12),
-                            Math.round(255 * 0.88 + p.rgb[2] * 0.12)
-                        );
-                        doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'F');
-                        doc.setDrawColor(...p.rgb);
-                        doc.setLineWidth(0.2);
-                        doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'S');
-                        doc.setTextColor(...p.rgb);
-                        doc.text(p.text, px + 2, nextY);
-                    } else {
-                        // Outcome code chip — neutral slate so it reads as
-                        // metadata, not a coloured callout.
-                        doc.setFont(pdfFont, 'normal');
-                        doc.setFontSize(chipFontPt);
-                        doc.setFillColor(243, 245, 250);
-                        doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'F');
-                        doc.setDrawColor(210, 218, 230);
-                        doc.setLineWidth(0.15);
-                        doc.roundedRect(px, pillTop, p.w, chipH, 1, 1, 'S');
-                        doc.setTextColor(120, 130, 150);
-                        doc.text(p.text, px + 2, nextY);
-                    }
-                    px += p.w + gap;
-                }
-                nextY += chipH + 1;
-            }
-            nextY -= 1;  // remove trailing inter-row gap
-        }
+        // ── Meta row ─────────────────────────────────────────────────
+        if (q.hasMeta) nextY = _drawMetaRow(ctx, m, item, q, itemX, nextY);
 
         const actualItemH = nextY - drawY + itemGap;
 
         if (cols === 2) {
-            colY[col] += actualItemH;
+            flow.colY[flow.col] += actualItemH;
             // Track the deepest column for divider/page-break geometry.
-            cy = Math.max(colY[0], colY[1]);
+            flow.cy = Math.max(flow.colY[0], flow.colY[1]);
         } else {
-            cy += actualItemH;
+            flow.cy += actualItemH;
         }
     }
 
     // Final page: draw the divider down to the deepest column extent.
     if (cols === 2) {
-        const dividerEnd = Math.max(colY[0], colY[1]);
-        _drawColumnDivider(doc, MARGIN, colW, pageStartY, dividerEnd);
+        _drawColumnDivider(doc, MARGIN, colW, flow.pageStartY, Math.max(flow.colY[0], flow.colY[1]));
     }
 
     // Score footer — right-aligned "Score: ___ / N = ___ %"
