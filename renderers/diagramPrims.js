@@ -1213,6 +1213,14 @@ function numberPlanePrims({ pts, line: showLine, mid, tri }) {
     let yMin = Math.min(...pts.map(p => p[1])), yMax = Math.max(...pts.map(p => p[1]));
     const padX = Math.max(1, (xMax - xMin) * 0.18), padY = Math.max(1, (yMax - yMin) * 0.18);
     xMin -= padX; xMax += padX; yMin -= padY; yMax += padY;
+    // A very narrow (or very flat) window leaves no room for the point labels
+    // inside the frame, so they collide with the axis titles. Widen the short
+    // dimension (equal scale is kept, so the plot just gains empty grid) until
+    // the window is at least roughly square / no flatter than 1 : 1.6.
+    const growTo = (lo, hi, span) => { const c = (lo + hi) / 2; return [c - span / 2, c + span / 2]; };
+    const xr = xMax - xMin, yr = yMax - yMin;
+    if (xr < yr) [xMin, xMax] = growTo(xMin, xMax, yr);
+    else if (xr > yr * 1.6) [yMin, yMax] = growTo(yMin, yMax, xr / 1.6);
     const f = eqFrame(xMin, xMax, yMin, yMax, VW, VH);
     const { mapX, mapY, L, T, R, Bm } = f;
     const items = [...f.items];
