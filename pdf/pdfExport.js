@@ -1174,10 +1174,13 @@ export function drawExportSet(env, i, count, exportBase, { title = 'Maths Quiz',
         const mode = cfg.blankPageMode || 'off';
         if (mode === 'always' || (mode === 'odd' && setPages % 2 === 1)) {
             doc.addPage();
-            doc.setFont(ctx.pdfFont || 'helvetica', 'normal');
-            doc.setFontSize(7);
-            doc.setTextColor(200, 200, 200);
-            doc.text('This page is intentionally left blank', PAGE_WIDTH / 2, PAGE_HEIGHT - MARGIN, { align: 'center' });
+            // "Leave blank pages fully empty" omits the faint footer line.
+            if (!cfg.blankPageEmpty) {
+                doc.setFont(ctx.pdfFont || 'helvetica', 'normal');
+                doc.setFontSize(7);
+                doc.setTextColor(200, 200, 200);
+                doc.text('This page is intentionally left blank', PAGE_WIDTH / 2, PAGE_HEIGHT - MARGIN, { align: 'center' });
+            }
         }
     }
 }

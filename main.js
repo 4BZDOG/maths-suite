@@ -303,7 +303,7 @@ function _updateQuestionsPerPageSummary(nEasy, nMedium, nHard, pages) {
 }
 
 function _updatePageButtonLabels(nEasy, nMedium, nHard) {
-    const btns = document.querySelectorAll('.page-btn');
+    const btns = [...document.querySelectorAll('.page-btn')].slice(0, 4);   // Blank-sheet tab keeps its own label
     if (btns.length < 4) return;
     const ICONS  = ['fa-seedling', 'fa-bolt', 'fa-fire', 'fa-key'];
     const labels = [
@@ -452,6 +452,39 @@ function _setExportEnabled(enabled, reason) {
     btn.style.opacity = enabled ? '' : '0.55';
 }
 
+/**
+ * Duplex padding in the web preview: when the export would insert a blank sheet
+ * after each set (more than one copy, and the Blank Page for Duplex mode applies
+ * to this set's page count), reveal a "Blank" tab showing a dashed placeholder
+ * sheet; the faint "intentionally left blank" line follows the
+ * "Leave Blank Pages Fully Empty" setting, exactly as in the PDF.
+ */
+function _syncBlankPreview(show, mode = 'off', setPages = 0) {
+    const btn  = document.getElementById('page-btn-blank');
+    const page = document.getElementById('page5');
+    if (!btn || !page) return;
+    btn.hidden = !show;
+    if (!show) {
+        if (state.activePage === 5) showPage(1);
+        return;
+    }
+    const empty = document.getElementById('blankPageEmpty')?.checked ?? false;
+    const footer = document.getElementById('blank-sheet-footer');
+    if (footer) footer.hidden = empty;
+    const reason = document.getElementById('blank-sheet-reason');
+    if (reason) {
+        reason.textContent = mode === 'odd'
+            ? `Added because each set is ${setPages} page${setPages === 1 ? '' : 's'} (odd), so the next set starts on a fresh sheet.`
+            : 'Added after every set (except the last) so the next set starts on a fresh sheet.';
+    }
+}
+
+/** Refresh just the blank-sheet preview (called when the "fully empty" toggle changes). */
+function updateBlankPagePreview() {
+    syncSettingsFromDOM();
+    renderExportPreview();
+}
+
 function renderExportPreview() {
     const panel = document.getElementById('export-preview-panel');
     const body  = document.getElementById('export-preview-body');
@@ -464,6 +497,7 @@ function renderExportPreview() {
     const total = easy + medium + hard;
 
     if (total === 0) {
+        _syncBlankPreview(false);
         body.innerHTML = '<span style="opacity:.6;">Click Regenerate to see export details.</span>';
         _setExportEnabled(false, 'Generate questions before exporting');
         return;
@@ -487,6 +521,7 @@ function renderExportPreview() {
     ].filter(r => r.sel && r.n > 0);
 
     if (diffRows.length === 0 && !selKey) {
+        _syncBlankPreview(false);
         body.innerHTML = '<span style="opacity:.7;">No pages selected. Tick at least one row in <em>Page Selection &amp; Order</em> to enable export.</span>';
         _setExportEnabled(false, 'Select at least one page to export');
         return;
@@ -529,6 +564,7 @@ function renderExportPreview() {
     const blankMode = document.getElementById('blankPageMode')?.value || 'off';
     const blankPerSet = (blankMode === 'always' || (blankMode === 'odd' && pageCount % 2 === 1)) ? 1 : 0;
     const blankTotal = blankPerSet * Math.max(0, copies - 1);
+    _syncBlankPreview(blankTotal > 0, blankMode, pageCount);
     if (blankTotal > 0) {
         html += `<div class="ep-row">
             <span style="font-weight:600;"><i class="fas fa-copy" style="color:#94a3b8; margin-right:5px; font-size:10px;"></i>Blank pages (duplex)</span>
@@ -1438,6 +1474,7 @@ window._puzzleApp = {
     updateUI,
     renderTierUI,
     renderExportPreview,
+    updateBlankPagePreview,
     updateGlobalFontScale,
     updateTitleScale,
     updatePaperSize,

@@ -88,3 +88,12 @@ test('pdf golden: papers differ (letter packs fewer questions than A4 at the sam
     const a4 = runExport({ fixture: 'core' }), lt = runExport({ fixture: 'core', paperSize: 'letter' });
     assert.ok(a4.pages[0].q >= lt.pages[0].q);
 });
+
+test('pdf golden: "leave blank pages fully empty" drops the footer line but keeps the page', () => {
+    const base = { fixture: 'core', count: 2, blankPageMode: 'always' };
+    const withText = runExport(base);
+    const empty = runExport({ ...base, settings: { blankPageEmpty: true } });
+    assert.equal(empty.total, withText.total, 'page count must not change');
+    assert.equal(withText.pages[4].text.some(t => /intentionally left blank/.test(t)), true);
+    assert.deepEqual(empty.pages[4].text, [], 'blank page has no text at all');
+});

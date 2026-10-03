@@ -1125,6 +1125,41 @@ body.sidebar-closed .toggle-sidebar { left: 20px; }
 .page-btn[data-page="1"].active { color: #10b981; border-bottom-color: #10b981; }
 .page-btn[data-page="2"].active { color: #f59e0b; border-bottom-color: #f59e0b; }
 .page-btn[data-page="3"].active { color: #ef4444; border-bottom-color: #ef4444; }
+.page-btn[hidden] { display: none; }
+.page-btn-blank { border: 1px dashed var(--border); }
+
+/* Duplex padding preview: a dashed, empty sheet (preview-only, never exported) */
+.page.page-blank {
+    background: transparent;
+    border: 2px dashed #94a3b8;
+    box-shadow: none;
+    border-radius: 6px;
+    align-items: center;
+    justify-content: center;
+}
+.page.page-blank.visible { display: flex; }
+.page.page-blank .blank-sheet-note {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    max-width: 70%;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #64748b !important;
+}
+.page.page-blank .blank-sheet-note i { font-size: 1.6rem; opacity: 0.6; }
+.page.page-blank .blank-sheet-footer {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 15mm;
+    text-align: center;
+    font-size: 7pt;
+    color: #c8c8c8;
+}
+.page.page-blank .blank-sheet-footer[hidden] { display: none; }
+[data-theme="dark"] .page.page-blank { border-color: #64748b; }
+[data-theme="dark"] .page.page-blank .blank-sheet-note { color: #94a3b8 !important; }
 
 .zoom-display {
     display: flex;
