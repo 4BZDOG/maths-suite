@@ -81,3 +81,9 @@ test('export payload shape round-trips through the sanitizer unchanged', () => {
     const out = sanitizeImportedState(payload);
     assert.deepEqual(out, payload);
 });
+
+test('sanitizeImportedState keeps the blankPageEmpty duplex setting', () => {
+    const out = sanitizeImportedState({ settings: { blankPageMode: 'odd', blankPageEmpty: true } });
+    assert.equal(out.settings.blankPageEmpty, true);
+    assert.equal(out.settings.blankPageMode, 'odd');
+});

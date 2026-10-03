@@ -6,7 +6,7 @@ import globals from 'globals';
 export default [
     {
         files: ['**/*.js', '**/*.mjs'],
-        ignores: ['bundle.js', 'node_modules/**', 'stripe-worker/node_modules/**'],
+        ignores: ['bundle.js', 'dist/**', 'node_modules/**', 'stripe-worker/node_modules/**'],
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType:  'module',

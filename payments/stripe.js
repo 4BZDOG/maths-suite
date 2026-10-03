@@ -8,6 +8,8 @@
 //   handleCheckoutReturn() reads ?stripe_session=, POSTs to /api/verify, sets session
 //   openCustomerPortal()  POST /api/portal   → portal URL → redirect
 //   refreshSession()      GET  /api/me        → re-validate token on app startup
+//   ensureIdentity()      POST /api/identity  → server-issued anonymous user token
+//   recordExport()        POST /api/export-count → server-side monthly export cap
 //
 // STRIPE_CONFIG lives in payments/config.js.
 // Stripe secret keys are stored only in Cloudflare Worker secrets (never here).
@@ -47,10 +49,16 @@ export async function initiateCheckout(tier = TIER.PRO, interval = 'monthly') {
     // cancelUrl: strip any existing query params so the user returns cleanly.
     const cancelUrl  = base;
 
-    const session = getSession();
+    // The worker binds the purchase to the identity in the Bearer token and
+    // rejects a mismatching userId, so make sure we hold a server-issued one.
+    const session = await ensureIdentity();
+    if (!session?.token) throw new Error('Could not establish a secure session. Please try again.');
     const resp = await fetch(`${STRIPE_CONFIG.workerUrl}/api/checkout`, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type':  'application/json',
+            'Authorization': `Bearer ${session.token}`,
+        },
         body:    JSON.stringify({
             priceId,
             tier,
@@ -199,4 +207,61 @@ export async function refreshSession() {
  */
 export function isStripeConfigured() {
     return !!(STRIPE_CONFIG.workerUrl && STRIPE_CONFIG.prices.proMonthly);
+}
+
+/**
+ * Make sure the browser holds a server-issued identity token (anonymous user
+ * id signed by the worker). No-op when a token is already stored. Returns the
+ * current session, or null when the worker is unconfigured / unreachable.
+ */
+export async function ensureIdentity() {
+    const session = getSession();
+    if (session.token) return session;
+    if (!STRIPE_CONFIG.workerUrl) return null;
+    try {
+        const resp = await fetch(`${STRIPE_CONFIG.workerUrl}/api/identity`, { method: 'POST' });
+        if (!resp.ok) return null;
+        const data = await resp.json();
+        if (!data.token || !data.userId) return null;
+        // Never overwrite an admin session's tier with the anonymous free tier.
+        setSession({
+            userId:    data.userId,
+            token:     data.token,
+            expiresAt: data.expiresAt ?? null,
+            ...(session.tier === TIER.ADMIN ? {} : { tier: data.tier ?? TIER.FREE }),
+        });
+        return getSession();
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Count one PDF export against the server-side monthly cap (free tier).
+ * Best-effort: when the worker is unconfigured, unreachable, or errors, the
+ * export is ALLOWED (the local client-side limits still apply). Only an explicit
+ * 429 from the worker blocks.
+ *
+ * @returns {Promise<{allowed:boolean, count:number|null, limit:number|null, resetsAt?:string, source:'server'|'offline'}>}
+ */
+export async function recordExport() {
+    const offline = { allowed: true, count: null, limit: null, source: 'offline' };
+    if (!STRIPE_CONFIG.workerUrl) return offline;
+    if (getSession().tier === TIER.ADMIN) return offline;
+    try {
+        const session = await ensureIdentity();
+        if (!session?.token) return offline;
+        const resp = await fetch(`${STRIPE_CONFIG.workerUrl}/api/export-count`, {
+            method:  'POST',
+            headers: { Authorization: `Bearer ${session.token}` },
+        });
+        if (resp.status === 429 || resp.ok) {
+            const d = await resp.json();
+            return { allowed: resp.ok && d.allowed !== false, count: d.count ?? null, limit: d.limit ?? null, resetsAt: d.resetsAt, source: 'server' };
+        }
+        if (resp.status === 401) setSession({ token: null, userId: null });  // stale token: re-issue next time
+    } catch {
+        // Network failure — fall through to allow.
+    }
+    return offline;
 }

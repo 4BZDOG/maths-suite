@@ -14,6 +14,7 @@ import { exportPDF } from './pdf/pdfExport.js';
 
 import { showToast } from './ui/toast.js';
 import { generateMathsQuestions } from './generators/mathsQuestionGen.js';
+import { groupSubOps } from './generators/subOps.js';
 import { openModal, closeModal } from './ui/modal.js';
 import { setupSidebarResize, toggleSidebar, switchTab, setupTablistKeys, closeSidebarOnNarrow, isNarrowScreen } from './ui/sidebar.js';
 import { toggleDarkMode } from './ui/darkMode.js';
@@ -24,7 +25,7 @@ import { setupDragAndDrop } from './ui/dropZone.js';
 import { downloadConfig } from './import-export/exportConfig.js';
 import { hasFeature, FEATURE, PRICING, TIER, GROUPS, FREE_LIMITS, ADMIN_KEY, isAdmin, enableAdminMode, disableAdminMode, getActiveGroupId, getBulkExportLimit } from './payments/access.js';
 import { pruneExpiredSession } from './payments/session.js';
-import { handleCheckoutReturn, initiateCheckout, openCustomerPortal, isStripeConfigured, refreshSession } from './payments/stripe.js';
+import { handleCheckoutReturn, initiateCheckout, openCustomerPortal, isStripeConfigured, refreshSession, recordExport } from './payments/stripe.js';
 import {
     openAccessPanel, closeAccessPanel,
     applyGroupPreset, acpFeatureChange,
@@ -303,7 +304,7 @@ function _updateQuestionsPerPageSummary(nEasy, nMedium, nHard, pages) {
 }
 
 function _updatePageButtonLabels(nEasy, nMedium, nHard) {
-    const btns = document.querySelectorAll('.page-btn');
+    const btns = [...document.querySelectorAll('.page-btn')].slice(0, 4);   // Blank-sheet tab keeps its own label
     if (btns.length < 4) return;
     const ICONS  = ['fa-seedling', 'fa-bolt', 'fa-fire', 'fa-key'];
     const labels = [
@@ -452,6 +453,39 @@ function _setExportEnabled(enabled, reason) {
     btn.style.opacity = enabled ? '' : '0.55';
 }
 
+/**
+ * Duplex padding in the web preview: when the export would insert a blank sheet
+ * after each set (more than one copy, and the Blank Page for Duplex mode applies
+ * to this set's page count), reveal a "Blank" tab showing a dashed placeholder
+ * sheet; the faint "intentionally left blank" line follows the
+ * "Leave Blank Pages Fully Empty" setting, exactly as in the PDF.
+ */
+function _syncBlankPreview(show, mode = 'off', setPages = 0) {
+    const btn  = document.getElementById('page-btn-blank');
+    const page = document.getElementById('page5');
+    if (!btn || !page) return;
+    btn.hidden = !show;
+    if (!show) {
+        if (state.activePage === 5) showPage(1);
+        return;
+    }
+    const empty = document.getElementById('blankPageEmpty')?.checked ?? false;
+    const footer = document.getElementById('blank-sheet-footer');
+    if (footer) footer.hidden = empty;
+    const reason = document.getElementById('blank-sheet-reason');
+    if (reason) {
+        reason.textContent = mode === 'odd'
+            ? `Added because each set is ${setPages} page${setPages === 1 ? '' : 's'} (odd), so the next set starts on a fresh sheet.`
+            : 'Added after every set (except the last) so the next set starts on a fresh sheet.';
+    }
+}
+
+/** Refresh just the blank-sheet preview (called when the "fully empty" toggle changes). */
+function updateBlankPagePreview() {
+    syncSettingsFromDOM();
+    renderExportPreview();
+}
+
 function renderExportPreview() {
     const panel = document.getElementById('export-preview-panel');
     const body  = document.getElementById('export-preview-body');
@@ -464,6 +498,7 @@ function renderExportPreview() {
     const total = easy + medium + hard;
 
     if (total === 0) {
+        _syncBlankPreview(false);
         body.innerHTML = '<span style="opacity:.6;">Click Regenerate to see export details.</span>';
         _setExportEnabled(false, 'Generate questions before exporting');
         return;
@@ -487,6 +522,7 @@ function renderExportPreview() {
     ].filter(r => r.sel && r.n > 0);
 
     if (diffRows.length === 0 && !selKey) {
+        _syncBlankPreview(false);
         body.innerHTML = '<span style="opacity:.7;">No pages selected. Tick at least one row in <em>Page Selection &amp; Order</em> to enable export.</span>';
         _setExportEnabled(false, 'Select at least one page to export');
         return;
@@ -529,6 +565,7 @@ function renderExportPreview() {
     const blankMode = document.getElementById('blankPageMode')?.value || 'off';
     const blankPerSet = (blankMode === 'always' || (blankMode === 'odd' && pageCount % 2 === 1)) ? 1 : 0;
     const blankTotal = blankPerSet * Math.max(0, copies - 1);
+    _syncBlankPreview(blankTotal > 0, blankMode, pageCount);
     if (blankTotal > 0) {
         html += `<div class="ep-row">
             <span style="font-weight:600;"><i class="fas fa-copy" style="color:#94a3b8; margin-right:5px; font-size:10px;"></i>Blank pages (duplex)</span>
@@ -649,6 +686,7 @@ function showPage(n) {
         else b.removeAttribute('aria-current');
         b.setAttribute('aria-selected', active ? 'true' : 'false');
         b.tabIndex = active ? 0 : -1;   // roving tabindex for the tablist
+        if (active && b.scrollIntoView) b.scrollIntoView({ inline: 'nearest', block: 'nearest' });   // narrow screens: the tab strip scrolls
     });
     renderActivePage();
     document.querySelector('.viewport')?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -662,7 +700,6 @@ function focusPage(n) {
 // Topic toggles
 // =============================================================
 function toggleTopic(topicName) {
-    pushHistory();
     const newVal = !state.selectedTopics[topicName];
     state.selectedTopics[topicName] = newVal;
     // When toggling the parent checkbox, set ALL sub-ops to match
@@ -687,10 +724,10 @@ function toggleTopic(topicName) {
     _pendingTopicChange = true;
     updateTopicCount();
     renderOutcomes();
+    pushHistory();
 }
 
 function setTopicsAll(enabled) {
-    pushHistory();
     const stageTopics = getTopicsForStage(state.stage);
     stageTopics.forEach(t => {
         state.selectedTopics[t] = enabled;
@@ -715,6 +752,7 @@ function setTopicsAll(enabled) {
     updateTopicCount();
     renderOutcomes();
     saveState();
+    pushHistory();
 }
 
 function updateTopicCount() {
@@ -840,6 +878,7 @@ function toggleOutcomeFilter(code, checked) {
     updateTopicCount();
     debouncedGenerate();
     saveState();
+    pushHistory();
 }
 
 /**
@@ -866,6 +905,7 @@ function focusOutcome(code) {
     showToast(`Topics filtered to ${code} — ${matchingTopics.join(', ')}`, 'success');
     debouncedGenerate();
     saveState();
+    pushHistory();
 }
 
 function clearOutcomeFilter() {
@@ -874,6 +914,7 @@ function clearOutcomeFilter() {
     updateTopicCount();
     debouncedGenerate();
     saveState();
+    pushHistory();
 }
 
 function toggleSubOp(topic, opKey) {
@@ -883,6 +924,7 @@ function toggleSubOp(topic, opKey) {
     _pendingTopicChange = true;
     updateTopicCount();
     saveState();
+    pushHistory();
 }
 
 function toggleTopicExpand(topicName) {
@@ -1011,10 +1053,15 @@ function _buildSubOpsPanels() {
             // when state.includePath is on.
             const coreOps = ops.filter(op => op.pathway !== 'path');
             const pathOps = ops.filter(op => op.pathway === 'path');
-            html += coreOps.map(renderRow).join('');
+            // Optional `group` metadata (generators/subOps.js) adds sub-headings.
+            const renderList = list => groupSubOps(list).map(run =>
+                (run.group ? `<div class="subop-group-heading">${esc(run.group)}</div>` : '') +
+                run.ops.map(renderRow).join('')
+            ).join('');
+            html += renderList(coreOps);
             if (pathOps.length > 0) {
                 html += `<div class="subop-path-divider"><i class="fas fa-road"></i>Stage 5.3 Path</div>`;
-                html += pathOps.map(renderRow).join('');
+                html += renderList(pathOps);
             }
         }
 
@@ -1165,6 +1212,7 @@ function setStage(newStage) {
     renderTopicTogglesByStrand();
     saveState();
     debouncedGenerate();
+    pushHistory();
 }
 
 /**
@@ -1220,6 +1268,20 @@ function setIncludePath(checked) {
     updateTopicCount();
     saveState();
     debouncedGenerate();
+    pushHistory();
+}
+
+/**
+ * Re-render everything that depends on the restored snapshot (stage, path,
+ * topics, sub-ops, outcome filter). state + stage/path/pages controls are
+ * already set by core/history.js; this rebuilds the topic list (and, through
+ * it, sub-op panels, outcome chips and counts) then regenerates the sets.
+ */
+function _afterHistoryRestore() {
+    renderTopicTogglesByStrand();
+    _updateAllSubOpBadges();
+    saveState();
+    generateAll();
 }
 
 function setPagesPerDifficulty(n) {
@@ -1228,6 +1290,7 @@ function setPagesPerDifficulty(n) {
     state.questionsPerSet = pages;
     saveState();
     generateAll();
+    pushHistory();
 }
 
 // =============================================================
@@ -1426,7 +1489,15 @@ window._puzzleApp = {
     openModal: (el) => openModal(el),
     closeModal,
     downloadConfig,
-    exportPDF,
+    // Server-side monthly cap (best-effort: offline/unconfigured worker allows).
+    exportPDF: async (...args) => {
+        const r = await recordExport();
+        if (!r.allowed) {
+            showToast(`Monthly free export limit reached (${r.limit}). Upgrade to Pro for unlimited exports.`, 'warning');
+            return;
+        }
+        return exportPDF(...args);
+    },
     closeSidebarOnNarrow,
     toggleDarkMode,
     toggleSidebar,
@@ -1438,6 +1509,7 @@ window._puzzleApp = {
     updateUI,
     renderTierUI,
     renderExportPreview,
+    updateBlankPagePreview,
     updateGlobalFontScale,
     updateTitleScale,
     updatePaperSize,
@@ -1449,8 +1521,8 @@ window._puzzleApp = {
     focusOutcome,
     clearOutcomeFilter,
     hardReset: () => hardReset(),
-    undo: () => undo(() => { _updateAllParentCheckboxes(); _updateAllSubOpBadges(); updateTopicCount(); saveState(); generateAll(); }),
-    redo: () => redo(() => { _updateAllParentCheckboxes(); _updateAllSubOpBadges(); updateTopicCount(); saveState(); generateAll(); }),
+    undo: () => undo(_afterHistoryRestore),
+    redo: () => redo(_afterHistoryRestore),
     debouncedGenerate,
     renderActivePage,
     debouncedUpdateUI,
@@ -1590,8 +1662,8 @@ window.addEventListener('load', async () => {
 
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') closeModal();
-            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }); }
-            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(() => { _updateAllParentCheckboxes(); updateTopicCount(); saveState(); generateAll(); }); }
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') { e.preventDefault(); undo(_afterHistoryRestore); }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z'))) { e.preventDefault(); redo(_afterHistoryRestore); }
             if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 's') { e.preventDefault(); downloadConfig(); }
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); generateAll(); }
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) { e.preventDefault(); promptAdminKey(); }

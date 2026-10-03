@@ -7,6 +7,8 @@
 // geometry.
 // =============================================================
 
+import { SUB_OPS } from './subOps.js';
+
 // Seeded PRNG (Mulberry32)
 function mulberry32(seed) {
     return function () {
@@ -323,257 +325,9 @@ function fracStr(n, d) {
     return s.d === 1 ? String(s.n) : `$\\frac{${s.n}}{${s.d}}$`;
 }
 
-// ============================================================
-// SUB_OPS metadata — defines selectable sub-operations per topic.
-// Each entry: { key, label, stages?, pathway? }
-//   stages  - which stages include this op (default: both)
-//   pathway - 'path' means Stage 5 Path only; omit for core
-// ============================================================
-export const SUB_OPS = {
-    'Integers': [
-        { key: 'add',      label: 'Add (+)' },
-        { key: 'subtract', label: 'Subtract (−)' },
-        { key: 'multiply', label: 'Multiply (×)' },
-        { key: 'divide',   label: 'Divide (÷)' },
-        { key: 'bodmas',   label: 'BODMAS' },
-    ],
-    'Decimals': [
-        { key: 'add-subtract',   label: 'Add / Subtract' },
-        { key: 'multiply-divide', label: 'Multiply / Divide' },
-    ],
-    'Rounding': [
-        { key: 'nearest',        label: 'Nearest 10 / 100 / 1000' },
-        { key: 'decimal-places', label: 'Decimal places' },
-        { key: 'sig-figs',       label: 'Significant figures' },
-        { key: 'sci-notation',     label: 'Scientific notation',  stages: ['Stage 5'] },
-        { key: 'measurement-error', label: 'Measurement error / limits', stages: ['Stage 5'] },
-    ],
-    'Fractions': [
-        { key: 'fraction-of',     label: 'Fraction of amount' },
-        { key: 'add-subtract',    label: 'Add / Subtract' },
-        { key: 'multiply-divide', label: 'Multiply / Divide' },
-        { key: 'simplify-convert', label: 'Simplify / Convert' },
-    ],
-    'Percentages': [
-        { key: 'find-pct',        label: 'Find percentage' },
-        { key: 'increase-decrease', label: 'Increase / Decrease' },
-        { key: 'reverse-change',  label: 'Reverse / % change' },
-    ],
-    'Algebra': [
-        { key: 'solve',        label: 'Solve equations' },
-        { key: 'substitution', label: 'Substitution' },
-        { key: 'like-terms',     label: 'Add / subtract like terms' },
-        { key: 'expand-simplify', label: 'Expand and simplify' },
-        { key: 'factorise-hcf',  label: 'Factorise (HCF)' },
-        { key: 'word-expression', label: 'Expression from words' },
-        // Stage 5 core
-        { key: 'expand',          label: 'Expand expressions',     stages: ['Stage 5'] },
-        { key: 'factorise',       label: 'Factorise expressions',  stages: ['Stage 5'] },
-        { key: 'factorise-bracket', label: 'Factorise (common bracket)', stages: ['Stage 5'] },
-        { key: 'factorise-nonmonic', label: 'Factorise (non-monic)', stages: ['Stage 5'] },
-        { key: 'factorise-grouping', label: 'Factorise (grouping)',  stages: ['Stage 5'] },
-        { key: 'alg-fractions',   label: 'Algebraic fractions',    stages: ['Stage 5'] },
-        { key: 'quadratic-solve', label: 'Solve quadratics',       stages: ['Stage 5'] },
-        { key: 'indices-laws',    label: 'Index laws',             stages: ['Stage 5'] },
-        // Stage 5 Path
-        { key: 'simultaneous',   label: 'Simultaneous equations', stages: ['Stage 5'], pathway: 'path' },
-        { key: 'surds-simplify', label: 'Simplify surds',         stages: ['Stage 5'], pathway: 'path' },
-        { key: 'surds-operate',  label: 'Add / Multiply surds',   stages: ['Stage 5'], pathway: 'path' },
-    ],
-    'Geometry': [
-        { key: 'area-perimeter', label: 'Area / Perimeter' },
-        { key: 'pythagoras',     label: 'Pythagoras' },
-        { key: 'angles',         label: 'Angles' },
-        { key: 'circles',        label: 'Circles' },
-        { key: 'surface-area',      label: 'Surface area' },
-        { key: 'composite-volume',  label: 'Composite volume',       stages: ['Stage 5'] },
-        { key: 'similar-triangles', label: 'Similar triangles',      stages: ['Stage 5'] },
-    ],
-    'Statistics': [
-        { key: 'mean-median', label: 'Mean / Median' },
-        { key: 'mode-range',  label: 'Mode / Range' },
-        { key: 'stem-leaf',   label: 'Stem-and-leaf plot' },
-        { key: 'iqr',         label: 'Interquartile range' },
-        // Stage 5
-        { key: 'five-number-summary', label: 'Five-number summary', stages: ['Stage 5'] },
-        { key: 'std-dev',             label: 'Standard deviation',  stages: ['Stage 5'] },
-        { key: 'box-plot',            label: 'Box plots / outliers', stages: ['Stage 5'] },
-        { key: 'bivariate',           label: 'Bivariate data',      stages: ['Stage 5'] },
-    ],
-    'Financial Maths': [
-        { key: 'simple-interest',   label: 'Simple interest' },
-        { key: 'compound-interest', label: 'Compound interest' },
-        { key: 'markup-profit',     label: 'Markup / Discount / Profit' },
-        { key: 'gst',               label: 'GST' },
-        // Stage 5
-        { key: 'depreciation',    label: 'Depreciation',       stages: ['Stage 5'] },
-        { key: 'compound-period', label: 'Compound (periods)', stages: ['Stage 5'] },
-        { key: 'wages',           label: 'Wages / overtime / loading', stages: ['Stage 5'] },
-        { key: 'commission',      label: 'Commission / PAYG tax',      stages: ['Stage 5'] },
-        { key: 'term-payments',   label: 'Term payments',              stages: ['Stage 5'] },
-    ],
-    // Right-Angled Triangles — trig intro (Stage 4) extending to applications
-    // (angles of elevation/depression) and non-right triangles (Stage 5 Path)
-    'Trigonometry': [
-        { key: 'find-side',    label: 'Find a side (SOHCAHTOA)' },
-        { key: 'find-angle',   label: 'Find an angle' },
-        { key: 'applications', label: 'Elevation / depression',  stages: ['Stage 5'] },
-        { key: 'sine-rule',    label: 'Sine rule',    stages: ['Stage 5'] },
-        { key: 'cosine-rule',  label: 'Cosine rule',  stages: ['Stage 5'] },
-        { key: 'area-rule',    label: 'Area (½ab sinC)', stages: ['Stage 5'] },
-        { key: 'exact-values', label: 'Exact values', stages: ['Stage 5'] },
-        // Path
-        { key: 'trig-equations', label: 'Trig equations', stages: ['Stage 5'], pathway: 'path' },
-        { key: 'trig-3d',        label: '3D trigonometry', stages: ['Stage 5'], pathway: 'path' },
-        { key: 'obtuse-angles', label: 'Obtuse angles',  stages: ['Stage 5'], pathway: 'path' },
-        { key: 'bearings',      label: 'Bearings (true)', stages: ['Stage 5'], pathway: 'path' },
-    ],
-    'Non-linear Relationships': [
-        { key: 'parabola-features', label: 'Parabola: features',    stages: ['Stage 5'] },
-        // Path
-        { key: 'parabola-sketch',   label: 'Parabola: sketch',      stages: ['Stage 5'], pathway: 'path' },
-        { key: 'identify-graph',    label: 'Identify graph type',   stages: ['Stage 5'], pathway: 'path' },
-    ],
-    'Probability': [
-        { key: 'theoretical',   label: 'Theoretical probability' },
-        { key: 'experimental',  label: 'Experimental / relative frequency' },
-        { key: 'complementary', label: 'Complementary events' },
-        { key: 'multi-event',   label: 'Multi-event / Mutually exclusive' },
-        { key: 'conditional',   label: 'Conditional probability', stages: ['Stage 5'] },
-        { key: 'venn',          label: 'Venn diagrams',           stages: ['Stage 5'] },
-        { key: 'two-way',       label: 'Two-way tables',          stages: ['Stage 5'] },
-    ],
-    'Ratios & Rates': [
-        { key: 'simplify',     label: 'Simplify a ratio' },
-        { key: 'unit-ratio',   label: 'Ratios with unit conversion' },
-        { key: 'divide-ratio', label: 'Divide in a ratio' },
-        { key: 'equivalent',   label: 'Equivalent ratios' },
-        { key: 'unit-rate',    label: 'Unit rate' },
-        { key: 'speed',        label: 'Speed / Distance / Time' },
-    ],
-    // ─── 2022-syllabus focus areas added as standalone topics ───────────
-    // These mirror the NESA Mathematics K-10 (2022) focus areas that aren't
-    // discoverable inside the Algebra / Geometry umbrellas. Existing users
-    // who already had Algebra/Geometry selected keep those — the new topics
-    // are purely additive.
-    'Indices': [
-        { key: 'indices-evaluate', label: 'Evaluate a power' },
-        { key: 'indices-multiply', label: 'Multiply (same base)' },
-        { key: 'indices-divide',   label: 'Divide (same base)' },
-        { key: 'indices-power',    label: 'Power of a power' },
-        { key: 'primes',           label: 'Primes / prime factorisation' },
-        { key: 'hcf-lcm',          label: 'HCF and LCM' },
-        { key: 'divisibility',     label: 'Divisibility tests' },
-        { key: 'indices-zero',     label: 'Zero index',  stages: ['Stage 5'] },
-        { key: 'indices-negative', label: 'Negative index', stages: ['Stage 5'] },
-        { key: 'indices-fraction', label: 'Fractional index', stages: ['Stage 5'] },
-    ],
-    'Algebraic Indices': [
-        { key: 'alg-multiply',     label: 'Multiply (same base)' },
-        { key: 'alg-divide',       label: 'Divide (same base)' },
-        { key: 'alg-power',        label: 'Power of a power' },
-        { key: 'alg-coefficients', label: 'With coefficients' },
-        { key: 'alg-zero',         label: 'Zero index',     stages: ['Stage 5'] },
-        { key: 'alg-negative',     label: 'Negative index', stages: ['Stage 5'] },
-        { key: 'alg-fraction',     label: 'Fractional index', stages: ['Stage 5'] },
-    ],
-    'Equations': [
-        { key: 'one-step',     label: 'One-step' },
-        { key: 'two-step',     label: 'Two-step' },
-        { key: 'both-sides',   label: 'Variables on both sides' },
-        { key: 'brackets',     label: 'With brackets' },
-        { key: 'fractions',    label: 'With fractions' },
-        { key: 'substitution', label: 'With substitution' },
-        { key: 'quadratic-square', label: 'Solve x² = a' },
-        // Stage 5: Equations and Inequalities
-        { key: 'inequalities', label: 'Linear inequalities',     stages: ['Stage 5'] },
-        { key: 'simultaneous', label: 'Simultaneous equations',  stages: ['Stage 5'] },
-        { key: 'complete-square', label: 'Completing the square', stages: ['Stage 5'] },
-        { key: 'quad-formula',    label: 'Quadratic formula',     stages: ['Stage 5'] },
-        { key: 'simultaneous-nonlinear', label: 'Simultaneous (line & curve)', stages: ['Stage 5'] },
-    ],
-    'Linear Relationships': [
-        { key: 'plot-line',         label: 'Plot points on y = mx + c' },
-        { key: 'pattern-rule',      label: 'Number pattern rule' },
-        { key: 'gradient-two-points', label: 'Gradient from two points' },
-        { key: 'midpoint',          label: 'Midpoint of two points' },
-        { key: 'intercepts',        label: 'Find intercepts' },
-        { key: 'distance',          label: 'Distance between points', stages: ['Stage 5'] },
-        { key: 'equation-from-gp',  label: 'Equation from gradient + point', stages: ['Stage 5'] },
-        { key: 'parallel-perp',     label: 'Parallel / perpendicular lines', stages: ['Stage 5'] },
-        { key: 'general-form',      label: 'General form & intercepts', stages: ['Stage 5'] },
-    ],
-    'Properties of Geometrical Figures': [
-        { key: 'angles',            label: 'Angle relationships' },
-        { key: 'congruent-tests',   label: 'Congruence tests',   stages: ['Stage 5'] },
-        { key: 'similar-ratio',     label: 'Similarity scale factor', stages: ['Stage 5'] },
-        { key: 'quad-properties',   label: 'Quadrilateral properties', stages: ['Stage 5'] },
-    ],
-    'Variation & Rates of Change': [
-        { key: 'direct-variation',   label: 'Direct variation  y = kx', stages: ['Stage 5'] },
-        { key: 'inverse-variation',  label: 'Inverse variation  y = k/x', stages: ['Stage 5'] },
-    ],
-    // ─── Measurement & Space focus areas (NESA structure) ───────────────
-    'Length': [
-        { key: 'perimeter',     label: 'Perimeter' },
-        { key: 'circumference', label: 'Circumference' },
-        { key: 'unit-convert',  label: 'Unit conversion' },
-    ],
-    'Area': [
-        { key: 'area-perimeter', label: 'Area of plane shapes' },
-        { key: 'circles',        label: 'Area of circles' },
-        { key: 'surface-area',   label: 'Surface area', stages: ['Stage 5'] },
-    ],
-    'Volume': [
-        { key: 'prism',    label: 'Prisms' },
-        { key: 'cylinder', label: 'Cylinders' },
-        { key: 'capacity', label: 'Volume / Capacity' },
-        { key: 'pyramid',  label: 'Pyramids',         stages: ['Stage 5'] },
-        { key: 'cone',     label: 'Cones',            stages: ['Stage 5'] },
-        { key: 'sphere',   label: 'Spheres',          stages: ['Stage 5'] },
-    ],
-    'Time': [
-        { key: 'convert',  label: '24-hour time' },
-        { key: 'duration', label: 'Elapsed time' },
-        { key: 'zones',    label: 'Time zones' },
-    ],
-    "Pythagoras' Theorem": [
-        { key: 'identify',    label: 'Identify & define the theorem' },
-        { key: 'hypotenuse',  label: 'Finding the Hypotenuse' },
-        { key: 'short-side',  label: 'Finding a short side' },
-        { key: 'triads',      label: 'Prove Pythagorean triads' },
-    ],
-    // ─── Statistics & Probability focus areas (NESA structure) ──────────
-    'Data Classification and Visualisation': [
-        { key: 'frequency-total', label: 'Frequency tables' },
-        { key: 'tally',           label: 'Tally charts' },
-        { key: 'dot-plot-read',   label: 'Read a dot plot' },
-        { key: 'graph-choice',    label: 'Choosing a display' },
-        { key: 'data-type',       label: 'Categorical / numerical' },
-    ],
-    // ─── Stage 5 Path new topics (all pathway:'path') ──────────────────
-    'Networks': [
-        { key: 'euler',       label: "Euler's formula",  stages: ['Stage 5'], pathway: 'path' },
-        { key: 'degree-sum',  label: 'Degree / edges',   stages: ['Stage 5'], pathway: 'path' },
-        { key: 'euler-trail', label: 'Eulerian trails',  stages: ['Stage 5'], pathway: 'path' },
-    ],
-    'Polynomials': [
-        { key: 'degree',         label: 'Degree / coefficients', stages: ['Stage 5'], pathway: 'path' },
-        { key: 'remainder',      label: 'Remainder theorem',     stages: ['Stage 5'], pathway: 'path' },
-        { key: 'factor-theorem', label: 'Factor theorem',        stages: ['Stage 5'], pathway: 'path' },
-    ],
-    'Logarithms': [
-        { key: 'evaluate', label: 'Evaluate logarithms', stages: ['Stage 5'], pathway: 'path' },
-        { key: 'laws',     label: 'Logarithm laws',      stages: ['Stage 5'], pathway: 'path' },
-        { key: 'solve',    label: 'Solve log / index equations', stages: ['Stage 5'], pathway: 'path' },
-    ],
-    'Functions': [
-        { key: 'evaluate',     label: 'Function notation',   stages: ['Stage 5'], pathway: 'path' },
-        { key: 'domain-range', label: 'Domain & range',      stages: ['Stage 5'], pathway: 'path' },
-        { key: 'circle',       label: 'Circle (complete square)', stages: ['Stage 5'], pathway: 'path' },
-        { key: 'hyperbola',    label: 'Hyperbola asymptotes', stages: ['Stage 5'], pathway: 'path' },
-    ],
-};
+// SUB_OPS (selectable sub-operations per topic) lives in ./subOps.js and is
+// re-exported here so existing importers keep working.
+export { SUB_OPS };
 
 // Helper: check if a sub-op is allowed (null = all allowed)
 function _ok(allowedOps, key) { return !allowedOps || allowedOps.includes(key); }
@@ -1966,7 +1720,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             // multiples of 20 guarantee integer results for the percentage pool
             const orig = ri(rng, 1, 20) * 20;
             const pct = rc(rng, [5, 10, 15, 20, 25, 40, 50]);
-            const ans = orig * (1 + pct / 100);
+            const ans = Math.round(orig * (100 + pct)) / 100;
             const ctx = rc(rng, ['price', 'value', 'amount', 'score', 'population', 'membership']);
             const ph = rc(rng, [
                 `Increase $${orig}$ by $${pct}\\%$`,
@@ -1975,7 +1729,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
                 `A price of $\\$${orig}$ increases by $${pct}\\%$. Find the **new** price.`,
                 `A score of $${orig}$ is raised by $${pct}\\%$. What is the **new** score?`,
             ]);
-            const multiplier = 1 + pct / 100;
+            const multiplier = (100 + pct) / 100;
             const worked = `$${orig} \\times ${multiplier} = ${ans}$`;
             return { clue: ph, answer: String(ans), worked };
         }
@@ -1995,7 +1749,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
         // type 3: decrease/discount — multiples of 20 guarantee integer results
         const origDec = ri(rng, 1, 20) * 20;
         const pctDec = rc(rng, [5, 10, 15, 20, 25, 40, 50]);
-        const ansDec = origDec * (1 - pctDec / 100);
+        const ansDec = Math.round(origDec * (100 - pctDec)) / 100;
         const ctxDec = rc(rng, ['price', 'salary', 'value', 'cost', 'attendance']);
         const phDec = rc(rng, [
             `Decrease $${origDec}$ by $${pctDec}\\%$`,
@@ -2003,7 +1757,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             `A $\\$${origDec}$ item is discounted by $${pctDec}\\%$. Find the *sale price*.`,
             `Calculate the result of decreasing $${origDec}$ by $${pctDec}\\%$`,
         ]);
-        const multDec = 1 - pctDec / 100;
+        const multDec = (100 - pctDec) / 100;
         return { clue: phDec, answer: String(ansDec), worked: `$${origDec} \\times ${multDec} = ${ansDec}$` };
     }
     // Hard
@@ -2251,11 +2005,114 @@ function _surdStr(k, rad) {
     return k === 1 ? `\\sqrt{${rad}}` : `${k}\\sqrt{${rad}}`;
 }
 
-// Completing the square: x² + bx + c = 0  (b even → clean half).
+// "(2x - 3)" style binomial: coefficient of the variable (1 is implicit) and a
+// non-zero constant, with the sign spaced so it never prints as "+ -3".
+function _binomStr(coef, v, k) {
+    return `(${coef === 1 ? '' : coef}${v} ${k < 0 ? '-' : '+'} ${Math.abs(k)})`;
+}
+// Number to exactly 2 d.p. without a negative zero ("-0.00").
+function _n2(v) { return (Math.abs(v) < 0.005 ? 0 : Math.round(v * 100) / 100).toFixed(2); }
+// True when a value sits close enough to a rounding boundary that a student's
+// answer could legitimately differ by 0.01 (keeps 2 d.p. answers unambiguous).
+function _nearTie(v, dp = 2) {
+    const f = Math.abs(v) * Math.pow(10, dp);
+    return Math.abs((f - Math.floor(f)) - 0.5) < 0.04;
+}
+// Real roots of ax² + bx + c = 0 in ascending order.
+function _quadRoots(a, b, c) {
+    const d = b * b - 4 * a * c;
+    if (d < 0) return [];
+    if (d === 0) return [-b / (2 * a)];
+    const sq = Math.sqrt(d);
+    return [(-b - sq) / (2 * a), (-b + sq) / (2 * a)].sort((x, y) => x - y);
+}
+const _pointStr = (x, y) => `(${x},${y})`;
+
+// Completing the square (MA5-EQU / Stage 5.2–5.3).
+//   Easy   — complete the square on x² + bx (even b)
+//   Medium — write x² + bx + c as (x + p)² + q, or solve with integer roots
+//   Hard   — a ≠ 1 (form a(x + p)² + q, or solve), or monic with surd roots
 function _genCompleteSquare(rng, diff) {
+    const sgn = (k) => `${k < 0 ? '-' : '+'} ${Math.abs(k)}`;
+    const nz = (lo, hi) => ri(rng, lo, hi) * (rng() < 0.5 ? 1 : -1);
+    const sqForm = (a, p, q) => `${a === 1 ? '' : a}(x ${sgn(p)})^2 ${sgn(q)}`;
+    const sqAns = (a, p, q) => `${a === 1 ? '' : a}(x${p < 0 ? '-' : '+'}${Math.abs(p)})^2${q < 0 ? '-' : '+'}${Math.abs(q)}`;
+
+    if (diff === 'Easy') {
+        const half = ri(rng, 1, 6) * (rng() < 0.75 ? 1 : -1);
+        const b = 2 * half;
+        const sq = half * half;
+        return {
+            clue: `Complete the square:\n$x^2 ${sgn(b)}x$`,
+            answer: `(x${half < 0 ? '-' : '+'}${Math.abs(half)})^2-${sq}`,
+            answerDisplay: `$(x ${sgn(half)})^2 - ${sq}$`,
+            worked: `Half of $${b}$ is $${half}$, so $x^2 ${sgn(b)}x = (x ${sgn(half)})^2 - ${sq}$`,
+        };
+    }
+
+    if (diff === 'Medium') {
+        if (rng() < 0.5) {
+            // x² + bx + c written as (x + p)² + q
+            const p = nz(1, 6);
+            const b = 2 * p;
+            let c = ri(rng, -9, 9);
+            if (c === p * p) c += 1;
+            const q = c - p * p;
+            return {
+                clue: `Write $${polyStr([[1, 'x^2'], [b, 'x'], [c, '']])}$ in the form $(x + p)^2 + q$.`,
+                answer: sqAns(1, p, q),
+                answerDisplay: `$${sqForm(1, p, q)}$`,
+                worked: `$x^2 ${sgn(b)}x ${sgn(c)} = (x ${sgn(p)})^2 - ${p * p} ${sgn(c)} = ${sqForm(1, p, q)}$`,
+            };
+        }
+        // solve by completing the square, integer roots (b even)
+        const r1 = ri(rng, -7, 3), r2 = r1 + 2 * ri(rng, 1, 4);
+        const b = -(r1 + r2), c = r1 * r2;
+        if (b === 0) return _genCompleteSquare(rng, diff);
+        const p = b / 2, k = (r2 - r1) / 2;
+        return {
+            clue: `Solve by completing the square:\n$${polyStr([[1, 'x^2'], [b, 'x'], [c, '']])} = 0$`,
+            answer: `x=${r1},${r2}`,
+            answerDisplay: `$x = ${r1}$ or $x = ${r2}$`,
+            worked: `$(x ${sgn(p)})^2 = ${p * p} ${sgn(-c)} = ${k * k} \\Rightarrow x ${sgn(p)} = \\pm ${k} \\Rightarrow x = ${r1}, ${r2}$`,
+        };
+    }
+
+    // Hard
+    const v = rng();
+    if (v < 0.34) {
+        // a(x + p)² + q for a ≠ 1
+        const a = ri(rng, 2, 4), p = nz(1, 5);
+        const b = 2 * a * p;
+        let c = ri(rng, -9, 9);
+        if (c === a * p * p) c += 1;
+        const q = c - a * p * p;
+        return {
+            clue: `Write $${polyStr([[a, 'x^2'], [b, 'x'], [c, '']])}$ in the form $a(x + p)^2 + q$.`,
+            answer: sqAns(a, p, q),
+            answerDisplay: `$${sqForm(a, p, q)}$`,
+            worked: `$${a}(x^2 ${sgn(2 * p)}x) ${sgn(c)} = ${a}(x ${sgn(p)})^2 - ${a * p * p} ${sgn(c)} = ${sqForm(a, p, q)}$`,
+        };
+    }
+    if (v < 0.67) {
+        // non-monic equation: divide through by a, complete the square, surd roots
+        const a = rc(rng, [2, 3]), p = nz(1, 4);
+        const b = 2 * a * p;
+        const c = nz(1, 8);
+        const D = a * p * p - c;                     // a(x + p)² = D
+        const { k, rad } = _surd(a * D);
+        if (D <= 0 || rad === 1 || gcd(k, a) !== 1) return _genCompleteSquare(rng, diff);
+        const num = -p * a;
+        return {
+            clue: `Solve by completing the square, leaving your answer in simplest surd form:\n$${polyStr([[a, 'x^2'], [b, 'x'], [c, '']])} = 0$`,
+            answer: `(${num}±${k}√${rad})/${a}`,
+            answerDisplay: `$x = \\dfrac{${num} \\pm ${_surdStr(k, rad)}}{${a}}$`,
+            worked: `Divide by $${a}$ and complete the square: $(x ${sgn(p)})^2 = \\dfrac{${D}}{${a}}$, so $x = ${-p} \\pm \\dfrac{\\sqrt{${a * D}}}{${a}} = \\dfrac{${num} \\pm ${_surdStr(k, rad)}}{${a}}$`,
+        };
+    }
+    // monic with surd roots: x² + bx + c = 0, b even
     const half = ri(rng, 1, 6);
     const b = 2 * half;
-    // choose c so the discriminant (half² − c) is positive but not a perfect square
     let c, disc;
     do { c = ri(rng, -8, half * half - 1); disc = half * half - c; }
     while (disc <= 0 || Number.isInteger(Math.sqrt(disc)));
@@ -2269,43 +2126,278 @@ function _genCompleteSquare(rng, diff) {
     };
 }
 
-// Quadratic formula: ax² + bx + c = 0, exact surd answers.
+// Quadratic formula (Stage 5.2–5.3).
+//   Easy   — a = 1, integer roots
+//   Medium — exact surd answers, or decimals to 2 d.p.
+//   Hard   — discriminant and number of solutions, rearrange first, or
+//            "solve or state no real solutions" with a > 1
 function _genQuadFormula(rng, diff) {
-    const a = diff === 'Easy' ? 1 : ri(rng, 2, 3);
-    let b, c, disc, guard = 0;
-    do {
-        b = ri(rng, -7, 7);
-        c = ri(rng, -6, 6);
-        disc = b * b - 4 * a * c;
-        guard++;
-    } while (disc <= 0 && guard < 40);
-    if (disc <= 0) { b = 5; c = -2; disc = b * b - 4 * a * c; }
-    const { k, rad } = _surd(disc);
-    const bStr = b === 0 ? '' : (b > 0 ? `+ ${b}x` : `- ${-b}x`);
-    const cStr = c < 0 ? `- ${-c}` : `+ ${c}`;
-    const surdPart = rad === 1 ? `${k}` : _surdStr(k, rad);
-    return {
-        clue: `Use the quadratic formula to solve, giving exact answers:\n$${a === 1 ? '' : a}x^2 ${bStr} ${cStr} = 0$`,
-        answer: `(${-b}±${k}√${rad})/${2 * a}`,
-        answerDisplay: `$x = \\dfrac{${-b} \\pm ${surdPart}}{${2 * a}}$`,
-        worked: `$x = \\dfrac{${-b} \\pm \\sqrt{${b}^2 - 4(${a})(${c})}}{2(${a})} = \\dfrac{${-b} \\pm \\sqrt{${disc}}}{${2 * a}}$`,
+    const nz = (lo, hi) => ri(rng, lo, hi) * (rng() < 0.5 ? 1 : -1);
+    const eqn = (a, b, c) => polyStr([[a, 'x^2'], [b, 'x'], [c, '']]);
+    const decimalQ = (a, b, c, clue) => {
+        const [lo, hi] = _quadRoots(a, b, c);
+        if (_nearTie(lo) || _nearTie(hi)) return null;
+        const sl = _n2(lo), sh = _n2(hi);
+        return {
+            clue,
+            answer: `x=${sl},${sh}`,
+            answerDisplay: `$x \\approx ${sl}$ or $x \\approx ${sh}$`,
+            worked: `$x = \\dfrac{${-b} \\pm \\sqrt{(${b})^2 - 4(${a})(${c})}}{2(${a})} = \\dfrac{${-b} \\pm \\sqrt{${b * b - 4 * a * c}}}{${2 * a}}$, so $x \\approx ${sl}$ or $x \\approx ${sh}$`,
+        };
     };
+    const nonSquare = (d) => d > 0 && !Number.isInteger(Math.sqrt(d));
+
+    if (diff === 'Easy') {
+        let r1 = nz(1, 6), r2 = nz(1, 6);
+        if (r1 === r2) r2 = -r2;
+        const lo = Math.min(r1, r2), hi = Math.max(r1, r2);
+        const b = -(r1 + r2), c = r1 * r2;
+        return {
+            clue: `Use the quadratic formula to solve:\n$${eqn(1, b, c)} = 0$`,
+            answer: `x=${lo},${hi}`,
+            answerDisplay: `$x = ${lo}$ or $x = ${hi}$`,
+            worked: `$x = \\dfrac{${-b} \\pm \\sqrt{(${b})^2 - 4(1)(${c})}}{2} = \\dfrac{${-b} \\pm \\sqrt{${b * b - 4 * c}}}{2}$, so $x = ${lo}$ or $x = ${hi}$`,
+        };
+    }
+
+    if (diff === 'Medium' && rng() < 0.5) {
+        // exact answers in surd form
+        const a = ri(rng, 1, 3);
+        let b, c, disc, guard = 0;
+        do {
+            b = ri(rng, -7, 7);
+            c = ri(rng, -6, 6);
+            disc = b * b - 4 * a * c;
+            guard++;
+        } while ((disc <= 0 || Number.isInteger(Math.sqrt(disc))) && guard < 60);
+        if (disc <= 0 || Number.isInteger(Math.sqrt(disc))) { b = 5; c = -2; disc = b * b - 4 * a * c; }
+        const { k, rad } = _surd(disc);
+        const surdPart = rad === 1 ? `${k}` : _surdStr(k, rad);
+        return {
+            clue: `Use the quadratic formula to solve, giving exact answers:\n$${eqn(a, b, c)} = 0$`,
+            answer: `(${-b}±${k}√${rad})/${2 * a}`,
+            answerDisplay: `$x = \\dfrac{${-b} \\pm ${surdPart}}{${2 * a}}$`,
+            worked: `$x = \\dfrac{${-b} \\pm \\sqrt{${b}^2 - 4(${a})(${c})}}{2(${a})} = \\dfrac{${-b} \\pm \\sqrt{${disc}}}{${2 * a}}$`,
+        };
+    }
+    if (diff === 'Medium') {
+        const a = ri(rng, 1, 3), b = nz(1, 9), c = nz(1, 8);
+        if (!nonSquare(b * b - 4 * a * c)) return _genQuadFormula(rng, diff);
+        return decimalQ(a, b, c, `Use the quadratic formula to solve, correct to 2 decimal places:\n$${eqn(a, b, c)} = 0$`)
+            || _genQuadFormula(rng, diff);
+    }
+
+    // Hard
+    const v = rng();
+    if (v < 0.34) {
+        // discriminant and the number of real solutions
+        const kind = rc(rng, ['none', 'one', 'two']);
+        let a, b, c;
+        if (kind === 'one') {
+            const kk = ri(rng, 1, 2), u = ri(rng, 1, 3), w = ri(rng, 1, 3);
+            a = kk * u * u; c = kk * w * w; b = 2 * kk * u * w * (rng() < 0.5 ? 1 : -1);
+        } else {
+            let guard = 0;
+            do {
+                a = ri(rng, 1, 4) * (rng() < 0.7 ? 1 : -1); b = nz(1, 9); c = nz(1, 8); guard++;
+            } while (guard < 60 && (kind === 'none' ? b * b - 4 * a * c >= 0 : b * b - 4 * a * c <= 0));
+        }
+        const disc = b * b - 4 * a * c;
+        const n = disc < 0 ? 'no real solutions' : disc === 0 ? 'one real solution' : 'two real solutions';
+        const bp = b < 0 ? `(${b})` : `${b}`, cp = c < 0 ? `(${c})` : `${c}`;
+        return {
+            clue: `Calculate the discriminant of $${eqn(a, b, c)} = 0$ and state how many real solutions it has.`,
+            answer: `${disc}, ${n}`,
+            answerDisplay: `$\\Delta = ${disc}$, so ${n}`,
+            worked: `$\\Delta = b^2 - 4ac = ${bp}^2 - 4(${a})(${cp}) = ${disc}$. ${disc < 0 ? 'Negative' : disc === 0 ? 'Zero' : 'Positive'} discriminant: ${n}.`,
+        };
+    }
+    if (v < 0.67) {
+        // rearrange to ax² + bx + c = 0 first:  a x² = b x + c  →  a x² − b x − c = 0
+        const a = ri(rng, 1, 3), b = nz(1, 6), c = nz(1, 8);
+        if (!nonSquare(b * b + 4 * a * c)) return _genQuadFormula(rng, diff);
+        const q = decimalQ(a, -b, -c,
+            `Rearrange, then use the quadratic formula to solve, correct to 2 decimal places:\n$${a === 1 ? '' : a}x^2 = ${polyStr([[b, 'x'], [c, '']])}$`);
+        if (!q) return _genQuadFormula(rng, diff);
+        q.worked = `$${eqn(a, -b, -c)} = 0$. ` + q.worked;
+        return q;
+    }
+    // solve, or state that there are no real solutions
+    const a = ri(rng, 2, 5), b = nz(1, 9), c = nz(1, 9);
+    const disc = b * b - 4 * a * c;
+    const clue = `Solve $${eqn(a, b, c)} = 0$ using the quadratic formula, correct to 2 decimal places. If there are no real solutions, say so.`;
+    if (disc < 0) {
+        return { clue, answer: 'no real solutions', answerDisplay: 'No real solutions',
+            worked: `$\\Delta = (${b})^2 - 4(${a})(${c}) = ${disc} < 0$, so there are no real solutions.` };
+    }
+    if (!nonSquare(disc)) return _genQuadFormula(rng, diff);
+    return decimalQ(a, b, c, clue) || _genQuadFormula(rng, diff);
 }
 
-// Simultaneous line & parabola: y = x² and y = (r1+r2)x − r1·r2 meet at x=r1,r2.
+// Simultaneous equations with a curve (Stage 5.2–5.3): a line with a parabola
+// y = x² + q or with a circle x² + y² = r².
+//   Easy   — y = x² with positive integer roots (x-values), or a circle cut by x = k / y = k
+//   Medium — both intersection points (integer), parabola or circle with an oblique line
+//   Hard   — tangent (one point), no real solution, or non-integer points to 2 d.p.
+const _CIRCLE_RADII = [5, 10, 13, 15, 17, 25];
+function _latticePoints(r) {
+    const pts = [];
+    for (let x = -r; x <= r; x++) {
+        const y2 = r * r - x * x, y = Math.round(Math.sqrt(y2));
+        if (y * y === y2) { pts.push([x, y]); if (y !== 0) pts.push([x, -y]); }
+    }
+    return pts;
+}
 function _genSimultaneousNonlinear(rng, diff) {
-    let r1 = ri(rng, -4, 4), r2 = ri(rng, -4, 4);
-    if (r1 === r2) r2 = r1 + 1;
-    const m = r1 + r2, c = -r1 * r2;
-    const mStr = m === 0 ? '' : (m === 1 ? 'x' : m === -1 ? '-x' : `${m}x`);
-    const cStr = c === 0 ? '' : (c > 0 ? ` + ${c}` : ` - ${-c}`);
-    const line = `${mStr}${cStr}` || '0';
-    const lo = Math.min(r1, r2), hi = Math.max(r1, r2);
+    const lineStr = (m, c) => polyStr([[m, 'x'], [c, '']]);
+    const ptsAns = (pts) => pts.map(([x, y]) => _pointStr(x, y)).join(',');
+    const ptsDisp = (pts) => pts.map(([x, y]) => `(${x}, ${y})`).join(' and ');
+    const nz = (lo, hi) => ri(rng, lo, hi) * (rng() < 0.5 ? 1 : -1);
+    const parab = (q) => `y = x^2${q === 0 ? '' : q < 0 ? ` - ${-q}` : ` + ${q}`}`;
+    const sg = (k) => `${k < 0 ? '-' : '+'} ${Math.abs(k)}`;
+    const quadTxt = (A, B, C) => `${A === 1 ? '' : A}x^2 ${B === 0 ? '' : `${B < 0 ? '-' : '+'} ${Math.abs(B) === 1 ? '' : Math.abs(B)}x `}${sg(C)}`;
+
+    // circle cut by an axis-parallel line with integer points
+    const axisCircle = () => {
+        const r = rc(rng, _CIRCLE_RADII);
+        const pts = _latticePoints(r).filter(([x, y]) => x !== 0 && y !== 0);
+        const [x0, y0] = rc(rng, pts);
+        const vertical = rng() < 0.5;
+        const hit = vertical ? [[x0, y0], [x0, -y0]].sort((a, b) => a[1] - b[1])
+            : [[x0, y0], [-x0, y0]].sort((a, b) => a[0] - b[0]);
+        return {
+            clue: `Solve simultaneously to find the points of intersection:\n$x^2 + y^2 = ${r * r}$\n$${vertical ? `x = ${x0}` : `y = ${y0}`}$`,
+            answer: ptsAns(hit), answerDisplay: `$${ptsDisp(hit)}$`,
+            worked: vertical
+                ? `Substitute $x = ${x0}$: $y^2 = ${r * r} - ${x0 * x0} = ${y0 * y0}$, so $y = \\pm ${Math.abs(y0)}$.`
+                : `Substitute $y = ${y0}$: $x^2 = ${r * r} - ${y0 * y0} = ${x0 * x0}$, so $x = \\pm ${Math.abs(x0)}$.`,
+        };
+    };
+
+    if (diff === 'Easy') {
+        if (rng() < 0.5) return axisCircle();
+        let r1 = ri(rng, 1, 5), r2 = ri(rng, 1, 5);
+        if (r1 === r2) r2 = r1 % 5 + 1;
+        const m = r1 + r2, c = -r1 * r2;
+        const lo = Math.min(r1, r2), hi = Math.max(r1, r2);
+        const line = lineStr(m, c);
+        return {
+            clue: `Solve simultaneously, finding the $x$-coordinates of the intersection points:\n$y = x^2$\n$y = ${line}$`,
+            answer: `x=${lo},${hi}`,
+            answerDisplay: `$x = ${lo}$ or $x = ${hi}$`,
+            worked: `$x^2 = ${line} \\Rightarrow x^2 - ${m}x + ${-c} = 0 \\Rightarrow (x - ${lo})(x - ${hi}) = 0$`,
+        };
+    }
+
+    if (diff === 'Medium') {
+        if (rng() < 0.55) {
+            // parabola y = x² + q and a line through two integer points
+            const q = ri(rng, -5, 5);
+            let r1 = ri(rng, -4, 4), r2 = ri(rng, -4, 4);
+            if (r1 === r2) r2 = r1 === 4 ? -4 : r1 + 1;
+            const m = r1 + r2, n = q - r1 * r2;
+            const hit = [r1, r2].sort((a, b) => a - b).map(x => [x, x * x + q]);
+            return {
+                clue: `Solve simultaneously to find both points of intersection:\n$${parab(q)}$\n$y = ${lineStr(m, n)}$`,
+                answer: ptsAns(hit), answerDisplay: `$${ptsDisp(hit)}$`,
+                worked: `$x^2 ${sg(q)} = ${lineStr(m, n)}$ gives $${quadTxt(1, -m, q - n)} = 0$, so $x = ${hit[0][0]}$ or $x = ${hit[1][0]}$; substitute to find $y$.`,
+            };
+        }
+        // circle and an oblique line through two lattice points
+        for (let t = 0; t < 40; t++) {
+            const r = rc(rng, _CIRCLE_RADII);
+            const pts = _latticePoints(r);
+            const P = rc(rng, pts), Q = rc(rng, pts);
+            if (P[0] === Q[0]) continue;
+            const dy = Q[1] - P[1], dx = Q[0] - P[0];
+            if (dy % dx !== 0) continue;
+            const m = dy / dx, c = P[1] - m * P[0];
+            if (m === 0 || Math.abs(m) > 4 || Math.abs(c) > 12) continue;
+            const hit = [P, Q].sort((a, b) => a[0] - b[0]);
+            return {
+                clue: `Solve simultaneously to find both points of intersection:\n$x^2 + y^2 = ${r * r}$\n$y = ${lineStr(m, c)}$`,
+                answer: ptsAns(hit), answerDisplay: `$${ptsDisp(hit)}$`,
+                worked: `Substitute $y = ${lineStr(m, c)}$ into $x^2 + y^2 = ${r * r}$ and solve the quadratic in $x$: $x = ${hit[0][0]}$ or $x = ${hit[1][0]}$.`,
+            };
+        }
+        return axisCircle();
+    }
+
+    // Hard
+    const v = rng();
+    if (v < 0.25) {
+        if (rng() < 0.7) {
+            // tangent line to the parabola y = x² + q
+            const t = ri(rng, -4, 4), q = ri(rng, -4, 4);
+            const m = 2 * t, n = q - t * t;
+            const hit = [[t, t * t + q]];
+            return {
+                clue: `The line $y = ${lineStr(m, n)}$ touches the parabola $${parab(q)}$ at exactly one point. Find the point of contact.`,
+                answer: ptsAns(hit), answerDisplay: `$${ptsDisp(hit)}$`,
+                worked: `$x^2 ${sg(q)} = ${lineStr(m, n)}$ gives $${quadTxt(1, -m, q - n)} = 0$, which is $(x ${t < 0 ? '+' : '-'} ${Math.abs(t)})^2 = 0$, so $x = ${t}$ is a repeated root.`,
+            };
+        }
+        // horizontal / vertical tangent to a circle
+        const r = ri(rng, 2, 9), sign = rng() < 0.5 ? 1 : -1;
+        const vertical = rng() < 0.5;
+        const hit = vertical ? [[sign * r, 0]] : [[0, sign * r]];
+        return {
+            clue: `The line $${vertical ? 'x' : 'y'} = ${sign * r}$ touches the circle $x^2 + y^2 = ${r * r}$ at exactly one point. Find the point of contact.`,
+            answer: ptsAns(hit), answerDisplay: `$${ptsDisp(hit)}$`,
+            worked: `Substitute: $${vertical ? 'y' : 'x'}^2 = ${r * r} - ${r * r} = 0$, so $${vertical ? 'y' : 'x'} = 0$.`,
+        };
+    }
+    const noRoots = v < 0.5;
+    const useCircle = rng() < 0.45;
+    const bad = (d) => (noRoots ? d >= 0 : (d <= 0 || Number.isInteger(Math.sqrt(d))));
+    if (!useCircle) {
+        const q = ri(rng, -4, 4);
+        let m, n, d, guard = 0;
+        do { m = ri(rng, -6, 6); n = ri(rng, -6, 6); d = m * m - 4 * (q - n); guard++; }
+        while (guard < 80 && bad(d));
+        if (bad(d)) return _genSimultaneousNonlinear(rng, diff);
+        const lineEq = `y = ${lineStr(m, n)}`;
+        if (noRoots) {
+            return {
+                clue: `Solve simultaneously, or state that there is no real solution:\n$${parab(q)}$\n$${lineEq}$`,
+                answer: 'no real solutions', answerDisplay: 'No real solutions',
+                worked: `$${quadTxt(1, -m, q - n)} = 0$ has $\\Delta = ${d} < 0$, so the line and parabola never meet.`,
+            };
+        }
+        const xs = _quadRoots(1, -m, q - n);
+        const hit = xs.map(x => [x, m * x + n]);
+        if (hit.some(([x, y]) => _nearTie(x) || _nearTie(y))) return _genSimultaneousNonlinear(rng, diff);
+        return {
+            clue: `Solve simultaneously, giving the points of intersection correct to 2 decimal places:\n$${parab(q)}$\n$${lineEq}$`,
+            answer: hit.map(([x, y]) => _pointStr(_n2(x), _n2(y))).join(','),
+            answerDisplay: `$${hit.map(([x, y]) => `(${_n2(x)}, ${_n2(y)})`).join(' and ')}$`,
+            worked: `$${quadTxt(1, -m, q - n)} = 0$ gives $x \\approx ${_n2(xs[0])}$ or $x \\approx ${_n2(xs[1])}$; substitute into the line to find $y$.`,
+        };
+    }
+    // circle x² + y² = r² and y = mx + c
+    const r = ri(rng, 3, 8);
+    let m, c, A, B, C, d, guard = 0;
+    do {
+        m = rc(rng, [1, -1, 2, -2, 3]); c = nz(1, 9);
+        A = 1 + m * m; B = 2 * m * c; C = c * c - r * r; d = B * B - 4 * A * C; guard++;
+    } while (guard < 80 && bad(d));
+    if (bad(d)) return _genSimultaneousNonlinear(rng, diff);
+    const lineEq = `y = ${lineStr(m, c)}`;
+    if (noRoots) {
+        return {
+            clue: `Solve simultaneously, or state that there is no real solution:\n$x^2 + y^2 = ${r * r}$\n$${lineEq}$`,
+            answer: 'no real solutions', answerDisplay: 'No real solutions',
+            worked: `Substituting gives $${quadTxt(A, B, C)} = 0$ with $\\Delta = ${d} < 0$, so the line misses the circle.`,
+        };
+    }
+    const xs = _quadRoots(A, B, C);
+    const hit = xs.map(x => [x, m * x + c]);
+    if (hit.some(([x, y]) => _nearTie(x) || _nearTie(y))) return _genSimultaneousNonlinear(rng, diff);
     return {
-        clue: `Solve simultaneously, finding the $x$-coordinates of the intersection points:\n$y = x^2$\n$y = ${line}$`,
-        answer: `x=${lo},${hi}`,
-        answerDisplay: `$x = ${lo}$ or $x = ${hi}$`,
-        worked: `$x^2 = ${line} \\Rightarrow x^2 ${m ? (m > 0 ? `- ${m}x` : `+ ${-m}x`) : ''} ${c ? (c > 0 ? `- ${c}` : `+ ${-c}`) : ''} = 0 \\Rightarrow x = ${lo}, ${hi}$`,
+        clue: `Solve simultaneously, giving the points of intersection correct to 2 decimal places:\n$x^2 + y^2 = ${r * r}$\n$${lineEq}$`,
+        answer: hit.map(([x, y]) => _pointStr(_n2(x), _n2(y))).join(','),
+        answerDisplay: `$${hit.map(([x, y]) => `(${_n2(x)}, ${_n2(y)})`).join(' and ')}$`,
+        worked: `Substituting gives $${quadTxt(A, B, C)} = 0$, so $x \\approx ${_n2(xs[0])}$ or $x \\approx ${_n2(xs[1])}$; substitute into the line to find $y$.`,
     };
 }
 
@@ -3696,35 +3788,69 @@ function _genAlgebraOp(rng, diff, op) {
     }
 
     // ---- non-monic trinomial factorisation: ax² + bx + c (a ≠ 1) ----
+    // Easy: a = 2, all positive. Medium: a up to 4 with negatives. Hard: a up to 6,
+    // negatives, and sometimes a common factor to take out first.
     if (op === 'factorise-nonmonic') {
-        const sgn = (k) => k < 0 ? `- ${-k}` : `+ ${k}`;
-        const p = ri(rng, 2, 3);
-        const r = diff === 'Easy' ? 1 : ri(rng, 1, 3);
-        let q = ri(rng, 1, 4) * (rng() < 0.5 ? 1 : -1);
-        let s = ri(rng, 1, 4) * (rng() < 0.5 ? 1 : -1);
-        const a = p * r, b = p * s + q * r, c = q * s;
-        if (a === 1 || b === 0 || c === 0) return _genAlgebraOp(rng, diff, op);
-        const trinomial = `${a}x^2 ${sgn(b)}x ${sgn(c)}`;
-        // build factor strings explicitly: (px + q)(rx + s)
-        const f1 = `(${p === 1 ? '' : p}x ${q < 0 ? '- ' + (-q) : '+ ' + q})`;
-        const f2 = `(${r === 1 ? '' : r}x ${s < 0 ? '- ' + (-s) : '+ ' + s})`;
-        return { clue: `Factorise:\n$${trinomial}$`,
-            answer: `${f1}${f2}`.replace(/\s/g, ''), answerDisplay: `$${f1}${f2}$`,
-            worked: `$${trinomial} = ${f1}${f2}$` };
+        const nz = (lo, hi) => ri(rng, lo, hi) * (rng() < 0.5 ? 1 : -1);
+        const PAIRS_M = [[2, 1], [3, 1], [4, 1], [2, 2]];
+        const PAIRS_H = [[2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [3, 2]];
+        const pair = diff === 'Easy' ? [2, 1] : rc(rng, diff === 'Medium' ? PAIRS_M : PAIRS_H);
+        const [p, r] = pair;
+        const q = diff === 'Easy' ? 2 * ri(rng, 0, 3) + 1 : nz(1, diff === 'Medium' ? 6 : 7);
+        const s = diff === 'Easy' ? ri(rng, 1, 8) : nz(1, diff === 'Medium' ? 6 : 7);
+        const k = diff === 'Hard' && rng() < 0.5 ? rc(rng, [2, 3]) : 1;
+        const a = p * r * k, b = (p * s + q * r) * k, c = q * s * k;
+        // both binomials must be fully factorised (no hidden common factor)
+        if (b === 0 || gcd(p, Math.abs(q)) !== 1 || gcd(r, Math.abs(s)) !== 1) return _genAlgebraOp(rng, diff, op);
+        const trinomial = polyStr([[a, 'x^2'], [b, 'x'], [c, '']]);
+        const f1 = _binomStr(p, 'x', q), f2 = _binomStr(r, 'x', s);
+        const pre = k > 1 ? String(k) : '';
+        return { clue: `${k > 1 ? 'Factorise fully' : 'Factorise'}:\n$${trinomial}$`,
+            answer: `${pre}${f1}${f2}`.replace(/\s/g, ''), answerDisplay: `$${pre}${f1}${f2}$`,
+            worked: k > 1
+                ? `Take out the common factor $${k}$: $${k}(${polyStr([[p * r, 'x^2'], [b / k, 'x'], [q * s, '']])}) = ${pre}${f1}${f2}$`
+                : `$${trinomial} = ${f1}${f2}$` };
     }
 
-    // ---- factorise by grouping in pairs: x³ + ax² + bx + ab ----
+    // ---- factorise by grouping in pairs ----
+    // Easy: xy + nx + my + mn with positive numbers. Medium: signed numbers and a
+    // coefficient on x. Hard: coefficients on both pronumerals, the four terms
+    // given out of order (rearrange first), or the cubic x³ + ax² + bx + ab.
     if (op === 'factorise-grouping') {
         const sgn = (k) => k < 0 ? `- ${-k}` : `+ ${k}`;
-        const a = ri(rng, 1, 5) * (rng() < 0.5 ? 1 : -1);
-        const b = ri(rng, 1, 6) * (rng() < 0.5 ? 1 : -1);
-        const ab = a * b;
-        // x³ + a x² + b x + ab = x²(x + a) + b(x + a) = (x + a)(x² + b)
-        const cubic = `x^3 ${sgn(a)}x^2 ${sgn(b)}x ${sgn(ab)}`;
-        const ans = `(x ${a < 0 ? '- ' + (-a) : '+ ' + a})(x^2 ${b < 0 ? '- ' + (-b) : '+ ' + b})`;
-        return { clue: `Factorise by grouping:\n$${cubic}$`,
+        const nz = (lo, hi) => ri(rng, lo, hi) * (rng() < 0.5 ? 1 : -1);
+        if (diff === 'Hard' && rng() < 0.35) {
+            const a = ri(rng, 1, 5) * (rng() < 0.5 ? 1 : -1);
+            const b = ri(rng, 1, 6) * (rng() < 0.5 ? 1 : -1);
+            const ab = a * b;
+            // x³ + a x² + b x + ab = x²(x + a) + b(x + a) = (x + a)(x² + b)
+            const cubic = `x^3 ${sgn(a)}x^2 ${sgn(b)}x ${sgn(ab)}`;
+            const ans = `(x ${a < 0 ? '- ' + (-a) : '+ ' + a})(x^2 ${b < 0 ? '- ' + (-b) : '+ ' + b})`;
+            return { clue: `Factorise by grouping:\n$${cubic}$`,
+                answer: ans.replace(/\s/g, ''), answerDisplay: `$${ans}$`,
+                worked: `$x^2(x ${sgn(a)}) + ${b}(x ${sgn(a)}) = ${ans}$` };
+        }
+        let a = 1, b = 1, m, n;
+        if (diff === 'Easy') { m = ri(rng, 1, 6); n = ri(rng, 1, 6); }
+        else {
+            m = nz(1, 6); n = nz(1, 6);
+            if (diff === 'Medium') { if (m > 0 && n > 0) n = -n; a = ri(rng, 1, 3); }
+            else { a = ri(rng, 2, 3); b = ri(rng, 1, 3); }
+        }
+        // (ax + m)(by + n) = ab·xy + an·x + bm·y + mn
+        if (gcd(a, Math.abs(m)) !== 1 || gcd(b, Math.abs(n)) !== 1) return _genAlgebraOp(rng, diff, op);
+        let terms = [[a * b, 'xy'], [a * n, 'x'], [b * m, 'y'], [m * n, '']];
+        if (diff === 'Hard') {
+            terms = rng() < 0.5 ? [terms[1], terms[2], terms[0], terms[3]] : [terms[3], terms[0], terms[2], terms[1]];
+        }
+        const expr = polyStr(terms);
+        const fy = _binomStr(b, 'y', n), fx = _binomStr(a, 'x', m);
+        const ax = a === 1 ? 'x' : `${a}x`;
+        const mm = Math.abs(m) === 1 ? '' : String(Math.abs(m));
+        const ans = `${fx}${fy}`;
+        return { clue: `${diff === 'Hard' ? 'Rearrange and factorise by grouping' : 'Factorise by grouping'}:\n$${expr}$`,
             answer: ans.replace(/\s/g, ''), answerDisplay: `$${ans}$`,
-            worked: `$x^2(x ${sgn(a)}) + ${b}(x ${sgn(a)}) = ${ans}$` };
+            worked: `$${ax}${fy} ${m < 0 ? '-' : '+'} ${mm}${fy} = ${ans}$` };
     }
 
     // ---- algebraic fractions ----
@@ -4490,16 +4616,59 @@ function _genFinancialS5Op(rng, diff, op) {
             worked: `$${weekly}\\times${weeks}\\times1.175 = \\$${money(pay)}$` };
     }
 
+    // ---- Commission (MA5-FIN-C-01): Easy fixed % of sales → Medium base + commission /
+    // commission over a threshold → Hard working backwards (sales needed, rate) or net of PAYG tax.
     if (op === 'commission') {
-        const sales = ri(rng, 4, 40) * 500;
         const rate = rc(rng, [2, 3, 4, 5, 6, 8, 10]);
-        const comm = round(sales * rate / 100, 2);
-        if (diff !== 'Hard') {
+        if (diff === 'Easy') {
+            const sales = ri(rng, 4, 40) * 500;
+            const comm = round(sales * rate / 100, 2);
             return { clue: `A salesperson earns $${rate}\\%$ commission on sales of $\\$${sales}$. Calculate the commission.`,
                 answer: String(comm), answerDisplay: `$${money(comm)}`,
                 worked: `$${sales} \\times \\frac{${rate}}{100} = \\$${money(comm)}$` };
         }
-        // Hard: commission then flat PAYG tax → net
+        if (diff === 'Medium') {
+            if (rng() < 0.5) {
+                const base = ri(rng, 4, 12) * 100, sales = ri(rng, 4, 40) * 500;
+                const comm = round(sales * rate / 100, 2), pay = round(base + comm, 2);
+                return { clue: `A salesperson is paid a base salary of $\\$${base}$ per week plus $${rate}\\%$ commission on sales. In one week the sales were $\\$${sales}$. Calculate the total earnings for the week.`,
+                    answer: String(pay), answerDisplay: `$${money(pay)}`,
+                    worked: `Commission $= ${sales} \\times \\frac{${rate}}{100} = \\$${money(comm)}$; total $= ${base} + ${money(comm)} = \\$${money(pay)}$` };
+            }
+            const thr = ri(rng, 4, 10) * 1000, sales = thr + ri(rng, 2, 20) * 500;
+            const comm = round((sales - thr) * rate / 100, 2);
+            return { clue: `A salesperson earns $${rate}\\%$ commission on all sales above $\\$${thr}$. Sales for the month were $\\$${sales}$. Calculate the commission earned.`,
+                answer: String(comm), answerDisplay: `$${money(comm)}`,
+                worked: `Sales above $\\$${thr}$: $${sales} - ${thr} = \\$${sales - thr}$; commission $= ${sales - thr} \\times \\frac{${rate}}{100} = \\$${money(comm)}$` };
+        }
+        // Hard
+        const r = rng();
+        if (r < 0.3) {
+            // find the sales needed to reach a target weekly income
+            const base = ri(rng, 4, 12) * 100, sales = ri(rng, 4, 40) * 500;
+            const target = round(base + sales * rate / 100, 2);
+            return { clue: `A salesperson is paid a base salary of $\\$${base}$ per week plus $${rate}\\%$ commission on sales. How much must they sell in a week to earn a total of $\\$${money(target)}$?`,
+                answer: String(sales), answerDisplay: `$${money(sales)}`,
+                worked: `Commission needed $= ${money(target)} - ${base} = \\$${money(target - base)}$; sales $= ${money(target - base)} \\div \\frac{${rate}}{100} = \\$${money(sales)}$` };
+        }
+        if (r < 0.55) {
+            // find the commission rate from earnings
+            const sales = ri(rng, 4, 40) * 500, pct = rc(rng, [2.5, 3.5, 4, 5, 7.5, 12.5, 15]);
+            const comm = round(sales * pct / 100, 2);
+            return { clue: `A salesperson earned $\\$${money(comm)}$ in commission on sales of $\\$${sales}$. Calculate the rate of commission as a percentage of sales.`,
+                answer: String(pct), answerDisplay: `$${pct}\\%$`,
+                worked: `Rate $= \\frac{${money(comm)}}{${sales}} \\times 100 = ${pct}\\%$` };
+        }
+        if (r < 0.8) {
+            // commission only on sales above a threshold: find the total sales
+            const thr = ri(rng, 4, 10) * 1000, extra = ri(rng, 2, 20) * 500, sales = thr + extra;
+            const comm = round(extra * rate / 100, 2);
+            return { clue: `A salesperson earns $${rate}\\%$ commission on all sales above $\\$${thr}$. In one month the commission earned was $\\$${money(comm)}$. Calculate the total sales for the month.`,
+                answer: String(sales), answerDisplay: `$${money(sales)}`,
+                worked: `Sales above $\\$${thr}$ $= ${money(comm)} \\div \\frac{${rate}}{100} = \\$${extra}$; total sales $= ${thr} + ${extra} = \\$${sales}$` };
+        }
+        // commission then flat PAYG tax → net
+        const sales = ri(rng, 4, 40) * 500, comm = round(sales * rate / 100, 2);
         const tax = rc(rng, [10, 15, 20, 25]);
         const net = round(comm * (1 - tax / 100), 2);
         return { clue: `A salesperson earns $${rate}\\%$ commission on $\\$${sales}$ of sales, then pays a flat $${tax}\\%$ PAYG tax on that commission. Calculate the *net* income from the commission.`,
@@ -4507,26 +4676,86 @@ function _genFinancialS5Op(rng, diff, op) {
             worked: `Commission $= \\$${money(comm)}$; net $= ${money(comm)} \\times (1 - ${tax / 100}) = \\$${money(net)}$` };
     }
 
+    // ---- Term payments / hire purchase (MA5-FIN-C-01): deposit + instalments ----
     if (op === 'term-payments') {
+        const item = rc(rng, ['A television', 'A laptop', 'A lounge suite', 'A washing machine', 'A bicycle']);
         const cash = ri(rng, 6, 40) * 100;       // cash price
-        const depPct = rc(rng, [10, 15, 20, 25]);
-        const deposit = round(cash * depPct / 100, 2);
-        const months = rc(rng, [12, 18, 24, 36]);
-        const monthly = rc(rng, [50, 75, 100, 120, 150, 200]);
-        const total = round(deposit + monthly * months, 2);
-        if (diff !== 'Hard') {
-            return { clue: `An item priced at $\\$${cash}$ is bought on terms: a $${depPct}\\%$ deposit then $${months}$ monthly payments of $\\$${monthly}$. Calculate the *total cost* on these terms.`,
+        const weekly = rng() < 0.4;
+        const per = weekly ? 'weekly' : 'monthly';
+        const n = weekly ? rc(rng, [26, 39, 52]) : rc(rng, [12, 18, 24, 36]);
+        // a sensible instalment: the balance plus a modest charge, spread over n payments, rounded to $5
+        const mkInst = (deposit, count) => {
+            const bal = cash - deposit;
+            let i = Math.max(5, Math.round(bal * (1 + ri(rng, 5, 25) / 100) / count / 5) * 5);
+            while (deposit + i * count <= cash) i += 5;       // terms always cost more than cash
+            return i;
+        };
+        if (diff === 'Easy') {
+            const depPct = rc(rng, [10, 20, 25]);
+            const deposit = round(cash * depPct / 100, 2);
+            const inst = mkInst(deposit, n);
+            const total = round(deposit + inst * n, 2);
+            return { clue: `${item} can be bought on terms with a deposit of $\\$${money(deposit)}$ and $${n}$ ${per} payments of $\\$${inst}$. Calculate the total cost on terms.`,
                 answer: String(total), answerDisplay: `$${money(total)}`,
-                worked: `Deposit $= \\$${money(deposit)}$; total $= ${money(deposit)} + ${months}\\times${monthly} = \\$${money(total)}$` };
+                worked: `Payments $= ${n} \\times ${inst} = \\$${n * inst}$; total $= ${money(deposit)} + ${n * inst} = \\$${money(total)}$` };
         }
-        // Hard: flat interest rate per annum on the balance financed
-        const balance = round(cash - deposit, 2);
-        const interest = round(total - cash, 2);
-        const years = months / 12;
-        const flat = round(interest / balance / years * 100, 2);
-        return { clue: `An item priced at $\\$${cash}$ is bought with a $${depPct}\\%$ deposit and $${months}$ monthly payments of $\\$${monthly}$. Calculate the equivalent *flat interest rate* per annum charged on the balance, to 2 d.p.`,
-            answer: String(flat), answerDisplay: `$${flat}\\%$`,
-            worked: `Balance $=\\$${money(balance)}$, interest $=\\$${money(interest)}$; flat rate $=\\frac{${money(interest)}}{${money(balance)}\\times${years}}\\times100 = ${flat}\\%$` };
+        if (diff === 'Medium') {
+            const r = rng();
+            if (r < 0.5) {
+                // extra cost compared with paying cash
+                const depPct = rc(rng, [10, 15, 20, 25]);
+                const deposit = round(cash * depPct / 100, 2);
+                const inst = mkInst(deposit, n);
+                const total = round(deposit + inst * n, 2);
+                const extra = round(total - cash, 2);
+                return { clue: `${item} has a cash price of $\\$${cash}$. On terms, the buyer pays a $${depPct}\\%$ deposit and $${n}$ ${per} payments of $\\$${inst}$. Calculate how much more the buyer pays on terms than the cash price.`,
+                    answer: String(extra), answerDisplay: `$${money(extra)}`,
+                    worked: `Deposit $= \\$${money(deposit)}$; total on terms $= ${money(deposit)} + ${n} \\times ${inst} = \\$${money(total)}$; extra $= ${money(total)} - ${cash} = \\$${money(extra)}$` };
+            }
+            // find each instalment from the terms price
+            const depPct = rc(rng, [10, 15, 20, 25]);
+            const deposit = round(cash * depPct / 100, 2);
+            const inst = mkInst(deposit, n);
+            const total = round(deposit + inst * n, 2);
+            return { clue: `${item} has a terms price of $\\$${money(total)}$, which includes a deposit of $\\$${money(deposit)}$. The balance is paid in $${n}$ equal ${per} instalments. Calculate the amount of each instalment.`,
+                answer: String(inst), answerDisplay: `$${money(inst)}`,
+                worked: `Balance $= ${money(total)} - ${money(deposit)} = \\$${money(total - deposit)}$; instalment $= ${money(total - deposit)} \\div ${n} = \\$${money(inst)}$` };
+        }
+        // Hard
+        const r = rng();
+        const months = rc(rng, [12, 18, 24, 36]);
+        if (r < 0.4) {
+            // equivalent flat interest rate per annum on the balance financed
+            const depPct = rc(rng, [10, 15, 20, 25]);
+            const deposit = round(cash * depPct / 100, 2);
+            const inst = mkInst(deposit, months);
+            const total = round(deposit + inst * months, 2);
+            const balance = round(cash - deposit, 2);
+            const interest = round(total - cash, 2);
+            const flat = round(interest / balance / (months / 12) * 100, 2);
+            const years = months / 12;
+            return { clue: `${item} with a cash price of $\\$${cash}$ is bought with a $${depPct}\\%$ deposit and $${months}$ monthly payments of $\\$${inst}$. Calculate the equivalent *flat interest rate* per annum charged on the balance, to 2 d.p.`,
+                answer: String(flat), answerDisplay: `$${flat}\\%$`,
+                worked: `Balance $=\\$${money(balance)}$, interest $=\\$${money(interest)}$; flat rate $=\\frac{${money(interest)}}{${money(balance)}\\times${years}}\\times100 = ${flat}\\%$` };
+        }
+        if (r < 0.75) {
+            // monthly instalment when simple interest is charged on the balance
+            const depPct = rc(rng, [10, 20, 25]), ir = rc(rng, [6, 8, 10, 12, 15]), yrs = rc(rng, [1, 2, 3]);
+            const deposit = round(cash * depPct / 100, 2), balance = round(cash - deposit, 2);
+            const repay = balance * (1 + ir * yrs / 100);
+            const inst = round(repay / (12 * yrs), 2);
+            return { clue: `${item} has a cash price of $\\$${cash}$. A buyer pays a $${depPct}\\%$ deposit, then repays the balance plus simple interest at $${ir}\\%$ p.a. over $${yrs}$ ${yrs === 1 ? 'year' : 'years'} in equal monthly instalments. Calculate the monthly instalment, to the nearest cent.`,
+                answer: String(inst), answerDisplay: `$${money(inst)}`,
+                worked: `Balance $= \\$${money(balance)}$; repayment $= ${money(balance)} \\times (1 + ${ir / 100} \\times ${yrs}) = \\$${money(repay)}$; instalment $= ${money(repay)} \\div ${12 * yrs} = \\$${money(inst)}$` };
+        }
+        // find the deposit as a percentage of the cash price
+        const depPct = rc(rng, [10, 15, 20, 25, 30]);
+        const deposit = round(cash * depPct / 100, 2);
+        const inst = mkInst(deposit, n);
+        const total = round(deposit + inst * n, 2);
+        return { clue: `${item} has a cash price of $\\$${cash}$. On terms, the buyer pays a deposit and $${n}$ ${per} payments of $\\$${inst}$, a total of $\\$${money(total)}$. Calculate the deposit as a percentage of the cash price.`,
+            answer: String(depPct), answerDisplay: `$${depPct}\\%$`,
+            worked: `Payments $= ${n} \\times ${inst} = \\$${n * inst}$; deposit $= ${money(total)} - ${n * inst} = \\$${money(deposit)}$; $\\frac{${money(deposit)}}{${cash}} \\times 100 = ${depPct}\\%$` };
     }
 
     if (op === 'depreciation') {
@@ -4583,6 +4812,94 @@ const TRIG_TRIPLES = [
     { a: 9, b: 40, c: 41 }, { a: 12, b: 35, c: 37 }, { a: 15, b: 20, c: 25 },
 ];
 
+// ---- Exact trigonometric values -----------------------------------------
+// Exact arithmetic over {1, √2, √3, √6} with rational coefficients, so
+// expressions such as sin 45° × cos 30° + tan 60° simplify exactly.
+const _qn = (n, d = 1) => { const g = gcd(Math.abs(n), Math.abs(d)) || 1; const sg = d < 0 ? -1 : 1; return [sg * n / g, Math.abs(d) / g]; };
+const _qadd = (p, q) => _qn(p[0] * q[1] + q[0] * p[1], p[1] * q[1]);
+const _qmul = (p, q) => _qn(p[0] * q[0], p[1] * q[1]);
+const _EV_BASES = [1, 2, 3, 6];
+function _ev(map) {
+    const r = {};
+    for (const k of _EV_BASES) r[k] = map[k] || [0, 1];
+    return r;
+}
+const _evAdd = (u, v) => { const r = _ev({}); for (const k of _EV_BASES) r[k] = _qadd(u[k], v[k]); return r; };
+const _evScale = (u, n) => { const r = _ev({}); for (const k of _EV_BASES) r[k] = _qmul(u[k], [n, 1]); return r; };
+function _evMul(u, v) {
+    const r = _ev({});
+    for (const a of _EV_BASES) for (const b of _EV_BASES) {
+        if (u[a][0] === 0 || v[b][0] === 0) continue;
+        const { k, rad } = _surd(a * b);
+        r[rad] = _qadd(r[rad], _qmul(_qmul(u[a], v[b]), [k, 1]));
+    }
+    return r;
+}
+// divide by a single-term value r√n:  1 / (r√n) = √n / (r·n)
+function _evDiv(u, v) {
+    const n = _EV_BASES.find(k => v[k][0] !== 0);
+    const inv = _ev({ [n]: _qn(v[n][1], v[n][0] * n) });
+    return _evMul(u, inv);
+}
+const _evNum = (u) => _EV_BASES.reduce((s, k) => s + u[k][0] / u[k][1] * Math.sqrt(k), 0);
+function _evFmt(u, tex) {
+    const bases = _EV_BASES.filter(k => u[k][0] !== 0);
+    if (!bases.length) return '0';
+    let D = 1;
+    for (const k of bases) D = lcm(D, u[k][1]);
+    const rt = (k, n) => {
+        const m = Math.abs(n);
+        if (k === 1) return String(m);
+        const r = tex ? `\\sqrt{${k}}` : `√${k}`;
+        return m === 1 ? r : `${m}${r}`;
+    };
+    let num = '';
+    bases.forEach((k, i) => {
+        const n = u[k][0] * (D / u[k][1]);
+        num += i === 0 ? `${n < 0 ? '-' : ''}${rt(k, n)}` : ` ${n < 0 ? '-' : '+'} ${rt(k, n)}`;
+    });
+    if (D === 1) return num;
+    if (bases.length === 1) {
+        const k = bases[0], n = u[k][0] * (D / u[k][1]);
+        return tex ? `${n < 0 ? '-' : ''}\\frac{${rt(k, n)}}{${D}}` : `${n < 0 ? '-' : ''}${rt(k, n)}/${D}`;
+    }
+    return tex ? `\\frac{${num}}{${D}}` : `(${num})/${D}`.replace(/\s/g, '');
+}
+// sin / cos / tan of 30°, 45°, 60° (and their obtuse partners by reflection)
+const _EX_ACUTE = {
+    sin: { 30: _ev({ 1: [1, 2] }), 45: _ev({ 2: [1, 2] }), 60: _ev({ 3: [1, 2] }) },
+    cos: { 30: _ev({ 3: [1, 2] }), 45: _ev({ 2: [1, 2] }), 60: _ev({ 1: [1, 2] }) },
+    tan: { 30: _ev({ 3: [1, 3] }), 45: _ev({ 1: [1, 1] }), 60: _ev({ 3: [1, 1] }) },
+};
+function _exactTrig(f, ang) {
+    if (ang <= 90) return _EX_ACUTE[f][ang];
+    const base = _EX_ACUTE[f][180 - ang];
+    return f === 'sin' ? base : _evScale(base, -1);
+}
+// How a recalled ratio is usually written when it is the *given* in an equation
+const _EX_RATIO_TEX = {
+    sin: { 30: '\\frac{1}{2}', 45: '\\frac{\\sqrt{2}}{2}', 60: '\\frac{\\sqrt{3}}{2}' },
+    cos: { 30: '\\frac{\\sqrt{3}}{2}', 45: '\\frac{\\sqrt{2}}{2}', 60: '\\frac{1}{2}' },
+    tan: { 30: '\\frac{1}{\\sqrt{3}}', 45: '1', 60: '\\sqrt{3}' },
+};
+// k·f(θ) = ±rhs forms for "rearrange first" equations
+const _EX_REARR = {
+    sin: { 30: ['2', '1'], 45: ['\\sqrt{2}', '1'], 60: ['2', '\\sqrt{3}'] },
+    cos: { 30: ['2', '\\sqrt{3}'], 45: ['\\sqrt{2}', '1'], 60: ['2', '1'] },
+    tan: { 30: ['\\sqrt{3}', '1'], 45: ['', '1'], 60: ['', '\\sqrt{3}'] },
+};
+// All solutions in [0°, 360°] of f θ = ±ratio with acute reference angle alpha
+function _trigSolutions(f, neg, alpha) {
+    const q = {
+        sin: neg ? [180 + alpha, 360 - alpha] : [alpha, 180 - alpha],
+        cos: neg ? [180 - alpha, 180 + alpha] : [alpha, 360 - alpha],
+        tan: neg ? [180 - alpha, 360 - alpha] : [alpha, 180 + alpha],
+    };
+    return q[f].slice().sort((a, b) => a - b);
+}
+const _toRad = (d) => d * Math.PI / 180;
+const _toDeg = (r) => r * 180 / Math.PI;
+
 function genTrigonometry(rng, diff, allowedOps) {
     const OPS = ['find-side', 'find-angle', 'applications', 'sine-rule', 'cosine-rule',
                  'area-rule', 'exact-values', 'trig-equations', 'trig-3d', 'obtuse-angles', 'bearings'];
@@ -4590,8 +4907,47 @@ function genTrigonometry(rng, diff, allowedOps) {
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
 
-    // ---- Sine rule: a/sinA = b/sinB → find a side (MA5-TRG-C-02) ----
+    // ---- Sine rule (MA5-TRG-C-02) ----
+    //   Easy   — two angles and a side: find a side
+    //   Medium — two sides and a non-included angle (opposite the longer side): find an angle
+    //   Hard   — the ambiguous case (two possible angles), or a side after finding the third angle
     if (op === 'sine-rule') {
+        if (diff === 'Medium') {
+            const A = ri(rng, 30, 100), a = ri(rng, 9, 20), b = ri(rng, 5, a - 2);
+            const B = _toDeg(Math.asin(b * Math.sin(_toRad(A)) / a));   // b < a: B is acute and unique
+            if (_nearTie(B, 1)) return genTrigonometry(rng, diff, allowedOps);
+            const B1 = round(B, 1);
+            return { clue: `In a triangle, $a = ${a}$ cm, $b = ${b}$ cm and $\\angle A = ${A}$°. Use the *sine rule* to find $\\angle B$ (to 1 d.p.).`,
+                answer: String(B1), answerDisplay: `${B1}°`,
+                worked: `$\\sin B = \\frac{${b}\\sin ${A}°}{${a}} \\Rightarrow B = ${B1}°$`,
+                diagram: { type: 'general-triangle', sides: { a, b }, angles: { A } } };
+        }
+        if (diff === 'Hard') {
+            if (rng() < 0.6) {
+                // ambiguous case: A acute, a < b, b·sin A < a
+                for (let t = 0; t < 40; t++) {
+                    const A = ri(rng, 25, 50), a = ri(rng, 7, 14), b = ri(rng, a + 1, a + 8);
+                    const sinB = b * Math.sin(_toRad(A)) / a;
+                    if (sinB >= 0.97) continue;
+                    const B1 = _toDeg(Math.asin(sinB)), B2 = 180 - B1;
+                    if (_nearTie(B1, 1) || A + B2 >= 180) continue;
+                    const r1 = round(B1, 1), r2 = round(B2, 1);
+                    return { clue: `In triangle ABC, $a = ${a}$ cm, $b = ${b}$ cm and $\\angle A = ${A}$°. Find the *two possible* sizes of $\\angle B$ (to 1 d.p.).`,
+                        answer: `${r1},${r2}`, answerDisplay: `$\\angle B = ${r1}°$ or $\\angle B = ${r2}°$`,
+                        worked: `$\\sin B = \\frac{${b}\\sin ${A}°}{${a}}$ gives $B = ${r1}°$ or $B = 180° - ${r1}° = ${r2}°$ (both fit, since $${A}° + ${r2}° < 180°$).`,
+                        diagram: { type: 'general-triangle', sides: { a, b }, angles: { A } } };
+                }
+            }
+            // two angles given: find the third, then use the sine rule
+            const B = ri(rng, 30, 80), C = ri(rng, 30, 80), a = ri(rng, 6, 20);
+            const A3 = 180 - B - C;
+            if (A3 < 20) return genTrigonometry(rng, diff, allowedOps);
+            const b = round(a * Math.sin(_toRad(B)) / Math.sin(_toRad(A3)), 1);
+            return { clue: `In a triangle, $a = ${a}$ cm, $\\angle B = ${B}$° and $\\angle C = ${C}$°. Find side $b$ (to 1 d.p.).`,
+                answer: String(b), answerDisplay: `${b} cm`,
+                worked: `$\\angle A = 180° - ${B}° - ${C}° = ${A3}°$, so $b = \\frac{${a}\\sin ${B}°}{\\sin ${A3}°} = ${b}$ cm`,
+                diagram: { type: 'general-triangle', sides: { a }, angles: { B, C }, missing: 'b' } };
+        }
         const A = rc(rng, [30, 40, 45, 50, 60, 70]);
         const B = rc(rng, [35, 40, 50, 55, 65, 75].filter(x => x + A < 170));
         const a = ri(rng, 6, 20);
@@ -4602,32 +4958,100 @@ function genTrigonometry(rng, diff, allowedOps) {
             diagram: { type: 'general-triangle', sides: { a }, angles: { A, B }, missing: 'b' } };
     }
 
-    // ---- Cosine rule: find third side or the largest angle ----
+    // ---- Cosine rule ----
+    //   Easy   — two sides and the included acute angle: find the third side
+    //   Medium — the same with any included angle, or the largest angle from three sides
+    //   Hard   — any named angle from three sides, or side then angle (cosine then sine rule)
     if (op === 'cosine-rule') {
-        if (rng() < 0.5) {
-            const a = ri(rng, 6, 16), b = ri(rng, 6, 16);
-            const C = rc(rng, [40, 55, 70, 95, 110, 120]);
+        const sasSide = (Cs) => {
+            const a = ri(rng, diff === 'Easy' ? 5 : 6, diff === 'Easy' ? 12 : 16);
+            const b = ri(rng, diff === 'Easy' ? 5 : 6, diff === 'Easy' ? 12 : 16);
+            const C = rc(rng, Cs);
             const c = round(Math.sqrt(a * a + b * b - 2 * a * b * Math.cos(C * Math.PI / 180)), 1);
             return { clue: `In a triangle, $a = ${a}$ cm, $b = ${b}$ cm and the included angle $C = ${C}$°. Use the *cosine rule* to find side $c$ (to 1 d.p.).`,
                 answer: String(c), answerDisplay: `${c} cm`,
                 worked: `$c^2 = ${a}^2 + ${b}^2 - 2(${a})(${b})\\cos ${C}° \\Rightarrow c = ${c}$ cm`,
                 diagram: { type: 'general-triangle', sides: { a, b }, angles: { C }, missing: 'c' } };
+        };
+        if (diff === 'Easy') return sasSide([35, 40, 50, 55, 60, 70, 75]);
+        if (diff === 'Medium' && rng() < 0.6) return sasSide([40, 55, 70, 95, 110, 120, 125]);
+        if (diff === 'Medium') {
+            // find the largest angle from 3 sides (opposite the longest side)
+            let x = ri(rng, 5, 9), y = ri(rng, 9, 12), z = ri(rng, 12, 16);
+            if (x + y <= z) z = x + y - 1;
+            const cosZ = (x * x + y * y - z * z) / (2 * x * y);
+            const Z = round(Math.acos(cosZ) * 180 / Math.PI, 0);
+            return { clue: `A triangle has sides $${x}$ cm, $${y}$ cm and $${z}$ cm. Use the *cosine rule* to find the *largest* angle (to the nearest degree).`,
+                answer: String(Z), answerDisplay: `${Z}°`,
+                worked: `$\\cos\\theta = \\frac{${x}^2 + ${y}^2 - ${z}^2}{2(${x})(${y})} \\Rightarrow \\theta = ${Z}°$` };
         }
-        // find the largest angle from 3 sides (opposite the longest side)
-        let x = ri(rng, 5, 9), y = ri(rng, 9, 12), z = ri(rng, 12, 16);
-        // ensure a valid triangle
-        if (x + y <= z) z = x + y - 1;
-        const cosZ = (x * x + y * y - z * z) / (2 * x * y);
-        const Z = round(Math.acos(cosZ) * 180 / Math.PI, 0);
-        return { clue: `A triangle has sides $${x}$ cm, $${y}$ cm and $${z}$ cm. Use the *cosine rule* to find the *largest* angle (to the nearest degree).`,
-            answer: String(Z), answerDisplay: `${Z}°`,
-            worked: `$\\cos\\theta = \\frac{${x}^2 + ${y}^2 - ${z}^2}{2(${x})(${y})} \\Rightarrow \\theta = ${Z}°$` };
+        // Hard
+        if (rng() < 0.6) {
+            for (let t = 0; t < 40; t++) {
+                const a = ri(rng, 5, 18), b = ri(rng, 5, 18), c = ri(rng, 5, 18);
+                if (a + b <= c + 1 || a + c <= b + 1 || b + c <= a + 1) continue;
+                const want = rc(rng, ['A', 'B', 'C']);
+                const [p, q, r] = want === 'A' ? [b, c, a] : want === 'B' ? [a, c, b] : [a, b, c];
+                const cosX = (p * p + q * q - r * r) / (2 * p * q);
+                if (Math.abs(cosX) > 0.95) continue;
+                const X = _toDeg(Math.acos(cosX));
+                if (_nearTie(X, 1)) continue;
+                const X1 = round(X, 1);
+                return { clue: `In a triangle, $a = ${a}$ cm, $b = ${b}$ cm and $c = ${c}$ cm. Use the *cosine rule* to find $\\angle ${want}$ (to 1 d.p.).`,
+                    answer: String(X1), answerDisplay: `${X1}°`,
+                    worked: `$\\cos ${want} = \\frac{${p}^2 + ${q}^2 - ${r}^2}{2(${p})(${q})} \\Rightarrow ${want} = ${X1}°$`,
+                    diagram: { type: 'general-triangle', sides: { a, b, c }, angles: {} } };
+            }
+        }
+        // two steps: cosine rule for the third side, then the sine rule for the smaller angle
+        for (let t = 0; t < 40; t++) {
+            const a = ri(rng, 6, 16), b = ri(rng, 6, 16), C = rc(rng, [40, 55, 70, 100, 110, 120]);
+            if (a === b) continue;
+            const c = Math.sqrt(a * a + b * b - 2 * a * b * Math.cos(_toRad(C)));
+            const small = a < b ? 'A' : 'B', sSide = Math.min(a, b);
+            const X = _toDeg(Math.asin(sSide * Math.sin(_toRad(C)) / c));
+            if (_nearTie(X, 1)) continue;
+            const X1 = round(X, 1);
+            return { clue: `In a triangle, $a = ${a}$ cm, $b = ${b}$ cm and the included angle $C = ${C}$°. Find $\\angle ${small}$ (to 1 d.p.) by first finding side $c$.`,
+                answer: String(X1), answerDisplay: `${X1}°`,
+                worked: `$c^2 = ${a}^2 + ${b}^2 - 2(${a})(${b})\\cos ${C}° \\Rightarrow c = ${round(c, 2)}$ cm, then $\\sin ${small} = \\frac{${sSide}\\sin ${C}°}{c} \\Rightarrow ${small} = ${X1}°$`,
+                diagram: { type: 'general-triangle', sides: { a, b }, angles: { C } } };
+        }
+        return sasSide([100, 110, 120]);
     }
 
     // ---- Area rule: A = ½·a·b·sin C ----
+    //   Easy   — acute included angle
+    //   Medium — any included angle (including obtuse)
+    //   Hard   — find the acute angle from the area, or the area from three sides
     if (op === 'area-rule') {
+        if (diff === 'Hard') {
+            if (rng() < 0.5) {
+                const a = ri(rng, 8, 20), b = ri(rng, 8, 20), C = ri(rng, 20, 80);
+                const area = round(0.5 * a * b * Math.sin(_toRad(C)), 1);
+                const X = _toDeg(Math.asin(2 * area / (a * b)));
+                if (2 * area / (a * b) > 0.98 || _nearTie(X, 1)) return genTrigonometry(rng, diff, allowedOps);
+                const X1 = round(X, 1);
+                return { clue: `A triangle has an area of $${area}$ cm². Two of its sides, $${a}$ cm and $${b}$ cm, enclose an *acute* angle $C$. Find $C$ (to 1 d.p.).`,
+                    answer: String(X1), answerDisplay: `${X1}°`,
+                    worked: `$${area} = \\tfrac{1}{2}(${a})(${b})\\sin C \\Rightarrow \\sin C = \\frac{${2 * area}}{${a * b}} \\Rightarrow C = ${X1}°$`,
+                    diagram: { type: 'general-triangle', sides: { a, b }, angles: {} } };
+            }
+            for (let t = 0; t < 40; t++) {
+                const a = ri(rng, 6, 16), b = ri(rng, 6, 16), c = ri(rng, 6, 16);
+                if (a + b <= c + 1 || a + c <= b + 1 || b + c <= a + 1) continue;
+                const cosC = (a * a + b * b - c * c) / (2 * a * b);
+                if (Math.abs(cosC) > 0.9) continue;
+                const C = _toDeg(Math.acos(cosC));
+                const area = round(0.5 * a * b * Math.sin(_toRad(C)), 1);
+                return { clue: `A triangle has sides $a = ${a}$ cm, $b = ${b}$ cm and $c = ${c}$ cm. Use the cosine rule to find $\\angle C$, then find the area of the triangle (to 1 d.p.).`,
+                    answer: String(area), answerDisplay: `${area} cm²`,
+                    worked: `$\\cos C = \\frac{${a}^2 + ${b}^2 - ${c}^2}{2(${a})(${b})} \\Rightarrow C = ${round(C, 1)}°$, so $A = \\tfrac{1}{2}(${a})(${b})\\sin C = ${area}$ cm²`,
+                    diagram: { type: 'general-triangle', sides: { a, b, c }, angles: {} } };
+            }
+        }
         const a = ri(rng, 6, 18), b = ri(rng, 6, 18);
-        const C = rc(rng, [30, 40, 48, 55, 70, 110, 120, 135]);
+        const C = rc(rng, diff === 'Easy' ? [30, 40, 48, 55, 70] : diff === 'Medium' ? [100, 110, 120, 135, 55, 70] : [100, 110, 120, 135]);
         const area = round(0.5 * a * b * Math.sin(C * Math.PI / 180), 1);
         return { clue: `Find the area of a triangle with sides $${a}$ cm and $${b}$ cm and an included angle of $${C}$° (to 1 d.p.).`,
             answer: String(area), answerDisplay: `${area} cm²`,
@@ -4635,40 +5059,109 @@ function genTrigonometry(rng, diff, allowedOps) {
             diagram: { type: 'general-triangle', sides: { a, b }, angles: { C } } };
     }
 
-    // ---- Exact trig values (unit circle) ----
+    // ---- Exact trig values (30°, 45°, 60° and their obtuse partners) ----
+    //   Easy   — recall sin, cos or tan of 30°, 45° or 60°
+    //   Medium — evaluate sums / differences such as sin 30° + cos 60°
+    //   Hard   — products, squares, quotients (rationalise), obtuse angles, or find θ
     if (op === 'exact-values') {
-        const EX = {
-            30:  { sin: '\\frac{1}{2}',         cos: '\\frac{\\sqrt{3}}{2}',  tan: '\\frac{1}{\\sqrt{3}}' },
-            45:  { sin: '\\frac{\\sqrt{2}}{2}', cos: '\\frac{\\sqrt{2}}{2}',  tan: '1' },
-            60:  { sin: '\\frac{\\sqrt{3}}{2}', cos: '\\frac{1}{2}',          tan: '\\sqrt{3}' },
-            120: { sin: '\\frac{\\sqrt{3}}{2}', cos: '-\\frac{1}{2}',         tan: '-\\sqrt{3}' },
-            135: { sin: '\\frac{\\sqrt{2}}{2}', cos: '-\\frac{\\sqrt{2}}{2}', tan: '-1' },
-            150: { sin: '\\frac{1}{2}',         cos: '-\\frac{\\sqrt{3}}{2}', tan: '-\\frac{1}{\\sqrt{3}}' },
-        };
-        const angle = rc(rng, Object.keys(EX).map(Number));
-        const ratio = rc(rng, diff === 'Easy' ? ['sin', 'cos'] : ['sin', 'cos', 'tan']);
-        const disp = EX[angle][ratio];
-        return { clue: `Find the *exact value* of $\\${ratio}(${angle}°)$.`,
-            answer: disp.replace(/\\/g, '').replace(/\s/g, ''), answerDisplay: `$${disp}$`,
-            worked: `$\\${ratio}(${angle}°) = ${disp}$ (from the unit circle).` };
+        const FN = ['sin', 'cos', 'tan'];
+        const ACUTE = [30, 45, 60];
+        const t = (c, f, ang, sq) => `${c > 1 ? c : ''}\\${f}${sq ? '^2' : ''} ${ang}°`;
+        const done = (exprTex, v, intro) => ({
+            clue: `${intro} $${exprTex}$.`,
+            answer: _evFmt(v, false), answerDisplay: `$${_evFmt(v, true)}$`,
+            worked: `$${exprTex} = ${_evFmt(v, true)}$`,
+        });
+        if (diff === 'Easy') {
+            const f = rc(rng, FN), ang = rc(rng, ACUTE);
+            const v = _exactTrig(f, ang);
+            return { clue: `Write the *exact value* of $\\${f} ${ang}°$.`,
+                answer: _evFmt(v, false), answerDisplay: `$${_evFmt(v, true)}$`,
+                worked: `$\\${f} ${ang}° = ${_evFmt(v, true)}$ (from the 30°–60°–90° and 45°–45°–90° triangles).` };
+        }
+        if (diff === 'Medium') {
+            const f1 = rc(rng, FN), f2 = rc(rng, FN), a1 = rc(rng, ACUTE), a2 = rc(rng, ACUTE);
+            const c1 = rc(rng, [1, 1, 2, 3]), c2 = rc(rng, [1, 1, 2, 3]);
+            const minus = rng() < 0.5;
+            if (f1 === f2 && a1 === a2) return genTrigonometry(rng, diff, allowedOps);
+            const v = _evAdd(_evScale(_exactTrig(f1, a1), c1), _evScale(_exactTrig(f2, a2), minus ? -c2 : c2));
+            return done(`${t(c1, f1, a1)} ${minus ? '-' : '+'} ${t(c2, f2, a2)}`, v, 'Find the *exact value* of');
+        }
+        const w = rng();
+        if (w < 0.15) {
+            const f = rc(rng, FN), ang = rc(rng, [120, 135, 150]);
+            const v = _exactTrig(f, ang);
+            return { clue: `Write the *exact value* of $\\${f} ${ang}°$.`,
+                answer: _evFmt(v, false), answerDisplay: `$${_evFmt(v, true)}$`,
+                worked: `$\\${f} ${ang}° = ${f === 'sin' ? '' : '-'}\\${f} ${180 - ang}° = ${_evFmt(v, true)}$` };
+        }
+        if (w < 0.30) {
+            const f1 = rc(rng, FN), f2 = rc(rng, FN), a1 = rc(rng, ACUTE), a2 = rc(rng, ACUTE);
+            const v = _evMul(_exactTrig(f1, a1), _exactTrig(f2, a2));
+            return done(`\\${f1} ${a1}° \\times \\${f2} ${a2}°`, v, 'Find the *exact value* of');
+        }
+        if (w < 0.50) {
+            const [f1, f2, f3, f4] = [0, 1, 2, 3].map(() => rc(rng, FN));
+            const [a1, a2, a3, a4] = [0, 1, 2, 3].map(() => rc(rng, ACUTE));
+            const minus = rng() < 0.5;
+            const p = _evMul(_exactTrig(f1, a1), _exactTrig(f2, a2));
+            const q = _evMul(_exactTrig(f3, a3), _exactTrig(f4, a4));
+            const v = _evAdd(p, minus ? _evScale(q, -1) : q);
+            return done(`\\${f1} ${a1}° \\times \\${f2} ${a2}° ${minus ? '-' : '+'} \\${f3} ${a3}° \\times \\${f4} ${a4}°`, v, 'Find the *exact value* of');
+        }
+        if (w < 0.65) {
+            const f1 = rc(rng, FN), f2 = rc(rng, FN), a1 = rc(rng, ACUTE), a2 = rc(rng, ACUTE);
+            const minus = rng() < 0.5;
+            const e1 = _exactTrig(f1, a1), e2 = _exactTrig(f2, a2);
+            const v = _evAdd(_evMul(e1, e1), minus ? _evScale(_evMul(e2, e2), -1) : _evMul(e2, e2));
+            return done(`${t(1, f1, a1, true)} ${minus ? '-' : '+'} ${t(1, f2, a2, true)}`, v, 'Find the *exact value* of');
+        }
+        if (w < 0.80) {
+            const f1 = rc(rng, FN), f2 = rc(rng, FN), a1 = rc(rng, ACUTE), a2 = rc(rng, ACUTE);
+            const v = _evDiv(_exactTrig(f1, a1), _exactTrig(f2, a2));
+            return { clue: `Evaluate $\\dfrac{\\${f1} ${a1}°}{\\${f2} ${a2}°}$, leaving your answer with a *rationalised* denominator.`,
+                answer: _evFmt(v, false), answerDisplay: `$${_evFmt(v, true)}$`,
+                worked: `$\\dfrac{\\${f1} ${a1}°}{\\${f2} ${a2}°} = ${_evFmt(v, true)}$` };
+        }
+        const f = rc(rng, FN), ang = rc(rng, ACUTE);
+        return { clue: `If $\\${f}\\theta = ${_EX_RATIO_TEX[f][ang]}$, find $\\theta$ for $0° < \\theta < 90°$.`,
+            answer: String(ang), answerDisplay: `$\\theta = ${ang}°$`,
+            worked: `$\\${f} ${ang}° = ${_EX_RATIO_TEX[f][ang]}$, so $\\theta = ${ang}°$.` };
     }
 
-    // ---- Trig equations on [0°, 360°] ----
+    // ---- Trig equations (Stage 5.3 Path) ----
+    //   Easy   — acute solutions 0°–90° (exact ratios or calculator values)
+    //   Medium — obtuse solutions 0°–180°, or both quadrants 0°–360° (positive ratio)
+    //   Hard   — 0°–360° with negative ratios (two solutions), including rearranging first
     if (op === 'trig-equations') {
-        const CASES = [
-            { f: 'sin', disp: '\\frac{1}{2}',        plain: '1/2',  sols: [30, 150] },
-            { f: 'sin', disp: '\\frac{\\sqrt{3}}{2}', plain: '√3/2', sols: [60, 120] },
-            { f: 'sin', disp: '\\frac{\\sqrt{2}}{2}', plain: '√2/2', sols: [45, 135] },
-            { f: 'cos', disp: '\\frac{1}{2}',        plain: '1/2',  sols: [60, 300] },
-            { f: 'cos', disp: '\\frac{\\sqrt{3}}{2}', plain: '√3/2', sols: [30, 330] },
-            { f: 'cos', disp: '\\frac{\\sqrt{2}}{2}', plain: '√2/2', sols: [45, 315] },
-            { f: 'tan', disp: '1',                   plain: '1',    sols: [45, 225] },
-            { f: 'tan', disp: '\\sqrt{3}',           plain: '√3',   sols: [60, 240] },
-        ];
-        const k = rc(rng, CASES);
-        return { clue: `Solve $\\${k.f}\\theta = ${k.disp}$ for $0° \\le \\theta \\le 360°$.`,
-            answer: k.sols.join(','), answerDisplay: `$\\theta = ${k.sols.join('°, ')}°$`,
-            worked: `$\\${k.f}\\theta = ${k.disp}$ gives $\\theta = ${k.sols.join('°, ')}°$.` };
+        const f = rc(rng, ['sin', 'cos', 'tan']);
+        const domain = diff === 'Easy' ? 90 : diff === 'Medium' ? (rng() < 0.5 ? 180 : 360) : 360;
+        const neg = diff === 'Hard' ? true : diff === 'Medium' && domain === 180 && f !== 'sin' && rng() < 0.5;
+        const exact = diff === 'Easy' ? rng() < 0.5 : diff === 'Medium' ? rng() < 0.6 : rng() < 0.65;
+        let alpha, rhs, lhs = `\\${f}\\theta`;
+        const sign = neg ? '-' : '';
+        if (exact) {
+            alpha = rc(rng, [30, 45, 60]);
+            if (diff === 'Hard' && rng() < 0.5) {
+                const [coef, mag] = _EX_REARR[f][alpha];
+                lhs = `${coef}\\${f}\\theta`;
+                rhs = `${sign}${mag}`;
+            } else {
+                rhs = `${sign}${_EX_RATIO_TEX[f][alpha]}`;
+            }
+        } else {
+            const v = f === 'tan' ? ri(rng, 2, 40) / 10 : ri(rng, 10, 95) / 100;
+            alpha = _toDeg(f === 'sin' ? Math.asin(v) : f === 'cos' ? Math.acos(v) : Math.atan(v));
+            rhs = `${sign}${v}`;
+        }
+        const sols = _trigSolutions(f, neg, alpha).filter(x => x <= domain);
+        const shown = exact ? sols : sols.map(x => round(x, 1));
+        if (!exact && (_nearTie(alpha, 1) || shown.length === 0)) return genTrigonometry(rng, diff, allowedOps);
+        if (shown.length === 0) return genTrigonometry(rng, diff, allowedOps);
+        const refTxt = exact ? `${alpha}°` : `${round(alpha, 1)}°`;
+        return { clue: `Solve $${lhs} = ${rhs}$ for $0° \\le \\theta \\le ${domain}°$.`,
+            answer: shown.join(','), answerDisplay: `$\\theta = ${shown.join('°, ')}°$`,
+            worked: `The reference angle is $${refTxt}$. ${neg ? 'The ratio is negative' : 'The ratio is positive'}, so $\\theta = ${shown.join('°, ')}°$ in $0° \\le \\theta \\le ${domain}°$.` };
     }
 
     // ---- 3D trig: angle a cuboid body diagonal makes with the base ----
@@ -5163,75 +5656,183 @@ function genProbability(rng, diff, allowedOps) {
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
 
-    // ---- conditional probability P(A|B) = n(A∩B)/n(B) (MA5-PRO-P-01) ----
+    const cap = (w) => w[0].toUpperCase() + w.slice(1);
+    // simplified-fraction answer fields for a favourable / total pair (always a proper fraction)
+    const pf = (fav, tot) => {
+        const s = simplify(fav, tot);
+        return { s, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+    };
+
+    // ---- conditional probability P(A|B) = n(A∩B)/n(B)  (MA5-PRO-P-01) ----
+    // Easy: read a two-way table; Medium: counts in a group (both P(A|B) and P(B|A));
+    // Hard: "given not", or conditional from probabilities.
     if (op === 'conditional') {
-        const subjA = rc(rng, ['History', 'Music', 'French', 'Science']);
-        const subjB = rc(rng, ['Geography', 'Art', 'Spanish', 'Sport']);
-        const total = rc(rng, [80, 100, 120, 150]);
-        const both = ri(rng, 10, 25);
-        const nB = both + ri(rng, 10, 30);
-        const nA = both + ri(rng, 10, 30);
-        if (nA >= total || nB >= total) return genProbability(rng, diff, allowedOps);
-        const s = simplify(both, nB);
-        return { clue: `In a group of $${total}$ students, $${nA}$ study ${subjA}, $${nB}$ study ${subjB}, and $${both}$ study both. Find the probability that a student studies ${subjA} *given* that they study ${subjB}.`,
-            answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `$P(${subjA[0]}|${subjB[0]}) = \\frac{n(\\text{both})}{n(${subjB})} = \\frac{${both}}{${nB}} = \\frac{${s.n}}{${s.d}}$`,
-            diagram: { type: 'venn', labels: [subjA[0].toUpperCase() + subjA.slice(1), subjB[0].toUpperCase() + subjB.slice(1)], total, sets: { a: nA, b: nB }, regions: { a: '?', ab: both, b: '?', out: '?' } } };
+        if (diff === 'Easy') {
+            const [A, B] = rc(rng, [['netball', 'basketball'], ['soccer', 'cricket'], ['tennis', 'swimming'], ['hockey', 'volleyball']]);
+            const both = ri(rng, 4, 12), onlyA = ri(rng, 3, 12), onlyB = ri(rng, 3, 12), none = ri(rng, 3, 12);
+            const T = both + onlyA + onlyB + none;
+            const aGivenB = rng() < 0.5;            // P(A|B) or P(B|A)
+            const [given, find] = aGivenB ? [B, A] : [A, B];
+            const nGiven = aGivenB ? both + onlyB : both + onlyA;
+            const p = pf(both, nGiven);
+            return { clue: `The two-way table shows how many students in a year group play ${A} and ${B}. Given that a student plays ${given}, find the probability that they also play ${find}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay,
+                worked: `Only the ${nGiven} students who play ${given} count: $P = \\frac{${both}}{${nGiven}} = \\frac{${p.s.n}}{${p.s.d}}$`,
+                diagram: { type: 'table', essential: true, head: ['', cap(B), `Not ${B}`, 'Total'],
+                    rows: [[cap(A), both, onlyA, both + onlyA], [`Not ${A}`, onlyB, none, onlyB + none], ['Total', both + onlyB, onlyA + none, T]] } };
+        }
+        const [subjA, subjB] = rc(rng, [['History', 'Geography'], ['Music', 'Art'], ['French', 'Spanish'], ['Science', 'Drama']]);
+        let total, both, nA, nB;
+        do {
+            total = rc(rng, [80, 100, 120, 150]);
+            both = ri(rng, 10, 25);
+            nA = both + ri(rng, 10, 30); nB = both + ri(rng, 10, 30);
+        } while (nA + nB - both >= total);
+        const venn = { type: 'venn', labels: [subjA, subjB], total, sets: { a: nA, b: nB }, regions: { a: '?', ab: both, b: '?', out: '?' } };
+        const intro = `In a group of $${total}$ students, $${nA}$ study ${subjA}, $${nB}$ study ${subjB}, and $${both}$ study both.`;
+        if (diff === 'Medium') {
+            const aGivenB = rng() < 0.5;
+            const [given, find, nGiven] = aGivenB ? [subjB, subjA, nB] : [subjA, subjB, nA];
+            const p = pf(both, nGiven);
+            return { clue: `${intro} Given that a student studies ${given}, find the probability that they also study ${find}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay,
+                worked: `$P = \\frac{n(\\text{both})}{n(${given})} = \\frac{${both}}{${nGiven}} = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: venn };
+        }
+        if (rng() < 0.5) {
+            // given NOT: P(A | B′) = n(A only) / n(not B)
+            const aGivenNotB = rng() < 0.5;
+            const [given, find, nGiven, nFind] = aGivenNotB ? [subjB, subjA, nB, nA] : [subjA, subjB, nA, nB];
+            const fav = nFind - both, tot = total - nGiven;
+            const p = pf(fav, tot);
+            return { clue: `${intro} Given that a student does *not* study ${given}, find the probability that they study ${find}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay,
+                worked: `Not ${given}: $${total} - ${nGiven} = ${tot}$; ${find} only: $${nFind} - ${both} = ${fav}$; $P = \\frac{${fav}}{${tot}} = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: venn };
+        }
+        // from probabilities (hundredths): P(A), P(B), P(A∩B)
+        let a, b, ab, tries = 0;
+        do {
+            a = 5 * ri(rng, 4, 18); b = 5 * ri(rng, 4, 18); ab = 5 * ri(rng, 1, Math.min(a, b) / 5 - 1); tries++;
+        } while (tries < 200 && (a + b - ab > 100 || ab >= Math.min(a, b)));
+        if (tries >= 200) { a = 60; b = 50; ab = 30; }
+        const dec = (v) => String(v / 100);
+        const bGivenA = rng() < 0.5;
+        const [num, den] = [ab, bGivenA ? a : b];
+        const p = pf(num, den);
+        return { clue: `Events $A$ and $B$ have $P(A) = ${dec(a)}$, $P(B) = ${dec(b)}$ and $P(A \\cap B) = ${dec(ab)}$. Given that ${bGivenA ? '$A$' : '$B$'} has occurred, find the probability that ${bGivenA ? '$B$' : '$A$'} also occurs.`,
+            answer: p.answer, answerDisplay: p.answerDisplay,
+            worked: `$P(${bGivenA ? 'B|A' : 'A|B'}) = \\frac{P(A \\cap B)}{P(${bGivenA ? 'A' : 'B'})} = \\frac{${dec(ab)}}{${dec(den)}} = \\frac{${p.s.n}}{${p.s.d}}$` };
     }
 
-    // ---- Venn diagram: P(A or B) = (|A| + |B| − both)/total ----
+    // ---- Venn diagrams: Easy read a region; Medium union / complement / "but not";
+    // Hard conditional probability read from the diagram ----
     if (op === 'venn') {
-        const total = rc(rng, [50, 80, 100, 120]);
-        const both = ri(rng, 8, 20);
-        const nA = both + ri(rng, 10, 25), nB = both + ri(rng, 10, 25);
-        if (nA + nB - both >= total) return genProbability(rng, diff, allowedOps);
-        const wantNeither = rng() < 0.5;
+        let total, both, nA, nB;
+        do {
+            total = rc(rng, [50, 80, 100, 120]);
+            both = ri(rng, 8, 20);
+            nA = both + ri(rng, 10, 25); nB = both + ri(rng, 10, 25);
+        } while (nA + nB - both >= total);
         const union = nA + nB - both;
-        const fav = wantNeither ? total - union : union;
-        const s = simplify(fav, total);
+        const onlyA = nA - both, onlyB = nB - both, out = total - union;
         const labelA = rc(rng, ['football', 'tennis', 'coffee', 'maths']);
         const labelB = rc(rng, ['basketball', 'cricket', 'tea', 'science']);
-        const cap = (w) => w[0].toUpperCase() + w.slice(1);
-        if (rng() < 0.4) {
-            // Fully labelled Venn diagram (essential): read counts straight off it.
-            const onlyA = nA - both, onlyB = nB - both, out = total - union;
+        const full = { type: 'venn', essential: true, labels: [cap(labelA), cap(labelB)], total, regions: { a: onlyA, ab: both, b: onlyB, out } };
+        const partial = { type: 'venn', labels: [cap(labelA), cap(labelB)], total, sets: { a: nA, b: nB }, regions: { a: '?', ab: both, b: '?', out: '?' } };
+        const survey = `The Venn diagram shows the results of a survey of $${total}$ people.`;
+        if (diff === 'Easy') {
+            // read the count straight off the diagram
             const asks = [
                 { d: `likes ${labelA} *only*`, v: onlyA }, { d: `likes ${labelB} *only*`, v: onlyB },
                 { d: `likes *both*`, v: both }, { d: `likes *neither*`, v: out },
-                { d: `likes ${labelA} (in total)`, v: nA }, { d: `likes ${labelA} *or* ${labelB}`, v: union },
+                { d: `likes ${labelA} (in total)`, v: nA },
             ];
             const pick = rc(rng, asks);
-            const ps = simplify(pick.v, total);
-            return { clue: `The Venn diagram shows the results of a survey of $${total}$ people. Find the probability that a person chosen at random ${pick.d}.`,
-                answer: fracStr(ps.n, ps.d), answerDisplay: `$\\frac{${ps.n}}{${ps.d}}$`,
-                worked: `$P = \\frac{${pick.v}}{${total}} = \\frac{${ps.n}}{${ps.d}}$`,
-                diagram: { type: 'venn', essential: true, labels: [cap(labelA), cap(labelB)], total, regions: { a: onlyA, ab: both, b: onlyB, out } } };
+            const p = pf(pick.v, total);
+            return { clue: `${survey} Find the probability that a person chosen at random ${pick.d}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay,
+                worked: `$P = \\frac{${pick.v}}{${total}} = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: full };
         }
-        const ask = wantNeither ? '*neither*' : `${labelA} *or* ${labelB}`;
-        return { clue: `In a survey of $${total}$ people, $${nA}$ like ${labelA}, $${nB}$ like ${labelB}, and $${both}$ like both. Find the probability that a person likes ${ask}.`,
-            answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `$n(A \\cup B) = ${nA} + ${nB} - ${both} = ${union}$; ${wantNeither ? `neither $= ${total} - ${union} = ${fav}$` : `favourable $= ${fav}$`}; $P = \\frac{${fav}}{${total}} = \\frac{${s.n}}{${s.d}}$`,
-            diagram: { type: 'venn', labels: [cap(labelA), cap(labelB)], total, sets: { a: nA, b: nB }, regions: { a: '?', ab: both, b: '?', out: '?' } } };
+        if (diff === 'Medium') {
+            const asks = [
+                { d: `likes ${labelA} *or* ${labelB}`, v: union, w: `$n(A \\cup B) = ${nA} + ${nB} - ${both} = ${union}$` },
+                { d: `likes *neither* ${labelA} *nor* ${labelB}`, v: out, w: `$n(A \\cup B) = ${union}$, so neither $= ${total} - ${union} = ${out}$` },
+                { d: `does *not* like ${labelA}`, v: total - nA, w: `$n(A') = ${total} - ${nA} = ${total - nA}$` },
+                { d: `likes ${labelB} but *not* ${labelA}`, v: onlyB, w: `$n(B \\cap A') = ${nB} - ${both} = ${onlyB}$` },
+            ];
+            const pick = rc(rng, asks);
+            const p = pf(pick.v, total);
+            const work = `${pick.w}; $P = \\frac{${pick.v}}{${total}} = \\frac{${p.s.n}}{${p.s.d}}$`;
+            if (rng() < 0.5) {
+                return { clue: `${survey} Find the probability that a person chosen at random ${pick.d}.`,
+                    answer: p.answer, answerDisplay: p.answerDisplay, worked: work, diagram: full };
+            }
+            return { clue: `In a survey of $${total}$ people, $${nA}$ like ${labelA}, $${nB}$ like ${labelB}, and $${both}$ like both. Find the probability that a person chosen at random ${pick.d}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay, worked: work, diagram: partial };
+        }
+        // Hard: conditional probability from the Venn diagram
+        const kind = ri(rng, 0, 2);
+        let clue, fav, tot, why;
+        if (kind === 0) {
+            clue = `Given that a person likes ${labelA}, find the probability that they also like ${labelB}.`;
+            fav = both; tot = nA; why = `The ${nA} people who like ${labelA} form the new sample space.`;
+        } else if (kind === 1) {
+            clue = `Given that a person likes ${labelB}, find the probability that they also like ${labelA}.`;
+            fav = both; tot = nB; why = `The ${nB} people who like ${labelB} form the new sample space.`;
+        } else {
+            clue = `Given that a person does *not* like ${labelB}, find the probability that they like ${labelA}.`;
+            fav = onlyA; tot = onlyA + out; why = `Outside ${cap(labelB)}: $${onlyA} + ${out} = ${tot}$ people.`;
+        }
+        const p = pf(fav, tot);
+        return { clue: `${survey} ${clue}`,
+            answer: p.answer, answerDisplay: p.answerDisplay,
+            worked: `${why} $P = \\frac{${fav}}{${tot}} = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: full };
     }
 
-    // ---- two-way table: P(specific cell) = cell/total ----
+    // ---- two-way tables: Easy a single cell; Medium "or" / complement; Hard "given that" ----
     if (op === 'two-way') {
         const bt = ri(rng, 8, 18), bn = ri(rng, 5, 15);   // boys tennis / not
         const gt = ri(rng, 6, 16), gn = ri(rng, 5, 15);   // girls tennis / not
         const total = bt + bn + gt + gn;
-        const cells = [
-            { d: `a *boy who plays tennis*`, v: bt },
-            { d: `a *girl who plays tennis*`, v: gt },
-            { d: `a *boy who does not play tennis*`, v: bn },
-            { d: `a student who *plays tennis*`, v: bt + gt },
+        const table = { type: 'table', essential: true, head: ['', 'Plays tennis', 'Does not', 'Total'],
+            rows: [['Boys', bt, bn, bt + bn], ['Girls', gt, gn, gt + gn], ['Total', bt + gt, bn + gn, total]] };
+        const lead = 'The two-way table shows how many students in a class play tennis.';
+        if (diff === 'Easy') {
+            const cells = [
+                { d: `a *boy who plays tennis*`, v: bt },
+                { d: `a *girl who plays tennis*`, v: gt },
+                { d: `a *boy who does not play tennis*`, v: bn },
+                { d: `a student who *plays tennis*`, v: bt + gt },
+            ];
+            const pick = rc(rng, cells);
+            const p = pf(pick.v, total);
+            return { clue: `${lead} A student is chosen at random. Find the probability of choosing ${pick.d}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay,
+                worked: `Total $= ${total}$; $P = \\frac{${pick.v}}{${total}} = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: table };
+        }
+        if (diff === 'Medium') {
+            const cells = [
+                { d: `a student who is a *boy or plays tennis*`, v: bt + bn + gt, w: `Boys $${bt + bn}$ + girls who play $${gt}$` },
+                { d: `a student who is a *girl or does not play tennis*`, v: gt + gn + bn, w: `Girls $${gt + gn}$ + boys who do not play $${bn}$` },
+                { d: `a student who does *not* play tennis`, v: bn + gn, w: `$${bn} + ${gn}$` },
+                { d: `a *girl*`, v: gt + gn, w: `$${gt} + ${gn}$` },
+            ];
+            const pick = rc(rng, cells);
+            const p = pf(pick.v, total);
+            return { clue: `${lead} A student is chosen at random. Find the probability of choosing ${pick.d}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay,
+                worked: `${pick.w} $= ${pick.v}$ out of $${total}$: $P = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: table };
+        }
+        const cond = [
+            { c: 'Given that a student plays tennis, find the probability that the student is a girl.', fav: gt, tot: bt + gt },
+            { c: 'Given that a student is a girl, find the probability that the student plays tennis.', fav: gt, tot: gt + gn },
+            { c: 'Given that a student is a boy, find the probability that the student does not play tennis.', fav: bn, tot: bt + bn },
+            { c: 'Given that a student does not play tennis, find the probability that the student is a boy.', fav: bn, tot: bn + gn },
         ];
-        const pick = rc(rng, cells);
-        const s = simplify(pick.v, total);
-        return { clue: `The two-way table shows how many students in a class play tennis. A student is chosen at random. Find the probability of choosing ${pick.d}.`,
-            answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `Total $= ${total}$; $P = \\frac{${pick.v}}{${total}} = \\frac{${s.n}}{${s.d}}$`,
-            diagram: { type: 'table', essential: true, head: ['', 'Plays tennis', 'Does not', 'Total'],
-                rows: [['Boys', bt, bn, bt + bn], ['Girls', gt, gn, gt + gn], ['Total', bt + gt, bn + gn, total]] } };
+        const pick = rc(rng, cond);
+        const p = pf(pick.fav, pick.tot);
+        return { clue: `${lead} ${pick.c}`,
+            answer: p.answer, answerDisplay: p.answerDisplay,
+            worked: `Restrict to the given group of $${pick.tot}$ students: $P = \\frac{${pick.fav}}{${pick.tot}} = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: table };
     }
 
     // ---- experimental / relative frequency (MA4-PRO-C-01) ----
@@ -6683,6 +7284,39 @@ function _linEqStr(m, c) {
     return { mStr, cStr, full: `${mStr}${cStr}` };
 }
 
+// ---- Linear relationships: line-equation formatting helpers ----
+// Signed rational n/d as LaTeX, e.g. (-3, 4) → "-\frac{3}{4}".
+function _ltxFrac(n, d) {
+    const s = simplify(n, d);
+    const sg = (s.n < 0) !== (s.d < 0) ? '-' : '';
+    const an = Math.abs(s.n), ad = Math.abs(s.d);
+    return ad === 1 ? `${sg}${an}` : `${sg}\\frac{${an}}{${ad}}`;
+}
+// y = (mn/md)x + (cn/cd) as LaTeX (constant omitted when zero).
+function _lineTex(mn, md, cn, cd = 1) {
+    const m = simplify(mn, md), c = simplify(cn, cd);
+    const mTxt = m.d === 1 && Math.abs(m.n) === 1 ? (m.n < 0 ? '-' : '') : _ltxFrac(m.n, m.d);
+    const cTxt = c.n === 0 ? '' : ` ${c.n < 0 ? '-' : '+'} ${_ltxFrac(Math.abs(c.n), c.d)}`;
+    return `y = ${mTxt}x${cTxt}`;
+}
+// Plain-text answer key form with an integer intercept: y=(-3/4)x+2, y=2x-5.
+function _linePlain(mn, md, c) {
+    const m = simplify(mn, md);
+    const mTxt = m.d === 1 ? (m.n === 1 ? '' : m.n === -1 ? '-' : String(m.n)) : `(${m.n}/${m.d})`;
+    return `y=${mTxt}x${c === 0 ? '' : (c > 0 ? '+' : '-') + Math.abs(c)}`;
+}
+// Ax + By + C = 0 with integer coefficients ("1x" / "1y" never printed).
+function _generalForm(A, B, C, normalise = false) {
+    if (normalise) {
+        const g = gcd(gcd(Math.abs(A), Math.abs(B)), Math.abs(C)) || 1;
+        A /= g; B /= g; C /= g;
+        if (A < 0 || (A === 0 && B < 0)) { A = -A; B = -B; C = -C; }
+    }
+    const cx = (k, v) => (Math.abs(k) === 1 ? '' : String(Math.abs(k))) + v;
+    const tex = `${A < 0 ? '-' : ''}${cx(A, 'x')} ${B < 0 ? '-' : '+'} ${cx(B, 'y')}${C === 0 ? '' : ` ${C < 0 ? '-' : '+'} ${Math.abs(C)}`} = 0`;
+    return { A, B, C, tex, plain: tex.replace(/ /g, '') };
+}
+
 function genLinear(rng, diff, allowedOps) {
     const OPS = ['plot-line', 'pattern-rule', 'gradient-two-points', 'midpoint', 'intercepts',
                  'distance', 'equation-from-gp', 'parallel-perp', 'general-form'];
@@ -6718,24 +7352,70 @@ function genLinear(rng, diff, allowedOps) {
         };
     }
 
-    // ---- general form Ax + By + C = 0: find an intercept (MA5-LIN-C-01) ----
+    // ---- general form Ax + By + C = 0 (MA5-LIN-C-01) ----
+    // Easy: y = mx + c → general form; Medium: intercepts / rearrange to y = mx + c;
+    // Hard: fractional and negative gradients in both directions.
     if (op === 'general-form') {
-        let xInt = ri(rng, -6, 6); if (xInt === 0) xInt = 2;
-        let yInt = ri(rng, -6, 6); if (yInt === 0) yInt = 3;
-        // Line through (xInt,0) & (0,yInt): yInt·x + xInt·y − xInt·yInt = 0
-        let A = yInt, B = xInt, C = -xInt * yInt;
-        if (A < 0) { A = -A; B = -B; C = -C; }   // keep leading coeff positive
-        const bSign = B < 0 ? `- ${-B}y` : `+ ${B}y`;
-        const cSign = C < 0 ? `- ${-C}` : `+ ${C}`;
-        const eqn = `${A}x ${bSign} ${cSign} = 0`;
-        if (rng() < 0.5) {
-            return { clue: `Find the *x-intercept* of the line $${eqn}$.`,
-                answer: String(xInt), answerDisplay: `$(${xInt}, 0)$`,
-                worked: `Set $y = 0$: $${A}x ${cSign} = 0 \\Rightarrow x = ${xInt}$.` };
+        if (diff === 'Easy') {
+            const m = ri(rng, 1, 5), c = ri(rng, 1, 8) * (rng() < 0.5 ? 1 : -1);
+            const g = _generalForm(m, -1, c);
+            const { full } = _linEqStr(m, c);
+            return { clue: `Rewrite $y = ${full}$ in the general form $ax + by + c = 0$.`,
+                answer: g.plain, answerDisplay: `$${g.tex}$`,
+                worked: `Move every term to one side: $0 = ${m}x - y ${c < 0 ? '-' : '+'} ${Math.abs(c)}$, so $${g.tex}$.` };
         }
-        return { clue: `Find the *y-intercept* of the line $${eqn}$.`,
-            answer: String(yInt), answerDisplay: `$(0, ${yInt})$`,
-            worked: `Set $x = 0$: $${bSign} ${cSign} = 0 \\Rightarrow y = ${yInt}$.` };
+        if (diff === 'Medium') {
+            if (rng() < 0.5) {
+                let xInt = ri(rng, -6, 6); if (xInt === 0) xInt = 2;
+                let yInt = ri(rng, -6, 6); if (yInt === 0) yInt = 3;
+                // Line through (xInt,0) & (0,yInt): yInt·x + xInt·y − xInt·yInt = 0
+                let A = yInt, B = xInt, C = -xInt * yInt;
+                if (A < 0) { A = -A; B = -B; C = -C; }   // keep leading coeff positive
+                const bSign = B < 0 ? `- ${-B}y` : `+ ${B}y`;
+                const cSign = C < 0 ? `- ${-C}` : `+ ${C}`;
+                const eqn = `${A}x ${bSign} ${cSign} = 0`;
+                if (rng() < 0.5) {
+                    return { clue: `Find the *x-intercept* of the line $${eqn}$.`,
+                        answer: String(xInt), answerDisplay: `$(${xInt}, 0)$`,
+                        worked: `Set $y = 0$: $${A}x ${cSign} = 0 \\Rightarrow x = ${xInt}$.` };
+                }
+                return { clue: `Find the *y-intercept* of the line $${eqn}$.`,
+                    answer: String(yInt), answerDisplay: `$(0, ${yInt})$`,
+                    worked: `Set $x = 0$: $${bSign} ${cSign} = 0 \\Rightarrow y = ${yInt}$.` };
+            }
+            // rearrange Ax ± y + C = 0 into y = mx + c (integer gradient, often negative)
+            const A = ri(rng, 1, 6), B = rng() < 0.5 ? 1 : -1;
+            const C = ri(rng, 1, 9) * (rng() < 0.5 ? 1 : -1);
+            const g = _generalForm(A, B, C);
+            const m = -A / B, c = -C / B;
+            const { full } = _linEqStr(m, c);
+            return { clue: `Rewrite $${g.tex}$ in the form $y = mx + c$.`,
+                answer: `y=${_linEqStr(m, c).mStr}${_linEqStr(m, c).cStr.replace(/ /g, '')}`, answerDisplay: `$y = ${full}$`,
+                worked: `Make $y$ the subject: $y = ${full}$.` };
+        }
+        // Hard
+        if (rng() < 0.5) {
+            // y = (p/q)x + c  (possibly fractional c) → integer general form
+            let p = ri(rng, 1, 5) * (rng() < 0.5 ? 1 : -1), q = ri(rng, 2, 5);
+            if (gcd(Math.abs(p), q) !== 1) p = p > 0 ? 1 : -1;
+            const fracC = rng() < 0.4;
+            const cd = fracC ? rc(rng, [2, 3, 4]) : 1;
+            const cn = fracC ? rc(rng, [1, 3, 5].filter(v => v % cd !== 0)) * (rng() < 0.5 ? 1 : -1) : ri(rng, 1, 6) * (rng() < 0.5 ? 1 : -1);
+            const L = lcm(q, cd);
+            const g = _generalForm(p * L / q, -L, cn * L / cd, true);
+            const tex = _lineTex(p, q, cn, cd);
+            return { clue: `Rewrite $${tex}$ in the general form $ax + by + c = 0$, where $a$, $b$ and $c$ are integers and $a$ is positive.`,
+                answer: g.plain, answerDisplay: `$${g.tex}$`,
+                worked: `Multiply both sides by $${L}$ to clear the fractions, then collect all terms on one side: $${g.tex}$.` };
+        }
+        // general form with a fractional gradient → y = mx + c
+        let p = ri(rng, 1, 7) * (rng() < 0.5 ? 1 : -1), q = ri(rng, 2, 5);
+        if (gcd(Math.abs(p), q) !== 1) p = p > 0 ? 1 : -1;
+        const c = ri(rng, 1, 6) * (rng() < 0.5 ? 1 : -1);
+        const g = _generalForm(p, -q, q * c, true);       // p·x − q·y + q·c = 0
+        return { clue: `Rewrite $${g.tex}$ in the form $y = mx + c$.`,
+            answer: _linePlain(p, q, c), answerDisplay: `$${_lineTex(p, q, c)}$`,
+            worked: `Make $y$ the subject: $${q}y = ${p}x ${c < 0 ? '-' : '+'} ${q * Math.abs(c)}$, so $${_lineTex(p, q, c)}$.` };
     }
 
     // ---- number-pattern rule  T = an + b  (MA4-LIN-C-01) ----
@@ -7038,32 +7718,87 @@ function genLinear(rng, diff, allowedOps) {
         };
     }
 
+    // ---- distance between two points (MA5-LIN-C-01) ----
+    // Easy: horizontal / vertical segments; Medium: integer answers (Pythagorean triples);
+    // Hard: irrational distances as a simplest surd or a decimal.
     if (op === 'distance') {
-        const triples = diff === 'Hard'
-            ? [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17], [7, 24, 25]]
-            : [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17]];
-        const [a, b, c] = rc(rng, triples);
-        const x1 = ri(rng, -5, 5), y1 = ri(rng, -5, 5);
-        const x2 = x1 + a, y2 = y1 + b;
+        const sgn = () => (rng() < 0.5 ? 1 : -1);
+        let x1, y1, x2, y2, tail = '', answer, answerDisplay, worked;
+        if (diff === 'Easy') {
+            x1 = ri(rng, -6, 6); y1 = ri(rng, -6, 6);
+            const len = ri(rng, 2, 9) * sgn();
+            const horizontal = rng() < 0.5;
+            x2 = horizontal ? x1 + len : x1; y2 = horizontal ? y1 : y1 + len;
+            const d = Math.abs(len);
+            answer = String(d); answerDisplay = `$d = ${d}$ units`;
+            worked = horizontal
+                ? `Both points have $y = ${y1}$, so $d = |${x2} - ${par(x1)}| = ${d}$`
+                : `Both points have $x = ${x1}$, so $d = |${y2} - ${par(y1)}| = ${d}$`;
+        } else if (diff === 'Medium') {
+            const [a, b, c] = rc(rng, [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17], [9, 12, 15]]);
+            const [dx, dy] = rng() < 0.5 ? [a, b] : [b, a];
+            x1 = ri(rng, -6, 6); y1 = ri(rng, -6, 6);
+            x2 = x1 + dx * sgn(); y2 = y1 + dy * sgn();
+            answer = String(c); answerDisplay = `$d = ${c}$ units`;
+            worked = `$d = \\sqrt{(${x2} - ${par(x1)})^2 + (${y2} - ${par(y1)})^2} = \\sqrt{${dx * dx} + ${dy * dy}} = \\sqrt{${dx * dx + dy * dy}} = ${c}$`;
+        } else {
+            let dx, dy, n;
+            do { dx = ri(rng, 1, 9); dy = ri(rng, 1, 9); n = dx * dx + dy * dy; } while (Number.isInteger(Math.sqrt(n)));
+            x1 = ri(rng, -6, 6); y1 = ri(rng, -6, 6);
+            x2 = x1 + dx * sgn(); y2 = y1 + dy * sgn();
+            const sub = `\\sqrt{(${x2} - ${par(x1)})^2 + (${y2} - ${par(y1)})^2} = \\sqrt{${dx * dx} + ${dy * dy}} = \\sqrt{${n}}`;
+            if (rng() < 0.6) {
+                const { k, rad } = _surd(n);
+                tail = ' Leave your answer in simplest surd form.';
+                answer = k === 1 ? `√${rad}` : `${k}√${rad}`;
+                answerDisplay = `$d = ${_surdStr(k, rad)}$ units`;
+                worked = `$d = ${sub}${k === 1 ? '' : ` = ${_surdStr(k, rad)}`}$`;
+            } else {
+                const d = Math.round(Math.sqrt(n) * 10) / 10;
+                tail = ' Give your answer correct to 1 decimal place.';
+                answer = String(d); answerDisplay = `$d \\approx ${d}$ units`;
+                worked = `$d = ${sub} \\approx ${d}$`;
+            }
+        }
         return {
-            clue: `Find the *distance* between $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
-            answer: String(c),
-            answerDisplay: `$d = ${c}$ units`,
-            worked: `$d = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} = ${c}$`,
+            clue: `Find the *distance* between $(${x1}, ${y1})$ and $(${x2}, ${y2})$.${tail}`,
+            answer, answerDisplay, worked,
             diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true },
         };
     }
 
-    // equation-from-gp
-    const m = ri(rng, 1, diff === 'Easy' ? 3 : 5) * (rng() < 0.5 ? -1 : 1);
-    const x1 = ri(rng, -4, 4), y1 = ri(rng, -6, 6);
+    // ---- equation of a line from a gradient and a point (MA5-LIN-C-01) ----
+    // Easy: y-intercept given; Medium: integer gradient and point; Hard: fractional gradient.
+    if (diff === 'Easy') {
+        const m = ri(rng, 1, 4) * (rng() < 0.5 ? -1 : 1), c = ri(rng, 1, 8) * (rng() < 0.5 ? -1 : 1);
+        const { full } = _linEqStr(m, c);
+        return {
+            clue: `Find the equation of the line with gradient $${m}$ and $y$-intercept $${c}$.`,
+            answer: _linePlain(m, 1, c), answerDisplay: `$y = ${full}$`,
+            worked: `Use $y = mx + c$ with $m = ${m}$ and $c = ${c}$: $y = ${full}$`,
+        };
+    }
+    if (diff === 'Hard') {
+        let p = ri(rng, 1, 7) * (rng() < 0.5 ? -1 : 1), q = ri(rng, 2, 4);
+        if (gcd(Math.abs(p), q) !== 1) p = p > 0 ? 1 : -1;
+        const k = ri(rng, 1, 3) * (rng() < 0.5 ? -1 : 1), x1 = q * k, y1 = ri(rng, -8, 8);
+        const c = y1 - p * k;
+        const mTex = _ltxFrac(p, q);
+        return {
+            clue: `Find the equation of the line with gradient $${mTex}$ passing through $(${x1}, ${y1})$. Give your answer in the form $y = mx + c$.`,
+            answer: _linePlain(p, q, c), answerDisplay: `$${_lineTex(p, q, c)}$`,
+            worked: `$c = ${y1} - (${mTex})(${x1}) = ${y1} - ${par(p * k)} = ${c}$, so $${_lineTex(p, q, c)}$`,
+        };
+    }
+    const m = ri(rng, 1, 5) * (rng() < 0.5 ? -1 : 1);
+    const x1 = ri(rng, 1, 5) * (rng() < 0.5 ? -1 : 1), y1 = ri(rng, -6, 6);
     const c = y1 - m * x1;
-    const { mStr, full } = _linEqStr(m, c);
+    const { full } = _linEqStr(m, c);
     return {
         clue: `Find the equation of the line with gradient $${m}$ passing through $(${x1}, ${y1})$.`,
-        answer: `y=${mStr}${c >= 0 ? '+' : ''}${c}`,
+        answer: _linePlain(m, 1, c),
         answerDisplay: `$y = ${full}$`,
-        worked: `$y - ${y1} = ${m}(x - ${x1})$, so $y = ${full}$`,
+        worked: `$y - ${par(y1)} = ${m}(x - ${par(x1)})$, so $y = ${full}$`,
     };
 }
 
@@ -7687,21 +8422,81 @@ function genLength(rng, diff, allowedOps) {
             worked: `$C = \\pi d = ${d}\\pi\\text{ cm}$` };
     }
 
-    // unit-convert
-    const units = [['cm', 'mm', 10], ['m', 'cm', 100], ['km', 'm', 1000], ['m', 'mm', 1000]];
-    if (diff === 'Hard' && rng() < 0.5) {
-        // mixed-unit conversion, e.g. "3 m 25 cm → cm"
-        const mixed = [['m', 'cm', 100], ['km', 'm', 1000], ['cm', 'mm', 10]];
-        const [big, small, factor] = rc(rng, mixed);
-        const a = ri(rng, 1, 9), b = ri(rng, 1, factor - 1);
-        const tot = a * factor + b;
-        return { clue: `Convert $${a}\\text{ ${big}}\\ ${b}\\text{ ${small}}$ to ${small}.`,
-            answer: String(tot), answerDisplay: `$${tot}\\text{ ${small}}$`,
-            worked: `$${a} \\times ${factor} + ${b} = ${tot}\\text{ ${small}}$` };
+    // unit-convert — Easy: whole-number single-step; Medium: decimals, worded
+    // contexts and mixed units; Hard: area-unit conversions.
+    return _genLengthConvert(rng, diff);
+}
+
+// Thousands grouping for long numerals in a clue (thin space in maths mode).
+function _grp(n) {
+    const str = String(n);
+    if (str.includes('.') || Math.abs(n) < 10000) return str;
+    return str.replace(/\B(?=(\d{3})+(?!\d))/g, '\\,');
+}
+const _LEN_NAMES = { mm: 'millimetres', cm: 'centimetres', m: 'metres', km: 'kilometres' };
+const _LEN_UNITS = [['cm', 'mm', 10], ['m', 'cm', 100], ['km', 'm', 1000], ['m', 'mm', 1000]];
+const _clean = (x) => Number(Math.round(x * 1e6) / 1e6);
+
+function _genLengthConvert(rng, diff) {
+    if (diff === 'Hard') {
+        // Area units: 1 m² = 10 000 cm², 1 cm² = 100 mm², 1 km² = 1 000 000 m²,
+        // 1 ha = 10 000 m², 1 km² = 100 ha
+        const AREA = [
+            [10000, '\\text{m}^2', '\\text{cm}^2', '1\\text{ m}^2 = 10\\,000\\text{ cm}^2'],
+            [100, '\\text{cm}^2', '\\text{mm}^2', '1\\text{ cm}^2 = 100\\text{ mm}^2'],
+            [1000000, '\\text{km}^2', '\\text{m}^2', '1\\text{ km}^2 = 1\\,000\\,000\\text{ m}^2'],
+            [10000, '\\text{ha}', '\\text{m}^2', '1\\text{ ha} = 10\\,000\\text{ m}^2'],
+            [100, '\\text{km}^2', '\\text{ha}', '1\\text{ km}^2 = 100\\text{ ha}'],
+        ];
+        const [factor, bigU, smallU, rule] = rc(rng, AREA);
+        if (rng() < 0.5) {
+            const val = rng() < 0.5 ? ri(rng, 2, 9) : ri(rng, 11, 99) / 10;
+            const out = _clean(val * factor);
+            return { clue: `Convert $${val}\\ ${bigU}$ to $${smallU}$.`,
+                answer: String(out), answerDisplay: `$${_grp(out)}\\ ${smallU}$`,
+                worked: `$${rule}$, so $${val} \\times ${_grp(factor)} = ${_grp(out)}\\ ${smallU}$` };
+        }
+        const m = rng() < 0.5 ? ri(rng, 2, 9) : ri(rng, 11, 99) / 10;
+        const val = _clean(m * factor);
+        return { clue: `Convert $${_grp(val)}\\ ${smallU}$ to $${bigU}$.`,
+            answer: String(m), answerDisplay: `$${m}\\ ${bigU}$`,
+            worked: `$${rule}$, so $${_grp(val)} \\div ${_grp(factor)} = ${m}\\ ${bigU}$` };
     }
-    const [big, small, factor] = rc(rng, units);
+    if (diff === 'Medium') {
+        const r = rng();
+        if (r < 0.25) {
+            // mixed-unit conversion, e.g. "3 m 25 cm → cm"
+            const mixed = [['m', 'cm', 100], ['km', 'm', 1000], ['cm', 'mm', 10]];
+            const [big, small, factor] = rc(rng, mixed);
+            const a = ri(rng, 1, 9), b = ri(rng, 1, factor - 1);
+            const tot = a * factor + b;
+            return { clue: `Convert $${a}\\text{ ${big}}\\ ${b}\\text{ ${small}}$ to ${small}.`,
+                answer: String(tot), answerDisplay: `$${tot}\\text{ ${small}}$`,
+                worked: `$${a} \\times ${factor} + ${b} = ${tot}\\text{ ${small}}$` };
+        }
+        const [big, small, factor] = rc(rng, _LEN_UNITS);
+        const down = rng() < 0.5;                       // big → small, else small → big
+        const from = down ? big : small, to = down ? small : big;
+        let val, out;
+        if (down) { val = ri(rng, 11, 99) / 10; out = _clean(val * factor); }
+        else { const n = ri(rng, 11, 99); val = _clean(n * factor / 10); out = n / 10; }
+        const worked = down ? `$${val} \\times ${factor} = ${out}\\text{ ${to}}$` : `$${val} \\div ${factor} = ${out}\\text{ ${to}}$`;
+        if (r < 0.6) {
+            return { clue: `Convert $${val}\\text{ ${from}}$ to ${to}.`,
+                answer: String(out), answerDisplay: `$${out}\\text{ ${to}}$`, worked };
+        }
+        const scale = big + small;                       // choose a context that suits the unit size
+        const thing = rc(rng, scale === 'kmm' ? ['A cycling path is', 'A river walk is', 'A hiking trail is']
+            : scale === 'mcm' ? ['A piece of timber is', 'A ribbon is', 'A garden path is']
+            : scale === 'cmmm' ? ['A pencil is', 'A leaf is', 'A screw is']
+            : ['A metal rod is', 'A strip of tape is', 'A skirting board is']);
+        return { clue: `${thing} $${val}\\text{ ${from}}$ long. Convert this length to ${_LEN_NAMES[to]}.`,
+            answer: String(out), answerDisplay: `$${out}\\text{ ${to}}$`, worked };
+    }
+    // Easy: whole-number, single-step conversions
+    const [big, small, factor] = rc(rng, _LEN_UNITS.slice(0, 3));
     if (rng() < 0.5) {
-        const val = ri(rng, 2, diff === 'Easy' ? 9 : 50);
+        const val = ri(rng, 2, 9);
         return { clue: `Convert $${val}\\text{ ${big}}$ to ${small}.`,
             answer: String(val * factor), answerDisplay: `$${val * factor}\\text{ ${small}}$`,
             worked: `$${val} \\times ${factor} = ${val * factor}\\text{ ${small}}$` };
@@ -7925,6 +8720,74 @@ function genTime(rng, diff, allowedOps) {
     const hm = (m) => { m = norm(m); return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`; };
     const disp = (m) => `$${hm(m).replace(':', '{:}')}$`;
 
+    // 12-hour helpers (am/pm) used by the 24-hour conversion tiers
+    const to12 = (m) => { m = norm(m); const h24 = Math.floor(m / 60); return { h: h24 % 12 || 12, min: m % 60, ap: h24 < 12 ? 'am' : 'pm', h24 }; };
+    const d12 = (m) => { const t = to12(m); return `$${t.h}{:}${pad(t.min)}\\text{ ${t.ap}}$`; };
+    const ans12 = (m) => { const t = to12(m); return { answer: `${t.h}:${pad(t.min)} ${t.ap}`, answerDisplay: `$${t.h}{:}${pad(t.min)}\\text{ ${t.ap}}$` }; };
+    const noEdge = (m) => { const h = Math.floor(norm(m) / 60); return h !== 0 && h !== 12; };   // not 12 am / 12 pm
+    const durTxt = (n) => `$${Math.floor(n / 60)}$ ${Math.floor(n / 60) === 1 ? 'hour' : 'hours'}${n % 60 ? ` $${n % 60}$ ${n % 60 === 1 ? 'minute' : 'minutes'}` : ''}`;
+
+    // ---- Hard: noon / midnight edge cases (12:xx am = 00:xx, 12:xx pm = 12:xx, 24:00 = 00:00) ----
+    if (op === 'convert' && diff === 'Hard') {
+        const r = rng();
+        if (r < 0.3) {
+            const min = rc(rng, [0, 30, ri(rng, 1, 59)]), pm = rng() < 0.5;
+            const h24 = pm ? 12 : 0;
+            return { clue: `Write $12{:}${pad(min)}\\text{ ${pm ? 'pm' : 'am'}}$ in 24-hour time.`,
+                answer: `${pad(h24)}:${pad(min)}`, answerDisplay: `$${pad(h24)}{:}${pad(min)}$`,
+                worked: pm ? `$12{:}${pad(min)}$ pm is just after noon: the hour stays $12$ $\\rightarrow 12{:}${pad(min)}$`
+                    : `$12{:}${pad(min)}$ am is just after midnight: the hour becomes $00$ $\\rightarrow 00{:}${pad(min)}$` };
+        }
+        if (r < 0.6) {
+            const min = rc(rng, [0, 15, ri(rng, 1, 59)]), noon = rng() < 0.5;
+            return { clue: `Write $${noon ? '12' : '00'}{:}${pad(min)}$ as 12-hour time (include am or pm).`,
+                answer: `12:${pad(min)} ${noon ? 'pm' : 'am'}`, answerDisplay: `$12{:}${pad(min)}\\text{ ${noon ? 'pm' : 'am'}}$`,
+                worked: noon ? `$12{:}${pad(min)}$ is just after noon $\\rightarrow 12{:}${pad(min)}\\text{ pm}$`
+                    : `$00{:}${pad(min)}$ is just after midnight, so the hour is $12$ $\\rightarrow 12{:}${pad(min)}\\text{ am}$` };
+        }
+        if (r < 0.75) {
+            return { clue: 'Midnight can be written as $00{:}00$ at the start of a day or $24{:}00$ at the end of a day. Write $24{:}00$ as 12-hour time (include am or pm).',
+                answer: '12:00 am', answerDisplay: '$12{:}00\\text{ am}$',
+                worked: '$24{:}00$ is the same moment as $00{:}00$ (midnight) $\\rightarrow 12{:}00\\text{ am}$' };
+        }
+        // elapsed time between two 12-hour times where one is 12:xx (crossing noon or midnight)
+        const dur = 5 * ri(rng, 4, 80);
+        let startM, endM;
+        if (rng() < 0.5) { startM = rc(rng, [0, 12]) * 60 + 5 * ri(rng, 0, 11); endM = startM + dur; }
+        else { endM = rc(rng, [0, 12]) * 60 + 5 * ri(rng, 0, 11); startM = endM - dur; }
+        const crosses = norm(startM) + dur >= 1440;
+        return { clue: `A shift starts at ${d12(startM)} and finishes at ${d12(endM)}${crosses ? ' the next day' : ''}. Convert both times to 24-hour time, then calculate how many minutes the shift lasts.`,
+            answer: String(dur), answerDisplay: `$${dur}\\text{ min}$`,
+            worked: `${disp(startM)} to ${disp(endM)} $= ${dur}$ minutes` };
+    }
+
+    // ---- Medium: durations that cross noon / midnight (12-hour times, never 12 am / 12 pm) ----
+    if (op === 'convert' && diff === 'Medium') {
+        const r = rng();
+        let startM, dur, endM;
+        const overnight = rng() < 0.5;            // half the questions cross midnight
+        do {
+            startM = ri(rng, overnight ? 21 : 1, 23) * 60 + 5 * ri(rng, 0, 11);
+            dur = 5 * ri(rng, overnight ? 36 : 12, 60);
+            endM = startM + dur;
+        } while (!noEdge(startM) || !noEdge(endM));
+        if (r < 0.35) {
+            return { clue: `A bus leaves at ${d12(startM)} and the trip takes ${durTxt(dur)}. Write the arrival time in 24-hour time.`,
+                answer: hm(endM), answerDisplay: disp(endM),
+                worked: `${disp(startM)} $+ ${dur}\\text{ min} = $ ${disp(endM)}` };
+        }
+        if (r < 0.7) {
+            const crosses = norm(startM) + dur >= 1440;
+            return { clue: `A shift starts at ${d12(startM)} and finishes at ${d12(endM)}${crosses ? ' the next day' : ''}. Convert both times to 24-hour time, then calculate how many minutes the shift lasts.`,
+                answer: String(dur), answerDisplay: `$${dur}\\text{ min}$`,
+                worked: `${disp(startM)} to ${disp(endM)} $= ${dur}$ minutes` };
+        }
+        return { clue: `A train departs at ${disp(startM)} and the journey takes ${durTxt(dur)}. Write the arrival time as 12-hour time (include am or pm).`,
+            ...ans12(endM),
+            worked: `${disp(startM)} $+ ${dur}\\text{ min} = $ ${disp(endM)} $\\rightarrow$ ${d12(endM)}` };
+    }
+
+    // ---- Easy: straightforward am / pm conversions (no 12 am / 12 pm) ----
     if (op === 'convert' && rng() < 0.4) {
         // Read an analogue clock, then give the 24-hour time.
         const h12 = ri(rng, 1, 11), min = 5 * ri(rng, 0, 11), pm = rng() < 0.5;
@@ -7943,11 +8806,13 @@ function genTime(rng, diff, allowedOps) {
                 answer: `${pad(h24)}:${pad(min)}`, answerDisplay: `$${pad(h24)}{:}${pad(min)}$`,
                 worked: `${pm ? `Add 12 hours: ${h12} + 12 = ${h24}` : 'Morning hours are unchanged'} $\\rightarrow ${pad(h24)}{:}${pad(min)}$` };
         }
-        // 24-hour → 12-hour (afternoon/evening, always pm, avoids the 12 edge)
-        const h24 = ri(rng, 13, 23), min = ri(rng, 0, 59), h12 = h24 - 12;
+        // 24-hour → 12-hour (morning or afternoon, avoiding the 12 edge)
+        const h24 = rng() < 0.7 ? ri(rng, 13, 23) : ri(rng, 1, 11), min = ri(rng, 0, 59);
+        const pm = h24 > 12, h12 = pm ? h24 - 12 : h24;
         return { clue: `Write $${pad(h24)}{:}${pad(min)}$ as 12-hour time (include am or pm).`,
-            answer: `${h12}:${pad(min)} pm`, answerDisplay: `$${h12}{:}${pad(min)}\\text{ pm}$`,
-            worked: `Subtract 12: $${h24} - 12 = ${h12}$, afternoon $\\rightarrow ${h12}{:}${pad(min)}\\text{ pm}$` };
+            answer: `${h12}:${pad(min)} ${pm ? 'pm' : 'am'}`, answerDisplay: `$${h12}{:}${pad(min)}\\text{ ${pm ? 'pm' : 'am'}}$`,
+            worked: pm ? `Subtract 12: $${h24} - 12 = ${h12}$, afternoon $\\rightarrow ${h12}{:}${pad(min)}\\text{ pm}$`
+                : `Morning hours are unchanged $\\rightarrow ${h12}{:}${pad(min)}\\text{ am}$` };
     }
 
     if (op === 'duration' && rng() < 0.35) {
@@ -7981,7 +8846,7 @@ function genTime(rng, diff, allowedOps) {
         if (rng() < 0.5) {
             // express the duration as "h min" at Medium/Hard for variety
             const durTxt = (diff !== 'Easy' && addMin >= 60)
-                ? `$${Math.floor(addMin / 60)}$ ${Math.floor(addMin / 60) === 1 ? 'hour' : 'hours'}${addMin % 60 ? ` $${addMin % 60}$ minutes` : ''}`
+                ? `$${Math.floor(addMin / 60)}$ ${Math.floor(addMin / 60) === 1 ? 'hour' : 'hours'}${addMin % 60 ? ` $${addMin % 60}$ ${addMin % 60 === 1 ? 'minute' : 'minutes'}` : ''}`
                 : `$${addMin}$ minutes`;
             return { clue: `A film starts at ${disp(startM)} and runs for ${durTxt}. What time does it finish?`,
                 answer: hm(endM), answerDisplay: disp(endM),

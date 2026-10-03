@@ -370,6 +370,10 @@
                                 <option value="odd">Pad odd sets only</option>
                                 <option value="always">After every set</option>
                             </select></div>
+                        <hr class="form-divider">
+                        <div class="toggle-row"><label for="blankPageEmpty" title="Leave the padding pages completely empty — omit the faint &quot;This page is intentionally left blank&quot; line"><i class="fas fa-eraser toggle-icon"></i>Leave Blank Pages Fully Empty</label><label class="switch"><input
+                                    type="checkbox" id="blankPageEmpty" onchange="saveState(); updateBlankPagePreview();"><span
+                                    class="slider-switch"></span></label></div>
                     </div>
                 </details>
             </div>
@@ -458,6 +462,9 @@
                     aria-selected="false" tabindex="-1" aria-label="Hard page"><i class="fas fa-fire" aria-hidden="true"></i> Hard</button>
                 <button class="page-btn" data-page="4" onclick="showPage(4)" role="tab"
                     aria-selected="false" tabindex="-1" aria-label="Answer key page"><i class="fas fa-key" aria-hidden="true"></i> Key</button>
+                <!-- Shown only when duplex padding would insert a blank sheet after each set -->
+                <button class="page-btn page-btn-blank" id="page-btn-blank" data-page="5" onclick="showPage(5)" role="tab" hidden
+                    aria-selected="false" tabindex="-1" aria-label="Blank duplex sheet"><i class="far fa-file" aria-hidden="true"></i> Blank</button>
             </div>
             <div class="toolbar-tools">
                 <div class="preview-quick-toggles" role="group" aria-label="Preview options">
@@ -546,6 +553,15 @@
                     </div>
                     <div class="p-area" id="key-container" style="--page-scale: var(--scale-key, 1)"></div>
                 </div>
+            </div>
+
+            <!-- Page 5: preview-only placeholder for the blank sheet that duplex padding inserts after each set -->
+            <div class="page page-blank" id="page5" aria-label="Blank sheet inserted for duplex printing">
+                <div class="blank-sheet-note" id="blank-sheet-note"><i class="far fa-file" aria-hidden="true"></i>
+                    <strong>Blank sheet</strong>
+                    <span id="blank-sheet-reason">Inserted after each set so the next set starts on a fresh sheet.</span>
+                </div>
+                <div class="blank-sheet-footer" id="blank-sheet-footer">This page is intentionally left blank</div>
             </div>
 
         </div>

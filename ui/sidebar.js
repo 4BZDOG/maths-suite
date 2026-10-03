@@ -58,7 +58,7 @@ export function closeSidebarOnNarrow() {
 export function setupTablistKeys() {
     document.querySelectorAll('[role="tablist"]').forEach(list => {
         list.addEventListener('keydown', e => {
-            const tabs = [...list.querySelectorAll('[role="tab"]')];
+            const tabs = [...list.querySelectorAll('[role="tab"]')].filter(t => !t.hidden);
             if (tabs.length === 0) return;
             const current = document.activeElement;
             const idx = tabs.indexOf(current);
