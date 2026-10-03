@@ -44,7 +44,7 @@ const GOLDEN = {
     "stats dense 2col": { total: 4, q: [7, 5, 5, 2] },
     "stats 2 pages 1col": { total: 7, q: [4, 4, 3, 4, 2, 4, 2] },
     "stage5 2col": { total: 4, q: [6, 6, 6, 4] },
-    "stage5 2 pages font 1.15": { total: 7, q: [4, 4, 5, 4, 4, 5, 5] },
+    "stage5 2 pages font 1.15": { total: 7, q: [4, 5, 5, 4, 4, 5, 5] },
     "duplex off 3 copies (5 pages)": { total: 12, q: [9, 8, 8, 0, 10, 8, 8, 0, 9, 8, 8, 0] },
     "duplex odd, even set (4 pages)": { total: 12, q: [9, 8, 8, 0, 10, 8, 8, 0, 9, 8, 8, 0] },
     "duplex odd, odd set (3 pages)": { total: 11, q: [9, 8, 0, 0, 10, 8, 0, 0, 9, 8, 0] },

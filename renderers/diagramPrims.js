@@ -856,13 +856,505 @@ function fractionPrims({ kind, parts, shaded }) {
     return fitPrims(items, 5);
 }
 
+// ─── Plane geometry, angles and graphs (shared by the SVG preview and the PDF) ─
+// These were once hand-written twice (an SVG string and a jsPDF drawer each);
+// they are now builders like every other diagram so the two back-ends cannot drift.
+
+// Label helper: a missing value renders red + bold.
+const lbl = (x, y, s, { missing = false, size = 11, ...o } = {}) =>
+    text(x, y, s, { size, ...(missing ? { color: 'm', bold: true } : {}), ...o });
+// Right-angle corner mark: legs go from (vx,vy) along unit directions a and b.
+const rAng = (vx, vy, ax, ay, bx, by, s = 7, sw = 1.3) =>
+    path([[vx + ax * s, vy + ay * s], [vx + (ax + bx) * s, vy + (ay + by) * s], [vx + bx * s, vy + by * s]], { sw });
+// Angle arc at v between the rays towards p1 and p2 (shorter way round).
+const arcAt = (v, p1, p2, r, o = {}) => {
+    const d1 = [p1[0] - v[0], p1[1] - v[1]], d2 = [p2[0] - v[0], p2[1] - v[1]];
+    if (!Math.hypot(...d1) || !Math.hypot(...d2)) return [];
+    return [path(angArc(v[0], v[1], r, d1, d2).pts, { sw: 1.3, ...o })];
+};
+const dimTicks = (a, b, tk, o = { stroke: 'g', sw: 1, op: 0.5 }) => {
+    // dimension line a→b with end ticks perpendicular to it (tk half-length)
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, nx = -(b[1] - a[1]) / L * tk, ny = (b[0] - a[0]) / L * tk;
+    return [line(a, b, o), line([a[0] - nx, a[1] - ny], [a[0] + nx, a[1] + ny], o), line([b[0] - nx, b[1] - ny], [b[0] + nx, b[1] + ny], o)];
+};
+const cornerMarks = (x0, y0, dw, dh, s = 7) => [
+    rAng(x0, y0, 1, 0, 0, 1, s, 1.2), rAng(x0 + dw, y0, -1, 0, 0, 1, s, 1.2),
+    rAng(x0, y0 + dh, 1, 0, 0, -1, s, 1.2), rAng(x0 + dw, y0 + dh, -1, 0, 0, -1, s, 1.2),
+];
+const dashG = { stroke: 'g', sw: 1.3, dash: true, op: 0.85 };
+
+// diagram: { type:'rectangle', l, w, missing:'area'|'perimeter' }
+function rectanglePrims({ l, w: wv, missing }) {
+    const VW = 210, VH = 112, boxW = 122, boxH = 64;
+    const aspect = l / wv;
+    let dw = aspect >= boxW / boxH ? boxW : boxH * aspect;
+    let dh = aspect >= boxW / boxH ? boxW / aspect : boxH;
+    dw = Math.max(50, Math.min(boxW, dw)); dh = Math.max(28, Math.min(boxH, dh));
+    const x0 = (VW - dw) / 2, y0 = (VH - dh) / 2 - 4;
+    return fitPrims([
+        poly([[x0, y0], [x0 + dw, y0], [x0 + dw, y0 + dh], [x0, y0 + dh]]),
+        ...cornerMarks(x0, y0, dw, dh),
+        ...dimTicks([x0 + 4, y0 + dh + 10], [x0 + dw - 4, y0 + dh + 10], 3),
+        text(x0 + dw / 2, y0 + dh + 22, `l = ${l}`, { size: 11 }),
+        ...dimTicks([x0 - 10, y0 + 4], [x0 - 10, y0 + dh - 4], 3),
+        text(x0 - 16, y0 + dh / 2 + 4, `w = ${wv}`, { anchor: 'end', size: 11 }),
+        lbl(x0 + dw / 2, y0 + dh / 2 + 5, missing === 'area' ? 'A = ?' : 'P = ?', { missing: true, size: 14 }),
+    ], 5);
+}
+
+// diagram: { type:'right-triangle', a, b, c, missing:'a'|'b'|'c' } — right angle bottom-left
+function rightTrianglePrims({ a, b, c, missing }) {
+    const VH = 130, maxW = 110, maxH = 86;
+    const sc = Math.min(maxW / a, maxH / b);
+    const aPx = Math.max(46, Math.min(maxW, a * sc)), bPx = Math.max(32, Math.min(maxH, b * sc));
+    const A = [50, VH - 18], B = [50 + aPx, A[1]], C = [50, A[1] - bPx];
+    const hl = Math.hypot(B[0] - C[0], B[1] - C[1]);
+    const nx = (B[1] - C[1]) / hl, ny = -(B[0] - C[0]) / hl;
+    const v = (k, val) => (missing === k ? '?' : String(val));
+    return fitPrims([
+        poly([A, B, C]),
+        rAng(A[0], A[1], 1, 0, 0, -1, 10, 1.5),
+        lbl((A[0] + B[0]) / 2, A[1] + 18, `a = ${v('a', a)}`, { missing: missing === 'a' }),
+        lbl(A[0] - 10, (A[1] + C[1]) / 2 + 4, `b = ${v('b', b)}`, { anchor: 'end', missing: missing === 'b' }),
+        lbl((B[0] + C[0]) / 2 + nx * 30, (B[1] + C[1]) / 2 + ny * 30 + 5, `c = ${v('c', c)}`, { missing: missing === 'c' }),
+    ], 5);
+}
+
+// diagram: { type:'triangle-angles', a1, a2, a3, missing:'a3' }
+function triangleAnglesPrims({ a1, a2, a3, missing }) {
+    const A = [20, 104], B = [164, 104], C = [86, 18];
+    return fitPrims([
+        poly([A, B, C]),
+        ...arcAt(A, B, C, 18), ...arcAt(B, A, C, 18), ...arcAt(C, A, B, 16),
+        lbl(A[0] + 28, A[1] - 8, `${a1}°`, { anchor: 'start' }),
+        lbl(B[0] - 28, B[1] - 8, `${a2}°`, { anchor: 'end' }),
+        lbl(C[0], C[1] + 26, missing === 'a3' ? '?' : `${a3}°`, { missing: missing === 'a3' }),
+    ], 5);
+}
+
+// diagram: { type:'general-triangle', sides:{a,b,c}, angles:{A,B,C}, missing:'b'|'c' } (not to scale)
+function generalTrianglePrims({ sides = {}, angles = {}, missing }) {
+    const A = [26, 110], B = [174, 110], C = [72, 20];
+    const cen = [(A[0] + B[0] + C[0]) / 3, (A[1] + B[1] + C[1]) / 3];
+    const items = [poly([A, B, C])];
+    if (angles.A != null) items.push(...arcAt(A, B, C, 15));
+    if (angles.B != null) items.push(...arcAt(B, A, C, 15));
+    if (angles.C != null) items.push(...arcAt(C, A, B, 14));
+    const angL = (k, V) => {
+        if (angles[k] == null) return;
+        let ox = cen[0] - V[0], oy = cen[1] - V[1]; const L = Math.hypot(ox, oy) || 1; ox /= L; oy /= L;
+        items.push(lbl(V[0] + ox * 24, V[1] + oy * 24 + 4, `${angles[k]}°`, { size: 10 }));
+    };
+    const sideL = (k, P, Q) => {
+        const val = k === missing ? '?' : (sides[k] != null ? sides[k] : null);
+        if (val == null) return;
+        const mx = (P[0] + Q[0]) / 2, my = (P[1] + Q[1]) / 2;
+        let ox = mx - cen[0], oy = my - cen[1]; const L = Math.hypot(ox, oy) || 1; ox /= L; oy /= L;
+        items.push(lbl(mx + ox * 16, my + oy * 16 + 4, `${k} = ${val}`, { missing: k === missing }));
+    };
+    angL('A', A); angL('B', B); angL('C', C);
+    sideL('a', B, C); sideL('b', A, C); sideL('c', A, B);
+    return fitPrims(items, 5);
+}
+
+// Oblique (cabinet) box with l/w/h labels; hidden edges dashed.
+function obliqueBox(x, y, wPx, hPx, d, e, dims, name) {
+    const FTL = [x, y], FTR = [x + wPx, y], FBR = [x + wPx, y + hPx], FBL = [x, y + hPx];
+    const BTL = [x + d, y - e], BTR = [x + wPx + d, y - e], BBR = [x + wPx + d, y + hPx - e], BBL = [x + d, y + hPx - e];
+    const it = [line(BBL, BTL, { dash: true, op: 0.55 }), line(BBL, BBR, { dash: true, op: 0.55 }), line(BBL, FBL, { dash: true, op: 0.55 }),
+        poly([FTL, FTR, FBR, FBL]), poly([FTL, FTR, BTR, BTL]), poly([FTR, FBR, BBR, BTR]),
+        text((FBL[0] + FBR[0]) / 2, FBL[1] + 12, `${dims.l}`, { size: 9 }),
+        text(FTL[0] - 6, (FTL[1] + FBL[1]) / 2 + 3, `${dims.h}`, { anchor: 'end', size: 9 }),
+        text((FTR[0] + BTR[0]) / 2 + 6, (FTR[1] + BTR[1]) / 2 - 1, `${dims.w}`, { anchor: 'start', size: 9 })];
+    if (name) it.push(text((FTL[0] + FBR[0]) / 2, (FTL[1] + FBR[1]) / 2 + 3, name, { size: 11 }));
+    return it;
+}
+// diagram: { type:'composite-prism', a:{l,w,h}, b:{l,w,h} } (not to scale)
+function compositePrismPrims({ a, b }) {
+    const VH = 142, cellW = 96, cellH = 100;
+    const cells = [{ d: a, x: 16, name: 'A' }, { d: b, x: 138, name: 'B' }];
+    let sc = Infinity;
+    for (const c of cells) sc = Math.min(sc, (cellW - 26) / (c.d.l + 0.45 * c.d.w), (cellH - 22) / (c.d.h + 0.45 * c.d.w));
+    sc = Math.max(3, Math.min(sc, 11));
+    const items = [];
+    for (const c of cells) {
+        const d = c.d, wPx = d.l * sc, hPx = d.h * sc, depth = 0.45 * d.w * sc;
+        items.push(...obliqueBox(c.x + 12, VH - 24 - hPx, wPx, hPx, depth, depth * 0.72, d, c.name));
+        items.push(text(c.x + 12 + wPx / 2, VH - 7, `Prism ${c.name}`, { size: 9, op: 0.8 }));
+    }
+    return fitPrims(items, 5);
+}
+
+// diagram: { type:'triangle-area', base, height }
+function triangleAreaPrims({ base, height }) {
+    const VW = 220, VH = 124, bPx = 128;
+    const hPx = Math.max(38, Math.min(76, bPx * (height / base) * 0.68));
+    const cx = VW / 2 - 16, y0 = VH - 18;
+    const bl = [cx - bPx / 2, y0], br = [cx + bPx / 2, y0], ap = [cx, y0 - hPx];
+    const lx = br[0] + 18;
+    return fitPrims([
+        poly([bl, br, ap]),
+        line(ap, [ap[0], y0], { ...dashG, op: 0.8 }),
+        rAng(ap[0], y0, 1, 0, 0, -1, 7),
+        ...dimTicks([lx, ap[1]], [lx, y0], 4),
+        text(cx, y0 + 17, `b = ${base}`, { size: 11 }),
+        text(lx + 6, (ap[1] + y0) / 2 + 4, `h = ${height}`, { anchor: 'start', size: 11 }),
+        lbl(cx - 22, y0 - 6, 'A = ?', { missing: true, size: 13 }),
+    ], 5);
+}
+
+// diagram: { type:'circle', r, missing:'area'|'circumference' }
+function circlePrims({ r, missing }) {
+    const cx = 74, cy = 66, rPx = Math.min(56, Math.max(38, r * 4.5));
+    const area = missing === 'area';
+    return fitPrims([
+        circle(cx, cy, rPx, { fill: 'tint', sw: 2 }),
+        line([cx, cy], [cx + rPx, cy], { dash: true }),
+        circle(cx, cy, 2.8, { fill: 'g', stroke: 'g', sw: 0 }),
+        text(cx - 7, cy + 13, 'O', { size: 10 }),
+        text(cx + rPx / 2, cy - 8, `r = ${r}`, { size: 11 }),
+        lbl(cx + rPx + 18, cy - 7, area ? 'A = ?' : 'C = ?', { anchor: 'start', missing: true, size: 14 }),
+        text(cx + rPx + 18, cy + 11, area ? 'A = πr²' : 'C = 2πr', { anchor: 'start', size: 9, op: 0.7, p: area ? 'A = pi r²' : 'C = 2 pi r' }),
+    ], 5);
+}
+
+// diagram: { type:'right-triangle-trig', opp, adj, hyp, angle, missing:'opp'|'adj'|'hyp'|'angle' }
+function rightTriangleTrigPrims({ opp, adj, hyp, angle, missing }) {
+    const VH = 142, adjPx = 106, oppPx = 78;
+    const A = [52, VH - 20], B = [A[0] + adjPx, A[1]], C = [A[0], A[1] - oppPx];
+    const v = (k, val) => (missing === k ? '?' : (val == null ? null : String(val)));
+    const hl = Math.hypot(B[0] - C[0], B[1] - C[1]);
+    const nx = (B[1] - C[1]) / hl, ny = -(B[0] - C[0]) / hl;
+    const arcR = 20;
+    const baL = Math.hypot(A[0] - B[0], A[1] - B[1]), bcL = Math.hypot(C[0] - B[0], C[1] - B[1]);
+    let bx = (A[0] - B[0]) / baL + (C[0] - B[0]) / bcL, by = (A[1] - B[1]) / baL + (C[1] - B[1]) / bcL;
+    const bl = Math.hypot(bx, by) || 1; bx /= bl; by /= bl;
+    const items = [poly([A, B, C]), rAng(A[0], A[1], 1, 0, 0, -1, 10, 1.5), ...arcAt(B, A, C, arcR),
+        lbl(B[0] + bx * (arcR + 13), B[1] + by * (arcR + 13) + 3, missing === 'angle' ? '?' : `${angle}°`, { missing: missing === 'angle' })];
+    const al = v('adj', adj), ol = v('opp', opp), hl2 = v('hyp', hyp);
+    if (al != null) items.push(lbl((A[0] + B[0]) / 2, A[1] + 17, `adj = ${al}`, { size: 10, missing: missing === 'adj' }));
+    if (ol != null) items.push(lbl(A[0] - 8, (A[1] + C[1]) / 2 + 4, `opp = ${ol}`, { anchor: 'end', size: 10, missing: missing === 'opp' }));
+    if (hl2 != null) items.push(lbl((B[0] + C[0]) / 2 + nx * 26, (B[1] + C[1]) / 2 + ny * 26 + 4, `hyp = ${hl2}`, { size: 10, missing: missing === 'hyp' }));
+    return fitPrims(items, 5);
+}
+
+// Faint frame + grid + tick labels shared by the auto-framing graphs.
+const gridLine = (a, b, sw, op) => line(a, b, { stroke: 'l', sw, op });
+function frameBG(L, T, R, Bm) {
+    return [poly([[L, T], [R, T], [R, Bm], [L, Bm]], { fill: 'none', stroke: 'l', sw: 0.8, op: 0.18 })];
+}
+function framedWindow({ xMin, xMax, yMin, yMax, mapX, mapY, L, T, R, Bm, xStep, yStep, xs, ys, minGx, maxGx, minGy, maxGy, hideZero }) {
+    const items = frameBG(L, T, R, Bm);
+    for (let xv = Math.ceil(xMin / xStep) * xStep; xv <= xMax; xv += xStep) {
+        const gx = mapX(xv);
+        if (gx < minGx || gx > maxGx) continue;
+        items.push(gridLine([gx, T], [gx, Bm], 0.5, xs.gridOp));
+        if (!(hideZero && Math.round(xv) === 0)) items.push(text(gx, Bm + xs.off, String(Math.round(xv)), { size: xs.size, op: 0.6 }));
+    }
+    for (let yv = Math.ceil(yMin / yStep) * yStep; yv <= yMax; yv += yStep) {
+        const gy = mapY(yv);
+        if (gy < minGy || gy > maxGy) continue;
+        items.push(gridLine([L, gy], [R, gy], 0.5, ys.gridOp));
+        if (!(hideZero && Math.round(yv) === 0)) items.push(text(L - 4, gy + ys.off, String(Math.round(yv)), { anchor: 'end', size: ys.size, op: 0.6 }));
+    }
+    if (xMin < 0 && xMax > 0) items.push(gridLine([mapX(0), T], [mapX(0), Bm], 1.2, 0.5));
+    if (yMin < 0 && yMax > 0) items.push(gridLine([L, mapY(0)], [R, mapY(0)], 1.2, 0.5));
+    return items;
+}
+const axisTitles = (L, T, R, Bm) => [
+    text(R - 2, Bm - 3, 'x', { anchor: 'end', size: 9, op: 0.7 }),
+    text(L + 3, T + 8, 'y', { anchor: 'start', size: 9, op: 0.7 }),
+];
+
+// diagram: { type:'parabola', h, k, a } — window auto-frames the vertex
+function parabolaPrims({ h, k, a }) {
+    a = a || 1;
+    const VW = 196, VH = 150, pl = 20, pr = VW - 10, pt = 12, pb = VH - 20;
+    const aAbs = Math.abs(a), V = 7;
+    const xHalf = Math.min(6, Math.sqrt(V / aAbs)), arm = aAbs * xHalf * xHalf;
+    const padX = xHalf * 0.14, xMin = h - xHalf - padX, xMax = h + xHalf + padX;
+    const padY = arm * 0.14 + 0.6;
+    const yMin = a > 0 ? k - padY : k - arm - padY, yMax = a > 0 ? k + arm + padY : k + padY;
+    const mapX = x => pl + ((x - xMin) / (xMax - xMin)) * (pr - pl);
+    const mapY = y => pb - ((y - yMin) / (yMax - yMin)) * (pb - pt);
+    const N = 72, pts = [];
+    for (let i = 0; i <= N; i++) {
+        const xc = xMin + (xMax - xMin) * (i / N), yc = a * (xc - h) * (xc - h) + k;
+        if (yc < yMin || yc > yMax) continue;
+        pts.push([mapX(xc), mapY(yc)]);
+    }
+    const items = framedWindow({
+        xMin, xMax, yMin, yMax, mapX, mapY, L: pl, T: pt, R: pr, Bm: pb,
+        xStep: niceStep(xMax - xMin, 6), yStep: niceStep(yMax - yMin, 6),
+        xs: { gridOp: 0.12, off: 10, size: 7.5 }, ys: { gridOp: 0.12, off: 2.6, size: 7.5 },
+        minGx: pl + 4, maxGx: pr - 2, minGy: pt + 2, maxGy: pb - 2,
+    });
+    items.push(...axisTitles(pl, pt, pr, pb));
+    if (pts.length > 1) items.push(path(pts, { sw: 2.2 }));
+    const vx = mapX(h), vy = mapY(k), right = vx < pr - 44;
+    items.push(circle(vx, vy, 3.6, { fill: 'm', stroke: 'm', sw: 0 }),
+        lbl(right ? vx + 8 : vx - 8, a > 0 ? vy + 12 : vy - 7, `(${h}, ${k})`, { anchor: right ? 'start' : 'end', missing: true, size: 9 }));
+    return fitPrims(items, 4);
+}
+
+// diagram: { type:'parallelogram', base, height, missing:'area'|'perimeter' }
+function parallelogramPrims({ base, height, missing }) {
+    const VW = 220, VH = 120, skew = 20;
+    const bPx = Math.max(70, Math.min(130, base * 7)), hPx = Math.max(30, Math.min(65, height * 6));
+    const x0 = (VW - bPx - skew - 28) / 2, y0 = (VH - hPx) / 2 - 4;
+    const intX = x0 + skew, hx = x0 + bPx + skew + 12;
+    return fitPrims([
+        poly([[x0, y0 + hPx], [x0 + bPx, y0 + hPx], [x0 + bPx + skew, y0], [x0 + skew, y0]]),
+        line([intX, y0], [intX, y0 + hPx], dashG), rAng(intX, y0 + hPx, 1, 0, 0, -1, 7),
+        line([x0 + 4, y0 + hPx + 10], [x0 + bPx - 4, y0 + hPx + 10], { stroke: 'g', sw: 1, op: 0.5 }),
+        text(x0 + bPx / 2, y0 + hPx + 22, `b = ${base}`, { size: 11 }),
+        line([hx, y0], [hx, y0 + hPx], dashG),
+        line([hx - 4, y0], [hx + 4, y0], { stroke: 'g', sw: 1.2, op: 0.85 }), line([hx - 4, y0 + hPx], [hx + 4, y0 + hPx], { stroke: 'g', sw: 1.2, op: 0.85 }),
+        text(hx + 6, y0 + hPx / 2 + 4, `h = ${height}`, { anchor: 'start', size: 10 }),
+        lbl(x0 + bPx / 2 + skew / 2, y0 + hPx / 2 + 5, missing === 'area' ? 'A = ?' : 'P = ?', { missing: true, size: 13 }),
+    ], 5);
+}
+
+// diagram: { type:'trapezium', a, b, height, missing:'area' }
+function trapeziumPrims({ a, b, height, missing }) {
+    const VW = 220, VH = 120;
+    const bPx = Math.max(80, Math.min(130, b * 7)), hPx = Math.max(32, Math.min(62, height * 6));
+    const aPx = Math.max(30, Math.min(bPx - 10, a * 7));
+    const x0 = (VW - bPx - 28) / 2, y0 = (VH - hPx) / 2 - 2, off = (bPx - aPx) / 2;
+    const intX = x0 + off, hx = x0 + bPx + 12, cx = x0 + bPx / 2;
+    return fitPrims([
+        poly([[x0, y0 + hPx], [x0 + bPx, y0 + hPx], [x0 + bPx - off, y0], [x0 + off, y0]]),
+        line([intX, y0], [intX, y0 + hPx], dashG), rAng(intX, y0 + hPx, 1, 0, 0, -1, 7),
+        line([x0 + 4, y0 + hPx + 10], [x0 + bPx - 4, y0 + hPx + 10], { stroke: 'g', sw: 1, op: 0.5 }),
+        text(cx, y0 + hPx + 22, `b = ${b}`, { size: 11 }),
+        text(cx, y0 - 6, `a = ${a}`, { size: 11 }),
+        line([hx, y0], [hx, y0 + hPx], dashG),
+        line([hx - 4, y0], [hx + 4, y0], { stroke: 'g', sw: 1.2, op: 0.85 }), line([hx - 4, y0 + hPx], [hx + 4, y0 + hPx], { stroke: 'g', sw: 1.2, op: 0.85 }),
+        text(hx + 6, y0 + hPx / 2 + 4, `h = ${height}`, { anchor: 'start', size: 10 }),
+        lbl(cx, y0 + hPx / 2 + 5, missing === 'area' ? 'A = ?' : '?', { missing: true, size: 13 }),
+    ], 5);
+}
+
+// diagram: { type:'parallel-transversal', a, angleType:'co-interior'|'corresponding'|'alternate' }
+function parallelTransversalPrims({ a, angleType }) {
+    const y1 = 40, y2 = 100, xL = 15, xR = 205;
+    const P1 = [143, y1], P2 = [77, y2], txBot = [55, 120], txTop = [165, 20], r = 17;
+    const tk = (x, y) => [line([x - 5, y - 6], [x + 1, y], { stroke: 'g', sw: 1.3, op: 0.85 }), line([x - 5, y + 6], [x + 1, y], { stroke: 'g', sw: 1.3, op: 0.85 })];
+    const items = [line([xL, y1], [xR, y1], { sw: 1.8 }), line([xL, y2], [xR, y2], { sw: 1.8 }),
+        ...tk(48, y1), ...tk(54, y1), ...tk(48, y2), ...tk(54, y2),
+        line(txBot, txTop, { stroke: 'l', sw: 1.6, op: 0.75 })];
+    let a1, a2, l1, l2;
+    if (angleType === 'co-interior') {
+        a1 = arcAt(P1, [xR, y1], txBot, r); l1 = [P1[0] + r + 6, P1[1] + 14];
+        a2 = arcAt(P2, txTop, [xR, y2], r);  l2 = [P2[0] + r + 6, P2[1] - 6];
+    } else if (angleType === 'corresponding') {
+        a1 = arcAt(P1, [xR, y1], txTop, r); l1 = [P1[0] + r + 6, P1[1] - 6];
+        a2 = arcAt(P2, [xR, y2], txTop, r); l2 = [P2[0] + r + 6, P2[1] - 6];
+    } else {
+        a1 = arcAt(P1, [xL, y1], txBot, r); l1 = [P1[0] - r - 6, P1[1] + 14, 'end'];
+        a2 = arcAt(P2, [xR, y2], txTop, r); l2 = [P2[0] + r + 6, P2[1] - 6];
+    }
+    items.push(...a1, ...a2, lbl(l1[0], l1[1], `${a}°`, { anchor: l1[2] || 'start' }), lbl(l2[0], l2[1], '?', { anchor: 'start', missing: true, size: 13 }));
+    return fitPrims(items, 5);
+}
+
+// diagram: { type:'straight-line-angles', a } — known a°, other is (180−a)°
+function straightLineAnglesPrims({ a }) {
+    const lx = 16, rx = 168, py = 68, px = 84, r = 22, len = 52;
+    const rad = (180 - a) * Math.PI / 180;
+    const ray = [px + len * Math.cos(rad), py - len * Math.sin(rad)];
+    const m1 = ((180 - a / 2) * Math.PI) / 180, m2 = ((180 - a) / 2) * Math.PI / 180;
+    return fitPrims([
+        line([lx, py], [rx, py], { sw: 1.8 }),
+        line([px, py], ray, { stroke: 'l', sw: 1.6, op: 0.8 }),
+        ...arcAt([px, py], [lx, py], ray, r), ...arcAt([px, py], ray, [rx, py], r),
+        lbl(px + (r + 14) * Math.cos(m1), py - (r + 14) * Math.sin(m1), `${a}°`),
+        lbl(px + (r + 14) * Math.cos(m2), py - (r + 14) * Math.sin(m2), '?', { missing: true, size: 13 }),
+    ], 5);
+}
+
+// diagram: { type:'vertically-opposite', a }
+function verticallyOppositePrims({ a }) {
+    const cx = 92, cy = 60, r = 20, len = 70, ang = a * Math.PI / 180;
+    const p1 = [cx + len, cy], p2 = [cx - len, cy];
+    const p3 = [cx + len * Math.cos(ang), cy - len * Math.sin(ang)], p4 = [cx - len * Math.cos(ang), cy + len * Math.sin(ang)];
+    const mid = (a / 2) * Math.PI / 180;
+    return fitPrims([
+        line(p2, p1, { sw: 1.8 }), line(p4, p3, { sw: 1.8 }),
+        ...arcAt([cx, cy], p1, p3, r), ...arcAt([cx, cy], p2, p4, r),
+        lbl(cx + (r + 12) * Math.cos(mid), cy - (r + 12) * Math.sin(mid), `${a}°`),
+        lbl(cx - (r + 12) * Math.cos(mid), cy + (r + 12) * Math.sin(mid), '?', { missing: true, size: 13 }),
+    ], 5);
+}
+
+// Equal-scale coordinate window (number plane, coordinate circle, semicircle, hyperbola).
+function eqFrame(xMin, xMax, yMin, yMax, VW, VH, m = 16) {
+    const availW = VW - 2 * m, availH = VH - 2 * m;
+    const unit = Math.min(availW / (xMax - xMin), availH / (yMax - yMin));
+    const drawW = (xMax - xMin) * unit, drawH = (yMax - yMin) * unit;
+    const L = m + (availW - drawW) / 2, T = m + (availH - drawH) / 2, R = L + drawW, Bm = T + drawH;
+    const mapX = x => L + (x - xMin) * unit, mapY = y => Bm - (y - yMin) * unit;
+    const items = framedWindow({
+        xMin, xMax, yMin, yMax, mapX, mapY, L, T, R, Bm,
+        xStep: Math.max(1, Math.round(niceStep(xMax - xMin, 6))), yStep: Math.max(1, Math.round(niceStep(yMax - yMin, 6))),
+        xs: { gridOp: 0.1, off: 10, size: 7 }, ys: { gridOp: 0.1, off: 2.4, size: 7 },
+        minGx: L + 3, maxGx: R - 1, minGy: T + 1, maxGy: Bm - 3, hideZero: true,
+    });
+    items.push(...axisTitles(L, T, R, Bm));
+    return { items, mapX, mapY, L, T, R, Bm, unit };
+}
+
+// diagram: { type:'number-plane', pts:[[x1,y1],[x2,y2]], line?, mid?, tri? }
+function numberPlanePrims({ pts, line: showLine, mid, tri }) {
+    const VW = 178, VH = 150;
+    let xMin = Math.min(...pts.map(p => p[0])), xMax = Math.max(...pts.map(p => p[0]));
+    let yMin = Math.min(...pts.map(p => p[1])), yMax = Math.max(...pts.map(p => p[1]));
+    const padX = Math.max(1, (xMax - xMin) * 0.18), padY = Math.max(1, (yMax - yMin) * 0.18);
+    xMin -= padX; xMax += padX; yMin -= padY; yMax += padY;
+    const f = eqFrame(xMin, xMax, yMin, yMax, VW, VH);
+    const { mapX, mapY, L, T, R, Bm } = f;
+    const items = [...f.items];
+    const two = pts.length >= 2;
+    if (tri && two) items.push(poly([[mapX(0), mapY(0)], [mapX(pts[0][0]), mapY(pts[0][1])], [mapX(pts[1][0]), mapY(pts[1][1])]], { fill: 'gtint', stroke: 'none', sw: 0 }));
+    if (showLine && two) items.push(line([mapX(pts[0][0]), mapY(pts[0][1])], [mapX(pts[1][0]), mapY(pts[1][1])], { sw: 2 }));
+    if (mid && two) items.push(circle(mapX((pts[0][0] + pts[1][0]) / 2), mapY((pts[0][1] + pts[1][1]) / 2), 3, { fill: 'white', sw: 1.6 }));
+    pts.forEach(([px, py], i) => {
+        const dx = mapX(px), dy = mapY(py), other = pts[1 - i] || pts[0];
+        const ox = mapX(other[0]), oy = mapY(other[1]);
+        const label = `(${px}, ${py})`, wPx = label.length * 5.2;
+        const awayX = dx >= ox ? 1 : -1, awayY = dy <= oy ? -1 : 1;
+        const hitsSeg = (x0, y0, x1, y1) => {
+            if (!(showLine && two)) return false;
+            for (let t = 0; t <= 1; t += 0.05) {
+                const sx = dx + (ox - dx) * t, sy = dy + (oy - dy) * t;
+                if (sx > x0 - 1 && sx < x1 + 1 && sy > y0 - 1 && sy < y1 + 1) return true;
+            }
+            return false;
+        };
+        let best = null;
+        for (const [sx, sy] of [[awayX, awayY], [-awayX, awayY], [awayX, -awayY], [-awayX, -awayY]]) {
+            const x0 = sx > 0 ? dx + 5 : dx - 5 - wPx, x1 = x0 + wPx;
+            const y1 = sy < 0 ? dy - 5 : dy + 14, y0 = y1 - 10;
+            if (x0 < L + 1 || x1 > R - 1 || y0 < T || y1 > Bm) continue;
+            if (hitsSeg(x0, y0, x1, y1)) continue;
+            best = { sx, sy }; break;
+        }
+        if (!best) best = { sx: awayX, sy: awayY };
+        items.push(circle(dx, dy, 3.4, { fill: 'm', stroke: 'm', sw: 0 }),
+            lbl(best.sx > 0 ? dx + 6 : dx - 6, best.sy < 0 ? dy - 6 : dy + 13, label, { anchor: best.sx > 0 ? 'start' : 'end', missing: true, size: 9 }));
+    });
+    return fitPrims(items, 4);
+}
+
+// diagram: { type:'rhombus'|'kite', d1, d2, missing:'area' }
+function quadDiagonalsPrims({ type, d1, d2 }) {
+    const cx = 104, cy = 62;
+    const hw = Math.max(32, Math.min(60, d1 * 4)), hh = Math.max(26, Math.min(44, d2 * 4));
+    const kite = type === 'kite';
+    const top = [cx, cy - hh], bot = [cx, kite ? cy + hh * 1.5 : cy + hh];
+    const crossY = kite ? cy - hh * 0.1 : cy;
+    const left = [cx - hw, crossY], right = [cx + hw, crossY];
+    return fitPrims([
+        poly([top, right, bot, left]),
+        line(left, right, dashG), line(top, bot, dashG),
+        rAng(cx, crossY, 1, 0, 0, -1, 5),
+        text(left[0] - 6, crossY + 3.5, `d₁ = ${d1}`, { anchor: 'end', size: 10, p: `d1 = ${d1}` }),
+        text(top[0], top[1] - 6, `d₂ = ${d2}`, { size: 10, p: `d2 = ${d2}` }),
+        lbl(right[0] + 16, crossY - 6, 'A = ?', { anchor: 'start', missing: true, size: 14 }),
+        text(right[0] + 16, crossY + 12, 'A = ½d₁d₂', { anchor: 'start', size: 9, op: 0.7, p: 'A = 1/2 d1 d2' }),
+    ], 5);
+}
+
+// diagram: { type:'sector', r, theta, missing:'area'|'arc' }
+function sectorPrims({ r, theta, missing }) {
+    const cx = 78, cy = 78, rPx = Math.min(58, Math.max(40, r * 4));
+    const arc = [];
+    for (let i = 0; i <= 40; i++) { const a = (theta * Math.PI / 180) * (i / 40); arc.push([cx + rPx * Math.cos(a), cy - rPx * Math.sin(a)]); }
+    const isArc = missing === 'arc';
+    return fitPrims([
+        poly([[cx, cy], ...arc], { sw: 2 }),
+        circle(cx, cy, 2.6, { fill: 'g', stroke: 'g', sw: 0 }),
+        text(cx + rPx / 2, cy + 13, `r = ${r}`, { size: 10 }),
+        text(cx + 16, cy - 7, `${theta}°`, { anchor: 'start', size: 10 }),
+        lbl(cx + rPx + 18, cy - 6, isArc ? 'ℓ = ?' : 'A = ?', { anchor: 'start', missing: true, size: 14, p: isArc ? 'l = ?' : 'A = ?' }),
+        text(cx + rPx + 18, cy + 12, isArc ? 'ℓ = θ/360·2πr' : 'A = θ/360·πr²', { anchor: 'start', size: 8, op: 0.7, p: isArc ? 'l = theta/360 x 2 pi r' : 'A = theta/360 x pi r²' }),
+    ], 5);
+}
+
+// diagram: { type:'coord-circle', h, k, r }
+function coordCirclePrims({ h, k, r }) {
+    const f = eqFrame(h - r - 1, h + r + 1, k - r - 1, k + r + 1, 178, 150);
+    const cx = f.mapX(h), cy = f.mapY(k);
+    return fitPrims([...f.items, circle(cx, cy, r * f.unit, { fill: 'gtint', sw: 2 }), circle(cx, cy, 2.4, { fill: 'm', stroke: 'm', sw: 0 }),
+        lbl(cx + 5, cy - 5, `(${h}, ${k})`, { anchor: 'start', missing: true, size: 9 })], 4);
+}
+
+// diagram: { type:'semicircle', a } — upper half of x² + y² = a²
+function semicirclePrims({ a }) {
+    const f = eqFrame(-a - 1, a + 1, -1, a + 1, 178, 150);
+    const arc = [];
+    for (let i = 0; i <= 48; i++) { const t = Math.PI * (i / 48); arc.push([f.mapX(a * Math.cos(t)), f.mapY(a * Math.sin(t))]); }
+    return fitPrims([...f.items, poly(arc, { fill: 'gtint', sw: 2 }),
+        circle(f.mapX(-a), f.mapY(0), 2.6, { fill: 'm', stroke: 'm', sw: 0 }), circle(f.mapX(a), f.mapY(0), 2.6, { fill: 'm', stroke: 'm', sw: 0 }),
+        text(f.mapX(0), f.mapY(a) - 5, `r = ${a}`, { size: 9, op: 0.8 })], 4);
+}
+
+// diagram: { type:'hyperbola', a, h, k } — y = a/(x − h) + k with dashed asymptotes
+function hyperbolaPrims({ a, h, k }) {
+    const span = 6;
+    const f = eqFrame(h - span, h + span, k - span, k + span, 178, 150);
+    const axV = f.mapX(h), ayH = f.mapY(k);
+    const items = [...f.items,
+        line([axV, f.T], [axV, f.Bm], { stroke: 'm', sw: 1.2, dash: true, op: 0.8 }),
+        line([f.L, ayH], [f.R, ayH], { stroke: 'm', sw: 1.2, dash: true, op: 0.8 })];
+    for (const dir of [-1, 1]) {
+        const pts = [];
+        for (let i = 0; i <= 120; i++) {
+            const dx = dir * 0.03 * Math.pow(span / 0.03, i / 120), y = a / dx + k;
+            if (Math.abs(y - k) > span * 1.6) continue;
+            pts.push([f.mapX(h + dx), f.mapY(y)]);
+        }
+        // clip each segment to the plot window so the curve runs to the frame edge
+        let run = [];
+        const flush = () => { if (run.length > 1) items.push(path(run, { sw: 2 })); run = []; };
+        for (let i = 1; i < pts.length; i++) {
+            const seg = clipSeg(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1], f.L, f.T, f.R, f.Bm);
+            if (!seg) { flush(); continue; }
+            if (!run.length) run.push(seg[0]);
+            run.push(seg[1]);
+            if (seg[1][0] !== pts[i][0] || seg[1][1] !== pts[i][1]) flush();
+        }
+        flush();
+    }
+    items.push(lbl(axV + (a > 0 ? -3 : 3), f.T + 9, `x = ${h}`, { anchor: a > 0 ? 'end' : 'start', missing: true, size: 8 }),
+        lbl(a > 0 ? f.L + 3 : f.R - 3, ayH - 4, `y = ${k}`, { anchor: a > 0 ? 'start' : 'end', missing: true, size: 8 }));
+    return fitPrims(items, 4);
+}
+
+// diagram: { type:'network', degrees:[…], edges:[[i,j]…] }
+function networkPrims({ degrees, edges }) {
+    const VW = 180, VH = 150, n = degrees.length;
+    const cx = VW / 2, cy = VH / 2 + 4, R = Math.min(VW, VH) / 2 - 22;
+    const pos = degrees.map((_, i) => { const ang = -Math.PI / 2 + (2 * Math.PI * i) / n; return { x: cx + R * Math.cos(ang), y: cy + R * Math.sin(ang), ang }; });
+    const items = edges.map(([a, b]) => line([pos[a].x, pos[a].y], [pos[b].x, pos[b].y], { sw: 1.6, op: 0.85 }));
+    pos.forEach((p, i) => {
+        items.push(circle(p.x, p.y, 5, { fill: 'white', sw: 2 }),
+            lbl(cx + (R + 13) * Math.cos(p.ang), cy + (R + 13) * Math.sin(p.ang) + 3, String(degrees[i]), { missing: true, size: 10 }));
+    });
+    return fitPrims(items, 5);
+}
+
 // ─── public entry points ─────────────────────────────────────────────────────
-const BUILDERS = { 'line-graph': lineGraphPrims, similar: similarPrims, congruent: congruentPrims, 'quad-angles': quadAnglesPrims, clock: clockPrims, fraction: fractionPrims, scene: scenePrims, bearing: bearingPrims, 'cuboid-diag': cuboidDiagPrims, table: tablePrims, venn: vennPrims, spinner: spinnerPrims, tree: treePrims, solid: solidPrims, 'stem-leaf': stemLeafPrims, 'box-plot': boxPlotPrims, 'dot-plot': dotPlotPrims, scatter: scatterPrims };
+const BUILDERS = { rectangle: rectanglePrims, 'right-triangle': rightTrianglePrims, 'triangle-angles': triangleAnglesPrims, 'general-triangle': generalTrianglePrims, 'composite-prism': compositePrismPrims, 'triangle-area': triangleAreaPrims, circle: circlePrims, 'right-triangle-trig': rightTriangleTrigPrims, parabola: parabolaPrims, parallelogram: parallelogramPrims, trapezium: trapeziumPrims, 'parallel-transversal': parallelTransversalPrims, 'straight-line-angles': straightLineAnglesPrims, 'vertically-opposite': verticallyOppositePrims, 'number-plane': numberPlanePrims, rhombus: quadDiagonalsPrims, kite: quadDiagonalsPrims, sector: sectorPrims, 'coord-circle': coordCirclePrims, semicircle: semicirclePrims, hyperbola: hyperbolaPrims, network: networkPrims, 'line-graph': lineGraphPrims, similar: similarPrims, congruent: congruentPrims, 'quad-angles': quadAnglesPrims, clock: clockPrims, fraction: fractionPrims, scene: scenePrims, bearing: bearingPrims, 'cuboid-diag': cuboidDiagPrims, table: tablePrims, venn: vennPrims, spinner: spinnerPrims, tree: treePrims, solid: solidPrims, 'stem-leaf': stemLeafPrims, 'box-plot': boxPlotPrims, 'dot-plot': dotPlotPrims, scatter: scatterPrims };
+const GRAPH_TYPES = new Set(['number-plane', 'parabola', 'coord-circle', 'semicircle', 'hyperbola']);
 /** Height (mm) a primitive diagram wants in a PDF column `wMM` wide. */
 export function preferredHeightMM(diagram, wMM, ps, base) {
     const p = buildPrims(diagram);
     if (!p) return base;
-    const k = Math.min(diagram.essential ? 0.30 : 0.24, wMM / p.w);
+    // Graph-style diagrams plot at equal x/y scale and carry small tick labels,
+    // so (like essential data displays) they get a larger print scale.
+    const big = diagram.essential || GRAPH_TYPES.has(diagram.type);
+    const k = Math.min(big ? 0.30 : 0.24, wMM / p.w);
     return Math.min(56 * ps, Math.max(base, p.h * k + 2));
 }
 export const isPrimDiagram = (d) => !!d && d.type in BUILDERS;
