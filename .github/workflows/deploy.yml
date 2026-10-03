@@ -74,10 +74,14 @@ jobs:
       # Publish ONLY the runtime files. Deploying the repo root would expose
       # internal docs (CLAUDE.md, monetisation.md, …), unbundled source, and
       # the stripe-worker implementation as public URLs on the Pages site.
-      - name: Stage deployable files
+      # build.sh writes the complete runtime set (stamped HTML, bundle, CSS,
+      # index.html, .nojekyll) into dist/; the tracked source HTML is untouched.
+      - name: Verify deployable files
         run: |
-          mkdir dist
-          cp puzzle-suite.html index.html puzzle-suite.css bundle.js .nojekyll dist/
+          for f in puzzle-suite.html index.html puzzle-suite.css bundle.js .nojekyll; do
+            test -f "dist/$f" || { echo "missing dist/$f"; exit 1; }
+          done
+          grep -q 'integrity="sha384-' dist/puzzle-suite.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

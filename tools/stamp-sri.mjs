@@ -16,8 +16,11 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
-const HTML_FILE   = 'puzzle-suite.html';
-const BUNDLE_FILE = 'bundle.js';
+// Operates on the BUILD OUTPUT (default dist/), never on the tracked source
+// HTML, so a local build leaves the working tree clean. Usage:
+//   node tools/stamp-sri.mjs [htmlFile] [bundleFile]
+const HTML_FILE   = process.argv[2] ?? 'dist/puzzle-suite.html';
+const BUNDLE_FILE = process.argv[3] ?? 'dist/bundle.js';
 const SRI_HOSTS   = ['cdn.jsdelivr.net', 'cdnjs.cloudflare.com'];
 const JSPDF_SENTINEL = '__JSPDF_SRI__';
 

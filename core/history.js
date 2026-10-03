@@ -1,70 +1,45 @@
-// core/history.js — Undo / Redo for topic selection + questionsPerSet
-import { state, ALL_SUBTOPICS, SUB_OPS, topicSlug, subOpDomId } from './state.js';
+// core/history.js — Undo / Redo for topic selection, sub-ops, pages-per-band,
+// NESA stage, 5.3 Path and the outcome filter. Pure logic lives in
+// historyCore.js (unit-tested); this file only wires it to state + DOM.
+//
+// Call pushHistory() AFTER a mutation (and once at init) — it records the
+// state as it is now; undo() then steps back to the previously recorded one.
+import { state } from './state.js';
+import { snapshotFrom, restoreInto, createHistory } from './historyCore.js';
 
-const MAX_HISTORY = 50;
-let history      = [];
-let historyIndex = -1;
-
-function snapshot() {
-    return {
-        selectedTopics: JSON.parse(JSON.stringify(state.selectedTopics)),
-        selectedSubOps: JSON.parse(JSON.stringify(state.selectedSubOps)),
-        questionsPerSet: state.questionsPerSet,
-    };
-}
+const hist = createHistory(50);
 
 export function pushHistory() {
-    history = history.slice(0, historyIndex + 1);
-    history.push(snapshot());
-    if (history.length > MAX_HISTORY) history.shift();
-    else historyIndex++;
+    hist.record(snapshotFrom(state));
     _updateButtons();
 }
 
+// Restore the controls that main.js does not rebuild itself. The caller's
+// onComplete re-renders topic/sub-op/outcome panels and regenerates.
 function _applySnapToDOM(snap) {
-    ALL_SUBTOPICS.forEach(t => {
-        const el = document.getElementById('topic-' + topicSlug(t));
-        if (el) el.checked = snap.selectedTopics[t] !== false;
-
-        // Restore sub-op checkboxes
-        const ops = SUB_OPS[t];
-        if (!ops) return;
-        const enabledOps = snap.selectedSubOps?.[t];
-        ops.forEach(op => {
-            const subEl = document.getElementById(subOpDomId(t, op.key));
-            if (subEl) subEl.checked = enabledOps ? enabledOps.includes(op.key) : true;
-        });
-    });
+    const radio = document.querySelector(`input[name="stage-selector"][value="${snap.stage}"]`);
+    if (radio) radio.checked = true;
+    const pathChk = document.getElementById('include-path-toggle');
+    if (pathChk) pathChk.checked = !!snap.includePath;
+    const pathWrapper = document.getElementById('path-toggle-wrapper');
+    if (pathWrapper) pathWrapper.style.display = snap.stage === 'Stage 5' ? 'block' : 'none';
     const qps = document.getElementById('questionsPerSet');
     if (qps) qps.value = snap.questionsPerSet;
 }
 
-export function undo(onComplete) {
-    if (historyIndex <= 0) return;
-    historyIndex--;
-    const snap = history[historyIndex];
-    Object.assign(state.selectedTopics, snap.selectedTopics);
-    state.selectedSubOps = JSON.parse(JSON.stringify(snap.selectedSubOps ?? {}));
-    state.questionsPerSet = snap.questionsPerSet;
+function _restore(snap, onComplete) {
+    if (!snap) return;
+    restoreInto(state, snap);
     _applySnapToDOM(snap);
     _updateButtons();
     if (onComplete) onComplete();
 }
 
-export function redo(onComplete) {
-    if (historyIndex >= history.length - 1) return;
-    historyIndex++;
-    const snap = history[historyIndex];
-    Object.assign(state.selectedTopics, snap.selectedTopics);
-    state.selectedSubOps = JSON.parse(JSON.stringify(snap.selectedSubOps ?? {}));
-    state.questionsPerSet = snap.questionsPerSet;
-    _applySnapToDOM(snap);
-    _updateButtons();
-    if (onComplete) onComplete();
-}
+export function undo(onComplete) { _restore(hist.undo(), onComplete); }
+export function redo(onComplete) { _restore(hist.redo(), onComplete); }
 
-export function canUndo() { return historyIndex > 0; }
-export function canRedo() { return historyIndex < history.length - 1; }
+export function canUndo() { return hist.canUndo(); }
+export function canRedo() { return hist.canRedo(); }
 
 function _updateButtons() {
     const u = document.getElementById('btn-undo');

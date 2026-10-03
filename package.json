@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "bash build.sh",
-    "start": "python3 -m http.server 8082",
+    "start": "SKIP_SRI=1 bash build.sh && python3 -m http.server 8082 --directory dist",
+    "serve": "python3 -m http.server 8082 --directory dist",
     "test": "node --test",
     "lint": "eslint ."
   },

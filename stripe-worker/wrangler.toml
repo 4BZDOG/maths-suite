@@ -48,3 +48,8 @@ APP_URL = ""   # REPLACE
 
 # Stripe API version to pin. Check https://stripe.com/docs/api/versioning for latest.
 STRIPE_API_VERSION = "2025-04-30"
+
+# Optional (defaults shown). Keep FREE_MONTHLY_EXPORTS equal to
+# FREE_LIMITS.MONTHLY_EXPORTS in payments/config.js.
+# FREE_MONTHLY_EXPORTS  = "10"
+# IDENTITY_PER_IP_DAILY = "30"

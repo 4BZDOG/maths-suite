@@ -79,7 +79,7 @@ export const TIER_FEATURES = Object.freeze({
 // long generation; raising this requires testing PDF memory pressure first.
 export const FREE_LIMITS = Object.freeze({
     BULK_EXPORT_MAX: 50,
-    MONTHLY_EXPORTS: 10,     // max PDF exports per month (future: tracked server-side)
+    MONTHLY_EXPORTS: 10,     // max PDF exports per month (enforced server-side by stripe-worker /api/export-count)
 });
 
 // ---- Pricing display (for upgrade prompts) ------------------

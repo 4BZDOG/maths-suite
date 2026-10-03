@@ -118,6 +118,15 @@ the KV record keyed by the user/customer ID inside the JWT.
   to prevent replay.
 - **JWTs** — short-ish (30 d) with `JWT_SECRET` rotation possible by
   invalidating tokens (next `/api/me` returns 401, client re-verifies).
+- **Server-issued identity** — `/api/identity` mints a signed anonymous
+  user token; `/api/checkout` takes the user id from the verified token and
+  rejects (403) a mismatching client-supplied `userId`. Never trust a
+  client-sent user id for billing.
+- **Server-side usage limits** — `POST /api/export-count` keeps a KV counter
+  per verified user + UTC month and returns 429 over `FREE_MONTHLY_EXPORTS`.
+  It is a soft cap (KV is not atomic; ids are IP-rate-limited when minted).
+  The client calls it best-effort and falls back gracefully when the worker
+  is unconfigured or offline.
 - **Idempotency** — `verified:{sessionId}` KV entry with 24 h TTL prevents
   a double-issued JWT if the user reloads `?stripe_session=…`.
 - **Cleared sessions** — strip `?stripe_session=` from the URL on first

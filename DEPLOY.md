@@ -121,7 +121,8 @@ The update is live within ~2 minutes.
 
 > **Note on bundle.js**: You do **not** need to run `bash build.sh` before pushing.
 > The GitHub Actions workflow runs the build step automatically in the cloud.
-> You only need to run it locally when previewing changes on `localhost:8082`.
+> You only need to build locally when previewing: `npm start` builds into the
+> gitignored `dist/` and serves it on `localhost:8082`.
 
 ---
 
@@ -168,8 +169,8 @@ Push to main
     ├─ Checkout code
     ├─ Install Node 20
     ├─ npm ci  (installs esbuild from package-lock.json)
-    ├─ bash build.sh  (esbuild → bundle.js, ~56 KB)
-    ├─ Upload artifact (whole repo folder)
+    ├─ bash build.sh  (esbuild + SRI + cache-bust → dist/)
+    ├─ Upload artifact (dist/ only)
     │
     └─ Deploy artifact → GitHub Pages CDN
             │

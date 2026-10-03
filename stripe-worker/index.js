@@ -2,10 +2,13 @@
 // stripe-worker/index.js — Cloudflare Worker: Stripe payment backend
 //
 // Routes:
-//   POST /api/checkout  — create a Stripe Checkout Session → return {url}
+//   POST /api/identity  — issue (or re-issue) a signed anonymous-user token
+//   POST /api/checkout  — [Bearer] create a Stripe Checkout Session → return {url}
 //   POST /api/verify    — verify completed checkout, issue JWT → return session
 //   GET  /api/me        — validate JWT, return current tier
 //   POST /api/portal    — create Customer Portal session → return {url}
+//   POST /api/export-count — [Bearer] count one PDF export; 429 over the free monthly cap
+//   GET  /api/export-count — [Bearer] read this month's count without incrementing
 //   POST /api/webhooks  — handle Stripe webhook events (subscription lifecycle)
 //
 // Environment bindings:
@@ -14,6 +17,9 @@
 //   JWT_SECRET             — random 32+ char string               (wrangler secret)
 //   PRICE_PRO_MONTHLY      — price_1ABC... from Stripe dashboard   (wrangler secret)
 //   PRICE_PRO_YEARLY       — price_1XYZ... from Stripe dashboard   (wrangler secret)
+//   FREE_MONTHLY_EXPORTS   — free-tier PDF exports per UTC month (default 10;
+//                            keep in sync with FREE_LIMITS.MONTHLY_EXPORTS)
+//   IDENTITY_PER_IP_DAILY  — max anonymous identities issued per IP per day (default 30)
 //   APP_URL                — https://your-pages-site (no slash)   (wrangler.toml [vars])
 //   STRIPE_API_VERSION     — e.g. "2025-04-30"                    (wrangler.toml [vars])
 //
@@ -21,6 +27,8 @@
 //   customer:{customerId}  → { userId, tier, subscriptionId, status, customerId }
 //   user:{userId}          → { customerId, tier }
 //   verified:{sessionId}   → { processedAt } — idempotency guard for /api/verify
+//   exports:{userId}:{YYYY-MM} → { count } — free-tier export counter (TTL ~40 days)
+//   idrl:{sha256(ip)}:{YYYY-MM-DD} → { count } — anonymous-identity issue rate limit
 // =============================================================
 
 // ---- CORS ---------------------------------------------------
@@ -45,6 +53,11 @@ function corsHeaders(env, request) {
 
 export default {
     async fetch(request, env) {
+        // Fail closed (and loudly) if the signing secret is missing: every
+        // authenticated route depends on it.
+        if (!env.JWT_SECRET && new URL(request.url).pathname !== '/api/webhooks' && request.method !== 'OPTIONS') {
+            return json({ error: 'Server misconfigured' }, 500, env, request);
+        }
         if (request.method === 'OPTIONS') {
             return new Response(null, { status: 204, headers: corsHeaders(env, request) });
         }
@@ -53,6 +66,12 @@ export default {
         const { pathname } = url;
 
         try {
+            if (pathname === '/api/identity' && request.method === 'POST') {
+                return handleIdentity(request, env);
+            }
+            if (pathname === '/api/export-count' && (request.method === 'POST' || request.method === 'GET')) {
+                return handleExportCount(request, env);
+            }
             if (pathname === '/api/checkout' && request.method === 'POST') {
                 return handleCheckout(request, env);
             }
@@ -77,14 +96,26 @@ export default {
 };
 
 // ---- POST /api/checkout -------------------------------------
+// Requires: Authorization: Bearer <token from /api/identity or /api/verify>
 // Body: { priceId, userId?, successUrl, cancelUrl }
 // Returns: { url } — Stripe-hosted Checkout URL
+//
+// The user id is taken ONLY from the verified token. A client-supplied
+// `userId` is accepted solely as a consistency check and rejected (403) if it
+// differs, so one user can never attach a purchase to another user's id.
 
 async function handleCheckout(request, env) {
+    const auth = await authenticate(request, env);
+    if (!auth) return json({ error: 'Unauthorized' }, 401, env, request);
+    const userId = auth.userId;
+
     const body = await request.json().catch(() => null);
     if (!body) return json({ error: 'Invalid JSON body' }, 400, env, request);
 
-    const { priceId, userId, successUrl, cancelUrl } = body;
+    const { priceId, successUrl, cancelUrl } = body;
+    if (body.userId != null && body.userId !== userId) {
+        return json({ error: 'userId does not match authenticated identity' }, 403, env, request);
+    }
 
     if (!priceId || !successUrl || !cancelUrl) {
         return json({ error: 'Missing required fields: priceId, successUrl, cancelUrl' }, 400, env, request);
@@ -113,18 +144,15 @@ async function handleCheckout(request, env) {
 
     // Write userId into both the session and subscription metadata so
     // handleVerify can read it from either object after checkout completes.
-    if (userId) {
-        params.set('metadata[userId]', userId);
-        params.set('subscription_data[metadata][userId]', userId);
-    }
+    params.set('metadata[userId]', userId);
+    params.set('subscription_data[metadata][userId]', userId);
+    params.set('client_reference_id', userId);
 
     // If we already have a Stripe customer for this userId, reuse it so the
     // customer doesn't need to re-enter their card details.
-    if (userId) {
-        const userRecord = await kvGet(env.SUBSCRIPTIONS, `user:${userId}`);
-        if (userRecord?.customerId) {
-            params.set('customer', userRecord.customerId);
-        }
+    const userRecord = await kvGet(env.SUBSCRIPTIONS, `user:${userId}`);
+    if (userRecord?.customerId) {
+        params.set('customer', userRecord.customerId);
     }
 
     // No idempotency key for checkout sessions — each attempt should be fresh.
@@ -231,6 +259,107 @@ async function handleMe(request, env) {
 
     const expiresAt = payload.exp ? payload.exp * 1000 : null;
     return json({ tier, userId: payload.userId, expiresAt }, 200, env, request);
+}
+
+// ---- POST /api/identity -------------------------------------
+// Issues a signed anonymous-user token ({ userId: 'anon:<uuid>', tier: 'free' }).
+// Presenting a still-valid token returns the same identity (so a browser keeps
+// one id). New identities are rate-limited per IP per day so the monthly export
+// cap cannot be trivially bypassed by minting fresh ids in a loop.
+// Returns: { userId, tier, token, expiresAt }
+
+const IDENTITY_TTL_MS = 365 * 24 * 60 * 60 * 1000;
+
+async function handleIdentity(request, env) {
+    const existing = await authenticate(request, env);
+    if (existing) {
+        const record = await kvGet(env.SUBSCRIPTIONS, `user:${existing.userId}`);
+        return json({
+            userId:    existing.userId,
+            tier:      record?.tier ?? existing.tier,
+            token:     _extractBearer(request),
+            expiresAt: existing.exp ? existing.exp * 1000 : null,
+        }, 200, env, request);
+    }
+
+    const ip    = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+    const day   = new Date().toISOString().slice(0, 10);
+    const rlKey = `idrl:${await sha256Hex(ip)}:${day}`;
+    const max   = _intEnv(env.IDENTITY_PER_IP_DAILY, 30);
+    const used  = (await kvGet(env.SUBSCRIPTIONS, rlKey))?.count ?? 0;
+    if (used >= max) {
+        return json({ error: 'Too many identities requested from this network' }, 429, env, request);
+    }
+    await kvPut(env.SUBSCRIPTIONS, rlKey, { count: used + 1 }, { expirationTtl: 172800 });
+
+    const userId    = `anon:${crypto.randomUUID()}`;
+    const expiresAt = Date.now() + IDENTITY_TTL_MS;
+    const token     = await signJwt({ userId, tier: 'free', anon: true }, expiresAt, env.JWT_SECRET);
+    return json({ userId, tier: 'free', token, expiresAt }, 200, env, request);
+}
+
+// ---- POST|GET /api/export-count -----------------------------
+// POST counts one PDF export for the authenticated user this UTC month and
+// returns 429 once a FREE-tier user is over the cap; GET reads without counting.
+// Pro/admin tiers are unlimited (limit: null) and are never counted.
+// Returns: { allowed, count, limit, remaining, resetsAt }
+//
+// KV has no atomic increment, so concurrent requests can under-count slightly;
+// this is a soft server-side cap, far stronger than a client-only check.
+
+async function handleExportCount(request, env) {
+    const auth = await authenticate(request, env);
+    if (!auth) return json({ error: 'Unauthorized' }, 401, env, request);
+
+    const record = await kvGet(env.SUBSCRIPTIONS, `user:${auth.userId}`);
+    const tier   = record?.tier ?? auth.tier;
+    const resetsAt = nextMonthStartIso();
+    if (tier === 'pro' || tier === 'admin') {
+        return json({ allowed: true, count: null, limit: null, remaining: null, resetsAt }, 200, env, request);
+    }
+
+    const limit = _intEnv(env.FREE_MONTHLY_EXPORTS, 10);
+    const key   = `exports:${auth.userId}:${monthKey()}`;
+    const count = (await kvGet(env.SUBSCRIPTIONS, key))?.count ?? 0;
+
+    if (request.method === 'GET') {
+        return json({ allowed: count < limit, count, limit, remaining: Math.max(0, limit - count), resetsAt }, 200, env, request);
+    }
+    if (count >= limit) {
+        return json({ allowed: false, count, limit, remaining: 0, resetsAt }, 429, env, request);
+    }
+    await kvPut(env.SUBSCRIPTIONS, key, { count: count + 1 }, { expirationTtl: 40 * 24 * 60 * 60 });
+    return json({ allowed: true, count: count + 1, limit, remaining: limit - count - 1, resetsAt }, 200, env, request);
+}
+
+function monthKey(d = new Date()) {
+    return d.toISOString().slice(0, 7);
+}
+
+function nextMonthStartIso(d = new Date()) {
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString();
+}
+
+function _intEnv(v, dflt) {
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) && n > 0 ? n : dflt;
+}
+
+async function sha256Hex(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Verifies the Bearer token; returns its payload or null.
+async function authenticate(request, env) {
+    const token = _extractBearer(request);
+    if (!token || !env.JWT_SECRET) return null;
+    try {
+        const payload = await verifyJwt(token, env.JWT_SECRET);
+        return payload?.userId ? payload : null;
+    } catch {
+        return null;   // malformed token
+    }
 }
 
 // ---- POST /api/portal ---------------------------------------
@@ -533,3 +662,6 @@ async function _upsertSubscription(env, sub) {
             : Promise.resolve(),
     ]);
 }
+
+// Exposed for unit tests (test/stripe-worker.test.mjs); Workers ignore extras.
+export { signJwt, verifyJwt, verifyWebhookSignature, monthKey, nextMonthStartIso };

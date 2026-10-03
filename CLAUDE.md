@@ -4,18 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Run
 ```bash
-bash build.sh                  # esbuild bundle + SRI stamp + cache-bust stamp
+bash build.sh                  # esbuild bundle + SRI stamp + cache-bust stamp → dist/
 SKIP_SRI=1 bash build.sh       # offline build (skips SRI stamping — dev only)
-npm run start                  # python3 -m http.server 8082
+npm run start                  # SKIP_SRI build, then serve dist/ on :8082
+npm run serve                  # serve an existing dist/ without rebuilding
 # open http://localhost:8082/puzzle-suite.html
 npm test                       # node --test — generator correctness harness (test/*.mjs)
 npm run lint                   # eslint (CI runs with --max-warnings 0)
 ```
-After any JS change just rerun `bash build.sh` — it runs `tools/stamp-sri.mjs`
-(computes Subresource Integrity hashes for every CDN tag and the jsPDF sentinel
-in the bundle; needs network) and stamps a fresh content-hash into the
-`<script src="bundle.js?v=…">` tag automatically. No manual bump needed.
-`bundle.js` is **not committed** — build it locally after cloning.
+After any JS change just rerun `bash build.sh`. It writes the whole deployable
+site to **`dist/`** (gitignored): `bundle.js`, a *copy* of `puzzle-suite.html`
+with SRI hashes (`tools/stamp-sri.mjs`, needs network) and a fresh
+`<script src="bundle.js?v=…">` content-hash stamped in, plus the CSS,
+`index.html` and `.nojekyll`. The tracked source `puzzle-suite.html` is never
+modified, so a local build leaves the working tree clean (nothing stamped to
+commit by accident). `dist/` and `bundle.js` are **not committed** — build after
+cloning and serve `dist/` (not the repo root: the root HTML carries a stale `?v=`
+and no SRI).
 
 > CI does **not** require a local build before pushing — GitHub Actions runs `bash build.sh` automatically on every push to `main`.
 
@@ -45,7 +50,8 @@ maths-suite/
 ├── core/
 │   ├── state.js               # Single source of truth for all app state (~366 lines)
 │   ├── storage.js             # localStorage persistence (debounced saveState)
-│   ├── history.js             # Undo/redo (max 50 snapshots, Ctrl+Z/Y)
+│   ├── history.js             # Undo/redo DOM wiring (max 50 snapshots, Ctrl+Z/Y)
+│   ├── historyCore.js         # DOM-free snapshot/restore/stack logic (unit-tested)
 │   └── outcomes.js            # NESA Stage 4 & Stage 5 outcome codes & mappings (~401 lines)
 │
 ├── renderers/                 # HTML preview generators (write directly to DOM)
@@ -89,7 +95,7 @@ maths-suite/
 │   ├── README.md              # Worker setup (KV, secrets, webhook registration)
 │   └── package.json
 │
-├── test/                      # node --test correctness harness (60+ tests)
+├── test/                      # node --test correctness harness (200+ tests; incl. history-core, stripe-worker, answer-recompute)
 │   ├── _helpers.mjs           # Shared utilities (gen, evaluator, structural checks)
 │   ├── generator.test.mjs     # Core Number topics + cross-topic invariants
 │   ├── pdf-latex.test.mjs     # latexToText PDF text conversion
@@ -144,7 +150,13 @@ All public functions are added to the `window._puzzleApp` object (~line 1404); a
 - `toggleTopic()`, `toggleSubOp()` — Selection management
 - `exportPDF()` — PDF download
 - `showPage(n)`, `focusPage(n)` — Page navigation
-- `undo()`, `redo()` — History management
+- `undo()`, `redo()` — History management. Snapshots cover topics, sub-ops,
+  `questionsPerSet`, `stage`, `includePath` and `selectedOutcomes`
+  (`core/historyCore.js`). **Call `pushHistory()` AFTER a mutation** (it records the
+  state as it is now; the first record is the init state). On restore,
+  `core/history.js` resets the stage radio / 5.3 path toggle / pages control and
+  `_afterHistoryRestore()` (main.js) rebuilds the topic list, sub-ops and outcome
+  chips, then regenerates. The subtitle auto-updated on a stage switch is not undone.
 - `toggleDarkMode()`, `adjustZoom(d)`, `switchTab(t)` — UI controls
 
 ### Initialization sequence (`main.js`, on `window.load`)
@@ -285,13 +297,17 @@ is client-side. `setAdminMode(true/false)` from the console still works too.
 Architecture: Browser → Cloudflare Worker (`stripe-worker/`) → Stripe API. The browser never holds a Stripe secret key.
 
 Key client functions in `payments/stripe.js`:
-- `initiateCheckout(tier, interval)` — POSTs to `/api/checkout`, redirects to Stripe-hosted Checkout
+- `ensureIdentity()` — POSTs `/api/identity` once; stores the server-signed anonymous user token (never overwrites an admin session's tier)
+- `initiateCheckout(tier, interval)` — POSTs to `/api/checkout` with the Bearer identity token (server takes the user id from it; a mismatching `userId` is 403), redirects to Stripe-hosted Checkout
+- `recordExport()` — POSTs `/api/export-count`; best-effort server-side `FREE_LIMITS.MONTHLY_EXPORTS` cap. Only an explicit 429 blocks; unconfigured/offline/error allows. Wired into `window.exportPDF` in `main.js`
 - `handleCheckoutReturn()` — detects `?stripe_session=`, POSTs to `/api/verify`, stores JWT; call **before** restoring app state
 - `refreshSession()` — GETs `/api/me` to re-validate stored JWT; no-op if unconfigured
 - `openCustomerPortal()` — POSTs to `/api/portal`, redirects to Stripe billing portal
 - `isStripeConfigured()` — returns `true` only when `STRIPE_CONFIG.workerUrl` and a price ID are set
 
 `STRIPE_CONFIG` in `payments/config.js` holds `publishableKey`, `workerUrl`, and `prices.{proMonthly,proYearly}` — all empty by default. Fill before going live (see `STRIPE_INTEGRATION.md`).
+
+Worker handlers are unit-tested (mocked KV, stubbed `fetch`) in `test/stripe-worker.test.mjs`; the worker exports `signJwt`/`verifyJwt`/`verifyWebhookSignature` for that purpose.
 
 To deploy the worker: `cd stripe-worker && npm install && wrangler deploy`, then set secrets via `wrangler secret put STRIPE_SECRET_KEY` etc.
 
@@ -340,11 +356,12 @@ optional formula sheet. To add another:
 
 ## Deployment
 GitHub Actions (`.github/workflows/deploy.yml`) auto-deploys on every push to `main`:
-1. lint + `node --test` → `bash build.sh` → stage `dist/` → deploy to GitHub Pages
-2. **Only runtime files are published** (`puzzle-suite.html`, `index.html`,
-   `puzzle-suite.css`, `bundle.js`, `.nojekyll`). Internal docs, source modules,
-   tests, and `stripe-worker/` are deliberately NOT deployed — when adding a new
-   runtime asset, add it to the "Stage deployable files" step in `deploy.yml`.
+1. lint + `node --test` → `bash build.sh` (writes `dist/`) → verify `dist/` → deploy it to GitHub Pages
+2. **Only runtime files are published** (`dist/`: stamped `puzzle-suite.html`,
+   `index.html`, `puzzle-suite.css`, `bundle.js`, `.nojekyll`). Internal docs, source
+   modules, tests, and `stripe-worker/` are deliberately NOT deployed — when adding a
+   new runtime asset, copy it into `dist/` in `build.sh` and add it to the "Verify
+   deployable files" list in `deploy.yml`.
 3. `index.html` redirects `/` → `puzzle-suite.html` for a clean entry URL
 
 The Cloudflare Worker (`stripe-worker/`) is **not** deployed by GitHub Actions — deploy it manually with `wrangler`. See `stripe-worker/README.md` for the full setup (KV namespace, secrets, webhook registration).
@@ -357,12 +374,9 @@ Recommended follow-ups from the 2026-06 technical audit, not yet done:
   DOM-free under Node jsPDF, then golden-test page counts for fixed seeds.
 - **Decompose `drawQuestionPage()`** into header/measure/placement/meta-row
   helpers once the tests above exist.
-- **Answer-recomputation gaps**: Rounding significant-figures, Fractions Hard
-  multiply-divide, and Percentages increase-decrease are structure-tested only.
-- **Undo/redo scope**: history snapshots only topics/sub-ops/questionsPerSet —
-  outcome-filter and stage changes are not undoable (`core/history.js`).
-- **Stripe pre-launch hardening** (before any live key is configured): bind
-  `/api/checkout` userId to a server-issued identity instead of trusting client
-  input (`stripe-worker/index.js` handleCheckout/handleVerify), and enforce
-  `FREE_LIMITS.MONTHLY_EXPORTS` server-side. Webhook signature comparison is
-  already constant-time.
+- **Percentages float artefact** (generator, found by `test/topics/answer-recompute.test.mjs`,
+  currently a `test.skip`): Medium increase-decrease can print `110.00000000000001`
+  (`100 × 1.1`) in answer/working. Round the product, then un-skip the test.
+- **Stripe**: the free monthly export cap is a soft KV counter (not atomic) and
+  anonymous ids are only IP-rate-limited when minted; for a hard guarantee move
+  the counter to a Durable Object.
