@@ -1966,7 +1966,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             // multiples of 20 guarantee integer results for the percentage pool
             const orig = ri(rng, 1, 20) * 20;
             const pct = rc(rng, [5, 10, 15, 20, 25, 40, 50]);
-            const ans = orig * (1 + pct / 100);
+            const ans = Math.round(orig * (100 + pct)) / 100;
             const ctx = rc(rng, ['price', 'value', 'amount', 'score', 'population', 'membership']);
             const ph = rc(rng, [
                 `Increase $${orig}$ by $${pct}\\%$`,
@@ -1975,7 +1975,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
                 `A price of $\\$${orig}$ increases by $${pct}\\%$. Find the **new** price.`,
                 `A score of $${orig}$ is raised by $${pct}\\%$. What is the **new** score?`,
             ]);
-            const multiplier = 1 + pct / 100;
+            const multiplier = (100 + pct) / 100;
             const worked = `$${orig} \\times ${multiplier} = ${ans}$`;
             return { clue: ph, answer: String(ans), worked };
         }
@@ -1995,7 +1995,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
         // type 3: decrease/discount — multiples of 20 guarantee integer results
         const origDec = ri(rng, 1, 20) * 20;
         const pctDec = rc(rng, [5, 10, 15, 20, 25, 40, 50]);
-        const ansDec = origDec * (1 - pctDec / 100);
+        const ansDec = Math.round(origDec * (100 - pctDec)) / 100;
         const ctxDec = rc(rng, ['price', 'salary', 'value', 'cost', 'attendance']);
         const phDec = rc(rng, [
             `Decrease $${origDec}$ by $${pctDec}\\%$`,
@@ -2003,7 +2003,7 @@ function genPercentages(rng, diff, allowedOps, _depth = 0) {
             `A $\\$${origDec}$ item is discounted by $${pctDec}\\%$. Find the *sale price*.`,
             `Calculate the result of decreasing $${origDec}$ by $${pctDec}\\%$`,
         ]);
-        const multDec = 1 - pctDec / 100;
+        const multDec = (100 - pctDec) / 100;
         return { clue: phDec, answer: String(ansDec), worked: `$${origDec} \\times ${multDec} = ${ansDec}$` };
     }
     // Hard

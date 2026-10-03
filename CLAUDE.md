@@ -374,9 +374,6 @@ Recommended follow-ups from the 2026-06 technical audit, not yet done:
   DOM-free under Node jsPDF, then golden-test page counts for fixed seeds.
 - **Decompose `drawQuestionPage()`** into header/measure/placement/meta-row
   helpers once the tests above exist.
-- **Percentages float artefact** (generator, found by `test/topics/answer-recompute.test.mjs`,
-  currently a `test.skip`): Medium increase-decrease can print `110.00000000000001`
-  (`100 × 1.1`) in answer/working. Round the product, then un-skip the test.
 - **Stripe**: the free monthly export cap is a soft KV counter (not atomic) and
   anonymous ids are only IP-rate-limited when minted; for a hard guarantee move
   the counter to a Durable Object.

@@ -147,14 +147,8 @@ test('Percentages increase-decrease: recomputed result matches (all difficulties
     assert.ok(kinds.single > 0 && kinds.sequential > 0 && kinds.nested > 0, JSON.stringify(kinds));
 });
 
-// KNOWN GENERATOR BUG (reported, not fixed here — generators/ is out of scope):
-//   gen({topic:'Percentages', difficulty:'Medium', count:8, seed:S,
-//        subOpsFilter:{Percentages:['increase-decrease']}}) can yield
-//   clue "Increase $100$ by $10\%$", answer "110.00000000000001",
-//   worked "$100 \times 1.1 = 110.00000000000001$" — an unrounded float
-//   product (100 * 1.1) is printed to students. Un-skip once the generator
-//   rounds the product (e.g. toFixed/Math.round to 2 dp).
-test.skip('Percentages increase-decrease Medium: answer text has no float artefacts', () => {
+// Regression: an unrounded float product (100 * 1.1) used to be printed to students.
+test('Percentages increase-decrease Medium: answer text has no float artefacts', () => {
     for (let seed = 1; seed <= SEEDS; seed++) {
         for (const q of gen({ topic: 'Percentages', difficulty: 'Medium', count: 8, seed,
             subOpsFilter: { Percentages: ['increase-decrease'] } })) {
