@@ -78,6 +78,7 @@ test('Venn diagram questions: regions are consistent and answers match', () => {
         else if (new RegExp(`likes ${lb} \\*only\\*`).test(q.clue)) k = b;
         else if (new RegExp(`likes ${la} \\(in total\\)`).test(q.clue)) k = a + ab;
         else if (new RegExp(`likes ${la} \\*or\\* ${lb}`).test(q.clue)) k = a + ab + b;
+        else if (/Given that|does \*not\* like|but \*not\*|\*neither\* .* \*nor\*/.test(q.clue)) continue;   // Medium/Hard forms: recomputed in difficulty-progression.test.mjs
         else assert.fail(`unrecognised Venn question: ${q.clue}`);
         assert.equal(normFrac(q.answer), fracAns(k, d.total), `${q.clue} → ${q.answer}`);
         checked++;

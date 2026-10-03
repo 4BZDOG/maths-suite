@@ -47,14 +47,15 @@ test('Time: recomputed answers match the generator', () => {
                 // convert 12h → 24h
                 let m = c.match(/\$(\d{1,2})\{:\}(\d{2})\\text\{ (am|pm)\}\$ in 24-hour/);
                 if (m) {
-                    const h12 = +m[1], min = +m[2], h24 = m[3] === 'pm' ? h12 + 12 : h12;
+                    const h12 = +m[1], min = +m[2], h24 = (h12 % 12) + (m[3] === 'pm' ? 12 : 0);   // 12 am = 00, 12 pm = 12
                     assert.equal(a, `${pad(h24)}:${pad(min)}`, L);
                     checked++; continue;
                 }
                 // convert 24h → 12h
-                if (/as 12-hour time/.test(c)) {
+                if (/as 12-hour time/.test(c) && !/journey takes/.test(c)) {
                     const [t] = times(c);
-                    assert.equal(a, `${Math.floor(t / 60) - 12}:${pad(t % 60)} pm`, L);
+                    const h24 = Math.floor(t / 60) % 24;
+                    assert.equal(a, `${h24 % 12 || 12}:${pad(t % 60)} ${h24 < 12 ? 'am' : 'pm'}`, L);
                     checked++; continue;
                 }
                 // duration: timetable (latest departure)

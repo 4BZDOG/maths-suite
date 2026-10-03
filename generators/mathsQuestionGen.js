@@ -4490,16 +4490,59 @@ function _genFinancialS5Op(rng, diff, op) {
             worked: `$${weekly}\\times${weeks}\\times1.175 = \\$${money(pay)}$` };
     }
 
+    // ---- Commission (MA5-FIN-C-01): Easy fixed % of sales → Medium base + commission /
+    // commission over a threshold → Hard working backwards (sales needed, rate) or net of PAYG tax.
     if (op === 'commission') {
-        const sales = ri(rng, 4, 40) * 500;
         const rate = rc(rng, [2, 3, 4, 5, 6, 8, 10]);
-        const comm = round(sales * rate / 100, 2);
-        if (diff !== 'Hard') {
+        if (diff === 'Easy') {
+            const sales = ri(rng, 4, 40) * 500;
+            const comm = round(sales * rate / 100, 2);
             return { clue: `A salesperson earns $${rate}\\%$ commission on sales of $\\$${sales}$. Calculate the commission.`,
                 answer: String(comm), answerDisplay: `$${money(comm)}`,
                 worked: `$${sales} \\times \\frac{${rate}}{100} = \\$${money(comm)}$` };
         }
-        // Hard: commission then flat PAYG tax → net
+        if (diff === 'Medium') {
+            if (rng() < 0.5) {
+                const base = ri(rng, 4, 12) * 100, sales = ri(rng, 4, 40) * 500;
+                const comm = round(sales * rate / 100, 2), pay = round(base + comm, 2);
+                return { clue: `A salesperson is paid a base salary of $\\$${base}$ per week plus $${rate}\\%$ commission on sales. In one week the sales were $\\$${sales}$. Calculate the total earnings for the week.`,
+                    answer: String(pay), answerDisplay: `$${money(pay)}`,
+                    worked: `Commission $= ${sales} \\times \\frac{${rate}}{100} = \\$${money(comm)}$; total $= ${base} + ${money(comm)} = \\$${money(pay)}$` };
+            }
+            const thr = ri(rng, 4, 10) * 1000, sales = thr + ri(rng, 2, 20) * 500;
+            const comm = round((sales - thr) * rate / 100, 2);
+            return { clue: `A salesperson earns $${rate}\\%$ commission on all sales above $\\$${thr}$. Sales for the month were $\\$${sales}$. Calculate the commission earned.`,
+                answer: String(comm), answerDisplay: `$${money(comm)}`,
+                worked: `Sales above $\\$${thr}$: $${sales} - ${thr} = \\$${sales - thr}$; commission $= ${sales - thr} \\times \\frac{${rate}}{100} = \\$${money(comm)}$` };
+        }
+        // Hard
+        const r = rng();
+        if (r < 0.3) {
+            // find the sales needed to reach a target weekly income
+            const base = ri(rng, 4, 12) * 100, sales = ri(rng, 4, 40) * 500;
+            const target = round(base + sales * rate / 100, 2);
+            return { clue: `A salesperson is paid a base salary of $\\$${base}$ per week plus $${rate}\\%$ commission on sales. How much must they sell in a week to earn a total of $\\$${money(target)}$?`,
+                answer: String(sales), answerDisplay: `$${money(sales)}`,
+                worked: `Commission needed $= ${money(target)} - ${base} = \\$${money(target - base)}$; sales $= ${money(target - base)} \\div \\frac{${rate}}{100} = \\$${money(sales)}$` };
+        }
+        if (r < 0.55) {
+            // find the commission rate from earnings
+            const sales = ri(rng, 4, 40) * 500, pct = rc(rng, [2.5, 3.5, 4, 5, 7.5, 12.5, 15]);
+            const comm = round(sales * pct / 100, 2);
+            return { clue: `A salesperson earned $\\$${money(comm)}$ in commission on sales of $\\$${sales}$. Calculate the rate of commission as a percentage of sales.`,
+                answer: String(pct), answerDisplay: `$${pct}\\%$`,
+                worked: `Rate $= \\frac{${money(comm)}}{${sales}} \\times 100 = ${pct}\\%$` };
+        }
+        if (r < 0.8) {
+            // commission only on sales above a threshold: find the total sales
+            const thr = ri(rng, 4, 10) * 1000, extra = ri(rng, 2, 20) * 500, sales = thr + extra;
+            const comm = round(extra * rate / 100, 2);
+            return { clue: `A salesperson earns $${rate}\\%$ commission on all sales above $\\$${thr}$. In one month the commission earned was $\\$${money(comm)}$. Calculate the total sales for the month.`,
+                answer: String(sales), answerDisplay: `$${money(sales)}`,
+                worked: `Sales above $\\$${thr}$ $= ${money(comm)} \\div \\frac{${rate}}{100} = \\$${extra}$; total sales $= ${thr} + ${extra} = \\$${sales}$` };
+        }
+        // commission then flat PAYG tax → net
+        const sales = ri(rng, 4, 40) * 500, comm = round(sales * rate / 100, 2);
         const tax = rc(rng, [10, 15, 20, 25]);
         const net = round(comm * (1 - tax / 100), 2);
         return { clue: `A salesperson earns $${rate}\\%$ commission on $\\$${sales}$ of sales, then pays a flat $${tax}\\%$ PAYG tax on that commission. Calculate the *net* income from the commission.`,
@@ -4507,26 +4550,86 @@ function _genFinancialS5Op(rng, diff, op) {
             worked: `Commission $= \\$${money(comm)}$; net $= ${money(comm)} \\times (1 - ${tax / 100}) = \\$${money(net)}$` };
     }
 
+    // ---- Term payments / hire purchase (MA5-FIN-C-01): deposit + instalments ----
     if (op === 'term-payments') {
+        const item = rc(rng, ['A television', 'A laptop', 'A lounge suite', 'A washing machine', 'A bicycle']);
         const cash = ri(rng, 6, 40) * 100;       // cash price
-        const depPct = rc(rng, [10, 15, 20, 25]);
-        const deposit = round(cash * depPct / 100, 2);
-        const months = rc(rng, [12, 18, 24, 36]);
-        const monthly = rc(rng, [50, 75, 100, 120, 150, 200]);
-        const total = round(deposit + monthly * months, 2);
-        if (diff !== 'Hard') {
-            return { clue: `An item priced at $\\$${cash}$ is bought on terms: a $${depPct}\\%$ deposit then $${months}$ monthly payments of $\\$${monthly}$. Calculate the *total cost* on these terms.`,
+        const weekly = rng() < 0.4;
+        const per = weekly ? 'weekly' : 'monthly';
+        const n = weekly ? rc(rng, [26, 39, 52]) : rc(rng, [12, 18, 24, 36]);
+        // a sensible instalment: the balance plus a modest charge, spread over n payments, rounded to $5
+        const mkInst = (deposit, count) => {
+            const bal = cash - deposit;
+            let i = Math.max(5, Math.round(bal * (1 + ri(rng, 5, 25) / 100) / count / 5) * 5);
+            while (deposit + i * count <= cash) i += 5;       // terms always cost more than cash
+            return i;
+        };
+        if (diff === 'Easy') {
+            const depPct = rc(rng, [10, 20, 25]);
+            const deposit = round(cash * depPct / 100, 2);
+            const inst = mkInst(deposit, n);
+            const total = round(deposit + inst * n, 2);
+            return { clue: `${item} can be bought on terms with a deposit of $\\$${money(deposit)}$ and $${n}$ ${per} payments of $\\$${inst}$. Calculate the total cost on terms.`,
                 answer: String(total), answerDisplay: `$${money(total)}`,
-                worked: `Deposit $= \\$${money(deposit)}$; total $= ${money(deposit)} + ${months}\\times${monthly} = \\$${money(total)}$` };
+                worked: `Payments $= ${n} \\times ${inst} = \\$${n * inst}$; total $= ${money(deposit)} + ${n * inst} = \\$${money(total)}$` };
         }
-        // Hard: flat interest rate per annum on the balance financed
-        const balance = round(cash - deposit, 2);
-        const interest = round(total - cash, 2);
-        const years = months / 12;
-        const flat = round(interest / balance / years * 100, 2);
-        return { clue: `An item priced at $\\$${cash}$ is bought with a $${depPct}\\%$ deposit and $${months}$ monthly payments of $\\$${monthly}$. Calculate the equivalent *flat interest rate* per annum charged on the balance, to 2 d.p.`,
-            answer: String(flat), answerDisplay: `$${flat}\\%$`,
-            worked: `Balance $=\\$${money(balance)}$, interest $=\\$${money(interest)}$; flat rate $=\\frac{${money(interest)}}{${money(balance)}\\times${years}}\\times100 = ${flat}\\%$` };
+        if (diff === 'Medium') {
+            const r = rng();
+            if (r < 0.5) {
+                // extra cost compared with paying cash
+                const depPct = rc(rng, [10, 15, 20, 25]);
+                const deposit = round(cash * depPct / 100, 2);
+                const inst = mkInst(deposit, n);
+                const total = round(deposit + inst * n, 2);
+                const extra = round(total - cash, 2);
+                return { clue: `${item} has a cash price of $\\$${cash}$. On terms, the buyer pays a $${depPct}\\%$ deposit and $${n}$ ${per} payments of $\\$${inst}$. Calculate how much more the buyer pays on terms than the cash price.`,
+                    answer: String(extra), answerDisplay: `$${money(extra)}`,
+                    worked: `Deposit $= \\$${money(deposit)}$; total on terms $= ${money(deposit)} + ${n} \\times ${inst} = \\$${money(total)}$; extra $= ${money(total)} - ${cash} = \\$${money(extra)}$` };
+            }
+            // find each instalment from the terms price
+            const depPct = rc(rng, [10, 15, 20, 25]);
+            const deposit = round(cash * depPct / 100, 2);
+            const inst = mkInst(deposit, n);
+            const total = round(deposit + inst * n, 2);
+            return { clue: `${item} has a terms price of $\\$${money(total)}$, which includes a deposit of $\\$${money(deposit)}$. The balance is paid in $${n}$ equal ${per} instalments. Calculate the amount of each instalment.`,
+                answer: String(inst), answerDisplay: `$${money(inst)}`,
+                worked: `Balance $= ${money(total)} - ${money(deposit)} = \\$${money(total - deposit)}$; instalment $= ${money(total - deposit)} \\div ${n} = \\$${money(inst)}$` };
+        }
+        // Hard
+        const r = rng();
+        const months = rc(rng, [12, 18, 24, 36]);
+        if (r < 0.4) {
+            // equivalent flat interest rate per annum on the balance financed
+            const depPct = rc(rng, [10, 15, 20, 25]);
+            const deposit = round(cash * depPct / 100, 2);
+            const inst = mkInst(deposit, months);
+            const total = round(deposit + inst * months, 2);
+            const balance = round(cash - deposit, 2);
+            const interest = round(total - cash, 2);
+            const flat = round(interest / balance / (months / 12) * 100, 2);
+            const years = months / 12;
+            return { clue: `${item} with a cash price of $\\$${cash}$ is bought with a $${depPct}\\%$ deposit and $${months}$ monthly payments of $\\$${inst}$. Calculate the equivalent *flat interest rate* per annum charged on the balance, to 2 d.p.`,
+                answer: String(flat), answerDisplay: `$${flat}\\%$`,
+                worked: `Balance $=\\$${money(balance)}$, interest $=\\$${money(interest)}$; flat rate $=\\frac{${money(interest)}}{${money(balance)}\\times${years}}\\times100 = ${flat}\\%$` };
+        }
+        if (r < 0.75) {
+            // monthly instalment when simple interest is charged on the balance
+            const depPct = rc(rng, [10, 20, 25]), ir = rc(rng, [6, 8, 10, 12, 15]), yrs = rc(rng, [1, 2, 3]);
+            const deposit = round(cash * depPct / 100, 2), balance = round(cash - deposit, 2);
+            const repay = balance * (1 + ir * yrs / 100);
+            const inst = round(repay / (12 * yrs), 2);
+            return { clue: `${item} has a cash price of $\\$${cash}$. A buyer pays a $${depPct}\\%$ deposit, then repays the balance plus simple interest at $${ir}\\%$ p.a. over $${yrs}$ ${yrs === 1 ? 'year' : 'years'} in equal monthly instalments. Calculate the monthly instalment, to the nearest cent.`,
+                answer: String(inst), answerDisplay: `$${money(inst)}`,
+                worked: `Balance $= \\$${money(balance)}$; repayment $= ${money(balance)} \\times (1 + ${ir / 100} \\times ${yrs}) = \\$${money(repay)}$; instalment $= ${money(repay)} \\div ${12 * yrs} = \\$${money(inst)}$` };
+        }
+        // find the deposit as a percentage of the cash price
+        const depPct = rc(rng, [10, 15, 20, 25, 30]);
+        const deposit = round(cash * depPct / 100, 2);
+        const inst = mkInst(deposit, n);
+        const total = round(deposit + inst * n, 2);
+        return { clue: `${item} has a cash price of $\\$${cash}$. On terms, the buyer pays a deposit and $${n}$ ${per} payments of $\\$${inst}$, a total of $\\$${money(total)}$. Calculate the deposit as a percentage of the cash price.`,
+            answer: String(depPct), answerDisplay: `$${depPct}\\%$`,
+            worked: `Payments $= ${n} \\times ${inst} = \\$${n * inst}$; deposit $= ${money(total)} - ${n * inst} = \\$${money(deposit)}$; $\\frac{${money(deposit)}}{${cash}} \\times 100 = ${depPct}\\%$` };
     }
 
     if (op === 'depreciation') {
@@ -5163,75 +5266,183 @@ function genProbability(rng, diff, allowedOps) {
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
 
-    // ---- conditional probability P(A|B) = n(A∩B)/n(B) (MA5-PRO-P-01) ----
+    const cap = (w) => w[0].toUpperCase() + w.slice(1);
+    // simplified-fraction answer fields for a favourable / total pair (always a proper fraction)
+    const pf = (fav, tot) => {
+        const s = simplify(fav, tot);
+        return { s, answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$` };
+    };
+
+    // ---- conditional probability P(A|B) = n(A∩B)/n(B)  (MA5-PRO-P-01) ----
+    // Easy: read a two-way table; Medium: counts in a group (both P(A|B) and P(B|A));
+    // Hard: "given not", or conditional from probabilities.
     if (op === 'conditional') {
-        const subjA = rc(rng, ['History', 'Music', 'French', 'Science']);
-        const subjB = rc(rng, ['Geography', 'Art', 'Spanish', 'Sport']);
-        const total = rc(rng, [80, 100, 120, 150]);
-        const both = ri(rng, 10, 25);
-        const nB = both + ri(rng, 10, 30);
-        const nA = both + ri(rng, 10, 30);
-        if (nA >= total || nB >= total) return genProbability(rng, diff, allowedOps);
-        const s = simplify(both, nB);
-        return { clue: `In a group of $${total}$ students, $${nA}$ study ${subjA}, $${nB}$ study ${subjB}, and $${both}$ study both. Find the probability that a student studies ${subjA} *given* that they study ${subjB}.`,
-            answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `$P(${subjA[0]}|${subjB[0]}) = \\frac{n(\\text{both})}{n(${subjB})} = \\frac{${both}}{${nB}} = \\frac{${s.n}}{${s.d}}$`,
-            diagram: { type: 'venn', labels: [subjA[0].toUpperCase() + subjA.slice(1), subjB[0].toUpperCase() + subjB.slice(1)], total, sets: { a: nA, b: nB }, regions: { a: '?', ab: both, b: '?', out: '?' } } };
+        if (diff === 'Easy') {
+            const [A, B] = rc(rng, [['netball', 'basketball'], ['soccer', 'cricket'], ['tennis', 'swimming'], ['hockey', 'volleyball']]);
+            const both = ri(rng, 4, 12), onlyA = ri(rng, 3, 12), onlyB = ri(rng, 3, 12), none = ri(rng, 3, 12);
+            const T = both + onlyA + onlyB + none;
+            const aGivenB = rng() < 0.5;            // P(A|B) or P(B|A)
+            const [given, find] = aGivenB ? [B, A] : [A, B];
+            const nGiven = aGivenB ? both + onlyB : both + onlyA;
+            const p = pf(both, nGiven);
+            return { clue: `The two-way table shows how many students in a year group play ${A} and ${B}. Given that a student plays ${given}, find the probability that they also play ${find}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay,
+                worked: `Only the ${nGiven} students who play ${given} count: $P = \\frac{${both}}{${nGiven}} = \\frac{${p.s.n}}{${p.s.d}}$`,
+                diagram: { type: 'table', essential: true, head: ['', cap(B), `Not ${B}`, 'Total'],
+                    rows: [[cap(A), both, onlyA, both + onlyA], [`Not ${A}`, onlyB, none, onlyB + none], ['Total', both + onlyB, onlyA + none, T]] } };
+        }
+        const [subjA, subjB] = rc(rng, [['History', 'Geography'], ['Music', 'Art'], ['French', 'Spanish'], ['Science', 'Drama']]);
+        let total, both, nA, nB;
+        do {
+            total = rc(rng, [80, 100, 120, 150]);
+            both = ri(rng, 10, 25);
+            nA = both + ri(rng, 10, 30); nB = both + ri(rng, 10, 30);
+        } while (nA + nB - both >= total);
+        const venn = { type: 'venn', labels: [subjA, subjB], total, sets: { a: nA, b: nB }, regions: { a: '?', ab: both, b: '?', out: '?' } };
+        const intro = `In a group of $${total}$ students, $${nA}$ study ${subjA}, $${nB}$ study ${subjB}, and $${both}$ study both.`;
+        if (diff === 'Medium') {
+            const aGivenB = rng() < 0.5;
+            const [given, find, nGiven] = aGivenB ? [subjB, subjA, nB] : [subjA, subjB, nA];
+            const p = pf(both, nGiven);
+            return { clue: `${intro} Given that a student studies ${given}, find the probability that they also study ${find}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay,
+                worked: `$P = \\frac{n(\\text{both})}{n(${given})} = \\frac{${both}}{${nGiven}} = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: venn };
+        }
+        if (rng() < 0.5) {
+            // given NOT: P(A | B′) = n(A only) / n(not B)
+            const aGivenNotB = rng() < 0.5;
+            const [given, find, nGiven, nFind] = aGivenNotB ? [subjB, subjA, nB, nA] : [subjA, subjB, nA, nB];
+            const fav = nFind - both, tot = total - nGiven;
+            const p = pf(fav, tot);
+            return { clue: `${intro} Given that a student does *not* study ${given}, find the probability that they study ${find}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay,
+                worked: `Not ${given}: $${total} - ${nGiven} = ${tot}$; ${find} only: $${nFind} - ${both} = ${fav}$; $P = \\frac{${fav}}{${tot}} = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: venn };
+        }
+        // from probabilities (hundredths): P(A), P(B), P(A∩B)
+        let a, b, ab, tries = 0;
+        do {
+            a = 5 * ri(rng, 4, 18); b = 5 * ri(rng, 4, 18); ab = 5 * ri(rng, 1, Math.min(a, b) / 5 - 1); tries++;
+        } while (tries < 200 && (a + b - ab > 100 || ab >= Math.min(a, b)));
+        if (tries >= 200) { a = 60; b = 50; ab = 30; }
+        const dec = (v) => String(v / 100);
+        const bGivenA = rng() < 0.5;
+        const [num, den] = [ab, bGivenA ? a : b];
+        const p = pf(num, den);
+        return { clue: `Events $A$ and $B$ have $P(A) = ${dec(a)}$, $P(B) = ${dec(b)}$ and $P(A \\cap B) = ${dec(ab)}$. Given that ${bGivenA ? '$A$' : '$B$'} has occurred, find the probability that ${bGivenA ? '$B$' : '$A$'} also occurs.`,
+            answer: p.answer, answerDisplay: p.answerDisplay,
+            worked: `$P(${bGivenA ? 'B|A' : 'A|B'}) = \\frac{P(A \\cap B)}{P(${bGivenA ? 'A' : 'B'})} = \\frac{${dec(ab)}}{${dec(den)}} = \\frac{${p.s.n}}{${p.s.d}}$` };
     }
 
-    // ---- Venn diagram: P(A or B) = (|A| + |B| − both)/total ----
+    // ---- Venn diagrams: Easy read a region; Medium union / complement / "but not";
+    // Hard conditional probability read from the diagram ----
     if (op === 'venn') {
-        const total = rc(rng, [50, 80, 100, 120]);
-        const both = ri(rng, 8, 20);
-        const nA = both + ri(rng, 10, 25), nB = both + ri(rng, 10, 25);
-        if (nA + nB - both >= total) return genProbability(rng, diff, allowedOps);
-        const wantNeither = rng() < 0.5;
+        let total, both, nA, nB;
+        do {
+            total = rc(rng, [50, 80, 100, 120]);
+            both = ri(rng, 8, 20);
+            nA = both + ri(rng, 10, 25); nB = both + ri(rng, 10, 25);
+        } while (nA + nB - both >= total);
         const union = nA + nB - both;
-        const fav = wantNeither ? total - union : union;
-        const s = simplify(fav, total);
+        const onlyA = nA - both, onlyB = nB - both, out = total - union;
         const labelA = rc(rng, ['football', 'tennis', 'coffee', 'maths']);
         const labelB = rc(rng, ['basketball', 'cricket', 'tea', 'science']);
-        const cap = (w) => w[0].toUpperCase() + w.slice(1);
-        if (rng() < 0.4) {
-            // Fully labelled Venn diagram (essential): read counts straight off it.
-            const onlyA = nA - both, onlyB = nB - both, out = total - union;
+        const full = { type: 'venn', essential: true, labels: [cap(labelA), cap(labelB)], total, regions: { a: onlyA, ab: both, b: onlyB, out } };
+        const partial = { type: 'venn', labels: [cap(labelA), cap(labelB)], total, sets: { a: nA, b: nB }, regions: { a: '?', ab: both, b: '?', out: '?' } };
+        const survey = `The Venn diagram shows the results of a survey of $${total}$ people.`;
+        if (diff === 'Easy') {
+            // read the count straight off the diagram
             const asks = [
                 { d: `likes ${labelA} *only*`, v: onlyA }, { d: `likes ${labelB} *only*`, v: onlyB },
                 { d: `likes *both*`, v: both }, { d: `likes *neither*`, v: out },
-                { d: `likes ${labelA} (in total)`, v: nA }, { d: `likes ${labelA} *or* ${labelB}`, v: union },
+                { d: `likes ${labelA} (in total)`, v: nA },
             ];
             const pick = rc(rng, asks);
-            const ps = simplify(pick.v, total);
-            return { clue: `The Venn diagram shows the results of a survey of $${total}$ people. Find the probability that a person chosen at random ${pick.d}.`,
-                answer: fracStr(ps.n, ps.d), answerDisplay: `$\\frac{${ps.n}}{${ps.d}}$`,
-                worked: `$P = \\frac{${pick.v}}{${total}} = \\frac{${ps.n}}{${ps.d}}$`,
-                diagram: { type: 'venn', essential: true, labels: [cap(labelA), cap(labelB)], total, regions: { a: onlyA, ab: both, b: onlyB, out } } };
+            const p = pf(pick.v, total);
+            return { clue: `${survey} Find the probability that a person chosen at random ${pick.d}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay,
+                worked: `$P = \\frac{${pick.v}}{${total}} = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: full };
         }
-        const ask = wantNeither ? '*neither*' : `${labelA} *or* ${labelB}`;
-        return { clue: `In a survey of $${total}$ people, $${nA}$ like ${labelA}, $${nB}$ like ${labelB}, and $${both}$ like both. Find the probability that a person likes ${ask}.`,
-            answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `$n(A \\cup B) = ${nA} + ${nB} - ${both} = ${union}$; ${wantNeither ? `neither $= ${total} - ${union} = ${fav}$` : `favourable $= ${fav}$`}; $P = \\frac{${fav}}{${total}} = \\frac{${s.n}}{${s.d}}$`,
-            diagram: { type: 'venn', labels: [cap(labelA), cap(labelB)], total, sets: { a: nA, b: nB }, regions: { a: '?', ab: both, b: '?', out: '?' } } };
+        if (diff === 'Medium') {
+            const asks = [
+                { d: `likes ${labelA} *or* ${labelB}`, v: union, w: `$n(A \\cup B) = ${nA} + ${nB} - ${both} = ${union}$` },
+                { d: `likes *neither* ${labelA} *nor* ${labelB}`, v: out, w: `$n(A \\cup B) = ${union}$, so neither $= ${total} - ${union} = ${out}$` },
+                { d: `does *not* like ${labelA}`, v: total - nA, w: `$n(A') = ${total} - ${nA} = ${total - nA}$` },
+                { d: `likes ${labelB} but *not* ${labelA}`, v: onlyB, w: `$n(B \\cap A') = ${nB} - ${both} = ${onlyB}$` },
+            ];
+            const pick = rc(rng, asks);
+            const p = pf(pick.v, total);
+            const work = `${pick.w}; $P = \\frac{${pick.v}}{${total}} = \\frac{${p.s.n}}{${p.s.d}}$`;
+            if (rng() < 0.5) {
+                return { clue: `${survey} Find the probability that a person chosen at random ${pick.d}.`,
+                    answer: p.answer, answerDisplay: p.answerDisplay, worked: work, diagram: full };
+            }
+            return { clue: `In a survey of $${total}$ people, $${nA}$ like ${labelA}, $${nB}$ like ${labelB}, and $${both}$ like both. Find the probability that a person chosen at random ${pick.d}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay, worked: work, diagram: partial };
+        }
+        // Hard: conditional probability from the Venn diagram
+        const kind = ri(rng, 0, 2);
+        let clue, fav, tot, why;
+        if (kind === 0) {
+            clue = `Given that a person likes ${labelA}, find the probability that they also like ${labelB}.`;
+            fav = both; tot = nA; why = `The ${nA} people who like ${labelA} form the new sample space.`;
+        } else if (kind === 1) {
+            clue = `Given that a person likes ${labelB}, find the probability that they also like ${labelA}.`;
+            fav = both; tot = nB; why = `The ${nB} people who like ${labelB} form the new sample space.`;
+        } else {
+            clue = `Given that a person does *not* like ${labelB}, find the probability that they like ${labelA}.`;
+            fav = onlyA; tot = onlyA + out; why = `Outside ${cap(labelB)}: $${onlyA} + ${out} = ${tot}$ people.`;
+        }
+        const p = pf(fav, tot);
+        return { clue: `${survey} ${clue}`,
+            answer: p.answer, answerDisplay: p.answerDisplay,
+            worked: `${why} $P = \\frac{${fav}}{${tot}} = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: full };
     }
 
-    // ---- two-way table: P(specific cell) = cell/total ----
+    // ---- two-way tables: Easy a single cell; Medium "or" / complement; Hard "given that" ----
     if (op === 'two-way') {
         const bt = ri(rng, 8, 18), bn = ri(rng, 5, 15);   // boys tennis / not
         const gt = ri(rng, 6, 16), gn = ri(rng, 5, 15);   // girls tennis / not
         const total = bt + bn + gt + gn;
-        const cells = [
-            { d: `a *boy who plays tennis*`, v: bt },
-            { d: `a *girl who plays tennis*`, v: gt },
-            { d: `a *boy who does not play tennis*`, v: bn },
-            { d: `a student who *plays tennis*`, v: bt + gt },
+        const table = { type: 'table', essential: true, head: ['', 'Plays tennis', 'Does not', 'Total'],
+            rows: [['Boys', bt, bn, bt + bn], ['Girls', gt, gn, gt + gn], ['Total', bt + gt, bn + gn, total]] };
+        const lead = 'The two-way table shows how many students in a class play tennis.';
+        if (diff === 'Easy') {
+            const cells = [
+                { d: `a *boy who plays tennis*`, v: bt },
+                { d: `a *girl who plays tennis*`, v: gt },
+                { d: `a *boy who does not play tennis*`, v: bn },
+                { d: `a student who *plays tennis*`, v: bt + gt },
+            ];
+            const pick = rc(rng, cells);
+            const p = pf(pick.v, total);
+            return { clue: `${lead} A student is chosen at random. Find the probability of choosing ${pick.d}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay,
+                worked: `Total $= ${total}$; $P = \\frac{${pick.v}}{${total}} = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: table };
+        }
+        if (diff === 'Medium') {
+            const cells = [
+                { d: `a student who is a *boy or plays tennis*`, v: bt + bn + gt, w: `Boys $${bt + bn}$ + girls who play $${gt}$` },
+                { d: `a student who is a *girl or does not play tennis*`, v: gt + gn + bn, w: `Girls $${gt + gn}$ + boys who do not play $${bn}$` },
+                { d: `a student who does *not* play tennis`, v: bn + gn, w: `$${bn} + ${gn}$` },
+                { d: `a *girl*`, v: gt + gn, w: `$${gt} + ${gn}$` },
+            ];
+            const pick = rc(rng, cells);
+            const p = pf(pick.v, total);
+            return { clue: `${lead} A student is chosen at random. Find the probability of choosing ${pick.d}.`,
+                answer: p.answer, answerDisplay: p.answerDisplay,
+                worked: `${pick.w} $= ${pick.v}$ out of $${total}$: $P = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: table };
+        }
+        const cond = [
+            { c: 'Given that a student plays tennis, find the probability that the student is a girl.', fav: gt, tot: bt + gt },
+            { c: 'Given that a student is a girl, find the probability that the student plays tennis.', fav: gt, tot: gt + gn },
+            { c: 'Given that a student is a boy, find the probability that the student does not play tennis.', fav: bn, tot: bt + bn },
+            { c: 'Given that a student does not play tennis, find the probability that the student is a boy.', fav: bn, tot: bn + gn },
         ];
-        const pick = rc(rng, cells);
-        const s = simplify(pick.v, total);
-        return { clue: `The two-way table shows how many students in a class play tennis. A student is chosen at random. Find the probability of choosing ${pick.d}.`,
-            answer: fracStr(s.n, s.d), answerDisplay: `$\\frac{${s.n}}{${s.d}}$`,
-            worked: `Total $= ${total}$; $P = \\frac{${pick.v}}{${total}} = \\frac{${s.n}}{${s.d}}$`,
-            diagram: { type: 'table', essential: true, head: ['', 'Plays tennis', 'Does not', 'Total'],
-                rows: [['Boys', bt, bn, bt + bn], ['Girls', gt, gn, gt + gn], ['Total', bt + gt, bn + gn, total]] } };
+        const pick = rc(rng, cond);
+        const p = pf(pick.fav, pick.tot);
+        return { clue: `${lead} ${pick.c}`,
+            answer: p.answer, answerDisplay: p.answerDisplay,
+            worked: `Restrict to the given group of $${pick.tot}$ students: $P = \\frac{${pick.fav}}{${pick.tot}} = \\frac{${p.s.n}}{${p.s.d}}$`, diagram: table };
     }
 
     // ---- experimental / relative frequency (MA4-PRO-C-01) ----
@@ -6683,6 +6894,39 @@ function _linEqStr(m, c) {
     return { mStr, cStr, full: `${mStr}${cStr}` };
 }
 
+// ---- Linear relationships: line-equation formatting helpers ----
+// Signed rational n/d as LaTeX, e.g. (-3, 4) → "-\frac{3}{4}".
+function _ltxFrac(n, d) {
+    const s = simplify(n, d);
+    const sg = (s.n < 0) !== (s.d < 0) ? '-' : '';
+    const an = Math.abs(s.n), ad = Math.abs(s.d);
+    return ad === 1 ? `${sg}${an}` : `${sg}\\frac{${an}}{${ad}}`;
+}
+// y = (mn/md)x + (cn/cd) as LaTeX (constant omitted when zero).
+function _lineTex(mn, md, cn, cd = 1) {
+    const m = simplify(mn, md), c = simplify(cn, cd);
+    const mTxt = m.d === 1 && Math.abs(m.n) === 1 ? (m.n < 0 ? '-' : '') : _ltxFrac(m.n, m.d);
+    const cTxt = c.n === 0 ? '' : ` ${c.n < 0 ? '-' : '+'} ${_ltxFrac(Math.abs(c.n), c.d)}`;
+    return `y = ${mTxt}x${cTxt}`;
+}
+// Plain-text answer key form with an integer intercept: y=(-3/4)x+2, y=2x-5.
+function _linePlain(mn, md, c) {
+    const m = simplify(mn, md);
+    const mTxt = m.d === 1 ? (m.n === 1 ? '' : m.n === -1 ? '-' : String(m.n)) : `(${m.n}/${m.d})`;
+    return `y=${mTxt}x${c === 0 ? '' : (c > 0 ? '+' : '-') + Math.abs(c)}`;
+}
+// Ax + By + C = 0 with integer coefficients ("1x" / "1y" never printed).
+function _generalForm(A, B, C, normalise = false) {
+    if (normalise) {
+        const g = gcd(gcd(Math.abs(A), Math.abs(B)), Math.abs(C)) || 1;
+        A /= g; B /= g; C /= g;
+        if (A < 0 || (A === 0 && B < 0)) { A = -A; B = -B; C = -C; }
+    }
+    const cx = (k, v) => (Math.abs(k) === 1 ? '' : String(Math.abs(k))) + v;
+    const tex = `${A < 0 ? '-' : ''}${cx(A, 'x')} ${B < 0 ? '-' : '+'} ${cx(B, 'y')}${C === 0 ? '' : ` ${C < 0 ? '-' : '+'} ${Math.abs(C)}`} = 0`;
+    return { A, B, C, tex, plain: tex.replace(/ /g, '') };
+}
+
 function genLinear(rng, diff, allowedOps) {
     const OPS = ['plot-line', 'pattern-rule', 'gradient-two-points', 'midpoint', 'intercepts',
                  'distance', 'equation-from-gp', 'parallel-perp', 'general-form'];
@@ -6718,24 +6962,70 @@ function genLinear(rng, diff, allowedOps) {
         };
     }
 
-    // ---- general form Ax + By + C = 0: find an intercept (MA5-LIN-C-01) ----
+    // ---- general form Ax + By + C = 0 (MA5-LIN-C-01) ----
+    // Easy: y = mx + c → general form; Medium: intercepts / rearrange to y = mx + c;
+    // Hard: fractional and negative gradients in both directions.
     if (op === 'general-form') {
-        let xInt = ri(rng, -6, 6); if (xInt === 0) xInt = 2;
-        let yInt = ri(rng, -6, 6); if (yInt === 0) yInt = 3;
-        // Line through (xInt,0) & (0,yInt): yInt·x + xInt·y − xInt·yInt = 0
-        let A = yInt, B = xInt, C = -xInt * yInt;
-        if (A < 0) { A = -A; B = -B; C = -C; }   // keep leading coeff positive
-        const bSign = B < 0 ? `- ${-B}y` : `+ ${B}y`;
-        const cSign = C < 0 ? `- ${-C}` : `+ ${C}`;
-        const eqn = `${A}x ${bSign} ${cSign} = 0`;
-        if (rng() < 0.5) {
-            return { clue: `Find the *x-intercept* of the line $${eqn}$.`,
-                answer: String(xInt), answerDisplay: `$(${xInt}, 0)$`,
-                worked: `Set $y = 0$: $${A}x ${cSign} = 0 \\Rightarrow x = ${xInt}$.` };
+        if (diff === 'Easy') {
+            const m = ri(rng, 1, 5), c = ri(rng, 1, 8) * (rng() < 0.5 ? 1 : -1);
+            const g = _generalForm(m, -1, c);
+            const { full } = _linEqStr(m, c);
+            return { clue: `Rewrite $y = ${full}$ in the general form $ax + by + c = 0$.`,
+                answer: g.plain, answerDisplay: `$${g.tex}$`,
+                worked: `Move every term to one side: $0 = ${m}x - y ${c < 0 ? '-' : '+'} ${Math.abs(c)}$, so $${g.tex}$.` };
         }
-        return { clue: `Find the *y-intercept* of the line $${eqn}$.`,
-            answer: String(yInt), answerDisplay: `$(0, ${yInt})$`,
-            worked: `Set $x = 0$: $${bSign} ${cSign} = 0 \\Rightarrow y = ${yInt}$.` };
+        if (diff === 'Medium') {
+            if (rng() < 0.5) {
+                let xInt = ri(rng, -6, 6); if (xInt === 0) xInt = 2;
+                let yInt = ri(rng, -6, 6); if (yInt === 0) yInt = 3;
+                // Line through (xInt,0) & (0,yInt): yInt·x + xInt·y − xInt·yInt = 0
+                let A = yInt, B = xInt, C = -xInt * yInt;
+                if (A < 0) { A = -A; B = -B; C = -C; }   // keep leading coeff positive
+                const bSign = B < 0 ? `- ${-B}y` : `+ ${B}y`;
+                const cSign = C < 0 ? `- ${-C}` : `+ ${C}`;
+                const eqn = `${A}x ${bSign} ${cSign} = 0`;
+                if (rng() < 0.5) {
+                    return { clue: `Find the *x-intercept* of the line $${eqn}$.`,
+                        answer: String(xInt), answerDisplay: `$(${xInt}, 0)$`,
+                        worked: `Set $y = 0$: $${A}x ${cSign} = 0 \\Rightarrow x = ${xInt}$.` };
+                }
+                return { clue: `Find the *y-intercept* of the line $${eqn}$.`,
+                    answer: String(yInt), answerDisplay: `$(0, ${yInt})$`,
+                    worked: `Set $x = 0$: $${bSign} ${cSign} = 0 \\Rightarrow y = ${yInt}$.` };
+            }
+            // rearrange Ax ± y + C = 0 into y = mx + c (integer gradient, often negative)
+            const A = ri(rng, 1, 6), B = rng() < 0.5 ? 1 : -1;
+            const C = ri(rng, 1, 9) * (rng() < 0.5 ? 1 : -1);
+            const g = _generalForm(A, B, C);
+            const m = -A / B, c = -C / B;
+            const { full } = _linEqStr(m, c);
+            return { clue: `Rewrite $${g.tex}$ in the form $y = mx + c$.`,
+                answer: `y=${_linEqStr(m, c).mStr}${_linEqStr(m, c).cStr.replace(/ /g, '')}`, answerDisplay: `$y = ${full}$`,
+                worked: `Make $y$ the subject: $y = ${full}$.` };
+        }
+        // Hard
+        if (rng() < 0.5) {
+            // y = (p/q)x + c  (possibly fractional c) → integer general form
+            let p = ri(rng, 1, 5) * (rng() < 0.5 ? 1 : -1), q = ri(rng, 2, 5);
+            if (gcd(Math.abs(p), q) !== 1) p = p > 0 ? 1 : -1;
+            const fracC = rng() < 0.4;
+            const cd = fracC ? rc(rng, [2, 3, 4]) : 1;
+            const cn = fracC ? rc(rng, [1, 3, 5].filter(v => v % cd !== 0)) * (rng() < 0.5 ? 1 : -1) : ri(rng, 1, 6) * (rng() < 0.5 ? 1 : -1);
+            const L = lcm(q, cd);
+            const g = _generalForm(p * L / q, -L, cn * L / cd, true);
+            const tex = _lineTex(p, q, cn, cd);
+            return { clue: `Rewrite $${tex}$ in the general form $ax + by + c = 0$, where $a$, $b$ and $c$ are integers and $a$ is positive.`,
+                answer: g.plain, answerDisplay: `$${g.tex}$`,
+                worked: `Multiply both sides by $${L}$ to clear the fractions, then collect all terms on one side: $${g.tex}$.` };
+        }
+        // general form with a fractional gradient → y = mx + c
+        let p = ri(rng, 1, 7) * (rng() < 0.5 ? 1 : -1), q = ri(rng, 2, 5);
+        if (gcd(Math.abs(p), q) !== 1) p = p > 0 ? 1 : -1;
+        const c = ri(rng, 1, 6) * (rng() < 0.5 ? 1 : -1);
+        const g = _generalForm(p, -q, q * c, true);       // p·x − q·y + q·c = 0
+        return { clue: `Rewrite $${g.tex}$ in the form $y = mx + c$.`,
+            answer: _linePlain(p, q, c), answerDisplay: `$${_lineTex(p, q, c)}$`,
+            worked: `Make $y$ the subject: $${q}y = ${p}x ${c < 0 ? '-' : '+'} ${q * Math.abs(c)}$, so $${_lineTex(p, q, c)}$.` };
     }
 
     // ---- number-pattern rule  T = an + b  (MA4-LIN-C-01) ----
@@ -7038,32 +7328,87 @@ function genLinear(rng, diff, allowedOps) {
         };
     }
 
+    // ---- distance between two points (MA5-LIN-C-01) ----
+    // Easy: horizontal / vertical segments; Medium: integer answers (Pythagorean triples);
+    // Hard: irrational distances as a simplest surd or a decimal.
     if (op === 'distance') {
-        const triples = diff === 'Hard'
-            ? [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17], [7, 24, 25]]
-            : [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17]];
-        const [a, b, c] = rc(rng, triples);
-        const x1 = ri(rng, -5, 5), y1 = ri(rng, -5, 5);
-        const x2 = x1 + a, y2 = y1 + b;
+        const sgn = () => (rng() < 0.5 ? 1 : -1);
+        let x1, y1, x2, y2, tail = '', answer, answerDisplay, worked;
+        if (diff === 'Easy') {
+            x1 = ri(rng, -6, 6); y1 = ri(rng, -6, 6);
+            const len = ri(rng, 2, 9) * sgn();
+            const horizontal = rng() < 0.5;
+            x2 = horizontal ? x1 + len : x1; y2 = horizontal ? y1 : y1 + len;
+            const d = Math.abs(len);
+            answer = String(d); answerDisplay = `$d = ${d}$ units`;
+            worked = horizontal
+                ? `Both points have $y = ${y1}$, so $d = |${x2} - ${par(x1)}| = ${d}$`
+                : `Both points have $x = ${x1}$, so $d = |${y2} - ${par(y1)}| = ${d}$`;
+        } else if (diff === 'Medium') {
+            const [a, b, c] = rc(rng, [[3, 4, 5], [5, 12, 13], [6, 8, 10], [8, 15, 17], [9, 12, 15]]);
+            const [dx, dy] = rng() < 0.5 ? [a, b] : [b, a];
+            x1 = ri(rng, -6, 6); y1 = ri(rng, -6, 6);
+            x2 = x1 + dx * sgn(); y2 = y1 + dy * sgn();
+            answer = String(c); answerDisplay = `$d = ${c}$ units`;
+            worked = `$d = \\sqrt{(${x2} - ${par(x1)})^2 + (${y2} - ${par(y1)})^2} = \\sqrt{${dx * dx} + ${dy * dy}} = \\sqrt{${dx * dx + dy * dy}} = ${c}$`;
+        } else {
+            let dx, dy, n;
+            do { dx = ri(rng, 1, 9); dy = ri(rng, 1, 9); n = dx * dx + dy * dy; } while (Number.isInteger(Math.sqrt(n)));
+            x1 = ri(rng, -6, 6); y1 = ri(rng, -6, 6);
+            x2 = x1 + dx * sgn(); y2 = y1 + dy * sgn();
+            const sub = `\\sqrt{(${x2} - ${par(x1)})^2 + (${y2} - ${par(y1)})^2} = \\sqrt{${dx * dx} + ${dy * dy}} = \\sqrt{${n}}`;
+            if (rng() < 0.6) {
+                const { k, rad } = _surd(n);
+                tail = ' Leave your answer in simplest surd form.';
+                answer = k === 1 ? `√${rad}` : `${k}√${rad}`;
+                answerDisplay = `$d = ${_surdStr(k, rad)}$ units`;
+                worked = `$d = ${sub}${k === 1 ? '' : ` = ${_surdStr(k, rad)}`}$`;
+            } else {
+                const d = Math.round(Math.sqrt(n) * 10) / 10;
+                tail = ' Give your answer correct to 1 decimal place.';
+                answer = String(d); answerDisplay = `$d \\approx ${d}$ units`;
+                worked = `$d = ${sub} \\approx ${d}$`;
+            }
+        }
         return {
-            clue: `Find the *distance* between $(${x1}, ${y1})$ and $(${x2}, ${y2})$.`,
-            answer: String(c),
-            answerDisplay: `$d = ${c}$ units`,
-            worked: `$d = \\sqrt{${a}^2 + ${b}^2} = \\sqrt{${a * a + b * b}} = ${c}$`,
+            clue: `Find the *distance* between $(${x1}, ${y1})$ and $(${x2}, ${y2})$.${tail}`,
+            answer, answerDisplay, worked,
             diagram: { type: 'number-plane', pts: [[x1, y1], [x2, y2]], line: true },
         };
     }
 
-    // equation-from-gp
-    const m = ri(rng, 1, diff === 'Easy' ? 3 : 5) * (rng() < 0.5 ? -1 : 1);
-    const x1 = ri(rng, -4, 4), y1 = ri(rng, -6, 6);
+    // ---- equation of a line from a gradient and a point (MA5-LIN-C-01) ----
+    // Easy: y-intercept given; Medium: integer gradient and point; Hard: fractional gradient.
+    if (diff === 'Easy') {
+        const m = ri(rng, 1, 4) * (rng() < 0.5 ? -1 : 1), c = ri(rng, 1, 8) * (rng() < 0.5 ? -1 : 1);
+        const { full } = _linEqStr(m, c);
+        return {
+            clue: `Find the equation of the line with gradient $${m}$ and $y$-intercept $${c}$.`,
+            answer: _linePlain(m, 1, c), answerDisplay: `$y = ${full}$`,
+            worked: `Use $y = mx + c$ with $m = ${m}$ and $c = ${c}$: $y = ${full}$`,
+        };
+    }
+    if (diff === 'Hard') {
+        let p = ri(rng, 1, 7) * (rng() < 0.5 ? -1 : 1), q = ri(rng, 2, 4);
+        if (gcd(Math.abs(p), q) !== 1) p = p > 0 ? 1 : -1;
+        const k = ri(rng, 1, 3) * (rng() < 0.5 ? -1 : 1), x1 = q * k, y1 = ri(rng, -8, 8);
+        const c = y1 - p * k;
+        const mTex = _ltxFrac(p, q);
+        return {
+            clue: `Find the equation of the line with gradient $${mTex}$ passing through $(${x1}, ${y1})$. Give your answer in the form $y = mx + c$.`,
+            answer: _linePlain(p, q, c), answerDisplay: `$${_lineTex(p, q, c)}$`,
+            worked: `$c = ${y1} - (${mTex})(${x1}) = ${y1} - ${par(p * k)} = ${c}$, so $${_lineTex(p, q, c)}$`,
+        };
+    }
+    const m = ri(rng, 1, 5) * (rng() < 0.5 ? -1 : 1);
+    const x1 = ri(rng, 1, 5) * (rng() < 0.5 ? -1 : 1), y1 = ri(rng, -6, 6);
     const c = y1 - m * x1;
-    const { mStr, full } = _linEqStr(m, c);
+    const { full } = _linEqStr(m, c);
     return {
         clue: `Find the equation of the line with gradient $${m}$ passing through $(${x1}, ${y1})$.`,
-        answer: `y=${mStr}${c >= 0 ? '+' : ''}${c}`,
+        answer: _linePlain(m, 1, c),
         answerDisplay: `$y = ${full}$`,
-        worked: `$y - ${y1} = ${m}(x - ${x1})$, so $y = ${full}$`,
+        worked: `$y - ${par(y1)} = ${m}(x - ${par(x1)})$, so $y = ${full}$`,
     };
 }
 
@@ -7687,21 +8032,81 @@ function genLength(rng, diff, allowedOps) {
             worked: `$C = \\pi d = ${d}\\pi\\text{ cm}$` };
     }
 
-    // unit-convert
-    const units = [['cm', 'mm', 10], ['m', 'cm', 100], ['km', 'm', 1000], ['m', 'mm', 1000]];
-    if (diff === 'Hard' && rng() < 0.5) {
-        // mixed-unit conversion, e.g. "3 m 25 cm → cm"
-        const mixed = [['m', 'cm', 100], ['km', 'm', 1000], ['cm', 'mm', 10]];
-        const [big, small, factor] = rc(rng, mixed);
-        const a = ri(rng, 1, 9), b = ri(rng, 1, factor - 1);
-        const tot = a * factor + b;
-        return { clue: `Convert $${a}\\text{ ${big}}\\ ${b}\\text{ ${small}}$ to ${small}.`,
-            answer: String(tot), answerDisplay: `$${tot}\\text{ ${small}}$`,
-            worked: `$${a} \\times ${factor} + ${b} = ${tot}\\text{ ${small}}$` };
+    // unit-convert — Easy: whole-number single-step; Medium: decimals, worded
+    // contexts and mixed units; Hard: area-unit conversions.
+    return _genLengthConvert(rng, diff);
+}
+
+// Thousands grouping for long numerals in a clue (thin space in maths mode).
+function _grp(n) {
+    const str = String(n);
+    if (str.includes('.') || Math.abs(n) < 10000) return str;
+    return str.replace(/\B(?=(\d{3})+(?!\d))/g, '\\,');
+}
+const _LEN_NAMES = { mm: 'millimetres', cm: 'centimetres', m: 'metres', km: 'kilometres' };
+const _LEN_UNITS = [['cm', 'mm', 10], ['m', 'cm', 100], ['km', 'm', 1000], ['m', 'mm', 1000]];
+const _clean = (x) => Number(Math.round(x * 1e6) / 1e6);
+
+function _genLengthConvert(rng, diff) {
+    if (diff === 'Hard') {
+        // Area units: 1 m² = 10 000 cm², 1 cm² = 100 mm², 1 km² = 1 000 000 m²,
+        // 1 ha = 10 000 m², 1 km² = 100 ha
+        const AREA = [
+            [10000, '\\text{m}^2', '\\text{cm}^2', '1\\text{ m}^2 = 10\\,000\\text{ cm}^2'],
+            [100, '\\text{cm}^2', '\\text{mm}^2', '1\\text{ cm}^2 = 100\\text{ mm}^2'],
+            [1000000, '\\text{km}^2', '\\text{m}^2', '1\\text{ km}^2 = 1\\,000\\,000\\text{ m}^2'],
+            [10000, '\\text{ha}', '\\text{m}^2', '1\\text{ ha} = 10\\,000\\text{ m}^2'],
+            [100, '\\text{km}^2', '\\text{ha}', '1\\text{ km}^2 = 100\\text{ ha}'],
+        ];
+        const [factor, bigU, smallU, rule] = rc(rng, AREA);
+        if (rng() < 0.5) {
+            const val = rng() < 0.5 ? ri(rng, 2, 9) : ri(rng, 11, 99) / 10;
+            const out = _clean(val * factor);
+            return { clue: `Convert $${val}\\ ${bigU}$ to $${smallU}$.`,
+                answer: String(out), answerDisplay: `$${_grp(out)}\\ ${smallU}$`,
+                worked: `$${rule}$, so $${val} \\times ${_grp(factor)} = ${_grp(out)}\\ ${smallU}$` };
+        }
+        const m = rng() < 0.5 ? ri(rng, 2, 9) : ri(rng, 11, 99) / 10;
+        const val = _clean(m * factor);
+        return { clue: `Convert $${_grp(val)}\\ ${smallU}$ to $${bigU}$.`,
+            answer: String(m), answerDisplay: `$${m}\\ ${bigU}$`,
+            worked: `$${rule}$, so $${_grp(val)} \\div ${_grp(factor)} = ${m}\\ ${bigU}$` };
     }
-    const [big, small, factor] = rc(rng, units);
+    if (diff === 'Medium') {
+        const r = rng();
+        if (r < 0.25) {
+            // mixed-unit conversion, e.g. "3 m 25 cm → cm"
+            const mixed = [['m', 'cm', 100], ['km', 'm', 1000], ['cm', 'mm', 10]];
+            const [big, small, factor] = rc(rng, mixed);
+            const a = ri(rng, 1, 9), b = ri(rng, 1, factor - 1);
+            const tot = a * factor + b;
+            return { clue: `Convert $${a}\\text{ ${big}}\\ ${b}\\text{ ${small}}$ to ${small}.`,
+                answer: String(tot), answerDisplay: `$${tot}\\text{ ${small}}$`,
+                worked: `$${a} \\times ${factor} + ${b} = ${tot}\\text{ ${small}}$` };
+        }
+        const [big, small, factor] = rc(rng, _LEN_UNITS);
+        const down = rng() < 0.5;                       // big → small, else small → big
+        const from = down ? big : small, to = down ? small : big;
+        let val, out;
+        if (down) { val = ri(rng, 11, 99) / 10; out = _clean(val * factor); }
+        else { const n = ri(rng, 11, 99); val = _clean(n * factor / 10); out = n / 10; }
+        const worked = down ? `$${val} \\times ${factor} = ${out}\\text{ ${to}}$` : `$${val} \\div ${factor} = ${out}\\text{ ${to}}$`;
+        if (r < 0.6) {
+            return { clue: `Convert $${val}\\text{ ${from}}$ to ${to}.`,
+                answer: String(out), answerDisplay: `$${out}\\text{ ${to}}$`, worked };
+        }
+        const scale = big + small;                       // choose a context that suits the unit size
+        const thing = rc(rng, scale === 'kmm' ? ['A cycling path is', 'A river walk is', 'A hiking trail is']
+            : scale === 'mcm' ? ['A piece of timber is', 'A ribbon is', 'A garden path is']
+            : scale === 'cmmm' ? ['A pencil is', 'A leaf is', 'A screw is']
+            : ['A metal rod is', 'A strip of tape is', 'A skirting board is']);
+        return { clue: `${thing} $${val}\\text{ ${from}}$ long. Convert this length to ${_LEN_NAMES[to]}.`,
+            answer: String(out), answerDisplay: `$${out}\\text{ ${to}}$`, worked };
+    }
+    // Easy: whole-number, single-step conversions
+    const [big, small, factor] = rc(rng, _LEN_UNITS.slice(0, 3));
     if (rng() < 0.5) {
-        const val = ri(rng, 2, diff === 'Easy' ? 9 : 50);
+        const val = ri(rng, 2, 9);
         return { clue: `Convert $${val}\\text{ ${big}}$ to ${small}.`,
             answer: String(val * factor), answerDisplay: `$${val * factor}\\text{ ${small}}$`,
             worked: `$${val} \\times ${factor} = ${val * factor}\\text{ ${small}}$` };
@@ -7925,6 +8330,74 @@ function genTime(rng, diff, allowedOps) {
     const hm = (m) => { m = norm(m); return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`; };
     const disp = (m) => `$${hm(m).replace(':', '{:}')}$`;
 
+    // 12-hour helpers (am/pm) used by the 24-hour conversion tiers
+    const to12 = (m) => { m = norm(m); const h24 = Math.floor(m / 60); return { h: h24 % 12 || 12, min: m % 60, ap: h24 < 12 ? 'am' : 'pm', h24 }; };
+    const d12 = (m) => { const t = to12(m); return `$${t.h}{:}${pad(t.min)}\\text{ ${t.ap}}$`; };
+    const ans12 = (m) => { const t = to12(m); return { answer: `${t.h}:${pad(t.min)} ${t.ap}`, answerDisplay: `$${t.h}{:}${pad(t.min)}\\text{ ${t.ap}}$` }; };
+    const noEdge = (m) => { const h = Math.floor(norm(m) / 60); return h !== 0 && h !== 12; };   // not 12 am / 12 pm
+    const durTxt = (n) => `$${Math.floor(n / 60)}$ ${Math.floor(n / 60) === 1 ? 'hour' : 'hours'}${n % 60 ? ` $${n % 60}$ ${n % 60 === 1 ? 'minute' : 'minutes'}` : ''}`;
+
+    // ---- Hard: noon / midnight edge cases (12:xx am = 00:xx, 12:xx pm = 12:xx, 24:00 = 00:00) ----
+    if (op === 'convert' && diff === 'Hard') {
+        const r = rng();
+        if (r < 0.3) {
+            const min = rc(rng, [0, 30, ri(rng, 1, 59)]), pm = rng() < 0.5;
+            const h24 = pm ? 12 : 0;
+            return { clue: `Write $12{:}${pad(min)}\\text{ ${pm ? 'pm' : 'am'}}$ in 24-hour time.`,
+                answer: `${pad(h24)}:${pad(min)}`, answerDisplay: `$${pad(h24)}{:}${pad(min)}$`,
+                worked: pm ? `$12{:}${pad(min)}$ pm is just after noon: the hour stays $12$ $\\rightarrow 12{:}${pad(min)}$`
+                    : `$12{:}${pad(min)}$ am is just after midnight: the hour becomes $00$ $\\rightarrow 00{:}${pad(min)}$` };
+        }
+        if (r < 0.6) {
+            const min = rc(rng, [0, 15, ri(rng, 1, 59)]), noon = rng() < 0.5;
+            return { clue: `Write $${noon ? '12' : '00'}{:}${pad(min)}$ as 12-hour time (include am or pm).`,
+                answer: `12:${pad(min)} ${noon ? 'pm' : 'am'}`, answerDisplay: `$12{:}${pad(min)}\\text{ ${noon ? 'pm' : 'am'}}$`,
+                worked: noon ? `$12{:}${pad(min)}$ is just after noon $\\rightarrow 12{:}${pad(min)}\\text{ pm}$`
+                    : `$00{:}${pad(min)}$ is just after midnight, so the hour is $12$ $\\rightarrow 12{:}${pad(min)}\\text{ am}$` };
+        }
+        if (r < 0.75) {
+            return { clue: 'Midnight can be written as $00{:}00$ at the start of a day or $24{:}00$ at the end of a day. Write $24{:}00$ as 12-hour time (include am or pm).',
+                answer: '12:00 am', answerDisplay: '$12{:}00\\text{ am}$',
+                worked: '$24{:}00$ is the same moment as $00{:}00$ (midnight) $\\rightarrow 12{:}00\\text{ am}$' };
+        }
+        // elapsed time between two 12-hour times where one is 12:xx (crossing noon or midnight)
+        const dur = 5 * ri(rng, 4, 80);
+        let startM, endM;
+        if (rng() < 0.5) { startM = rc(rng, [0, 12]) * 60 + 5 * ri(rng, 0, 11); endM = startM + dur; }
+        else { endM = rc(rng, [0, 12]) * 60 + 5 * ri(rng, 0, 11); startM = endM - dur; }
+        const crosses = norm(startM) + dur >= 1440;
+        return { clue: `A shift starts at ${d12(startM)} and finishes at ${d12(endM)}${crosses ? ' the next day' : ''}. Convert both times to 24-hour time, then calculate how many minutes the shift lasts.`,
+            answer: String(dur), answerDisplay: `$${dur}\\text{ min}$`,
+            worked: `${disp(startM)} to ${disp(endM)} $= ${dur}$ minutes` };
+    }
+
+    // ---- Medium: durations that cross noon / midnight (12-hour times, never 12 am / 12 pm) ----
+    if (op === 'convert' && diff === 'Medium') {
+        const r = rng();
+        let startM, dur, endM;
+        const overnight = rng() < 0.5;            // half the questions cross midnight
+        do {
+            startM = ri(rng, overnight ? 21 : 1, 23) * 60 + 5 * ri(rng, 0, 11);
+            dur = 5 * ri(rng, overnight ? 36 : 12, 60);
+            endM = startM + dur;
+        } while (!noEdge(startM) || !noEdge(endM));
+        if (r < 0.35) {
+            return { clue: `A bus leaves at ${d12(startM)} and the trip takes ${durTxt(dur)}. Write the arrival time in 24-hour time.`,
+                answer: hm(endM), answerDisplay: disp(endM),
+                worked: `${disp(startM)} $+ ${dur}\\text{ min} = $ ${disp(endM)}` };
+        }
+        if (r < 0.7) {
+            const crosses = norm(startM) + dur >= 1440;
+            return { clue: `A shift starts at ${d12(startM)} and finishes at ${d12(endM)}${crosses ? ' the next day' : ''}. Convert both times to 24-hour time, then calculate how many minutes the shift lasts.`,
+                answer: String(dur), answerDisplay: `$${dur}\\text{ min}$`,
+                worked: `${disp(startM)} to ${disp(endM)} $= ${dur}$ minutes` };
+        }
+        return { clue: `A train departs at ${disp(startM)} and the journey takes ${durTxt(dur)}. Write the arrival time as 12-hour time (include am or pm).`,
+            ...ans12(endM),
+            worked: `${disp(startM)} $+ ${dur}\\text{ min} = $ ${disp(endM)} $\\rightarrow$ ${d12(endM)}` };
+    }
+
+    // ---- Easy: straightforward am / pm conversions (no 12 am / 12 pm) ----
     if (op === 'convert' && rng() < 0.4) {
         // Read an analogue clock, then give the 24-hour time.
         const h12 = ri(rng, 1, 11), min = 5 * ri(rng, 0, 11), pm = rng() < 0.5;
@@ -7943,11 +8416,13 @@ function genTime(rng, diff, allowedOps) {
                 answer: `${pad(h24)}:${pad(min)}`, answerDisplay: `$${pad(h24)}{:}${pad(min)}$`,
                 worked: `${pm ? `Add 12 hours: ${h12} + 12 = ${h24}` : 'Morning hours are unchanged'} $\\rightarrow ${pad(h24)}{:}${pad(min)}$` };
         }
-        // 24-hour → 12-hour (afternoon/evening, always pm, avoids the 12 edge)
-        const h24 = ri(rng, 13, 23), min = ri(rng, 0, 59), h12 = h24 - 12;
+        // 24-hour → 12-hour (morning or afternoon, avoiding the 12 edge)
+        const h24 = rng() < 0.7 ? ri(rng, 13, 23) : ri(rng, 1, 11), min = ri(rng, 0, 59);
+        const pm = h24 > 12, h12 = pm ? h24 - 12 : h24;
         return { clue: `Write $${pad(h24)}{:}${pad(min)}$ as 12-hour time (include am or pm).`,
-            answer: `${h12}:${pad(min)} pm`, answerDisplay: `$${h12}{:}${pad(min)}\\text{ pm}$`,
-            worked: `Subtract 12: $${h24} - 12 = ${h12}$, afternoon $\\rightarrow ${h12}{:}${pad(min)}\\text{ pm}$` };
+            answer: `${h12}:${pad(min)} ${pm ? 'pm' : 'am'}`, answerDisplay: `$${h12}{:}${pad(min)}\\text{ ${pm ? 'pm' : 'am'}}$`,
+            worked: pm ? `Subtract 12: $${h24} - 12 = ${h12}$, afternoon $\\rightarrow ${h12}{:}${pad(min)}\\text{ pm}$`
+                : `Morning hours are unchanged $\\rightarrow ${h12}{:}${pad(min)}\\text{ am}$` };
     }
 
     if (op === 'duration' && rng() < 0.35) {
@@ -7981,7 +8456,7 @@ function genTime(rng, diff, allowedOps) {
         if (rng() < 0.5) {
             // express the duration as "h min" at Medium/Hard for variety
             const durTxt = (diff !== 'Easy' && addMin >= 60)
-                ? `$${Math.floor(addMin / 60)}$ ${Math.floor(addMin / 60) === 1 ? 'hour' : 'hours'}${addMin % 60 ? ` $${addMin % 60}$ minutes` : ''}`
+                ? `$${Math.floor(addMin / 60)}$ ${Math.floor(addMin / 60) === 1 ? 'hour' : 'hours'}${addMin % 60 ? ` $${addMin % 60}$ ${addMin % 60 === 1 ? 'minute' : 'minutes'}` : ''}`
                 : `$${addMin}$ minutes`;
             return { clue: `A film starts at ${disp(startM)} and runs for ${durTxt}. What time does it finish?`,
                 answer: hm(endM), answerDisplay: disp(endM),
