@@ -76,3 +76,17 @@ test('number-plane PDF keeps the preview proportions and a legible scale', () =>
         }
     }
 });
+
+test('number-plane point labels stay clear of the axis titles on tall, narrow and flat segments', () => {
+    const cases = [[[0, 2], [3, 14]], [[-5, -4], [-2, -13]], [[-3, 0], [0, -12]], [[2, 12], [8, 12]], [[-2, 12], [10, 8]], [[5, 1], [9, 9]]];
+    for (const pts of cases) {
+        const p = buildPrims({ type: 'number-plane', pts, line: true });
+        const dots = p.items.filter(i => i.t === 'circle' && i.fill === 'm');
+        assert.equal(dots.length, 2, `${JSON.stringify(pts)}: two plotted points`);
+        // The widened frame must be roughly square or wider than tall (≥ 0.9) so labels fit inside it.
+        const frame = p.items.find(i => i.t === 'poly').pts;
+        const w = Math.max(...frame.map(q => q[0])) - Math.min(...frame.map(q => q[0]));
+        const h = Math.max(...frame.map(q => q[1])) - Math.min(...frame.map(q => q[1]));
+        assert.ok(w / h >= 0.9, `${JSON.stringify(pts)}: window ${w.toFixed(0)}×${h.toFixed(0)} px is too narrow`);
+    }
+});
