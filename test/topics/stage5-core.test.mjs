@@ -13,13 +13,6 @@ import assert from 'node:assert/strict';
 import { genStage5, DIFFS, approxEqual, checkStructure } from '../_helpers.mjs';
 
 const nums = (s) => [...String(s).matchAll(/-?\d+(?:\.\d+)?/g)].map(m => Number(m[0]));
-function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
-function fracEq(ans, n, d) {
-    const g = gcd(n, d); const en = n / g, ed = d / g;
-    if (/^\d+$/.test(String(ans))) return Number(ans) === en && ed === 1;
-    const m = String(ans).match(/\\frac\{(\d+)\}\{(\d+)\}/);
-    return m && Number(m[1]) === en && Number(m[2]) === ed;
-}
 
 // Generic structural floor for every new sub-op.
 const NEW = {
@@ -322,41 +315,5 @@ test('Statistics box-plot: outlier/fence answers use 1.5×IQR', () => {
     assert.ok(checked > 20, `only ${checked} box-plot questions verified`);
 });
 
-// ---- Probability: conditional / Venn / two-way fractions --------
-test('Probability conditional: P(A|B) = both / n(B)', () => {
-    let checked = 0;
-    for (let seed = 1; seed <= 250; seed++) {
-        const qs = genStage5({ topic: 'Probability', difficulty: 'Medium', count: 4, seed,
-            subOpsFilter: { Probability: ['conditional'] } });
-        for (const q of qs) {
-            const m = q.clue.match(/group of \$(\d+)\$ students, \$(\d+)\$ study \w+, \$(\d+)\$ study \w+, and \$(\d+)\$ study both/);
-            if (!m) continue;
-            const nB = +m[3], both = +m[4];
-            assert.ok(fracEq(q.answer, both, nB), `seed${seed}: ${q.clue} → ${q.answer}`);
-            checked++;
-        }
-    }
-    assert.ok(checked > 20, `only ${checked} conditional questions verified`);
-});
-
-test('Probability two-way: P(cell) = cell / total', () => {
-    let checked = 0;
-    for (let seed = 1; seed <= 250; seed++) {
-        const qs = genStage5({ topic: 'Probability', difficulty: 'Medium', count: 4, seed,
-            subOpsFilter: { Probability: ['two-way'] } });
-        for (const q of qs) {
-            if (q.diagram?.type !== 'table') continue;
-            const [boys, girls] = q.diagram.rows;
-            const [bt, bn, gt, gn] = [boys[1], boys[2], girls[1], girls[2]];
-            const total = bt + gt + bn + gn;
-            let cell;
-            if (/boy who plays tennis/.test(q.clue)) cell = bt;
-            else if (/girl who plays tennis/.test(q.clue)) cell = gt;
-            else if (/boy who does not/.test(q.clue)) cell = bn;
-            else cell = bt + gt;
-            assert.ok(fracEq(q.answer, cell, total), `seed${seed}: ${q.clue} → ${q.answer}`);
-            checked++;
-        }
-    }
-    assert.ok(checked > 20, `only ${checked} two-way questions verified`);
-});
+// ---- Probability: conditional / Venn / two-way answers are recomputed per
+// difficulty in test/topics/difficulty-progression.test.mjs ---------------
