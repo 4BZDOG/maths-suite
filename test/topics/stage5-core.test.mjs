@@ -193,44 +193,8 @@ test('Volume cone: π-coefficient equals ⅓ r² h', () => {
     assert.ok(checked > 20, `only ${checked} cone questions verified`);
 });
 
-// ---- Trig: sine/cosine/area rules recompute within tolerance ----
-test('Trig sine/cosine/area rules: answers match recomputation', () => {
-    let sChecked = 0, aChecked = 0;
-    for (const diff of DIFFS) {
-        for (let seed = 1; seed <= 120; seed++) {
-            for (const op of ['sine-rule', 'cosine-rule', 'area-rule']) {
-                const qs = genStage5({ topic: 'Trigonometry', difficulty: diff, count: 4, seed,
-                    subOpsFilter: { Trigonometry: [op] } });
-                for (const q of qs) {
-                    const ans = Number(q.answer);
-                    const [p, q2, r] = nums(q.clue);   // first three numbers in the clue
-                    if (op === 'area-rule') {
-                        assert.ok(approxEqual(ans, Math.round(0.5 * p * q2 * Math.sin(r * Math.PI / 180) * 10) / 10, 0.05),
-                            `area ${diff}/seed${seed}: ${q.clue} → ${q.answer}`);
-                        aChecked++;
-                    } else if (op === 'cosine-rule' && /side \$c\$/.test(q.clue)) {
-                        const c = Math.sqrt(p * p + q2 * q2 - 2 * p * q2 * Math.cos(r * Math.PI / 180));
-                        assert.ok(approxEqual(ans, Math.round(c * 10) / 10, 0.05),
-                            `cos ${diff}/seed${seed}: ${q.clue} → ${q.answer}`);
-                        sChecked++;
-                    } else if (op === 'cosine-rule') {
-                        // largest angle opposite the longest side r
-                        const Z = Math.round(Math.acos((p * p + q2 * q2 - r * r) / (2 * p * q2)) * 180 / Math.PI);
-                        assert.ok(approxEqual(ans, Z, 1.5),
-                            `cos-angle ${diff}/seed${seed}: ${q.clue} → ${q.answer}`);
-                        sChecked++;
-                    } else if (op === 'sine-rule') {
-                        const b = p * Math.sin(r * Math.PI / 180) / Math.sin(q2 * Math.PI / 180);
-                        assert.ok(approxEqual(ans, Math.round(b * 10) / 10, 0.05),
-                            `sin ${diff}/seed${seed}: ${q.clue} → ${q.answer}`);
-                        sChecked++;
-                    }
-                }
-            }
-        }
-    }
-    assert.ok(sChecked > 20 && aChecked > 20, `sine/cosine ${sChecked}, area ${aChecked} verified`);
-});
+// Sine / cosine / area rule answers are verified per variant and difficulty
+// in progression-algebra-trig.test.mjs.
 
 // ---- Trig: trig-equations solutions lie in range & solve ---------
 test('Trig trig-equations: each solution satisfies the equation in [0,360]', () => {
