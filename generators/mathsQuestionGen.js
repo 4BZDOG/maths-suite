@@ -2251,11 +2251,114 @@ function _surdStr(k, rad) {
     return k === 1 ? `\\sqrt{${rad}}` : `${k}\\sqrt{${rad}}`;
 }
 
-// Completing the square: x² + bx + c = 0  (b even → clean half).
+// "(2x - 3)" style binomial: coefficient of the variable (1 is implicit) and a
+// non-zero constant, with the sign spaced so it never prints as "+ -3".
+function _binomStr(coef, v, k) {
+    return `(${coef === 1 ? '' : coef}${v} ${k < 0 ? '-' : '+'} ${Math.abs(k)})`;
+}
+// Number to exactly 2 d.p. without a negative zero ("-0.00").
+function _n2(v) { return (Math.abs(v) < 0.005 ? 0 : Math.round(v * 100) / 100).toFixed(2); }
+// True when a value sits close enough to a rounding boundary that a student's
+// answer could legitimately differ by 0.01 (keeps 2 d.p. answers unambiguous).
+function _nearTie(v, dp = 2) {
+    const f = Math.abs(v) * Math.pow(10, dp);
+    return Math.abs((f - Math.floor(f)) - 0.5) < 0.04;
+}
+// Real roots of ax² + bx + c = 0 in ascending order.
+function _quadRoots(a, b, c) {
+    const d = b * b - 4 * a * c;
+    if (d < 0) return [];
+    if (d === 0) return [-b / (2 * a)];
+    const sq = Math.sqrt(d);
+    return [(-b - sq) / (2 * a), (-b + sq) / (2 * a)].sort((x, y) => x - y);
+}
+const _pointStr = (x, y) => `(${x},${y})`;
+
+// Completing the square (MA5-EQU / Stage 5.2–5.3).
+//   Easy   — complete the square on x² + bx (even b)
+//   Medium — write x² + bx + c as (x + p)² + q, or solve with integer roots
+//   Hard   — a ≠ 1 (form a(x + p)² + q, or solve), or monic with surd roots
 function _genCompleteSquare(rng, diff) {
+    const sgn = (k) => `${k < 0 ? '-' : '+'} ${Math.abs(k)}`;
+    const nz = (lo, hi) => ri(rng, lo, hi) * (rng() < 0.5 ? 1 : -1);
+    const sqForm = (a, p, q) => `${a === 1 ? '' : a}(x ${sgn(p)})^2 ${sgn(q)}`;
+    const sqAns = (a, p, q) => `${a === 1 ? '' : a}(x${p < 0 ? '-' : '+'}${Math.abs(p)})^2${q < 0 ? '-' : '+'}${Math.abs(q)}`;
+
+    if (diff === 'Easy') {
+        const half = ri(rng, 1, 6) * (rng() < 0.75 ? 1 : -1);
+        const b = 2 * half;
+        const sq = half * half;
+        return {
+            clue: `Complete the square:\n$x^2 ${sgn(b)}x$`,
+            answer: `(x${half < 0 ? '-' : '+'}${Math.abs(half)})^2-${sq}`,
+            answerDisplay: `$(x ${sgn(half)})^2 - ${sq}$`,
+            worked: `Half of $${b}$ is $${half}$, so $x^2 ${sgn(b)}x = (x ${sgn(half)})^2 - ${sq}$`,
+        };
+    }
+
+    if (diff === 'Medium') {
+        if (rng() < 0.5) {
+            // x² + bx + c written as (x + p)² + q
+            const p = nz(1, 6);
+            const b = 2 * p;
+            let c = ri(rng, -9, 9);
+            if (c === p * p) c += 1;
+            const q = c - p * p;
+            return {
+                clue: `Write $${polyStr([[1, 'x^2'], [b, 'x'], [c, '']])}$ in the form $(x + p)^2 + q$.`,
+                answer: sqAns(1, p, q),
+                answerDisplay: `$${sqForm(1, p, q)}$`,
+                worked: `$x^2 ${sgn(b)}x ${sgn(c)} = (x ${sgn(p)})^2 - ${p * p} ${sgn(c)} = ${sqForm(1, p, q)}$`,
+            };
+        }
+        // solve by completing the square, integer roots (b even)
+        const r1 = ri(rng, -7, 3), r2 = r1 + 2 * ri(rng, 1, 4);
+        const b = -(r1 + r2), c = r1 * r2;
+        if (b === 0) return _genCompleteSquare(rng, diff);
+        const p = b / 2, k = (r2 - r1) / 2;
+        return {
+            clue: `Solve by completing the square:\n$${polyStr([[1, 'x^2'], [b, 'x'], [c, '']])} = 0$`,
+            answer: `x=${r1},${r2}`,
+            answerDisplay: `$x = ${r1}$ or $x = ${r2}$`,
+            worked: `$(x ${sgn(p)})^2 = ${p * p} ${sgn(-c)} = ${k * k} \\Rightarrow x ${sgn(p)} = \\pm ${k} \\Rightarrow x = ${r1}, ${r2}$`,
+        };
+    }
+
+    // Hard
+    const v = rng();
+    if (v < 0.34) {
+        // a(x + p)² + q for a ≠ 1
+        const a = ri(rng, 2, 4), p = nz(1, 5);
+        const b = 2 * a * p;
+        let c = ri(rng, -9, 9);
+        if (c === a * p * p) c += 1;
+        const q = c - a * p * p;
+        return {
+            clue: `Write $${polyStr([[a, 'x^2'], [b, 'x'], [c, '']])}$ in the form $a(x + p)^2 + q$.`,
+            answer: sqAns(a, p, q),
+            answerDisplay: `$${sqForm(a, p, q)}$`,
+            worked: `$${a}(x^2 ${sgn(2 * p)}x) ${sgn(c)} = ${a}(x ${sgn(p)})^2 - ${a * p * p} ${sgn(c)} = ${sqForm(a, p, q)}$`,
+        };
+    }
+    if (v < 0.67) {
+        // non-monic equation: divide through by a, complete the square, surd roots
+        const a = rc(rng, [2, 3]), p = nz(1, 4);
+        const b = 2 * a * p;
+        const c = nz(1, 8);
+        const D = a * p * p - c;                     // a(x + p)² = D
+        const { k, rad } = _surd(a * D);
+        if (D <= 0 || rad === 1 || gcd(k, a) !== 1) return _genCompleteSquare(rng, diff);
+        const num = -p * a;
+        return {
+            clue: `Solve by completing the square, leaving your answer in simplest surd form:\n$${polyStr([[a, 'x^2'], [b, 'x'], [c, '']])} = 0$`,
+            answer: `(${num}±${k}√${rad})/${a}`,
+            answerDisplay: `$x = \\dfrac{${num} \\pm ${_surdStr(k, rad)}}{${a}}$`,
+            worked: `Divide by $${a}$ and complete the square: $(x ${sgn(p)})^2 = \\dfrac{${D}}{${a}}$, so $x = ${-p} \\pm \\dfrac{\\sqrt{${a * D}}}{${a}} = \\dfrac{${num} \\pm ${_surdStr(k, rad)}}{${a}}$`,
+        };
+    }
+    // monic with surd roots: x² + bx + c = 0, b even
     const half = ri(rng, 1, 6);
     const b = 2 * half;
-    // choose c so the discriminant (half² − c) is positive but not a perfect square
     let c, disc;
     do { c = ri(rng, -8, half * half - 1); disc = half * half - c; }
     while (disc <= 0 || Number.isInteger(Math.sqrt(disc)));
@@ -2269,43 +2372,278 @@ function _genCompleteSquare(rng, diff) {
     };
 }
 
-// Quadratic formula: ax² + bx + c = 0, exact surd answers.
+// Quadratic formula (Stage 5.2–5.3).
+//   Easy   — a = 1, integer roots
+//   Medium — exact surd answers, or decimals to 2 d.p.
+//   Hard   — discriminant and number of solutions, rearrange first, or
+//            "solve or state no real solutions" with a > 1
 function _genQuadFormula(rng, diff) {
-    const a = diff === 'Easy' ? 1 : ri(rng, 2, 3);
-    let b, c, disc, guard = 0;
-    do {
-        b = ri(rng, -7, 7);
-        c = ri(rng, -6, 6);
-        disc = b * b - 4 * a * c;
-        guard++;
-    } while (disc <= 0 && guard < 40);
-    if (disc <= 0) { b = 5; c = -2; disc = b * b - 4 * a * c; }
-    const { k, rad } = _surd(disc);
-    const bStr = b === 0 ? '' : (b > 0 ? `+ ${b}x` : `- ${-b}x`);
-    const cStr = c < 0 ? `- ${-c}` : `+ ${c}`;
-    const surdPart = rad === 1 ? `${k}` : _surdStr(k, rad);
-    return {
-        clue: `Use the quadratic formula to solve, giving exact answers:\n$${a === 1 ? '' : a}x^2 ${bStr} ${cStr} = 0$`,
-        answer: `(${-b}±${k}√${rad})/${2 * a}`,
-        answerDisplay: `$x = \\dfrac{${-b} \\pm ${surdPart}}{${2 * a}}$`,
-        worked: `$x = \\dfrac{${-b} \\pm \\sqrt{${b}^2 - 4(${a})(${c})}}{2(${a})} = \\dfrac{${-b} \\pm \\sqrt{${disc}}}{${2 * a}}$`,
+    const nz = (lo, hi) => ri(rng, lo, hi) * (rng() < 0.5 ? 1 : -1);
+    const eqn = (a, b, c) => polyStr([[a, 'x^2'], [b, 'x'], [c, '']]);
+    const decimalQ = (a, b, c, clue) => {
+        const [lo, hi] = _quadRoots(a, b, c);
+        if (_nearTie(lo) || _nearTie(hi)) return null;
+        const sl = _n2(lo), sh = _n2(hi);
+        return {
+            clue,
+            answer: `x=${sl},${sh}`,
+            answerDisplay: `$x \\approx ${sl}$ or $x \\approx ${sh}$`,
+            worked: `$x = \\dfrac{${-b} \\pm \\sqrt{(${b})^2 - 4(${a})(${c})}}{2(${a})} = \\dfrac{${-b} \\pm \\sqrt{${b * b - 4 * a * c}}}{${2 * a}}$, so $x \\approx ${sl}$ or $x \\approx ${sh}$`,
+        };
     };
+    const nonSquare = (d) => d > 0 && !Number.isInteger(Math.sqrt(d));
+
+    if (diff === 'Easy') {
+        let r1 = nz(1, 6), r2 = nz(1, 6);
+        if (r1 === r2) r2 = -r2;
+        const lo = Math.min(r1, r2), hi = Math.max(r1, r2);
+        const b = -(r1 + r2), c = r1 * r2;
+        return {
+            clue: `Use the quadratic formula to solve:\n$${eqn(1, b, c)} = 0$`,
+            answer: `x=${lo},${hi}`,
+            answerDisplay: `$x = ${lo}$ or $x = ${hi}$`,
+            worked: `$x = \\dfrac{${-b} \\pm \\sqrt{(${b})^2 - 4(1)(${c})}}{2} = \\dfrac{${-b} \\pm \\sqrt{${b * b - 4 * c}}}{2}$, so $x = ${lo}$ or $x = ${hi}$`,
+        };
+    }
+
+    if (diff === 'Medium' && rng() < 0.5) {
+        // exact answers in surd form
+        const a = ri(rng, 1, 3);
+        let b, c, disc, guard = 0;
+        do {
+            b = ri(rng, -7, 7);
+            c = ri(rng, -6, 6);
+            disc = b * b - 4 * a * c;
+            guard++;
+        } while ((disc <= 0 || Number.isInteger(Math.sqrt(disc))) && guard < 60);
+        if (disc <= 0 || Number.isInteger(Math.sqrt(disc))) { b = 5; c = -2; disc = b * b - 4 * a * c; }
+        const { k, rad } = _surd(disc);
+        const surdPart = rad === 1 ? `${k}` : _surdStr(k, rad);
+        return {
+            clue: `Use the quadratic formula to solve, giving exact answers:\n$${eqn(a, b, c)} = 0$`,
+            answer: `(${-b}±${k}√${rad})/${2 * a}`,
+            answerDisplay: `$x = \\dfrac{${-b} \\pm ${surdPart}}{${2 * a}}$`,
+            worked: `$x = \\dfrac{${-b} \\pm \\sqrt{${b}^2 - 4(${a})(${c})}}{2(${a})} = \\dfrac{${-b} \\pm \\sqrt{${disc}}}{${2 * a}}$`,
+        };
+    }
+    if (diff === 'Medium') {
+        const a = ri(rng, 1, 3), b = nz(1, 9), c = nz(1, 8);
+        if (!nonSquare(b * b - 4 * a * c)) return _genQuadFormula(rng, diff);
+        return decimalQ(a, b, c, `Use the quadratic formula to solve, correct to 2 decimal places:\n$${eqn(a, b, c)} = 0$`)
+            || _genQuadFormula(rng, diff);
+    }
+
+    // Hard
+    const v = rng();
+    if (v < 0.34) {
+        // discriminant and the number of real solutions
+        const kind = rc(rng, ['none', 'one', 'two']);
+        let a, b, c;
+        if (kind === 'one') {
+            const kk = ri(rng, 1, 2), u = ri(rng, 1, 3), w = ri(rng, 1, 3);
+            a = kk * u * u; c = kk * w * w; b = 2 * kk * u * w * (rng() < 0.5 ? 1 : -1);
+        } else {
+            let guard = 0;
+            do {
+                a = ri(rng, 1, 4) * (rng() < 0.7 ? 1 : -1); b = nz(1, 9); c = nz(1, 8); guard++;
+            } while (guard < 60 && (kind === 'none' ? b * b - 4 * a * c >= 0 : b * b - 4 * a * c <= 0));
+        }
+        const disc = b * b - 4 * a * c;
+        const n = disc < 0 ? 'no real solutions' : disc === 0 ? 'one real solution' : 'two real solutions';
+        const bp = b < 0 ? `(${b})` : `${b}`, cp = c < 0 ? `(${c})` : `${c}`;
+        return {
+            clue: `Calculate the discriminant of $${eqn(a, b, c)} = 0$ and state how many real solutions it has.`,
+            answer: `${disc}, ${n}`,
+            answerDisplay: `$\\Delta = ${disc}$, so ${n}`,
+            worked: `$\\Delta = b^2 - 4ac = ${bp}^2 - 4(${a})(${cp}) = ${disc}$. ${disc < 0 ? 'Negative' : disc === 0 ? 'Zero' : 'Positive'} discriminant: ${n}.`,
+        };
+    }
+    if (v < 0.67) {
+        // rearrange to ax² + bx + c = 0 first:  a x² = b x + c  →  a x² − b x − c = 0
+        const a = ri(rng, 1, 3), b = nz(1, 6), c = nz(1, 8);
+        if (!nonSquare(b * b + 4 * a * c)) return _genQuadFormula(rng, diff);
+        const q = decimalQ(a, -b, -c,
+            `Rearrange, then use the quadratic formula to solve, correct to 2 decimal places:\n$${a === 1 ? '' : a}x^2 = ${polyStr([[b, 'x'], [c, '']])}$`);
+        if (!q) return _genQuadFormula(rng, diff);
+        q.worked = `$${eqn(a, -b, -c)} = 0$. ` + q.worked;
+        return q;
+    }
+    // solve, or state that there are no real solutions
+    const a = ri(rng, 2, 5), b = nz(1, 9), c = nz(1, 9);
+    const disc = b * b - 4 * a * c;
+    const clue = `Solve $${eqn(a, b, c)} = 0$ using the quadratic formula, correct to 2 decimal places. If there are no real solutions, say so.`;
+    if (disc < 0) {
+        return { clue, answer: 'no real solutions', answerDisplay: 'No real solutions',
+            worked: `$\\Delta = (${b})^2 - 4(${a})(${c}) = ${disc} < 0$, so there are no real solutions.` };
+    }
+    if (!nonSquare(disc)) return _genQuadFormula(rng, diff);
+    return decimalQ(a, b, c, clue) || _genQuadFormula(rng, diff);
 }
 
-// Simultaneous line & parabola: y = x² and y = (r1+r2)x − r1·r2 meet at x=r1,r2.
+// Simultaneous equations with a curve (Stage 5.2–5.3): a line with a parabola
+// y = x² + q or with a circle x² + y² = r².
+//   Easy   — y = x² with positive integer roots (x-values), or a circle cut by x = k / y = k
+//   Medium — both intersection points (integer), parabola or circle with an oblique line
+//   Hard   — tangent (one point), no real solution, or non-integer points to 2 d.p.
+const _CIRCLE_RADII = [5, 10, 13, 15, 17, 25];
+function _latticePoints(r) {
+    const pts = [];
+    for (let x = -r; x <= r; x++) {
+        const y2 = r * r - x * x, y = Math.round(Math.sqrt(y2));
+        if (y * y === y2) { pts.push([x, y]); if (y !== 0) pts.push([x, -y]); }
+    }
+    return pts;
+}
 function _genSimultaneousNonlinear(rng, diff) {
-    let r1 = ri(rng, -4, 4), r2 = ri(rng, -4, 4);
-    if (r1 === r2) r2 = r1 + 1;
-    const m = r1 + r2, c = -r1 * r2;
-    const mStr = m === 0 ? '' : (m === 1 ? 'x' : m === -1 ? '-x' : `${m}x`);
-    const cStr = c === 0 ? '' : (c > 0 ? ` + ${c}` : ` - ${-c}`);
-    const line = `${mStr}${cStr}` || '0';
-    const lo = Math.min(r1, r2), hi = Math.max(r1, r2);
+    const lineStr = (m, c) => polyStr([[m, 'x'], [c, '']]);
+    const ptsAns = (pts) => pts.map(([x, y]) => _pointStr(x, y)).join(',');
+    const ptsDisp = (pts) => pts.map(([x, y]) => `(${x}, ${y})`).join(' and ');
+    const nz = (lo, hi) => ri(rng, lo, hi) * (rng() < 0.5 ? 1 : -1);
+    const parab = (q) => `y = x^2${q === 0 ? '' : q < 0 ? ` - ${-q}` : ` + ${q}`}`;
+    const sg = (k) => `${k < 0 ? '-' : '+'} ${Math.abs(k)}`;
+    const quadTxt = (A, B, C) => `${A === 1 ? '' : A}x^2 ${B === 0 ? '' : `${B < 0 ? '-' : '+'} ${Math.abs(B) === 1 ? '' : Math.abs(B)}x `}${sg(C)}`;
+
+    // circle cut by an axis-parallel line with integer points
+    const axisCircle = () => {
+        const r = rc(rng, _CIRCLE_RADII);
+        const pts = _latticePoints(r).filter(([x, y]) => x !== 0 && y !== 0);
+        const [x0, y0] = rc(rng, pts);
+        const vertical = rng() < 0.5;
+        const hit = vertical ? [[x0, y0], [x0, -y0]].sort((a, b) => a[1] - b[1])
+            : [[x0, y0], [-x0, y0]].sort((a, b) => a[0] - b[0]);
+        return {
+            clue: `Solve simultaneously to find the points of intersection:\n$x^2 + y^2 = ${r * r}$\n$${vertical ? `x = ${x0}` : `y = ${y0}`}$`,
+            answer: ptsAns(hit), answerDisplay: `$${ptsDisp(hit)}$`,
+            worked: vertical
+                ? `Substitute $x = ${x0}$: $y^2 = ${r * r} - ${x0 * x0} = ${y0 * y0}$, so $y = \\pm ${Math.abs(y0)}$.`
+                : `Substitute $y = ${y0}$: $x^2 = ${r * r} - ${y0 * y0} = ${x0 * x0}$, so $x = \\pm ${Math.abs(x0)}$.`,
+        };
+    };
+
+    if (diff === 'Easy') {
+        if (rng() < 0.5) return axisCircle();
+        let r1 = ri(rng, 1, 5), r2 = ri(rng, 1, 5);
+        if (r1 === r2) r2 = r1 % 5 + 1;
+        const m = r1 + r2, c = -r1 * r2;
+        const lo = Math.min(r1, r2), hi = Math.max(r1, r2);
+        const line = lineStr(m, c);
+        return {
+            clue: `Solve simultaneously, finding the $x$-coordinates of the intersection points:\n$y = x^2$\n$y = ${line}$`,
+            answer: `x=${lo},${hi}`,
+            answerDisplay: `$x = ${lo}$ or $x = ${hi}$`,
+            worked: `$x^2 = ${line} \\Rightarrow x^2 - ${m}x + ${-c} = 0 \\Rightarrow (x - ${lo})(x - ${hi}) = 0$`,
+        };
+    }
+
+    if (diff === 'Medium') {
+        if (rng() < 0.55) {
+            // parabola y = x² + q and a line through two integer points
+            const q = ri(rng, -5, 5);
+            let r1 = ri(rng, -4, 4), r2 = ri(rng, -4, 4);
+            if (r1 === r2) r2 = r1 === 4 ? -4 : r1 + 1;
+            const m = r1 + r2, n = q - r1 * r2;
+            const hit = [r1, r2].sort((a, b) => a - b).map(x => [x, x * x + q]);
+            return {
+                clue: `Solve simultaneously to find both points of intersection:\n$${parab(q)}$\n$y = ${lineStr(m, n)}$`,
+                answer: ptsAns(hit), answerDisplay: `$${ptsDisp(hit)}$`,
+                worked: `$x^2 ${sg(q)} = ${lineStr(m, n)}$ gives $${quadTxt(1, -m, q - n)} = 0$, so $x = ${hit[0][0]}$ or $x = ${hit[1][0]}$; substitute to find $y$.`,
+            };
+        }
+        // circle and an oblique line through two lattice points
+        for (let t = 0; t < 40; t++) {
+            const r = rc(rng, _CIRCLE_RADII);
+            const pts = _latticePoints(r);
+            const P = rc(rng, pts), Q = rc(rng, pts);
+            if (P[0] === Q[0]) continue;
+            const dy = Q[1] - P[1], dx = Q[0] - P[0];
+            if (dy % dx !== 0) continue;
+            const m = dy / dx, c = P[1] - m * P[0];
+            if (m === 0 || Math.abs(m) > 4 || Math.abs(c) > 12) continue;
+            const hit = [P, Q].sort((a, b) => a[0] - b[0]);
+            return {
+                clue: `Solve simultaneously to find both points of intersection:\n$x^2 + y^2 = ${r * r}$\n$y = ${lineStr(m, c)}$`,
+                answer: ptsAns(hit), answerDisplay: `$${ptsDisp(hit)}$`,
+                worked: `Substitute $y = ${lineStr(m, c)}$ into $x^2 + y^2 = ${r * r}$ and solve the quadratic in $x$: $x = ${hit[0][0]}$ or $x = ${hit[1][0]}$.`,
+            };
+        }
+        return axisCircle();
+    }
+
+    // Hard
+    const v = rng();
+    if (v < 0.25) {
+        if (rng() < 0.7) {
+            // tangent line to the parabola y = x² + q
+            const t = ri(rng, -4, 4), q = ri(rng, -4, 4);
+            const m = 2 * t, n = q - t * t;
+            const hit = [[t, t * t + q]];
+            return {
+                clue: `The line $y = ${lineStr(m, n)}$ touches the parabola $${parab(q)}$ at exactly one point. Find the point of contact.`,
+                answer: ptsAns(hit), answerDisplay: `$${ptsDisp(hit)}$`,
+                worked: `$x^2 ${sg(q)} = ${lineStr(m, n)}$ gives $${quadTxt(1, -m, q - n)} = 0$, which is $(x ${t < 0 ? '+' : '-'} ${Math.abs(t)})^2 = 0$, so $x = ${t}$ is a repeated root.`,
+            };
+        }
+        // horizontal / vertical tangent to a circle
+        const r = ri(rng, 2, 9), sign = rng() < 0.5 ? 1 : -1;
+        const vertical = rng() < 0.5;
+        const hit = vertical ? [[sign * r, 0]] : [[0, sign * r]];
+        return {
+            clue: `The line $${vertical ? 'x' : 'y'} = ${sign * r}$ touches the circle $x^2 + y^2 = ${r * r}$ at exactly one point. Find the point of contact.`,
+            answer: ptsAns(hit), answerDisplay: `$${ptsDisp(hit)}$`,
+            worked: `Substitute: $${vertical ? 'y' : 'x'}^2 = ${r * r} - ${r * r} = 0$, so $${vertical ? 'y' : 'x'} = 0$.`,
+        };
+    }
+    const noRoots = v < 0.5;
+    const useCircle = rng() < 0.45;
+    const bad = (d) => (noRoots ? d >= 0 : (d <= 0 || Number.isInteger(Math.sqrt(d))));
+    if (!useCircle) {
+        const q = ri(rng, -4, 4);
+        let m, n, d, guard = 0;
+        do { m = ri(rng, -6, 6); n = ri(rng, -6, 6); d = m * m - 4 * (q - n); guard++; }
+        while (guard < 80 && bad(d));
+        if (bad(d)) return _genSimultaneousNonlinear(rng, diff);
+        const lineEq = `y = ${lineStr(m, n)}`;
+        if (noRoots) {
+            return {
+                clue: `Solve simultaneously, or state that there is no real solution:\n$${parab(q)}$\n$${lineEq}$`,
+                answer: 'no real solutions', answerDisplay: 'No real solutions',
+                worked: `$${quadTxt(1, -m, q - n)} = 0$ has $\\Delta = ${d} < 0$, so the line and parabola never meet.`,
+            };
+        }
+        const xs = _quadRoots(1, -m, q - n);
+        const hit = xs.map(x => [x, m * x + n]);
+        if (hit.some(([x, y]) => _nearTie(x) || _nearTie(y))) return _genSimultaneousNonlinear(rng, diff);
+        return {
+            clue: `Solve simultaneously, giving the points of intersection correct to 2 decimal places:\n$${parab(q)}$\n$${lineEq}$`,
+            answer: hit.map(([x, y]) => _pointStr(_n2(x), _n2(y))).join(','),
+            answerDisplay: `$${hit.map(([x, y]) => `(${_n2(x)}, ${_n2(y)})`).join(' and ')}$`,
+            worked: `$${quadTxt(1, -m, q - n)} = 0$ gives $x \\approx ${_n2(xs[0])}$ or $x \\approx ${_n2(xs[1])}$; substitute into the line to find $y$.`,
+        };
+    }
+    // circle x² + y² = r² and y = mx + c
+    const r = ri(rng, 3, 8);
+    let m, c, A, B, C, d, guard = 0;
+    do {
+        m = rc(rng, [1, -1, 2, -2, 3]); c = nz(1, 9);
+        A = 1 + m * m; B = 2 * m * c; C = c * c - r * r; d = B * B - 4 * A * C; guard++;
+    } while (guard < 80 && bad(d));
+    if (bad(d)) return _genSimultaneousNonlinear(rng, diff);
+    const lineEq = `y = ${lineStr(m, c)}`;
+    if (noRoots) {
+        return {
+            clue: `Solve simultaneously, or state that there is no real solution:\n$x^2 + y^2 = ${r * r}$\n$${lineEq}$`,
+            answer: 'no real solutions', answerDisplay: 'No real solutions',
+            worked: `Substituting gives $${quadTxt(A, B, C)} = 0$ with $\\Delta = ${d} < 0$, so the line misses the circle.`,
+        };
+    }
+    const xs = _quadRoots(A, B, C);
+    const hit = xs.map(x => [x, m * x + c]);
+    if (hit.some(([x, y]) => _nearTie(x) || _nearTie(y))) return _genSimultaneousNonlinear(rng, diff);
     return {
-        clue: `Solve simultaneously, finding the $x$-coordinates of the intersection points:\n$y = x^2$\n$y = ${line}$`,
-        answer: `x=${lo},${hi}`,
-        answerDisplay: `$x = ${lo}$ or $x = ${hi}$`,
-        worked: `$x^2 = ${line} \\Rightarrow x^2 ${m ? (m > 0 ? `- ${m}x` : `+ ${-m}x`) : ''} ${c ? (c > 0 ? `- ${c}` : `+ ${-c}`) : ''} = 0 \\Rightarrow x = ${lo}, ${hi}$`,
+        clue: `Solve simultaneously, giving the points of intersection correct to 2 decimal places:\n$x^2 + y^2 = ${r * r}$\n$${lineEq}$`,
+        answer: hit.map(([x, y]) => _pointStr(_n2(x), _n2(y))).join(','),
+        answerDisplay: `$${hit.map(([x, y]) => `(${_n2(x)}, ${_n2(y)})`).join(' and ')}$`,
+        worked: `Substituting gives $${quadTxt(A, B, C)} = 0$, so $x \\approx ${_n2(xs[0])}$ or $x \\approx ${_n2(xs[1])}$; substitute into the line to find $y$.`,
     };
 }
 
@@ -3696,35 +4034,69 @@ function _genAlgebraOp(rng, diff, op) {
     }
 
     // ---- non-monic trinomial factorisation: ax² + bx + c (a ≠ 1) ----
+    // Easy: a = 2, all positive. Medium: a up to 4 with negatives. Hard: a up to 6,
+    // negatives, and sometimes a common factor to take out first.
     if (op === 'factorise-nonmonic') {
-        const sgn = (k) => k < 0 ? `- ${-k}` : `+ ${k}`;
-        const p = ri(rng, 2, 3);
-        const r = diff === 'Easy' ? 1 : ri(rng, 1, 3);
-        let q = ri(rng, 1, 4) * (rng() < 0.5 ? 1 : -1);
-        let s = ri(rng, 1, 4) * (rng() < 0.5 ? 1 : -1);
-        const a = p * r, b = p * s + q * r, c = q * s;
-        if (a === 1 || b === 0 || c === 0) return _genAlgebraOp(rng, diff, op);
-        const trinomial = `${a}x^2 ${sgn(b)}x ${sgn(c)}`;
-        // build factor strings explicitly: (px + q)(rx + s)
-        const f1 = `(${p === 1 ? '' : p}x ${q < 0 ? '- ' + (-q) : '+ ' + q})`;
-        const f2 = `(${r === 1 ? '' : r}x ${s < 0 ? '- ' + (-s) : '+ ' + s})`;
-        return { clue: `Factorise:\n$${trinomial}$`,
-            answer: `${f1}${f2}`.replace(/\s/g, ''), answerDisplay: `$${f1}${f2}$`,
-            worked: `$${trinomial} = ${f1}${f2}$` };
+        const nz = (lo, hi) => ri(rng, lo, hi) * (rng() < 0.5 ? 1 : -1);
+        const PAIRS_M = [[2, 1], [3, 1], [4, 1], [2, 2]];
+        const PAIRS_H = [[2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [3, 2]];
+        const pair = diff === 'Easy' ? [2, 1] : rc(rng, diff === 'Medium' ? PAIRS_M : PAIRS_H);
+        const [p, r] = pair;
+        const q = diff === 'Easy' ? 2 * ri(rng, 0, 3) + 1 : nz(1, diff === 'Medium' ? 6 : 7);
+        const s = diff === 'Easy' ? ri(rng, 1, 8) : nz(1, diff === 'Medium' ? 6 : 7);
+        const k = diff === 'Hard' && rng() < 0.5 ? rc(rng, [2, 3]) : 1;
+        const a = p * r * k, b = (p * s + q * r) * k, c = q * s * k;
+        // both binomials must be fully factorised (no hidden common factor)
+        if (b === 0 || gcd(p, Math.abs(q)) !== 1 || gcd(r, Math.abs(s)) !== 1) return _genAlgebraOp(rng, diff, op);
+        const trinomial = polyStr([[a, 'x^2'], [b, 'x'], [c, '']]);
+        const f1 = _binomStr(p, 'x', q), f2 = _binomStr(r, 'x', s);
+        const pre = k > 1 ? String(k) : '';
+        return { clue: `${k > 1 ? 'Factorise fully' : 'Factorise'}:\n$${trinomial}$`,
+            answer: `${pre}${f1}${f2}`.replace(/\s/g, ''), answerDisplay: `$${pre}${f1}${f2}$`,
+            worked: k > 1
+                ? `Take out the common factor $${k}$: $${k}(${polyStr([[p * r, 'x^2'], [b / k, 'x'], [q * s, '']])}) = ${pre}${f1}${f2}$`
+                : `$${trinomial} = ${f1}${f2}$` };
     }
 
-    // ---- factorise by grouping in pairs: x³ + ax² + bx + ab ----
+    // ---- factorise by grouping in pairs ----
+    // Easy: xy + nx + my + mn with positive numbers. Medium: signed numbers and a
+    // coefficient on x. Hard: coefficients on both pronumerals, the four terms
+    // given out of order (rearrange first), or the cubic x³ + ax² + bx + ab.
     if (op === 'factorise-grouping') {
         const sgn = (k) => k < 0 ? `- ${-k}` : `+ ${k}`;
-        const a = ri(rng, 1, 5) * (rng() < 0.5 ? 1 : -1);
-        const b = ri(rng, 1, 6) * (rng() < 0.5 ? 1 : -1);
-        const ab = a * b;
-        // x³ + a x² + b x + ab = x²(x + a) + b(x + a) = (x + a)(x² + b)
-        const cubic = `x^3 ${sgn(a)}x^2 ${sgn(b)}x ${sgn(ab)}`;
-        const ans = `(x ${a < 0 ? '- ' + (-a) : '+ ' + a})(x^2 ${b < 0 ? '- ' + (-b) : '+ ' + b})`;
-        return { clue: `Factorise by grouping:\n$${cubic}$`,
+        const nz = (lo, hi) => ri(rng, lo, hi) * (rng() < 0.5 ? 1 : -1);
+        if (diff === 'Hard' && rng() < 0.35) {
+            const a = ri(rng, 1, 5) * (rng() < 0.5 ? 1 : -1);
+            const b = ri(rng, 1, 6) * (rng() < 0.5 ? 1 : -1);
+            const ab = a * b;
+            // x³ + a x² + b x + ab = x²(x + a) + b(x + a) = (x + a)(x² + b)
+            const cubic = `x^3 ${sgn(a)}x^2 ${sgn(b)}x ${sgn(ab)}`;
+            const ans = `(x ${a < 0 ? '- ' + (-a) : '+ ' + a})(x^2 ${b < 0 ? '- ' + (-b) : '+ ' + b})`;
+            return { clue: `Factorise by grouping:\n$${cubic}$`,
+                answer: ans.replace(/\s/g, ''), answerDisplay: `$${ans}$`,
+                worked: `$x^2(x ${sgn(a)}) + ${b}(x ${sgn(a)}) = ${ans}$` };
+        }
+        let a = 1, b = 1, m, n;
+        if (diff === 'Easy') { m = ri(rng, 1, 6); n = ri(rng, 1, 6); }
+        else {
+            m = nz(1, 6); n = nz(1, 6);
+            if (diff === 'Medium') { if (m > 0 && n > 0) n = -n; a = ri(rng, 1, 3); }
+            else { a = ri(rng, 2, 3); b = ri(rng, 1, 3); }
+        }
+        // (ax + m)(by + n) = ab·xy + an·x + bm·y + mn
+        if (gcd(a, Math.abs(m)) !== 1 || gcd(b, Math.abs(n)) !== 1) return _genAlgebraOp(rng, diff, op);
+        let terms = [[a * b, 'xy'], [a * n, 'x'], [b * m, 'y'], [m * n, '']];
+        if (diff === 'Hard') {
+            terms = rng() < 0.5 ? [terms[1], terms[2], terms[0], terms[3]] : [terms[3], terms[0], terms[2], terms[1]];
+        }
+        const expr = polyStr(terms);
+        const fy = _binomStr(b, 'y', n), fx = _binomStr(a, 'x', m);
+        const ax = a === 1 ? 'x' : `${a}x`;
+        const mm = Math.abs(m) === 1 ? '' : String(Math.abs(m));
+        const ans = `${fx}${fy}`;
+        return { clue: `${diff === 'Hard' ? 'Rearrange and factorise by grouping' : 'Factorise by grouping'}:\n$${expr}$`,
             answer: ans.replace(/\s/g, ''), answerDisplay: `$${ans}$`,
-            worked: `$x^2(x ${sgn(a)}) + ${b}(x ${sgn(a)}) = ${ans}$` };
+            worked: `$${ax}${fy} ${m < 0 ? '-' : '+'} ${mm}${fy} = ${ans}$` };
     }
 
     // ---- algebraic fractions ----
@@ -4686,6 +5058,94 @@ const TRIG_TRIPLES = [
     { a: 9, b: 40, c: 41 }, { a: 12, b: 35, c: 37 }, { a: 15, b: 20, c: 25 },
 ];
 
+// ---- Exact trigonometric values -----------------------------------------
+// Exact arithmetic over {1, √2, √3, √6} with rational coefficients, so
+// expressions such as sin 45° × cos 30° + tan 60° simplify exactly.
+const _qn = (n, d = 1) => { const g = gcd(Math.abs(n), Math.abs(d)) || 1; const sg = d < 0 ? -1 : 1; return [sg * n / g, Math.abs(d) / g]; };
+const _qadd = (p, q) => _qn(p[0] * q[1] + q[0] * p[1], p[1] * q[1]);
+const _qmul = (p, q) => _qn(p[0] * q[0], p[1] * q[1]);
+const _EV_BASES = [1, 2, 3, 6];
+function _ev(map) {
+    const r = {};
+    for (const k of _EV_BASES) r[k] = map[k] || [0, 1];
+    return r;
+}
+const _evAdd = (u, v) => { const r = _ev({}); for (const k of _EV_BASES) r[k] = _qadd(u[k], v[k]); return r; };
+const _evScale = (u, n) => { const r = _ev({}); for (const k of _EV_BASES) r[k] = _qmul(u[k], [n, 1]); return r; };
+function _evMul(u, v) {
+    const r = _ev({});
+    for (const a of _EV_BASES) for (const b of _EV_BASES) {
+        if (u[a][0] === 0 || v[b][0] === 0) continue;
+        const { k, rad } = _surd(a * b);
+        r[rad] = _qadd(r[rad], _qmul(_qmul(u[a], v[b]), [k, 1]));
+    }
+    return r;
+}
+// divide by a single-term value r√n:  1 / (r√n) = √n / (r·n)
+function _evDiv(u, v) {
+    const n = _EV_BASES.find(k => v[k][0] !== 0);
+    const inv = _ev({ [n]: _qn(v[n][1], v[n][0] * n) });
+    return _evMul(u, inv);
+}
+const _evNum = (u) => _EV_BASES.reduce((s, k) => s + u[k][0] / u[k][1] * Math.sqrt(k), 0);
+function _evFmt(u, tex) {
+    const bases = _EV_BASES.filter(k => u[k][0] !== 0);
+    if (!bases.length) return '0';
+    let D = 1;
+    for (const k of bases) D = lcm(D, u[k][1]);
+    const rt = (k, n) => {
+        const m = Math.abs(n);
+        if (k === 1) return String(m);
+        const r = tex ? `\\sqrt{${k}}` : `√${k}`;
+        return m === 1 ? r : `${m}${r}`;
+    };
+    let num = '';
+    bases.forEach((k, i) => {
+        const n = u[k][0] * (D / u[k][1]);
+        num += i === 0 ? `${n < 0 ? '-' : ''}${rt(k, n)}` : ` ${n < 0 ? '-' : '+'} ${rt(k, n)}`;
+    });
+    if (D === 1) return num;
+    if (bases.length === 1) {
+        const k = bases[0], n = u[k][0] * (D / u[k][1]);
+        return tex ? `${n < 0 ? '-' : ''}\\frac{${rt(k, n)}}{${D}}` : `${n < 0 ? '-' : ''}${rt(k, n)}/${D}`;
+    }
+    return tex ? `\\frac{${num}}{${D}}` : `(${num})/${D}`.replace(/\s/g, '');
+}
+// sin / cos / tan of 30°, 45°, 60° (and their obtuse partners by reflection)
+const _EX_ACUTE = {
+    sin: { 30: _ev({ 1: [1, 2] }), 45: _ev({ 2: [1, 2] }), 60: _ev({ 3: [1, 2] }) },
+    cos: { 30: _ev({ 3: [1, 2] }), 45: _ev({ 2: [1, 2] }), 60: _ev({ 1: [1, 2] }) },
+    tan: { 30: _ev({ 3: [1, 3] }), 45: _ev({ 1: [1, 1] }), 60: _ev({ 3: [1, 1] }) },
+};
+function _exactTrig(f, ang) {
+    if (ang <= 90) return _EX_ACUTE[f][ang];
+    const base = _EX_ACUTE[f][180 - ang];
+    return f === 'sin' ? base : _evScale(base, -1);
+}
+// How a recalled ratio is usually written when it is the *given* in an equation
+const _EX_RATIO_TEX = {
+    sin: { 30: '\\frac{1}{2}', 45: '\\frac{\\sqrt{2}}{2}', 60: '\\frac{\\sqrt{3}}{2}' },
+    cos: { 30: '\\frac{\\sqrt{3}}{2}', 45: '\\frac{\\sqrt{2}}{2}', 60: '\\frac{1}{2}' },
+    tan: { 30: '\\frac{1}{\\sqrt{3}}', 45: '1', 60: '\\sqrt{3}' },
+};
+// k·f(θ) = ±rhs forms for "rearrange first" equations
+const _EX_REARR = {
+    sin: { 30: ['2', '1'], 45: ['\\sqrt{2}', '1'], 60: ['2', '\\sqrt{3}'] },
+    cos: { 30: ['2', '\\sqrt{3}'], 45: ['\\sqrt{2}', '1'], 60: ['2', '1'] },
+    tan: { 30: ['\\sqrt{3}', '1'], 45: ['', '1'], 60: ['', '\\sqrt{3}'] },
+};
+// All solutions in [0°, 360°] of f θ = ±ratio with acute reference angle alpha
+function _trigSolutions(f, neg, alpha) {
+    const q = {
+        sin: neg ? [180 + alpha, 360 - alpha] : [alpha, 180 - alpha],
+        cos: neg ? [180 - alpha, 180 + alpha] : [alpha, 360 - alpha],
+        tan: neg ? [180 - alpha, 360 - alpha] : [alpha, 180 + alpha],
+    };
+    return q[f].slice().sort((a, b) => a - b);
+}
+const _toRad = (d) => d * Math.PI / 180;
+const _toDeg = (r) => r * 180 / Math.PI;
+
 function genTrigonometry(rng, diff, allowedOps) {
     const OPS = ['find-side', 'find-angle', 'applications', 'sine-rule', 'cosine-rule',
                  'area-rule', 'exact-values', 'trig-equations', 'trig-3d', 'obtuse-angles', 'bearings'];
@@ -4693,8 +5153,47 @@ function genTrigonometry(rng, diff, allowedOps) {
     if (pool.length === 0) return null;
     const op = rc(rng, pool);
 
-    // ---- Sine rule: a/sinA = b/sinB → find a side (MA5-TRG-C-02) ----
+    // ---- Sine rule (MA5-TRG-C-02) ----
+    //   Easy   — two angles and a side: find a side
+    //   Medium — two sides and a non-included angle (opposite the longer side): find an angle
+    //   Hard   — the ambiguous case (two possible angles), or a side after finding the third angle
     if (op === 'sine-rule') {
+        if (diff === 'Medium') {
+            const A = ri(rng, 30, 100), a = ri(rng, 9, 20), b = ri(rng, 5, a - 2);
+            const B = _toDeg(Math.asin(b * Math.sin(_toRad(A)) / a));   // b < a: B is acute and unique
+            if (_nearTie(B, 1)) return genTrigonometry(rng, diff, allowedOps);
+            const B1 = round(B, 1);
+            return { clue: `In a triangle, $a = ${a}$ cm, $b = ${b}$ cm and $\\angle A = ${A}$°. Use the *sine rule* to find $\\angle B$ (to 1 d.p.).`,
+                answer: String(B1), answerDisplay: `${B1}°`,
+                worked: `$\\sin B = \\frac{${b}\\sin ${A}°}{${a}} \\Rightarrow B = ${B1}°$`,
+                diagram: { type: 'general-triangle', sides: { a, b }, angles: { A } } };
+        }
+        if (diff === 'Hard') {
+            if (rng() < 0.6) {
+                // ambiguous case: A acute, a < b, b·sin A < a
+                for (let t = 0; t < 40; t++) {
+                    const A = ri(rng, 25, 50), a = ri(rng, 7, 14), b = ri(rng, a + 1, a + 8);
+                    const sinB = b * Math.sin(_toRad(A)) / a;
+                    if (sinB >= 0.97) continue;
+                    const B1 = _toDeg(Math.asin(sinB)), B2 = 180 - B1;
+                    if (_nearTie(B1, 1) || A + B2 >= 180) continue;
+                    const r1 = round(B1, 1), r2 = round(B2, 1);
+                    return { clue: `In triangle ABC, $a = ${a}$ cm, $b = ${b}$ cm and $\\angle A = ${A}$°. Find the *two possible* sizes of $\\angle B$ (to 1 d.p.).`,
+                        answer: `${r1},${r2}`, answerDisplay: `$\\angle B = ${r1}°$ or $\\angle B = ${r2}°$`,
+                        worked: `$\\sin B = \\frac{${b}\\sin ${A}°}{${a}}$ gives $B = ${r1}°$ or $B = 180° - ${r1}° = ${r2}°$ (both fit, since $${A}° + ${r2}° < 180°$).`,
+                        diagram: { type: 'general-triangle', sides: { a, b }, angles: { A } } };
+                }
+            }
+            // two angles given: find the third, then use the sine rule
+            const B = ri(rng, 30, 80), C = ri(rng, 30, 80), a = ri(rng, 6, 20);
+            const A3 = 180 - B - C;
+            if (A3 < 20) return genTrigonometry(rng, diff, allowedOps);
+            const b = round(a * Math.sin(_toRad(B)) / Math.sin(_toRad(A3)), 1);
+            return { clue: `In a triangle, $a = ${a}$ cm, $\\angle B = ${B}$° and $\\angle C = ${C}$°. Find side $b$ (to 1 d.p.).`,
+                answer: String(b), answerDisplay: `${b} cm`,
+                worked: `$\\angle A = 180° - ${B}° - ${C}° = ${A3}°$, so $b = \\frac{${a}\\sin ${B}°}{\\sin ${A3}°} = ${b}$ cm`,
+                diagram: { type: 'general-triangle', sides: { a }, angles: { B, C }, missing: 'b' } };
+        }
         const A = rc(rng, [30, 40, 45, 50, 60, 70]);
         const B = rc(rng, [35, 40, 50, 55, 65, 75].filter(x => x + A < 170));
         const a = ri(rng, 6, 20);
@@ -4705,32 +5204,100 @@ function genTrigonometry(rng, diff, allowedOps) {
             diagram: { type: 'general-triangle', sides: { a }, angles: { A, B }, missing: 'b' } };
     }
 
-    // ---- Cosine rule: find third side or the largest angle ----
+    // ---- Cosine rule ----
+    //   Easy   — two sides and the included acute angle: find the third side
+    //   Medium — the same with any included angle, or the largest angle from three sides
+    //   Hard   — any named angle from three sides, or side then angle (cosine then sine rule)
     if (op === 'cosine-rule') {
-        if (rng() < 0.5) {
-            const a = ri(rng, 6, 16), b = ri(rng, 6, 16);
-            const C = rc(rng, [40, 55, 70, 95, 110, 120]);
+        const sasSide = (Cs) => {
+            const a = ri(rng, diff === 'Easy' ? 5 : 6, diff === 'Easy' ? 12 : 16);
+            const b = ri(rng, diff === 'Easy' ? 5 : 6, diff === 'Easy' ? 12 : 16);
+            const C = rc(rng, Cs);
             const c = round(Math.sqrt(a * a + b * b - 2 * a * b * Math.cos(C * Math.PI / 180)), 1);
             return { clue: `In a triangle, $a = ${a}$ cm, $b = ${b}$ cm and the included angle $C = ${C}$°. Use the *cosine rule* to find side $c$ (to 1 d.p.).`,
                 answer: String(c), answerDisplay: `${c} cm`,
                 worked: `$c^2 = ${a}^2 + ${b}^2 - 2(${a})(${b})\\cos ${C}° \\Rightarrow c = ${c}$ cm`,
                 diagram: { type: 'general-triangle', sides: { a, b }, angles: { C }, missing: 'c' } };
+        };
+        if (diff === 'Easy') return sasSide([35, 40, 50, 55, 60, 70, 75]);
+        if (diff === 'Medium' && rng() < 0.6) return sasSide([40, 55, 70, 95, 110, 120, 125]);
+        if (diff === 'Medium') {
+            // find the largest angle from 3 sides (opposite the longest side)
+            let x = ri(rng, 5, 9), y = ri(rng, 9, 12), z = ri(rng, 12, 16);
+            if (x + y <= z) z = x + y - 1;
+            const cosZ = (x * x + y * y - z * z) / (2 * x * y);
+            const Z = round(Math.acos(cosZ) * 180 / Math.PI, 0);
+            return { clue: `A triangle has sides $${x}$ cm, $${y}$ cm and $${z}$ cm. Use the *cosine rule* to find the *largest* angle (to the nearest degree).`,
+                answer: String(Z), answerDisplay: `${Z}°`,
+                worked: `$\\cos\\theta = \\frac{${x}^2 + ${y}^2 - ${z}^2}{2(${x})(${y})} \\Rightarrow \\theta = ${Z}°$` };
         }
-        // find the largest angle from 3 sides (opposite the longest side)
-        let x = ri(rng, 5, 9), y = ri(rng, 9, 12), z = ri(rng, 12, 16);
-        // ensure a valid triangle
-        if (x + y <= z) z = x + y - 1;
-        const cosZ = (x * x + y * y - z * z) / (2 * x * y);
-        const Z = round(Math.acos(cosZ) * 180 / Math.PI, 0);
-        return { clue: `A triangle has sides $${x}$ cm, $${y}$ cm and $${z}$ cm. Use the *cosine rule* to find the *largest* angle (to the nearest degree).`,
-            answer: String(Z), answerDisplay: `${Z}°`,
-            worked: `$\\cos\\theta = \\frac{${x}^2 + ${y}^2 - ${z}^2}{2(${x})(${y})} \\Rightarrow \\theta = ${Z}°$` };
+        // Hard
+        if (rng() < 0.6) {
+            for (let t = 0; t < 40; t++) {
+                const a = ri(rng, 5, 18), b = ri(rng, 5, 18), c = ri(rng, 5, 18);
+                if (a + b <= c + 1 || a + c <= b + 1 || b + c <= a + 1) continue;
+                const want = rc(rng, ['A', 'B', 'C']);
+                const [p, q, r] = want === 'A' ? [b, c, a] : want === 'B' ? [a, c, b] : [a, b, c];
+                const cosX = (p * p + q * q - r * r) / (2 * p * q);
+                if (Math.abs(cosX) > 0.95) continue;
+                const X = _toDeg(Math.acos(cosX));
+                if (_nearTie(X, 1)) continue;
+                const X1 = round(X, 1);
+                return { clue: `In a triangle, $a = ${a}$ cm, $b = ${b}$ cm and $c = ${c}$ cm. Use the *cosine rule* to find $\\angle ${want}$ (to 1 d.p.).`,
+                    answer: String(X1), answerDisplay: `${X1}°`,
+                    worked: `$\\cos ${want} = \\frac{${p}^2 + ${q}^2 - ${r}^2}{2(${p})(${q})} \\Rightarrow ${want} = ${X1}°$`,
+                    diagram: { type: 'general-triangle', sides: { a, b, c }, angles: {} } };
+            }
+        }
+        // two steps: cosine rule for the third side, then the sine rule for the smaller angle
+        for (let t = 0; t < 40; t++) {
+            const a = ri(rng, 6, 16), b = ri(rng, 6, 16), C = rc(rng, [40, 55, 70, 100, 110, 120]);
+            if (a === b) continue;
+            const c = Math.sqrt(a * a + b * b - 2 * a * b * Math.cos(_toRad(C)));
+            const small = a < b ? 'A' : 'B', sSide = Math.min(a, b);
+            const X = _toDeg(Math.asin(sSide * Math.sin(_toRad(C)) / c));
+            if (_nearTie(X, 1)) continue;
+            const X1 = round(X, 1);
+            return { clue: `In a triangle, $a = ${a}$ cm, $b = ${b}$ cm and the included angle $C = ${C}$°. Find $\\angle ${small}$ (to 1 d.p.) by first finding side $c$.`,
+                answer: String(X1), answerDisplay: `${X1}°`,
+                worked: `$c^2 = ${a}^2 + ${b}^2 - 2(${a})(${b})\\cos ${C}° \\Rightarrow c = ${round(c, 2)}$ cm, then $\\sin ${small} = \\frac{${sSide}\\sin ${C}°}{c} \\Rightarrow ${small} = ${X1}°$`,
+                diagram: { type: 'general-triangle', sides: { a, b }, angles: { C } } };
+        }
+        return sasSide([100, 110, 120]);
     }
 
     // ---- Area rule: A = ½·a·b·sin C ----
+    //   Easy   — acute included angle
+    //   Medium — any included angle (including obtuse)
+    //   Hard   — find the acute angle from the area, or the area from three sides
     if (op === 'area-rule') {
+        if (diff === 'Hard') {
+            if (rng() < 0.5) {
+                const a = ri(rng, 8, 20), b = ri(rng, 8, 20), C = ri(rng, 20, 80);
+                const area = round(0.5 * a * b * Math.sin(_toRad(C)), 1);
+                const X = _toDeg(Math.asin(2 * area / (a * b)));
+                if (2 * area / (a * b) > 0.98 || _nearTie(X, 1)) return genTrigonometry(rng, diff, allowedOps);
+                const X1 = round(X, 1);
+                return { clue: `A triangle has an area of $${area}$ cm². Two of its sides, $${a}$ cm and $${b}$ cm, enclose an *acute* angle $C$. Find $C$ (to 1 d.p.).`,
+                    answer: String(X1), answerDisplay: `${X1}°`,
+                    worked: `$${area} = \\tfrac{1}{2}(${a})(${b})\\sin C \\Rightarrow \\sin C = \\frac{${2 * area}}{${a * b}} \\Rightarrow C = ${X1}°$`,
+                    diagram: { type: 'general-triangle', sides: { a, b }, angles: {} } };
+            }
+            for (let t = 0; t < 40; t++) {
+                const a = ri(rng, 6, 16), b = ri(rng, 6, 16), c = ri(rng, 6, 16);
+                if (a + b <= c + 1 || a + c <= b + 1 || b + c <= a + 1) continue;
+                const cosC = (a * a + b * b - c * c) / (2 * a * b);
+                if (Math.abs(cosC) > 0.9) continue;
+                const C = _toDeg(Math.acos(cosC));
+                const area = round(0.5 * a * b * Math.sin(_toRad(C)), 1);
+                return { clue: `A triangle has sides $a = ${a}$ cm, $b = ${b}$ cm and $c = ${c}$ cm. Use the cosine rule to find $\\angle C$, then find the area of the triangle (to 1 d.p.).`,
+                    answer: String(area), answerDisplay: `${area} cm²`,
+                    worked: `$\\cos C = \\frac{${a}^2 + ${b}^2 - ${c}^2}{2(${a})(${b})} \\Rightarrow C = ${round(C, 1)}°$, so $A = \\tfrac{1}{2}(${a})(${b})\\sin C = ${area}$ cm²`,
+                    diagram: { type: 'general-triangle', sides: { a, b, c }, angles: {} } };
+            }
+        }
         const a = ri(rng, 6, 18), b = ri(rng, 6, 18);
-        const C = rc(rng, [30, 40, 48, 55, 70, 110, 120, 135]);
+        const C = rc(rng, diff === 'Easy' ? [30, 40, 48, 55, 70] : diff === 'Medium' ? [100, 110, 120, 135, 55, 70] : [100, 110, 120, 135]);
         const area = round(0.5 * a * b * Math.sin(C * Math.PI / 180), 1);
         return { clue: `Find the area of a triangle with sides $${a}$ cm and $${b}$ cm and an included angle of $${C}$° (to 1 d.p.).`,
             answer: String(area), answerDisplay: `${area} cm²`,
@@ -4738,40 +5305,109 @@ function genTrigonometry(rng, diff, allowedOps) {
             diagram: { type: 'general-triangle', sides: { a, b }, angles: { C } } };
     }
 
-    // ---- Exact trig values (unit circle) ----
+    // ---- Exact trig values (30°, 45°, 60° and their obtuse partners) ----
+    //   Easy   — recall sin, cos or tan of 30°, 45° or 60°
+    //   Medium — evaluate sums / differences such as sin 30° + cos 60°
+    //   Hard   — products, squares, quotients (rationalise), obtuse angles, or find θ
     if (op === 'exact-values') {
-        const EX = {
-            30:  { sin: '\\frac{1}{2}',         cos: '\\frac{\\sqrt{3}}{2}',  tan: '\\frac{1}{\\sqrt{3}}' },
-            45:  { sin: '\\frac{\\sqrt{2}}{2}', cos: '\\frac{\\sqrt{2}}{2}',  tan: '1' },
-            60:  { sin: '\\frac{\\sqrt{3}}{2}', cos: '\\frac{1}{2}',          tan: '\\sqrt{3}' },
-            120: { sin: '\\frac{\\sqrt{3}}{2}', cos: '-\\frac{1}{2}',         tan: '-\\sqrt{3}' },
-            135: { sin: '\\frac{\\sqrt{2}}{2}', cos: '-\\frac{\\sqrt{2}}{2}', tan: '-1' },
-            150: { sin: '\\frac{1}{2}',         cos: '-\\frac{\\sqrt{3}}{2}', tan: '-\\frac{1}{\\sqrt{3}}' },
-        };
-        const angle = rc(rng, Object.keys(EX).map(Number));
-        const ratio = rc(rng, diff === 'Easy' ? ['sin', 'cos'] : ['sin', 'cos', 'tan']);
-        const disp = EX[angle][ratio];
-        return { clue: `Find the *exact value* of $\\${ratio}(${angle}°)$.`,
-            answer: disp.replace(/\\/g, '').replace(/\s/g, ''), answerDisplay: `$${disp}$`,
-            worked: `$\\${ratio}(${angle}°) = ${disp}$ (from the unit circle).` };
+        const FN = ['sin', 'cos', 'tan'];
+        const ACUTE = [30, 45, 60];
+        const t = (c, f, ang, sq) => `${c > 1 ? c : ''}\\${f}${sq ? '^2' : ''} ${ang}°`;
+        const done = (exprTex, v, intro) => ({
+            clue: `${intro} $${exprTex}$.`,
+            answer: _evFmt(v, false), answerDisplay: `$${_evFmt(v, true)}$`,
+            worked: `$${exprTex} = ${_evFmt(v, true)}$`,
+        });
+        if (diff === 'Easy') {
+            const f = rc(rng, FN), ang = rc(rng, ACUTE);
+            const v = _exactTrig(f, ang);
+            return { clue: `Write the *exact value* of $\\${f} ${ang}°$.`,
+                answer: _evFmt(v, false), answerDisplay: `$${_evFmt(v, true)}$`,
+                worked: `$\\${f} ${ang}° = ${_evFmt(v, true)}$ (from the 30°–60°–90° and 45°–45°–90° triangles).` };
+        }
+        if (diff === 'Medium') {
+            const f1 = rc(rng, FN), f2 = rc(rng, FN), a1 = rc(rng, ACUTE), a2 = rc(rng, ACUTE);
+            const c1 = rc(rng, [1, 1, 2, 3]), c2 = rc(rng, [1, 1, 2, 3]);
+            const minus = rng() < 0.5;
+            if (f1 === f2 && a1 === a2) return genTrigonometry(rng, diff, allowedOps);
+            const v = _evAdd(_evScale(_exactTrig(f1, a1), c1), _evScale(_exactTrig(f2, a2), minus ? -c2 : c2));
+            return done(`${t(c1, f1, a1)} ${minus ? '-' : '+'} ${t(c2, f2, a2)}`, v, 'Find the *exact value* of');
+        }
+        const w = rng();
+        if (w < 0.15) {
+            const f = rc(rng, FN), ang = rc(rng, [120, 135, 150]);
+            const v = _exactTrig(f, ang);
+            return { clue: `Write the *exact value* of $\\${f} ${ang}°$.`,
+                answer: _evFmt(v, false), answerDisplay: `$${_evFmt(v, true)}$`,
+                worked: `$\\${f} ${ang}° = ${f === 'sin' ? '' : '-'}\\${f} ${180 - ang}° = ${_evFmt(v, true)}$` };
+        }
+        if (w < 0.30) {
+            const f1 = rc(rng, FN), f2 = rc(rng, FN), a1 = rc(rng, ACUTE), a2 = rc(rng, ACUTE);
+            const v = _evMul(_exactTrig(f1, a1), _exactTrig(f2, a2));
+            return done(`\\${f1} ${a1}° \\times \\${f2} ${a2}°`, v, 'Find the *exact value* of');
+        }
+        if (w < 0.50) {
+            const [f1, f2, f3, f4] = [0, 1, 2, 3].map(() => rc(rng, FN));
+            const [a1, a2, a3, a4] = [0, 1, 2, 3].map(() => rc(rng, ACUTE));
+            const minus = rng() < 0.5;
+            const p = _evMul(_exactTrig(f1, a1), _exactTrig(f2, a2));
+            const q = _evMul(_exactTrig(f3, a3), _exactTrig(f4, a4));
+            const v = _evAdd(p, minus ? _evScale(q, -1) : q);
+            return done(`\\${f1} ${a1}° \\times \\${f2} ${a2}° ${minus ? '-' : '+'} \\${f3} ${a3}° \\times \\${f4} ${a4}°`, v, 'Find the *exact value* of');
+        }
+        if (w < 0.65) {
+            const f1 = rc(rng, FN), f2 = rc(rng, FN), a1 = rc(rng, ACUTE), a2 = rc(rng, ACUTE);
+            const minus = rng() < 0.5;
+            const e1 = _exactTrig(f1, a1), e2 = _exactTrig(f2, a2);
+            const v = _evAdd(_evMul(e1, e1), minus ? _evScale(_evMul(e2, e2), -1) : _evMul(e2, e2));
+            return done(`${t(1, f1, a1, true)} ${minus ? '-' : '+'} ${t(1, f2, a2, true)}`, v, 'Find the *exact value* of');
+        }
+        if (w < 0.80) {
+            const f1 = rc(rng, FN), f2 = rc(rng, FN), a1 = rc(rng, ACUTE), a2 = rc(rng, ACUTE);
+            const v = _evDiv(_exactTrig(f1, a1), _exactTrig(f2, a2));
+            return { clue: `Evaluate $\\dfrac{\\${f1} ${a1}°}{\\${f2} ${a2}°}$, leaving your answer with a *rationalised* denominator.`,
+                answer: _evFmt(v, false), answerDisplay: `$${_evFmt(v, true)}$`,
+                worked: `$\\dfrac{\\${f1} ${a1}°}{\\${f2} ${a2}°} = ${_evFmt(v, true)}$` };
+        }
+        const f = rc(rng, FN), ang = rc(rng, ACUTE);
+        return { clue: `If $\\${f}\\theta = ${_EX_RATIO_TEX[f][ang]}$, find $\\theta$ for $0° < \\theta < 90°$.`,
+            answer: String(ang), answerDisplay: `$\\theta = ${ang}°$`,
+            worked: `$\\${f} ${ang}° = ${_EX_RATIO_TEX[f][ang]}$, so $\\theta = ${ang}°$.` };
     }
 
-    // ---- Trig equations on [0°, 360°] ----
+    // ---- Trig equations (Stage 5.3 Path) ----
+    //   Easy   — acute solutions 0°–90° (exact ratios or calculator values)
+    //   Medium — obtuse solutions 0°–180°, or both quadrants 0°–360° (positive ratio)
+    //   Hard   — 0°–360° with negative ratios (two solutions), including rearranging first
     if (op === 'trig-equations') {
-        const CASES = [
-            { f: 'sin', disp: '\\frac{1}{2}',        plain: '1/2',  sols: [30, 150] },
-            { f: 'sin', disp: '\\frac{\\sqrt{3}}{2}', plain: '√3/2', sols: [60, 120] },
-            { f: 'sin', disp: '\\frac{\\sqrt{2}}{2}', plain: '√2/2', sols: [45, 135] },
-            { f: 'cos', disp: '\\frac{1}{2}',        plain: '1/2',  sols: [60, 300] },
-            { f: 'cos', disp: '\\frac{\\sqrt{3}}{2}', plain: '√3/2', sols: [30, 330] },
-            { f: 'cos', disp: '\\frac{\\sqrt{2}}{2}', plain: '√2/2', sols: [45, 315] },
-            { f: 'tan', disp: '1',                   plain: '1',    sols: [45, 225] },
-            { f: 'tan', disp: '\\sqrt{3}',           plain: '√3',   sols: [60, 240] },
-        ];
-        const k = rc(rng, CASES);
-        return { clue: `Solve $\\${k.f}\\theta = ${k.disp}$ for $0° \\le \\theta \\le 360°$.`,
-            answer: k.sols.join(','), answerDisplay: `$\\theta = ${k.sols.join('°, ')}°$`,
-            worked: `$\\${k.f}\\theta = ${k.disp}$ gives $\\theta = ${k.sols.join('°, ')}°$.` };
+        const f = rc(rng, ['sin', 'cos', 'tan']);
+        const domain = diff === 'Easy' ? 90 : diff === 'Medium' ? (rng() < 0.5 ? 180 : 360) : 360;
+        const neg = diff === 'Hard' ? true : diff === 'Medium' && domain === 180 && f !== 'sin' && rng() < 0.5;
+        const exact = diff === 'Easy' ? rng() < 0.5 : diff === 'Medium' ? rng() < 0.6 : rng() < 0.65;
+        let alpha, rhs, lhs = `\\${f}\\theta`;
+        const sign = neg ? '-' : '';
+        if (exact) {
+            alpha = rc(rng, [30, 45, 60]);
+            if (diff === 'Hard' && rng() < 0.5) {
+                const [coef, mag] = _EX_REARR[f][alpha];
+                lhs = `${coef}\\${f}\\theta`;
+                rhs = `${sign}${mag}`;
+            } else {
+                rhs = `${sign}${_EX_RATIO_TEX[f][alpha]}`;
+            }
+        } else {
+            const v = f === 'tan' ? ri(rng, 2, 40) / 10 : ri(rng, 10, 95) / 100;
+            alpha = _toDeg(f === 'sin' ? Math.asin(v) : f === 'cos' ? Math.acos(v) : Math.atan(v));
+            rhs = `${sign}${v}`;
+        }
+        const sols = _trigSolutions(f, neg, alpha).filter(x => x <= domain);
+        const shown = exact ? sols : sols.map(x => round(x, 1));
+        if (!exact && (_nearTie(alpha, 1) || shown.length === 0)) return genTrigonometry(rng, diff, allowedOps);
+        if (shown.length === 0) return genTrigonometry(rng, diff, allowedOps);
+        const refTxt = exact ? `${alpha}°` : `${round(alpha, 1)}°`;
+        return { clue: `Solve $${lhs} = ${rhs}$ for $0° \\le \\theta \\le ${domain}°$.`,
+            answer: shown.join(','), answerDisplay: `$\\theta = ${shown.join('°, ')}°$`,
+            worked: `The reference angle is $${refTxt}$. ${neg ? 'The ratio is negative' : 'The ratio is positive'}, so $\\theta = ${shown.join('°, ')}°$ in $0° \\le \\theta \\le ${domain}°$.` };
     }
 
     // ---- 3D trig: angle a cuboid body diagonal makes with the base ----
