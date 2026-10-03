@@ -3291,6 +3291,19 @@ table.mode-cw td.cell.empty {
     border-top-color: rgba(165,180,252,0.30);
 }
 
+/* Sub-op group heading (e.g. "Factorising") — optional `group` metadata in
+   generators/subOps.js. Sits in the same layer as the path divider above. */
+.subop-group-heading {
+    margin: 6px 0 1px;
+    padding: 0 8px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-muted, #64748b);
+}
+.subop-group-heading:first-child { margin-top: 2px; }
+
 /* Stage 5 "Path" toggle — reads as an indented sub-option of the stage block */
 .path-toggle {
     margin-top: 6px;

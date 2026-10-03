@@ -14,6 +14,7 @@ import { exportPDF } from './pdf/pdfExport.js';
 
 import { showToast } from './ui/toast.js';
 import { generateMathsQuestions } from './generators/mathsQuestionGen.js';
+import { groupSubOps } from './generators/subOps.js';
 import { openModal, closeModal } from './ui/modal.js';
 import { setupSidebarResize, toggleSidebar, switchTab, setupTablistKeys, closeSidebarOnNarrow, isNarrowScreen } from './ui/sidebar.js';
 import { toggleDarkMode } from './ui/darkMode.js';
@@ -1011,10 +1012,15 @@ function _buildSubOpsPanels() {
             // when state.includePath is on.
             const coreOps = ops.filter(op => op.pathway !== 'path');
             const pathOps = ops.filter(op => op.pathway === 'path');
-            html += coreOps.map(renderRow).join('');
+            // Optional `group` metadata (generators/subOps.js) adds sub-headings.
+            const renderList = list => groupSubOps(list).map(run =>
+                (run.group ? `<div class="subop-group-heading">${esc(run.group)}</div>` : '') +
+                run.ops.map(renderRow).join('')
+            ).join('');
+            html += renderList(coreOps);
             if (pathOps.length > 0) {
                 html += `<div class="subop-path-divider"><i class="fas fa-road"></i>Stage 5.3 Path</div>`;
-                html += pathOps.map(renderRow).join('');
+                html += renderList(pathOps);
             }
         }
 
